@@ -1,0 +1,9 @@
+Package: com.bandarhl.BHTwitter
+Name: BHTwitter
+Version: 1.2
+Description: awesome for Twitter
+Section: Tweaks
+Depends: firmware (>= 12.0), mobilesubstrate
+Priority: optional
+Architecture: iphoneos-arm
+Author: BandarHelal
