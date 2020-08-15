@@ -1,5 +1,5 @@
 # BHTwitter
-awesome for Twitter
+- awesome Tweak for Twitter
 
 # Features
 - Download Videos (even if account privet).
