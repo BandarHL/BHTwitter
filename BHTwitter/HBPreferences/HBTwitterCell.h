@@ -15,4 +15,5 @@
 @property (nonatomic, strong) UIImageView *TwitterImage;
 @property (nonatomic, strong) UILabel *userName;
 @property (nonatomic, strong) UILabel *detailLabel;
+@property (nonatomic, strong) NSString *AccountURL;
 @end

@@ -8,17 +8,20 @@
 #import "BHTdownloadManager.h"
 
 @implementation BHTdownloadManager
-+ (void)DownloadVideoWithURL:(NSString *)url completionHandler:(void (^)(NSURLResponse *response, NSURL *filePath, NSError *error))completionHandler {
-    NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:NSUUID.UUID.UUIDString];
-    AFURLSessionManager *manager = [[AFURLSessionManager alloc] initWithSessionConfiguration:configuration];
-    NSURL *URL = [NSURL URLWithString:url];
-    NSURLRequest *request = [NSURLRequest requestWithURL:URL];
++ (void)DownloadVideoWithURL:(NSString *)url completionHandler:(void (^)(NSURL *filePath, NSError *error))completionHandler {
+    NSError *err;
+    NSString *documentsDirectoryURL = [NSString stringWithFormat:@"%@/%@", NSHomeDirectory(), @"Documents"];
+    NSURL *fileURL = [NSURL URLWithString:url];
+    NSString *fileName = fileURL.lastPathComponent;
+    NSString *downloadPath = [documentsDirectoryURL stringByAppendingPathComponent:fileName];
+    NSURL *downloadPathURL = [NSURL fileURLWithPath:downloadPath];
     
-    NSURLSessionDownloadTask *downloadTask = [manager downloadTaskWithRequest:request progress:nil destination:^NSURL *(NSURL *targetPath, NSURLResponse *response) {
-        NSURL *documentsDirectoryURL = [[NSFileManager defaultManager] URLForDirectory:NSDocumentDirectory inDomain:NSUserDomainMask appropriateForURL:nil create:NO error:nil];
-        return [documentsDirectoryURL URLByAppendingPathComponent:[response suggestedFilename]];
-    } completionHandler:completionHandler];
-    [downloadTask resume];
+    NSData *dataFile = [NSData dataWithContentsOfURL:fileURL];
+    if (dataFile) {
+        [dataFile writeToFile:downloadPath options:nil error:&err];
+    }
+    
+    completionHandler(downloadPathURL, err);
 }
 + (BOOL)isVideoCell:(T1StatusInlineActionsView *)cell {
     TFSTwitterEntityMedia *i = cell.viewModel.entities.media.firstObject;
@@ -30,6 +33,14 @@
 }
 + (BOOL)isDMVideoCell:(T1InlineMediaView *)cell {
     if (cell.playerIconView == nil) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
++ (BOOL)isLTR {
+    if ([UIApplication sharedApplication].userInterfaceLayoutDirection == UIUserInterfaceLayoutDirectionRightToLeft) {
         return false;
     } else {
         return true;
@@ -75,14 +86,15 @@
             [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"tweet_con"];
         }
     }];
-    
     HBTwitterCell *bandarhl = [[HBTwitterCell alloc] initTwitterCellWithTitle:@"BandarHelal" detail:@"@BandarHL" AccountLink:@"https://twitter.com/BandarHL"];
+//    HBTwitterCell *c = [[HBTwitterCell alloc] initTwitterCellWithTitle:@"CrazyMind" detail:@"@CrazyMind90" AccountLink:@"https://twitter.com/CrazyMind90"];
     
     [main_section addCell:download];
     [main_section addCell:voice];
     [main_section addCell:like_confirm];
     [main_section addCell:tweet_confirm];
     [developer addCell:bandarhl];
+//    [developer addCell:c];
     HBPreferences *hollow_pref = [HBPreferences tableWithSections:@[main_section, developer] title:@"BHTwitter" TableStyle:UITableViewStyleGrouped SeparatorStyle:UITableViewCellSeparatorStyleNone];
     [_self.navigationController pushViewController:hollow_pref animated:true];
 }

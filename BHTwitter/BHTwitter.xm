@@ -57,40 +57,40 @@
     }
 }
 %new - (void)DownloadHandler {
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"hi" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
-    T1PlayerMediaEntitySessionProducible *session = self.inlineMediaView.viewModel.playerSessionProducer.sessionProducible;
-    for (TFSTwitterEntityMediaVideoVariant *i in session.mediaEntity.videoInfo.variants) {
-        if ([i.contentType isEqualToString:@"video/mp4"]) {
-            UIAlertAction *download = [UIAlertAction actionWithTitle:[self getVideoQ:i.url] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-                JGProgressHUD *hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
-                [hud showInView:topMostController().view];
-                [BHTdownloadManager DownloadVideoWithURL:i.url completionHandler:^(NSURLResponse *response, NSURL *filePath, NSError *error) {
-                    if (error) {
-                        
-                        [hud dismiss];
-                        [FLEXAlert showAlert:@"error :(" message:error.localizedFailureReason from:topMostController()];
-                    } else {
-                        [hud dismiss];
-                        
-                        [[PHPhotoLibrary sharedPhotoLibrary] performChanges:^{
-                            [PHAssetChangeRequest creationRequestForAssetFromVideoAtFileURL:filePath];
-                        } completionHandler:^(BOOL success, NSError *error2) {
-                            if (error2) {
-                                [FLEXAlert showAlert:@"error :(" message:error2.localizedFailureReason from:topMostController()];
-                                [[NSFileManager defaultManager] removeItemAtURL:filePath error:nil];
-                            } else {
-                                [FLEXAlert showAlert:@"hi" message:@"Video successfully saved" from:topMostController()];
-                                [[NSFileManager defaultManager] removeItemAtURL:filePath error:nil];
-                            }
-                        }];
-                    }
-                }];
-            }];
-            [alert addAction:download];
-        }
-    }
-    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
-    [topMostController() presentViewController:alert animated:true completion:nil];
+    //    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"hi" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
+    //    T1PlayerMediaEntitySessionProducible *session = self.inlineMediaView.viewModel.playerSessionProducer.sessionProducible;
+    //    for (TFSTwitterEntityMediaVideoVariant *i in session.mediaEntity.videoInfo.variants) {
+    //        if ([i.contentType isEqualToString:@"video/mp4"]) {
+    //            UIAlertAction *download = [UIAlertAction actionWithTitle:[self getVideoQ:i.url] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+    //                JGProgressHUD *hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
+    //                [hud showInView:topMostController().view];
+    //                [BHTdownloadManager DownloadVideoWithURL:i.url completionHandler:^(NSURLResponse *response, NSURL *filePath, NSError *error) {
+    //                    if (error) {
+    //
+    //                        [hud dismiss];
+    //                        [FLEXAlert showAlert:@"error :(" message:error.localizedFailureReason from:topMostController()];
+    //                    } else {
+    //                        [hud dismiss];
+    //
+    //                        [[PHPhotoLibrary sharedPhotoLibrary] performChanges:^{
+    //                            [PHAssetChangeRequest creationRequestForAssetFromVideoAtFileURL:filePath];
+    //                        } completionHandler:^(BOOL success, NSError *error2) {
+    //                            if (error2) {
+    //                                [FLEXAlert showAlert:@"error :(" message:error2.localizedFailureReason from:topMostController()];
+    //                                [[NSFileManager defaultManager] removeItemAtURL:filePath error:nil];
+    //                            } else {
+    //                                [FLEXAlert showAlert:@"hi" message:@"Video successfully saved" from:topMostController()];
+    //                                [[NSFileManager defaultManager] removeItemAtURL:filePath error:nil];
+    //                            }
+    //                        }];
+    //                    }
+    //                }];
+    //            }];
+    //            [alert addAction:download];
+    //        }
+    //    }
+    //    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+    //    [topMostController() presentViewController:alert animated:true completion:nil];
 }
 %new - (NSString *)getVideoQ:(NSString *)url {
     NSMutableArray *q = [NSMutableArray new];
@@ -142,13 +142,22 @@
         [self addSubview:newButton];
         
         TFNButton *lastButton = self.inlineActionButtons.lastObject;
-        
-        [NSLayoutConstraint activateConstraints:@[
-            [newButton.heightAnchor constraintEqualToConstant:24],
-            [newButton.widthAnchor constraintEqualToConstant:30],
-            [newButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
-            [newButton.leadingAnchor constraintEqualToAnchor:lastButton.trailingAnchor constant:10]
-        ]];
+        if ([BHTdownloadManager isLTR]) {
+            [NSLayoutConstraint activateConstraints:@[
+                [newButton.heightAnchor constraintEqualToConstant:24],
+                [newButton.widthAnchor constraintEqualToConstant:30],
+                [newButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
+                [newButton.leadingAnchor constraintEqualToAnchor:lastButton.trailingAnchor constant:10]
+            ]];
+        } else {
+            [NSLayoutConstraint activateConstraints:@[
+                [newButton.heightAnchor constraintEqualToConstant:24],
+                [newButton.widthAnchor constraintEqualToConstant:30],
+                [newButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
+                [newButton.leadingAnchor constraintEqualToAnchor:lastButton.trailingAnchor constant:-70]
+            ]];
+        }
+
     }
 }
 %new - (void)DownloadHandler {
@@ -159,15 +168,24 @@
                 UIAlertAction *download = [UIAlertAction actionWithTitle:[self getVideoQ:k.url] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
                     JGProgressHUD *hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
                     [hud showInView:topMostController().view];
-                    [BHTdownloadManager DownloadVideoWithURL:k.url completionHandler:^(NSURLResponse *response, NSURL *filePath, NSError *error) {
-                        if (error) {
-                            // show error alert
-                            [hud dismiss];
-                            [FLEXAlert showAlert:@"error :(" message:error.localizedFailureReason from:topMostController()];
-                        } else {
-                            [BHTdownloadManager showSaveingViewController:filePath];
-                            [hud dismiss];
-                        }
+                    [NSThread detachNewThreadWithBlock:^{
+                        [BHTdownloadManager DownloadVideoWithURL:k.url completionHandler:^(NSURL *filePath, NSError *error) {
+                            if (error) {
+                                dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                                    dispatch_async(dispatch_get_main_queue(), ^{
+                                        [hud dismiss];
+                                        [FLEXAlert showAlert:@"error :(" message:error.localizedFailureReason from:topMostController()];
+                                    });
+                                });
+                            } else {
+                                dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                                    dispatch_async(dispatch_get_main_queue(), ^{
+                                        [BHTdownloadManager showSaveingViewController:filePath];
+                                        [hud dismiss];
+                                    });
+                                });
+                            }
+                        }];
                     }];
                 }];
                 [alert addAction:download];
@@ -285,10 +303,17 @@
     [self.buttonBarView addSubview:self.voiceButton];
     
     TFNButton *lastButton = self.buttonBarView.leadingViews.lastObject;
-    [NSLayoutConstraint activateConstraints:@[
-        [self.voiceButton.centerYAnchor constraintEqualToAnchor:self.buttonBarView.centerYAnchor],
-        [self.voiceButton.leadingAnchor constraintEqualToAnchor:lastButton.trailingAnchor constant:self.buttonBarView.leadingViewsSpacing],
-    ]];
+    if ([BHTdownloadManager isLTR]) {
+        [NSLayoutConstraint activateConstraints:@[
+            [self.voiceButton.centerYAnchor constraintEqualToAnchor:self.buttonBarView.centerYAnchor],
+            [self.voiceButton.leadingAnchor constraintEqualToAnchor:lastButton.trailingAnchor constant:self.buttonBarView.leadingViewsSpacing],
+        ]];
+    } else {
+        [NSLayoutConstraint activateConstraints:@[
+            [self.voiceButton.centerYAnchor constraintEqualToAnchor:self.buttonBarView.centerYAnchor],
+            [self.voiceButton.trailingAnchor constraintEqualToAnchor:lastButton.leadingAnchor constant:self.buttonBarView.leadingViewsSpacing-40],
+        ]];
+    }
 }
 %end
 
@@ -373,7 +398,7 @@
 
 
 
-// Fix Login in non-JB (ipa)
+
 //%hook TFSKeychain
 //- (NSString *)providerDefaultAccessGroup {
 //    NSDictionary *query = [NSDictionary dictionaryWithObjectsAndKeys:
@@ -389,7 +414,7 @@
 //        if (status != errSecSuccess)
 //            return nil;
 //    NSString *accessGroup = [(__bridge NSDictionary *)result objectForKey:(__bridge NSString *)kSecAttrAccessGroup];
-//
+//    
 //    return accessGroup;
 //}
 //- (NSString *)providerSharedAccessGroup {
@@ -406,11 +431,11 @@
 //        if (status != errSecSuccess)
 //            return nil;
 //    NSString *accessGroup = [(__bridge NSDictionary *)result objectForKey:(__bridge NSString *)kSecAttrAccessGroup];
-//
+//    
 //    return accessGroup;
 //}
 //%end
-//
+
 //%hook TFSKeychainDefaultTwitterConfiguration
 //- (NSString *)defaultAccessGroup {
 //    NSDictionary *query = [NSDictionary dictionaryWithObjectsAndKeys:
@@ -426,7 +451,7 @@
 //        if (status != errSecSuccess)
 //            return nil;
 //    NSString *accessGroup = [(__bridge NSDictionary *)result objectForKey:(__bridge NSString *)kSecAttrAccessGroup];
-//
+//    
 //    return accessGroup;
 //}
 //- (NSString *)sharedAccessGroup {
@@ -443,8 +468,8 @@
 //        if (status != errSecSuccess)
 //            return nil;
 //    NSString *accessGroup = [(__bridge NSDictionary *)result objectForKey:(__bridge NSString *)kSecAttrAccessGroup];
-//
+//    
 //    return accessGroup;
 //}
 //%end
-//
+

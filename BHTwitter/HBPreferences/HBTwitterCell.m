@@ -10,11 +10,9 @@
 
 @implementation HBTwitterCell
 
-NSString *AccountURL;
-
 - (instancetype)initTwitterCellWithTitle:(NSString *)title detail:(NSString *)detail AccountLink:(NSString *)Aurl {
     HBTwitterCell *cell = [super init];
-    AccountURL = Aurl;
+    self.AccountURL = Aurl;
     
     [self setupUI:Aurl detail:detail title:title];
     
@@ -79,11 +77,11 @@ NSString *AccountURL;
 
 
 - (void)didSelectFromTable:(HBPreferences *)viewController {
-    if (AccountURL.length == 0) {
+    if (self.AccountURL.length == 0) {
         NSIndexPath *indexPath = [viewController.tableView indexPathForCell:self];
         [viewController.tableView deselectRowAtIndexPath:indexPath animated:YES];
     } else {
-        SFSafariViewController *SafariVC = [[SFSafariViewController alloc] initWithURL:[NSURL URLWithString:AccountURL]];
+        SFSafariViewController *SafariVC = [[SFSafariViewController alloc] initWithURL:[NSURL URLWithString:self.AccountURL]];
 //        [[UIApplication.sharedApplication windows][0].rootViewController.navigationController presentViewController:SafariVC animated:true completion:nil];
 //        [viewController.navigationController pushViewController:SafariVC animated:true];
         [viewController presentViewController:SafariVC animated:true completion:nil];

@@ -40,22 +40,24 @@
     [self setupStyle];
 }
 - (void)setupStyle {
-    if ([self isDarkMode]) {
-        [self setOverrideUserInterfaceStyle:UIUserInterfaceStyleDark];
-        [self.navigationController.navigationBar setOverrideUserInterfaceStyle:UIUserInterfaceStyleDark];
-        [self.navigationController setOverrideUserInterfaceStyle:UIUserInterfaceStyleDark];
-        [self.tableView setOverrideUserInterfaceStyle:UIUserInterfaceStyleDark];
-        [self.navigationController.navigationBar setTitleTextAttributes:@{
-            NSForegroundColorAttributeName: [UIColor whiteColor]
-        }];
-    } else {
-        [self setOverrideUserInterfaceStyle:UIUserInterfaceStyleLight];
-        [self.navigationController.navigationBar setOverrideUserInterfaceStyle:UIUserInterfaceStyleLight];
-        [self.navigationController setOverrideUserInterfaceStyle:UIUserInterfaceStyleLight];
-        [self.tableView setOverrideUserInterfaceStyle:UIUserInterfaceStyleLight];
-        [self.navigationController.navigationBar setTitleTextAttributes:@{
-            NSForegroundColorAttributeName: [UIColor blackColor]
-        }];
+    if (@available(iOS 13.0, *)) {
+        if ([self isDarkMode]) {
+            [self setOverrideUserInterfaceStyle:UIUserInterfaceStyleDark];
+            [self.navigationController.navigationBar setOverrideUserInterfaceStyle:UIUserInterfaceStyleDark];
+            [self.navigationController setOverrideUserInterfaceStyle:UIUserInterfaceStyleDark];
+            [self.tableView setOverrideUserInterfaceStyle:UIUserInterfaceStyleDark];
+            [self.navigationController.navigationBar setTitleTextAttributes:@{
+                NSForegroundColorAttributeName: [UIColor whiteColor]
+            }];
+        } else {
+            [self setOverrideUserInterfaceStyle:UIUserInterfaceStyleLight];
+            [self.navigationController.navigationBar setOverrideUserInterfaceStyle:UIUserInterfaceStyleLight];
+            [self.navigationController setOverrideUserInterfaceStyle:UIUserInterfaceStyleLight];
+            [self.tableView setOverrideUserInterfaceStyle:UIUserInterfaceStyleLight];
+            [self.navigationController.navigationBar setTitleTextAttributes:@{
+                NSForegroundColorAttributeName: [UIColor blackColor]
+            }];
+        }
     }
 }
 
