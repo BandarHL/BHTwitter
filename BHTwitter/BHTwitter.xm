@@ -24,96 +24,97 @@
 }
 %end
 
-%hook T1DirectMessageEntryMediaCell
-%new - (void)appendNewButton {
-    UIButton *newButton = [UIButton buttonWithType:UIButtonTypeCustom];
-    if (@available(iOS 13.0, *)) {
-        [newButton setImage:[UIImage systemImageNamed:@"arrow.down"] forState:UIControlStateNormal];
-    } else {
-        [newButton setImage:[UIImage imageNamed:@"/Library/Application Support/BHT/Ressources.bundle/Regular"] forState:UIControlStateNormal];
-    }
-    [newButton addTarget:self action:@selector(DownloadHandler) forControlEvents:UIControlEventTouchUpInside];
-    [newButton setTranslatesAutoresizingMaskIntoConstraints:false];
-    [newButton setTintColor:[UIColor colorFromHexString:@"6D6E70"]];
-    
-    if ([BHTdownloadManager isDMVideoCell:self.inlineMediaView]) {
-        if (self.messageEntryViewModel.isOutgoingMessage) {
-            [self addSubview:newButton];
-            [NSLayoutConstraint activateConstraints:@[
-                [newButton.heightAnchor constraintEqualToConstant:24],
-                [newButton.widthAnchor constraintEqualToConstant:30],
-                [newButton.bottomAnchor constraintEqualToAnchor:self.bottomAnchor constant:-10],
-                [newButton.leadingAnchor constraintEqualToAnchor:self.inlineMediaView.playerIconView.trailingAnchor]
-            ]];
-        } else {
-            [self addSubview:newButton];
-            [NSLayoutConstraint activateConstraints:@[
-                [newButton.heightAnchor constraintEqualToConstant:24],
-                [newButton.widthAnchor constraintEqualToConstant:30],
-                [newButton.bottomAnchor constraintEqualToAnchor:self.bottomAnchor constant:-10],
-                [newButton.leadingAnchor constraintEqualToAnchor:self.inlineMediaView.playerIconView.trailingAnchor]
-            ]];
-        }
-    }
-}
-%new - (void)DownloadHandler {
-    //    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"hi" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
-    //    T1PlayerMediaEntitySessionProducible *session = self.inlineMediaView.viewModel.playerSessionProducer.sessionProducible;
-    //    for (TFSTwitterEntityMediaVideoVariant *i in session.mediaEntity.videoInfo.variants) {
-    //        if ([i.contentType isEqualToString:@"video/mp4"]) {
-    //            UIAlertAction *download = [UIAlertAction actionWithTitle:[self getVideoQ:i.url] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-    //                JGProgressHUD *hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
-    //                [hud showInView:topMostController().view];
-    //                [BHTdownloadManager DownloadVideoWithURL:i.url completionHandler:^(NSURLResponse *response, NSURL *filePath, NSError *error) {
-    //                    if (error) {
-    //
-    //                        [hud dismiss];
-    //                        [FLEXAlert showAlert:@"error :(" message:error.localizedFailureReason from:topMostController()];
-    //                    } else {
-    //                        [hud dismiss];
-    //
-    //                        [[PHPhotoLibrary sharedPhotoLibrary] performChanges:^{
-    //                            [PHAssetChangeRequest creationRequestForAssetFromVideoAtFileURL:filePath];
-    //                        } completionHandler:^(BOOL success, NSError *error2) {
-    //                            if (error2) {
-    //                                [FLEXAlert showAlert:@"error :(" message:error2.localizedFailureReason from:topMostController()];
-    //                                [[NSFileManager defaultManager] removeItemAtURL:filePath error:nil];
-    //                            } else {
-    //                                [FLEXAlert showAlert:@"hi" message:@"Video successfully saved" from:topMostController()];
-    //                                [[NSFileManager defaultManager] removeItemAtURL:filePath error:nil];
-    //                            }
-    //                        }];
-    //                    }
-    //                }];
-    //            }];
-    //            [alert addAction:download];
-    //        }
-    //    }
-    //    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
-    //    [topMostController() presentViewController:alert animated:true completion:nil];
-}
-%new - (NSString *)getVideoQ:(NSString *)url {
-    NSMutableArray *q = [NSMutableArray new];
-    NSArray *splits = [url componentsSeparatedByString:@"/"];
-    for (int i = 0; i < [splits count]; i++) {
-        NSString *item = [splits objectAtIndex:i];
-        NSArray *dir = [item componentsSeparatedByString:@"x"];
-        for (int k = 0; k < [dir count]; k++) {
-            NSString *item2 = [dir objectAtIndex:k];
-            if (!(item2.length == 0)) {
-                if ([BHTdownloadManager doesContainDigitsOnly:item2]) {
-                    if (!(item2.integerValue > 10000)) {
-                        if (!(q.count == 2)) {
-                            [q addObject:item2];
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return [NSString stringWithFormat:@"%@x%@", q.firstObject, q.lastObject];
-}
-%end
+// save from DM (its working 100%, but i don't know where to add download button :)).
+//%hook T1DirectMessageEntryMediaCell
+//%new - (void)appendNewButton {
+//    UIButton *newButton = [UIButton buttonWithType:UIButtonTypeCustom];
+//    if (@available(iOS 13.0, *)) {
+//        [newButton setImage:[UIImage systemImageNamed:@"arrow.down"] forState:UIControlStateNormal];
+//    } else {
+//        [newButton setImage:[UIImage imageNamed:@"/Library/Application Support/BHT/Ressources.bundle/Regular"] forState:UIControlStateNormal];
+//    }
+//    [newButton addTarget:self action:@selector(DownloadHandler) forControlEvents:UIControlEventTouchUpInside];
+//    [newButton setTranslatesAutoresizingMaskIntoConstraints:false];
+//    [newButton setTintColor:[UIColor colorFromHexString:@"6D6E70"]];
+//    
+//    if ([BHTdownloadManager isDMVideoCell:self.inlineMediaView]) {
+//        if (self.messageEntryViewModel.isOutgoingMessage) {
+//            [self addSubview:newButton];
+//            [NSLayoutConstraint activateConstraints:@[
+//                [newButton.heightAnchor constraintEqualToConstant:24],
+//                [newButton.widthAnchor constraintEqualToConstant:30],
+//                [newButton.bottomAnchor constraintEqualToAnchor:self.bottomAnchor constant:-10],
+//                [newButton.leadingAnchor constraintEqualToAnchor:self.inlineMediaView.playerIconView.trailingAnchor]
+//            ]];
+//        } else {
+//            [self addSubview:newButton];
+//            [NSLayoutConstraint activateConstraints:@[
+//                [newButton.heightAnchor constraintEqualToConstant:24],
+//                [newButton.widthAnchor constraintEqualToConstant:30],
+//                [newButton.bottomAnchor constraintEqualToAnchor:self.bottomAnchor constant:-10],
+//                [newButton.leadingAnchor constraintEqualToAnchor:self.inlineMediaView.playerIconView.trailingAnchor]
+//            ]];
+//        }
+//    }
+//}
+//%new - (void)DownloadHandler {
+//    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"hi" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
+//    T1PlayerMediaEntitySessionProducible *session = self.inlineMediaView.viewModel.playerSessionProducer.sessionProducible;
+//    for (TFSTwitterEntityMediaVideoVariant *i in session.mediaEntity.videoInfo.variants) {
+//        if ([i.contentType isEqualToString:@"video/mp4"]) {
+//            UIAlertAction *download = [UIAlertAction actionWithTitle:[self getVideoQ:i.url] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+//                JGProgressHUD *hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
+//                [hud showInView:topMostController().view];
+//                [BHTdownloadManager DownloadVideoWithURL:i.url completionHandler:^(NSURLResponse *response, NSURL *filePath, NSError *error) {
+//                    if (error) {
+//                        
+//                        [hud dismiss];
+//                        [FLEXAlert showAlert:@"error :(" message:error.localizedFailureReason from:topMostController()];
+//                    } else {
+//                        [hud dismiss];
+//                        
+//                        [[PHPhotoLibrary sharedPhotoLibrary] performChanges:^{
+//                            [PHAssetChangeRequest creationRequestForAssetFromVideoAtFileURL:filePath];
+//                        } completionHandler:^(BOOL success, NSError *error2) {
+//                            if (error2) {
+//                                [FLEXAlert showAlert:@"error :(" message:error2.localizedFailureReason from:topMostController()];
+//                                [[NSFileManager defaultManager] removeItemAtURL:filePath error:nil];
+//                            } else {
+//                                [FLEXAlert showAlert:@"hi" message:@"Video successfully saved" from:topMostController()];
+//                                [[NSFileManager defaultManager] removeItemAtURL:filePath error:nil];
+//                            }
+//                        }];
+//                    }
+//                }];
+//            }];
+//            [alert addAction:download];
+//        }
+//    }
+//    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+//    [topMostController() presentViewController:alert animated:true completion:nil];
+//}
+//%new - (NSString *)getVideoQ:(NSString *)url {
+//    NSMutableArray *q = [NSMutableArray new];
+//    NSArray *splits = [url componentsSeparatedByString:@"/"];
+//    for (int i = 0; i < [splits count]; i++) {
+//        NSString *item = [splits objectAtIndex:i];
+//        NSArray *dir = [item componentsSeparatedByString:@"x"];
+//        for (int k = 0; k < [dir count]; k++) {
+//            NSString *item2 = [dir objectAtIndex:k];
+//            if (!(item2.length == 0)) {
+//                if ([BHTdownloadManager doesContainDigitsOnly:item2]) {
+//                    if (!(item2.integerValue > 10000)) {
+//                        if (!(q.count == 2)) {
+//                            [q addObject:item2];
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
+//    return [NSString stringWithFormat:@"%@x%@", q.firstObject, q.lastObject];
+//}
+//%end
 
 
 %hook T1StandardStatusView
@@ -398,7 +399,7 @@
 
 
 
-
+// Fix login keychain in non-JB (IPA).
 //%hook TFSKeychain
 //- (NSString *)providerDefaultAccessGroup {
 //    NSDictionary *query = [NSDictionary dictionaryWithObjectsAndKeys:
