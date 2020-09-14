@@ -20,12 +20,14 @@
 #import "HBPreferences/HBLinkCell.h"
 #import "FCFileManager.h"
 
-@interface BHTdownloadManager : NSObject
-+ (void)DownloadVideoWithURL:(NSString *)url completionHandler:(void (^)(NSURL *filePath, NSError *error))completionHandler;
+@interface BHTManager : NSObject
++ (NSString *)getDownloadingPersent:(float)per;
++ (void)cleanCache;
++ (NSString *)getVideoQuality:(NSString *)url;
 + (BOOL)isVideoCell:(T1StatusInlineActionsView *)cell;
-+ (BOOL)isDMVideoCell:(T1InlineMediaView *)cell;
++ (bool)isDMVideoCell:(T1InlineMediaView *)view;
 + (BOOL)doesContainDigitsOnly:(NSString *)string;
 + (void)showSettings:(UIViewController *)_self;
-+ (void)showSaveingViewController:(NSURL *)url;
++ (void)showSaveVC:(NSURL *)url;
 + (BOOL)isLTR;
 @end

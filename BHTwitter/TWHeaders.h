@@ -5,6 +5,7 @@
 //  Created by BandarHelal on 23/12/1441 AH.
 //
 #import <objc/runtime.h>
+#import "BHDownload.h"
 
 @interface TFNItemsDataViewControllerBackingStore
 - (void)insertSection:(id)arg1 atIndex:(long long)arg2;
@@ -51,7 +52,6 @@
 @property(nonatomic, readonly) TFSTwitterEntitySet *entities;
 @end
 
-
 @interface T1StatusInlineActionsView : UIView
 {
     NSMutableArray *_inlineActionButtons;
@@ -60,7 +60,9 @@
 @property(readonly, nonatomic) id <T1StatusViewModel> viewModel;
 @property(retain, nonatomic) NSMutableArray *inlineActionButtons;
 - (void)DownloadHandler;
-- (NSString *)getVideoQ:(NSString *)url;
+@end
+
+@interface T1StatusInlineActionsView () <BHDownloadDelegate>
 @end
 
 @interface T1StandardStatusView : UIView
@@ -109,9 +111,10 @@
 @end
 
 @interface T1InlineMediaView : UIView
-@property(retain, nonatomic) id <T1InlineMediaViewModel> viewModel;
-@property(readonly, nonatomic) UIImageView *previewImageView;
-@property(retain, nonatomic) UIView *playerIconView;
+@property (retain, nonatomic) id <T1InlineMediaViewModel> viewModel;
+@property (readonly, nonatomic) UIImageView *previewImageView;
+@property (retain, nonatomic) UIView *playerIconView;
+@property (nonatomic, assign, readwrite) NSUInteger playerIconViewType;
 @end
 
 @interface T1DirectMessageAbstractConversationEntryViewModel : NSObject
@@ -135,11 +138,11 @@
 - (void)dealloc;
 - (void)layoutSubviews;
 - (id)initWithFrame:(struct CGRect)arg1;
-- (void)appendNewButton;
 - (void)DownloadHandler;
-- (NSString *)getVideoQ:(NSString *)url;
 @end
 
+@interface T1DirectMessageEntryMediaCell () <BHDownloadDelegate>
+@end
 
 static UIViewController *_topMostController(UIViewController *cont)
 {
@@ -162,8 +165,4 @@ static UIViewController *topMostController() {
         topController = next;
     }
     return topController;
-}
-static UIWindow *newWindow() {
-    UIWindow *win = [[[UIApplication sharedApplication] delegate] window];
-    return win;
 }

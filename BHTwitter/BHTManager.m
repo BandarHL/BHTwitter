@@ -12,6 +12,49 @@
 @end
 
 @implementation BHTManager
++ (bool)isDMVideoCell:(T1InlineMediaView *)view {
+    if (view.playerIconViewType == 4) {
+        return true;
+    } else {
+        return false;
+    }
+}
++ (void)cleanCache {
+    NSArray <NSURL *> *files = [[NSFileManager defaultManager] contentsOfDirectoryAtURL:[NSURL fileURLWithPath:NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true).firstObject] includingPropertiesForKeys:@[] options:NSDirectoryEnumerationSkipsHiddenFiles error:nil];
+    
+    for (NSURL *file in files) {
+        if ([file.pathExtension isEqualToString:@"mp4"]) {
+            [[NSFileManager defaultManager] removeItemAtURL:file error:nil];
+        }
+    }
+}
++ (NSString *)getDownloadingPersent:(float)per {
+    NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
+    [numberFormatter setNumberStyle:NSNumberFormatterPercentStyle];
+    NSNumber *number = [NSNumber numberWithFloat:per];
+    return [numberFormatter stringFromNumber:number];
+}
++ (NSString *)getVideoQuality:(NSString *)url {
+    NSMutableArray *q = [NSMutableArray new];
+    NSArray *splits = [url componentsSeparatedByString:@"/"];
+    for (int i = 0; i < [splits count]; i++) {
+        NSString *item = [splits objectAtIndex:i];
+        NSArray *dir = [item componentsSeparatedByString:@"x"];
+        for (int k = 0; k < [dir count]; k++) {
+            NSString *item2 = [dir objectAtIndex:k];
+            if (!(item2.length == 0)) {
+                if ([BHTManager doesContainDigitsOnly:item2]) {
+                    if (!(item2.integerValue > 10000)) {
+                        if (!(q.count == 2)) {
+                            [q addObject:item2];
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return [NSString stringWithFormat:@"%@x%@", q.firstObject, q.lastObject];
+}
 + (BOOL)isVideoCell:(T1StatusInlineActionsView *)cell {
     TFSTwitterEntityMedia *i = cell.viewModel.entities.media.firstObject;
     if (i.videoInfo == nil) {
@@ -20,14 +63,6 @@
         return true;
     }
 }
-+ (BOOL)isDMVideoCell:(T1InlineMediaView *)cell {
-    if (cell.playerIconView == nil) {
-        return false;
-    } else {
-        return true;
-    }
-}
-
 + (BOOL)isLTR {
     if ([UIApplication sharedApplication].userInterfaceLayoutDirection == UIUserInterfaceLayoutDirectionRightToLeft) {
         return false;
@@ -36,7 +71,7 @@
     }
 }
 
-+ (void)showSaveingViewController:(NSURL *)url {
++ (void)showSaveVC:(NSURL *)url {
     UIActivityViewController *acVC = [[UIActivityViewController alloc] initWithActivityItems:@[url] applicationActivities:nil];
     [topMostController() presentViewController:acVC animated:true completion:nil];
 }
