@@ -7,10 +7,6 @@
 
 #import "BHTManager.h"
 
-@interface BHTManager () <NSURLSessionDelegate>
-@property (nonatomic, strong) NSURLSession *session;
-@end
-
 @implementation BHTManager
 + (bool)isDMVideoCell:(T1InlineMediaView *)view {
     if (view.playerIconViewType == 4) {
