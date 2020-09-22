@@ -7,12 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		50198012250E053900207745 /* BHDownload.h in Headers */ = {isa = PBXBuildFile; fileRef = 50198010250E053900207745 /* BHDownload.h */; };
+		50198013250E053900207745 /* BHDownload.m in Sources */ = {isa = PBXBuildFile; fileRef = 50198011250E053900207745 /* BHDownload.m */; };
 		5020A87824E758E00080F292 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5020A87724E758E00080F292 /* UIKit.framework */; };
 		5020A87A24E758E00080F292 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5020A87924E758E00080F292 /* Foundation.framework */; };
 		5020A88524E758E00080F292 /* BHTwitter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5020A88424E758E00080F292 /* BHTwitter.mm */; };
 		5020A8D824E759190080F292 /* TWHeaders.h in Headers */ = {isa = PBXBuildFile; fileRef = 5020A8D524E759190080F292 /* TWHeaders.h */; };
-		5020A8D924E759190080F292 /* BHTdownloadManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 5020A8D624E759190080F292 /* BHTdownloadManager.h */; };
-		5020A8DA24E759190080F292 /* BHTdownloadManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 5020A8D724E759190080F292 /* BHTdownloadManager.m */; };
+		5020A8D924E759190080F292 /* BHTManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 5020A8D624E759190080F292 /* BHTManager.h */; };
+		5020A8DA24E759190080F292 /* BHTManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 5020A8D724E759190080F292 /* BHTManager.m */; };
 		5020A8E624E759230080F292 /* ALActionBlocks.h in Headers */ = {isa = PBXBuildFile; fileRef = 5020A8DC24E759230080F292 /* ALActionBlocks.h */; };
 		5020A8E724E759230080F292 /* ALActionBlockWrapper.m in Sources */ = {isa = PBXBuildFile; fileRef = 5020A8DD24E759230080F292 /* ALActionBlockWrapper.m */; };
 		5020A8E824E759230080F292 /* UIGestureRecognizer+ALActionBlocks.h in Headers */ = {isa = PBXBuildFile; fileRef = 5020A8DE24E759230080F292 /* UIGestureRecognizer+ALActionBlocks.h */; };
@@ -161,22 +163,6 @@
 		5020AA0424E759290080F292 /* NSBezierPath+RoundedCorners.m in Sources */ = {isa = PBXBuildFile; fileRef = 5020A97A24E759290080F292 /* NSBezierPath+RoundedCorners.m */; };
 		5020AA0524E759290080F292 /* UIColor+HexString.m in Sources */ = {isa = PBXBuildFile; fileRef = 5020A97B24E759290080F292 /* UIColor+HexString.m */; };
 		5020AA0624E759290080F292 /* SDAssociatedObject.m in Sources */ = {isa = PBXBuildFile; fileRef = 5020A97C24E759290080F292 /* SDAssociatedObject.m */; };
-		5020AA1824E759350080F292 /* HBCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 5020AA0824E759340080F292 /* HBCell.m */; };
-		5020AA1924E759350080F292 /* HBSection.h in Headers */ = {isa = PBXBuildFile; fileRef = 5020AA0924E759340080F292 /* HBSection.h */; };
-		5020AA1A24E759350080F292 /* HBButtonCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 5020AA0A24E759340080F292 /* HBButtonCell.m */; };
-		5020AA1B24E759350080F292 /* HBLinkCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 5020AA0B24E759350080F292 /* HBLinkCell.m */; };
-		5020AA1C24E759350080F292 /* HBTwitterCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 5020AA0C24E759350080F292 /* HBTwitterCell.m */; };
-		5020AA1D24E759350080F292 /* HBPreferences.h in Headers */ = {isa = PBXBuildFile; fileRef = 5020AA0D24E759350080F292 /* HBPreferences.h */; };
-		5020AA1E24E759350080F292 /* HBSwitchCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 5020AA0E24E759350080F292 /* HBSwitchCell.m */; };
-		5020AA1F24E759350080F292 /* HBGithubCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 5020AA0F24E759350080F292 /* HBGithubCell.m */; };
-		5020AA2024E759350080F292 /* HBSection.m in Sources */ = {isa = PBXBuildFile; fileRef = 5020AA1024E759350080F292 /* HBSection.m */; };
-		5020AA2124E759350080F292 /* HBCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 5020AA1124E759350080F292 /* HBCell.h */; };
-		5020AA2224E759350080F292 /* HBTwitterCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 5020AA1224E759350080F292 /* HBTwitterCell.h */; };
-		5020AA2324E759350080F292 /* HBLinkCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 5020AA1324E759350080F292 /* HBLinkCell.h */; };
-		5020AA2424E759350080F292 /* HBButtonCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 5020AA1424E759350080F292 /* HBButtonCell.h */; };
-		5020AA2524E759350080F292 /* HBSwitchCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 5020AA1524E759350080F292 /* HBSwitchCell.h */; };
-		5020AA2624E759350080F292 /* HBPreferences.m in Sources */ = {isa = PBXBuildFile; fileRef = 5020AA1624E759350080F292 /* HBPreferences.m */; };
-		5020AA2724E759350080F292 /* HBGithubCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 5020AA1724E759350080F292 /* HBGithubCell.h */; };
 		5020AA4324E759390080F292 /* JGProgressHUDIndeterminateIndicatorView.m in Sources */ = {isa = PBXBuildFile; fileRef = 5020AA2924E759390080F292 /* JGProgressHUDIndeterminateIndicatorView.m */; };
 		5020AA4424E759390080F292 /* JGProgressHUDErrorIndicatorView.m in Sources */ = {isa = PBXBuildFile; fileRef = 5020AA2A24E759390080F292 /* JGProgressHUDErrorIndicatorView.m */; };
 		5020AA4524E759390080F292 /* JGProgressHUDAnimation.m in Sources */ = {isa = PBXBuildFile; fileRef = 5020AA2B24E759390080F292 /* JGProgressHUDAnimation.m */; };
@@ -219,6 +205,23 @@
 		5020AA7924E759960080F292 /* SafariServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5020AA7824E759960080F292 /* SafariServices.framework */; };
 		5020AA7B24E7599B0080F292 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5020AA7A24E7599B0080F292 /* Security.framework */; };
 		5020AA7D24E759A20080F292 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5020AA7C24E759A20080F292 /* QuartzCore.framework */; };
+		503F4EB925173F2D00D05033 /* HBCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 503F4EA925173F2D00D05033 /* HBCell.m */; };
+		503F4EBA25173F2D00D05033 /* HBSection.h in Headers */ = {isa = PBXBuildFile; fileRef = 503F4EAA25173F2D00D05033 /* HBSection.h */; };
+		503F4EBB25173F2D00D05033 /* HBButtonCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 503F4EAB25173F2D00D05033 /* HBButtonCell.m */; };
+		503F4EBC25173F2D00D05033 /* HBLinkCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 503F4EAC25173F2D00D05033 /* HBLinkCell.m */; };
+		503F4EBD25173F2D00D05033 /* HBTwitterCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 503F4EAD25173F2D00D05033 /* HBTwitterCell.m */; };
+		503F4EBE25173F2D00D05033 /* HBPreferences.h in Headers */ = {isa = PBXBuildFile; fileRef = 503F4EAE25173F2D00D05033 /* HBPreferences.h */; };
+		503F4EBF25173F2D00D05033 /* HBSwitchCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 503F4EAF25173F2D00D05033 /* HBSwitchCell.m */; };
+		503F4EC025173F2D00D05033 /* HBGithubCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 503F4EB025173F2D00D05033 /* HBGithubCell.m */; };
+		503F4EC125173F2D00D05033 /* HBSection.m in Sources */ = {isa = PBXBuildFile; fileRef = 503F4EB125173F2D00D05033 /* HBSection.m */; };
+		503F4EC225173F2D00D05033 /* HBCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 503F4EB225173F2D00D05033 /* HBCell.h */; };
+		503F4EC325173F2D00D05033 /* HBTwitterCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 503F4EB325173F2D00D05033 /* HBTwitterCell.h */; };
+		503F4EC425173F2D00D05033 /* HBLinkCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 503F4EB425173F2D00D05033 /* HBLinkCell.h */; };
+		503F4EC525173F2D00D05033 /* HBButtonCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 503F4EB525173F2D00D05033 /* HBButtonCell.h */; };
+		503F4EC625173F2D00D05033 /* HBSwitchCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 503F4EB625173F2D00D05033 /* HBSwitchCell.h */; };
+		503F4EC725173F2D00D05033 /* HBPreferences.m in Sources */ = {isa = PBXBuildFile; fileRef = 503F4EB725173F2D00D05033 /* HBPreferences.m */; };
+		503F4EC825173F2D00D05033 /* HBGithubCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 503F4EB825173F2D00D05033 /* HBGithubCell.h */; };
+		50E7ABEF24F5A8F700A8619D /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 50E7ABEE24F5A8F600A8619D /* WebKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -226,6 +229,8 @@
 		500B311B24E872F0007531B1 /* libsubstrate.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libsubstrate.dylib; path = ../../../../opt/MonkeyDev/Frameworks/libsubstrate.dylib; sourceTree = "<group>"; };
 		500B314524E87351007531B1 /* CydiaSubstrate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CydiaSubstrate.framework; path = Library/Frameworks/CydiaSubstrate.framework; sourceTree = DEVELOPER_DIR; };
 		500B314924E87414007531B1 /* libsubstrate.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libsubstrate.dylib; path = ../../../../opt/libsubstrate.dylib; sourceTree = "<group>"; };
+		50198010250E053900207745 /* BHDownload.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BHDownload.h; sourceTree = "<group>"; };
+		50198011250E053900207745 /* BHDownload.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BHDownload.m; sourceTree = "<group>"; };
 		5020A87424E758E00080F292 /* BHTwitter.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = BHTwitter.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		5020A87724E758E00080F292 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		5020A87924E758E00080F292 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -236,8 +241,8 @@
 		5020A88424E758E00080F292 /* BHTwitter.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = BHTwitter.mm; sourceTree = "<group>"; };
 		5020A88924E758E00080F292 /* BHTwitter.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = BHTwitter.plist; sourceTree = "<group>"; };
 		5020A8D524E759190080F292 /* TWHeaders.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TWHeaders.h; sourceTree = "<group>"; };
-		5020A8D624E759190080F292 /* BHTdownloadManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BHTdownloadManager.h; sourceTree = "<group>"; };
-		5020A8D724E759190080F292 /* BHTdownloadManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BHTdownloadManager.m; sourceTree = "<group>"; };
+		5020A8D624E759190080F292 /* BHTManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BHTManager.h; sourceTree = "<group>"; };
+		5020A8D724E759190080F292 /* BHTManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BHTManager.m; sourceTree = "<group>"; };
 		5020A8DC24E759230080F292 /* ALActionBlocks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ALActionBlocks.h; sourceTree = "<group>"; };
 		5020A8DD24E759230080F292 /* ALActionBlockWrapper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ALActionBlockWrapper.m; sourceTree = "<group>"; };
 		5020A8DE24E759230080F292 /* UIGestureRecognizer+ALActionBlocks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIGestureRecognizer+ALActionBlocks.h"; sourceTree = "<group>"; };
@@ -386,22 +391,6 @@
 		5020A97A24E759290080F292 /* NSBezierPath+RoundedCorners.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSBezierPath+RoundedCorners.m"; sourceTree = "<group>"; };
 		5020A97B24E759290080F292 /* UIColor+HexString.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIColor+HexString.m"; sourceTree = "<group>"; };
 		5020A97C24E759290080F292 /* SDAssociatedObject.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SDAssociatedObject.m; sourceTree = "<group>"; };
-		5020AA0824E759340080F292 /* HBCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HBCell.m; sourceTree = "<group>"; };
-		5020AA0924E759340080F292 /* HBSection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HBSection.h; sourceTree = "<group>"; };
-		5020AA0A24E759340080F292 /* HBButtonCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HBButtonCell.m; sourceTree = "<group>"; };
-		5020AA0B24E759350080F292 /* HBLinkCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HBLinkCell.m; sourceTree = "<group>"; };
-		5020AA0C24E759350080F292 /* HBTwitterCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HBTwitterCell.m; sourceTree = "<group>"; };
-		5020AA0D24E759350080F292 /* HBPreferences.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HBPreferences.h; sourceTree = "<group>"; };
-		5020AA0E24E759350080F292 /* HBSwitchCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HBSwitchCell.m; sourceTree = "<group>"; };
-		5020AA0F24E759350080F292 /* HBGithubCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HBGithubCell.m; sourceTree = "<group>"; };
-		5020AA1024E759350080F292 /* HBSection.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HBSection.m; sourceTree = "<group>"; };
-		5020AA1124E759350080F292 /* HBCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HBCell.h; sourceTree = "<group>"; };
-		5020AA1224E759350080F292 /* HBTwitterCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HBTwitterCell.h; sourceTree = "<group>"; };
-		5020AA1324E759350080F292 /* HBLinkCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HBLinkCell.h; sourceTree = "<group>"; };
-		5020AA1424E759350080F292 /* HBButtonCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HBButtonCell.h; sourceTree = "<group>"; };
-		5020AA1524E759350080F292 /* HBSwitchCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HBSwitchCell.h; sourceTree = "<group>"; };
-		5020AA1624E759350080F292 /* HBPreferences.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HBPreferences.m; sourceTree = "<group>"; };
-		5020AA1724E759350080F292 /* HBGithubCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HBGithubCell.h; sourceTree = "<group>"; };
 		5020AA2924E759390080F292 /* JGProgressHUDIndeterminateIndicatorView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = JGProgressHUDIndeterminateIndicatorView.m; sourceTree = "<group>"; };
 		5020AA2A24E759390080F292 /* JGProgressHUDErrorIndicatorView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = JGProgressHUDErrorIndicatorView.m; sourceTree = "<group>"; };
 		5020AA2B24E759390080F292 /* JGProgressHUDAnimation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = JGProgressHUDAnimation.m; sourceTree = "<group>"; };
@@ -444,6 +433,23 @@
 		5020AA7824E759960080F292 /* SafariServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SafariServices.framework; path = System/Library/Frameworks/SafariServices.framework; sourceTree = SDKROOT; };
 		5020AA7A24E7599B0080F292 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		5020AA7C24E759A20080F292 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		503F4EA925173F2D00D05033 /* HBCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HBCell.m; sourceTree = "<group>"; };
+		503F4EAA25173F2D00D05033 /* HBSection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HBSection.h; sourceTree = "<group>"; };
+		503F4EAB25173F2D00D05033 /* HBButtonCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HBButtonCell.m; sourceTree = "<group>"; };
+		503F4EAC25173F2D00D05033 /* HBLinkCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HBLinkCell.m; sourceTree = "<group>"; };
+		503F4EAD25173F2D00D05033 /* HBTwitterCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HBTwitterCell.m; sourceTree = "<group>"; };
+		503F4EAE25173F2D00D05033 /* HBPreferences.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HBPreferences.h; sourceTree = "<group>"; };
+		503F4EAF25173F2D00D05033 /* HBSwitchCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HBSwitchCell.m; sourceTree = "<group>"; };
+		503F4EB025173F2D00D05033 /* HBGithubCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HBGithubCell.m; sourceTree = "<group>"; };
+		503F4EB125173F2D00D05033 /* HBSection.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HBSection.m; sourceTree = "<group>"; };
+		503F4EB225173F2D00D05033 /* HBCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HBCell.h; sourceTree = "<group>"; };
+		503F4EB325173F2D00D05033 /* HBTwitterCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HBTwitterCell.h; sourceTree = "<group>"; };
+		503F4EB425173F2D00D05033 /* HBLinkCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HBLinkCell.h; sourceTree = "<group>"; };
+		503F4EB525173F2D00D05033 /* HBButtonCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HBButtonCell.h; sourceTree = "<group>"; };
+		503F4EB625173F2D00D05033 /* HBSwitchCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HBSwitchCell.h; sourceTree = "<group>"; };
+		503F4EB725173F2D00D05033 /* HBPreferences.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HBPreferences.m; sourceTree = "<group>"; };
+		503F4EB825173F2D00D05033 /* HBGithubCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HBGithubCell.h; sourceTree = "<group>"; };
+		50E7ABEE24F5A8F600A8619D /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -451,6 +457,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				50E7ABEF24F5A8F700A8619D /* WebKit.framework in Frameworks */,
 				5020AA6F24E759790080F292 /* CoreGraphics.framework in Frameworks */,
 				5020AA7D24E759A20080F292 /* QuartzCore.framework in Frameworks */,
 				5020AA7324E759860080F292 /* Photos.framework in Frameworks */,
@@ -490,6 +497,7 @@
 		5020A87624E758E00080F292 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				50E7ABEE24F5A8F600A8619D /* WebKit.framework */,
 				500B311B24E872F0007531B1 /* libsubstrate.dylib */,
 				500B314924E87414007531B1 /* libsubstrate.dylib */,
 				500B311724E86DEC007531B1 /* libsubstitute.dylib */,
@@ -518,16 +526,18 @@
 				5020A88324E758E00080F292 /* BHTwitter.xm */,
 				5020A88424E758E00080F292 /* BHTwitter.mm */,
 				5020A8D524E759190080F292 /* TWHeaders.h */,
-				5020A8D624E759190080F292 /* BHTdownloadManager.h */,
-				5020A8D724E759190080F292 /* BHTdownloadManager.m */,
+				50198010250E053900207745 /* BHDownload.h */,
+				50198011250E053900207745 /* BHDownload.m */,
+				5020A8D624E759190080F292 /* BHTManager.h */,
+				5020A8D724E759190080F292 /* BHTManager.m */,
 				5020AA5C24E759590080F292 /* FLEXAlert.h */,
 				5020AA5D24E759590080F292 /* FLEXAlert.m */,
 				5020AA5E24E759590080F292 /* Colours.h */,
 				5020AA6024E759590080F292 /* Colours.m */,
 				5020AA6124E759590080F292 /* FCFileManager.h */,
 				5020AA5F24E759590080F292 /* FCFileManager.m */,
+				503F4EA825173F2D00D05033 /* HBPreferences */,
 				5020AA2824E759390080F292 /* JGProgressHUD */,
-				5020AA0724E759340080F292 /* HBPreferences */,
 				5020A8F024E759290080F292 /* SDWebImage */,
 				5020A8DB24E759230080F292 /* ALActionBlocks */,
 				5020A87E24E758E00080F292 /* Package */,
@@ -763,29 +773,6 @@
 			path = Private;
 			sourceTree = "<group>";
 		};
-		5020AA0724E759340080F292 /* HBPreferences */ = {
-			isa = PBXGroup;
-			children = (
-				5020AA0824E759340080F292 /* HBCell.m */,
-				5020AA0924E759340080F292 /* HBSection.h */,
-				5020AA0A24E759340080F292 /* HBButtonCell.m */,
-				5020AA0B24E759350080F292 /* HBLinkCell.m */,
-				5020AA0C24E759350080F292 /* HBTwitterCell.m */,
-				5020AA0D24E759350080F292 /* HBPreferences.h */,
-				5020AA0E24E759350080F292 /* HBSwitchCell.m */,
-				5020AA0F24E759350080F292 /* HBGithubCell.m */,
-				5020AA1024E759350080F292 /* HBSection.m */,
-				5020AA1124E759350080F292 /* HBCell.h */,
-				5020AA1224E759350080F292 /* HBTwitterCell.h */,
-				5020AA1324E759350080F292 /* HBLinkCell.h */,
-				5020AA1424E759350080F292 /* HBButtonCell.h */,
-				5020AA1524E759350080F292 /* HBSwitchCell.h */,
-				5020AA1624E759350080F292 /* HBPreferences.m */,
-				5020AA1724E759350080F292 /* HBGithubCell.h */,
-			);
-			path = HBPreferences;
-			sourceTree = "<group>";
-		};
 		5020AA2824E759390080F292 /* JGProgressHUD */ = {
 			isa = PBXGroup;
 			children = (
@@ -826,6 +813,29 @@
 			path = include;
 			sourceTree = "<group>";
 		};
+		503F4EA825173F2D00D05033 /* HBPreferences */ = {
+			isa = PBXGroup;
+			children = (
+				503F4EA925173F2D00D05033 /* HBCell.m */,
+				503F4EAA25173F2D00D05033 /* HBSection.h */,
+				503F4EAB25173F2D00D05033 /* HBButtonCell.m */,
+				503F4EAC25173F2D00D05033 /* HBLinkCell.m */,
+				503F4EAD25173F2D00D05033 /* HBTwitterCell.m */,
+				503F4EAE25173F2D00D05033 /* HBPreferences.h */,
+				503F4EAF25173F2D00D05033 /* HBSwitchCell.m */,
+				503F4EB025173F2D00D05033 /* HBGithubCell.m */,
+				503F4EB125173F2D00D05033 /* HBSection.m */,
+				503F4EB225173F2D00D05033 /* HBCell.h */,
+				503F4EB325173F2D00D05033 /* HBTwitterCell.h */,
+				503F4EB425173F2D00D05033 /* HBLinkCell.h */,
+				503F4EB525173F2D00D05033 /* HBButtonCell.h */,
+				503F4EB625173F2D00D05033 /* HBSwitchCell.h */,
+				503F4EB725173F2D00D05033 /* HBPreferences.m */,
+				503F4EB825173F2D00D05033 /* HBGithubCell.h */,
+			);
+			path = HBPreferences;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -834,7 +844,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				5020A9E724E759290080F292 /* SDMemoryCache.h in Headers */,
-				5020AA1D24E759350080F292 /* HBPreferences.h in Headers */,
 				5020AA4624E759390080F292 /* JGProgressHUDSuccessIndicatorView.h in Headers */,
 				5020A9DC24E759290080F292 /* UIImage+ForceDecode.h in Headers */,
 				5020A9EE24E759290080F292 /* SDDeviceHelper.h in Headers */,
@@ -849,6 +858,7 @@
 				5020A9A724E759290080F292 /* SDWebImageDownloaderRequestModifier.h in Headers */,
 				5020AA5124E759390080F292 /* JGProgressHUDIndeterminateIndicatorView.h in Headers */,
 				5020A9C324E759290080F292 /* UIImageView+HighlightedWebCache.h in Headers */,
+				503F4EBA25173F2D00D05033 /* HBSection.h in Headers */,
 				5020A98824E759290080F292 /* NSData+ImageContentType.h in Headers */,
 				5020A9F724E759290080F292 /* UIColor+HexString.h in Headers */,
 				5020A9E424E759290080F292 /* SDImageAPNGCoder.h in Headers */,
@@ -861,6 +871,7 @@
 				5020A97F24E759290080F292 /* SDAnimatedImageRep.h in Headers */,
 				5020A98E24E759290080F292 /* SDImageLoadersManager.h in Headers */,
 				5020A9E524E759290080F292 /* SDWebImageError.h in Headers */,
+				503F4EC425173F2D00D05033 /* HBLinkCell.h in Headers */,
 				5020AA4924E759390080F292 /* JGProgressHUD.h in Headers */,
 				5020A9FA24E759290080F292 /* SDImageHEICCoderInternal.h in Headers */,
 				5020A9D324E759290080F292 /* SDWebImageCacheSerializer.h in Headers */,
@@ -871,8 +882,8 @@
 				5020A99224E759290080F292 /* SDImageFrame.h in Headers */,
 				5020A9B424E759290080F292 /* SDWebImageDefine.h in Headers */,
 				5020A9D624E759290080F292 /* SDWebImageDownloader.h in Headers */,
+				503F4EC625173F2D00D05033 /* HBSwitchCell.h in Headers */,
 				5020A9E224E759290080F292 /* SDWebImagePrefetcher.h in Headers */,
-				5020AA2424E759350080F292 /* HBButtonCell.h in Headers */,
 				5020A9FB24E759290080F292 /* SDImageIOAnimatedCoderInternal.h in Headers */,
 				5020A8D824E759190080F292 /* TWHeaders.h in Headers */,
 				5020AA4B24E759390080F292 /* JGProgressHUDPieIndicatorView.h in Headers */,
@@ -880,12 +891,16 @@
 				5020A99324E759290080F292 /* SDImageGIFCoder.h in Headers */,
 				5020AA5224E759390080F292 /* JGProgressHUDFadeZoomAnimation.h in Headers */,
 				5020A99024E759290080F292 /* SDWebImageDownloaderOperation.h in Headers */,
+				503F4EC325173F2D00D05033 /* HBTwitterCell.h in Headers */,
 				5020AA4A24E759390080F292 /* JGProgressHUDShadow.h in Headers */,
 				5020AA6424E759590080F292 /* Colours.h in Headers */,
 				5020A9B324E759290080F292 /* UIView+WebCacheOperation.h in Headers */,
+				503F4EBE25173F2D00D05033 /* HBPreferences.h in Headers */,
 				5020A99D24E759290080F292 /* UIImage+MemoryCacheCost.h in Headers */,
 				5020A9E324E759290080F292 /* SDWebImageDownloaderResponseModifier.h in Headers */,
+				50198012250E053900207745 /* BHDownload.h in Headers */,
 				5020A9AA24E759290080F292 /* UIImage+Metadata.h in Headers */,
+				503F4EC825173F2D00D05033 /* HBGithubCell.h in Headers */,
 				5020A98724E759290080F292 /* UIImageView+WebCache.h in Headers */,
 				5020AA6724E759590080F292 /* FCFileManager.h in Headers */,
 				5020A98324E759290080F292 /* SDImageIOCoder.h in Headers */,
@@ -895,9 +910,8 @@
 				5020A9B624E759290080F292 /* SDImageCoder.h in Headers */,
 				5020AA6224E759590080F292 /* FLEXAlert.h in Headers */,
 				5020A9E624E759290080F292 /* SDWebImageCompat.h in Headers */,
-				5020AA1924E759350080F292 /* HBSection.h in Headers */,
 				5020A98624E759290080F292 /* SDImageGraphics.h in Headers */,
-				5020A8D924E759190080F292 /* BHTdownloadManager.h in Headers */,
+				5020A8D924E759190080F292 /* BHTManager.h in Headers */,
 				5020A99924E759290080F292 /* SDImageCacheConfig.h in Headers */,
 				5020A9B224E759290080F292 /* UIView+WebCache.h in Headers */,
 				5020A99424E759290080F292 /* SDImageCache.h in Headers */,
@@ -912,10 +926,10 @@
 				5020A9CF24E759290080F292 /* SDWebImageOperation.h in Headers */,
 				5020A8E924E759230080F292 /* UIControl+ALActionBlocks.h in Headers */,
 				5020A97D24E759290080F292 /* UIImage+ExtendedCacheData.h in Headers */,
+				503F4EC225173F2D00D05033 /* HBCell.h in Headers */,
 				5020AA0224E759290080F292 /* SDImageAssetManager.h in Headers */,
-				5020AA2724E759350080F292 /* HBGithubCell.h in Headers */,
-				5020AA2124E759350080F292 /* HBCell.h in Headers */,
 				5020A9CE24E759290080F292 /* SDWebImageDownloaderDecryptor.h in Headers */,
+				503F4EC525173F2D00D05033 /* HBButtonCell.h in Headers */,
 				5020A98A24E759290080F292 /* SDImageTransformer.h in Headers */,
 				5020A9F824E759290080F292 /* SDAssociatedObject.h in Headers */,
 				5020A9B124E759290080F292 /* SDWebImageOptionsProcessor.h in Headers */,
@@ -928,14 +942,11 @@
 				5020A99524E759290080F292 /* SDWebImageDownloaderConfig.h in Headers */,
 				5020A9F324E759290080F292 /* NSBezierPath+RoundedCorners.h in Headers */,
 				5020A8EB24E759230080F292 /* ALActionBlockWrapper.h in Headers */,
-				5020AA2224E759350080F292 /* HBTwitterCell.h in Headers */,
 				5020A9CA24E759290080F292 /* SDWebImageManager.h in Headers */,
-				5020AA2324E759350080F292 /* HBLinkCell.h in Headers */,
 				5020A8EE24E759230080F292 /* UIBarButtonItem+ALActionBlocks.h in Headers */,
 				5020A9ED24E759290080F292 /* UIImage+GIF.h in Headers */,
 				5020A8EF24E759230080F292 /* ALActionBlock.h in Headers */,
 				5020AA4F24E759390080F292 /* JGProgressHUDAnimation.h in Headers */,
-				5020AA2524E759350080F292 /* HBSwitchCell.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -971,6 +982,7 @@
 				TargetAttributes = {
 					5020A87324E758E00080F292 = {
 						CreatedOnToolsVersion = 11.6;
+						LastSwiftMigration = 1160;
 					};
 				};
 			};
@@ -1035,20 +1047,16 @@
 			buildActionMask = 2147483647;
 			files = (
 				5020AA0524E759290080F292 /* UIColor+HexString.m in Sources */,
-				5020AA1E24E759350080F292 /* HBSwitchCell.m in Sources */,
 				5020A8ED24E759230080F292 /* UIGestureRecognizer+ALActionBlocks.m in Sources */,
 				5020AA5924E759390080F292 /* JGProgressHUDRingIndicatorView.m in Sources */,
 				5020A9AE24E759290080F292 /* SDWebImageError.m in Sources */,
-				5020AA2624E759350080F292 /* HBPreferences.m in Sources */,
 				5020A97E24E759290080F292 /* SDImageHEICCoder.m in Sources */,
 				5020AA5824E759390080F292 /* JGProgressHUDFadeAnimation.m in Sources */,
 				5020A9B924E759290080F292 /* SDDiskCache.m in Sources */,
 				5020A9A924E759290080F292 /* SDMemoryCache.m in Sources */,
 				5020A9DD24E759290080F292 /* SDWebImageDefine.m in Sources */,
-				5020A8DA24E759190080F292 /* BHTdownloadManager.m in Sources */,
-				5020AA2024E759350080F292 /* HBSection.m in Sources */,
-				5020AA1B24E759350080F292 /* HBLinkCell.m in Sources */,
-				5020AA1F24E759350080F292 /* HBGithubCell.m in Sources */,
+				503F4EC025173F2D00D05033 /* HBGithubCell.m in Sources */,
+				5020A8DA24E759190080F292 /* BHTManager.m in Sources */,
 				5020A9A024E759290080F292 /* SDImageLoader.m in Sources */,
 				5020AA4424E759390080F292 /* JGProgressHUDErrorIndicatorView.m in Sources */,
 				5020AA6624E759590080F292 /* Colours.m in Sources */,
@@ -1062,24 +1070,26 @@
 				5020A9FF24E759290080F292 /* SDFileAttributeHelper.m in Sources */,
 				5020A9F424E759290080F292 /* SDImageAssetManager.m in Sources */,
 				5020A9BB24E759290080F292 /* SDAnimatedImageRep.m in Sources */,
+				503F4EB925173F2D00D05033 /* HBCell.m in Sources */,
 				5020AA0124E759290080F292 /* SDDisplayLink.m in Sources */,
+				503F4EBF25173F2D00D05033 /* HBSwitchCell.m in Sources */,
 				5020A98924E759290080F292 /* SDWebImageDownloaderDecryptor.m in Sources */,
 				5020A9A124E759290080F292 /* SDWebImageCacheSerializer.m in Sources */,
 				5020A9A224E759290080F292 /* SDWebImageIndicator.m in Sources */,
+				503F4EBB25173F2D00D05033 /* HBButtonCell.m in Sources */,
 				5020A98D24E759290080F292 /* SDWebImageManager.m in Sources */,
 				5020A9A424E759290080F292 /* UIImage+GIF.m in Sources */,
 				5020AA5424E759390080F292 /* JGProgressHUDImageIndicatorView.m in Sources */,
 				5020A9CC24E759290080F292 /* NSData+ImageContentType.m in Sources */,
 				5020AA5A24E759390080F292 /* JGProgressHUDPieIndicatorView.m in Sources */,
 				5020AA5724E759390080F292 /* JGProgressHUD.m in Sources */,
+				503F4EC125173F2D00D05033 /* HBSection.m in Sources */,
 				5020A9CD24E759290080F292 /* UIImageView+WebCache.m in Sources */,
 				5020A99824E759290080F292 /* UIImage+ForceDecode.m in Sources */,
 				5020A9A524E759290080F292 /* SDImageCodersManager.m in Sources */,
-				5020AA1A24E759350080F292 /* HBButtonCell.m in Sources */,
 				5020A9FC24E759290080F292 /* SDDeviceHelper.m in Sources */,
 				5020A9FD24E759290080F292 /* SDWeakProxy.m in Sources */,
 				5020A9B724E759290080F292 /* SDImageIOCoder.m in Sources */,
-				5020AA1C24E759350080F292 /* HBTwitterCell.m in Sources */,
 				5020AA4324E759390080F292 /* JGProgressHUDIndeterminateIndicatorView.m in Sources */,
 				5020A98024E759290080F292 /* NSImage+Compatibility.m in Sources */,
 				5020A9DF24E759290080F292 /* SDWebImageOptionsProcessor.m in Sources */,
@@ -1093,15 +1103,19 @@
 				5020A9DB24E759290080F292 /* SDWebImageCacheKeyFilter.m in Sources */,
 				5020A9B524E759290080F292 /* NSButton+WebCache.m in Sources */,
 				5020A9EB24E759290080F292 /* SDWebImageDownloaderRequestModifier.m in Sources */,
+				503F4EBD25173F2D00D05033 /* HBTwitterCell.m in Sources */,
 				5020A9D024E759290080F292 /* SDImageGraphics.m in Sources */,
+				503F4EBC25173F2D00D05033 /* HBLinkCell.m in Sources */,
 				5020A9FE24E759290080F292 /* SDInternalMacros.m in Sources */,
 				5020A99B24E759290080F292 /* SDAnimatedImagePlayer.m in Sources */,
 				5020AA5624E759390080F292 /* JGProgressHUDIndicatorView.m in Sources */,
 				5020A9A324E759290080F292 /* SDGraphicsImageRenderer.m in Sources */,
 				5020A9AF24E759290080F292 /* SDWebImagePrefetcher.m in Sources */,
 				5020AA0424E759290080F292 /* NSBezierPath+RoundedCorners.m in Sources */,
+				50198013250E053900207745 /* BHDownload.m in Sources */,
 				5020AA6524E759590080F292 /* FCFileManager.m in Sources */,
 				5020A9F024E759290080F292 /* SDImageCachesManagerOperation.m in Sources */,
+				503F4EC725173F2D00D05033 /* HBPreferences.m in Sources */,
 				5020A99124E759290080F292 /* UIImageView+HighlightedWebCache.m in Sources */,
 				5020A9AD24E759290080F292 /* SDWebImageDownloaderResponseModifier.m in Sources */,
 				5020A9AB24E759290080F292 /* SDWebImageCompat.m in Sources */,
@@ -1121,7 +1135,6 @@
 				5020A9D524E759290080F292 /* SDImageCacheDefine.m in Sources */,
 				5020A9C824E759290080F292 /* SDImageCachesManager.m in Sources */,
 				5020A9EA24E759290080F292 /* UIButton+WebCache.m in Sources */,
-				5020AA1824E759350080F292 /* HBCell.m in Sources */,
 				5020AA4524E759390080F292 /* JGProgressHUDAnimation.m in Sources */,
 				5020A99624E759290080F292 /* SDAnimatedImage.m in Sources */,
 				5020AA5B24E759390080F292 /* JGProgressHUDShadow.m in Sources */,
@@ -1197,7 +1210,9 @@
 		5020A88D24E758E00080F292 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_ENTITLEMENTS = "";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
@@ -1209,7 +1224,12 @@
 				GCC_PREFIX_HEADER = "BHTwitter/BHTwitter-Prefix.pch";
 				INFOPLIST_FILE = "";
 				INSTALL_PATH = /Library/MobileSubstrate/DynamicLibraries;
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					/opt/MonkeyDev/MFrameworks,
@@ -1219,15 +1239,16 @@
 				MonkeyDevBuildPackageOnAnyBuild = NO;
 				MonkeyDevClearUiCacheOnInstall = NO;
 				MonkeyDevCopyOnBuild = NO;
-				MonkeyDevDeviceIP = "";
-				MonkeyDevDevicePassword = "";
-				MonkeyDevDevicePort = "";
+				MonkeyDevDeviceIP = 192.168.1.60;
+				MonkeyDevDevicePassword = alpine;
+				MonkeyDevDevicePort = 22;
 				MonkeyDevInstallOnAnyBuild = YES;
 				MonkeyDevInstallOnProfiling = YES;
 				MonkeyDevkillProcessOnInstall = SpringBoard;
 				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTS_MACCATALYST = NO;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -1235,7 +1256,9 @@
 		5020A88E24E758E00080F292 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_ENTITLEMENTS = "";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
@@ -1247,7 +1270,12 @@
 				GCC_PREFIX_HEADER = "BHTwitter/BHTwitter-Prefix.pch";
 				INFOPLIST_FILE = "";
 				INSTALL_PATH = /Library/MobileSubstrate/DynamicLibraries;
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					/opt/MonkeyDev/MFrameworks,
@@ -1257,15 +1285,17 @@
 				MonkeyDevBuildPackageOnAnyBuild = NO;
 				MonkeyDevClearUiCacheOnInstall = NO;
 				MonkeyDevCopyOnBuild = NO;
-				MonkeyDevDeviceIP = "";
-				MonkeyDevDevicePassword = "";
-				MonkeyDevDevicePort = "";
+				MonkeyDevDeviceIP = 192.168.1.60;
+				MonkeyDevDevicePassword = alpine;
+				MonkeyDevDevicePort = 22;
 				MonkeyDevInstallOnAnyBuild = YES;
 				MonkeyDevInstallOnProfiling = YES;
 				MonkeyDevkillProcessOnInstall = SpringBoard;
 				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTS_MACCATALYST = NO;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;

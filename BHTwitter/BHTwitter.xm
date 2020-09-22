@@ -11,12 +11,13 @@ JGProgressHUD *hud;
 - (_Bool)application:(UIApplication *)application didFinishLaunchingWithOptions:(id)arg2 {
     %orig;
     if (![[NSUserDefaults standardUserDefaults] objectForKey:@"FirstRun"]) {
-        //sort
         [[NSUserDefaults standardUserDefaults] setValue:@"1strun" forKey:@"FirstRun"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"dw_v"];
+        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"hide_promoted"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"voice"];
         [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"like_con"];
         [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"tweet_con"];
+        [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"direct_save"];
         [[NSUserDefaults standardUserDefaults] synchronize];
     }
     [BHTManager cleanCache];
@@ -24,10 +25,41 @@ JGProgressHUD *hud;
 }
 %end
 
+// credit goes to haoict https://github.com/haoict/twitter-no-ads
+%hook TFNItemsDataViewController
+- (id)tableViewCellForItem:(id)arg1 atIndexPath:(id)arg2 {
+    UITableViewCell *_orig = %orig;
+    if ([BHTManager HidePromoted]) {
+        id tweet = [self itemAtIndexPath:arg2];
+        if ([tweet isKindOfClass:NSClassFromString(@"TFNTwitterStatus")]) {
+            TFNTwitterStatus *fullTweet = tweet;
+            if (fullTweet.isPromoted) {
+                [_orig setHidden:true];
+                return _orig;
+            }
+        }
+    }
+    return _orig;
+}
+- (double)tableView:(id)arg1 heightForRowAtIndexPath:(id)arg2 {
+    if ([BHTManager HidePromoted]) {
+        id tweet = [self itemAtIndexPath:arg2];
+        if ([tweet isKindOfClass:NSClassFromString(@"TFNTwitterStatus")]) {
+            TFNTwitterStatus *fullTweet = tweet;
+            if (fullTweet.isPromoted) {
+                return 0;
+            } else {
+                return %orig;
+            }
+        }
+    }
+    return %orig;
+}
+%end
+
 %hook T1DirectMessageEntryMediaCell
 - (id)initWithFrame:(struct CGRect)arg1 {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    if ([defaults boolForKey:@"dw_v"]) {
+    if ([BHTManager DownloadingVideos]) {
         UILongPressGestureRecognizer *longGes = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(DownloadHandler)];
         [self addGestureRecognizer:longGes];
     }
@@ -79,11 +111,25 @@ JGProgressHUD *hud;
 }
 %end
 
+%hook T1StatusBodyTextView
+- (_Bool)openURL {
+    if ([self.viewModel isKindOfClass:NSClassFromString(@"TFNTwitterStatus")]) {
+        TFNTwitterStatus *tweet = self.viewModel;
+        if ([tweet.mediaScribeContentID containsString:@"youtube"]) {
+            [[UIApplication sharedApplication] openURL:[NSURL URLWithString:tweet.mediaScribeContentID] options:@{} completionHandler:nil];
+            return true;
+        } else {
+            return %orig;
+        }
+    }
+    return %orig;
+}
+%end
+
 %hook T1StandardStatusView
 - (void)setViewModel:(id)arg1 options:(unsigned long long)arg2 account:(id)arg3 {
     %orig;
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    if ([defaults boolForKey:@"dw_v"]) {
+    if ([BHTManager DownloadingVideos]) {
         T1StatusInlineActionsView *vis = self.visibleInlineActionsView;
         [vis appendNewButton];
     }
@@ -109,7 +155,7 @@ JGProgressHUD *hud;
             [newButton.heightAnchor constraintEqualToConstant:24],
             [newButton.widthAnchor constraintEqualToConstant:30],
             [newButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
-            [newButton.leadingAnchor constraintEqualToAnchor:lastButton.trailingAnchor constant:10]
+            [newButton.leadingAnchor constraintEqualToAnchor:lastButton.trailingAnchor constant:13]
         ]];
 
     }
@@ -121,11 +167,13 @@ JGProgressHUD *hud;
             if ([k.contentType isEqualToString:@"video/mp4"]) {
                 UIAlertAction *download = [UIAlertAction actionWithTitle:[BHTManager getVideoQuality:k.url] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
                     BHDownload *DownloadManager = [[BHDownload alloc] initWithBackgroundSessionID:NSUUID.UUID.UUIDString];
-                    hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
-                    hud.textLabel.text = @"Downloading";
                     [DownloadManager downloadFileWithURL:[NSURL URLWithString:k.url]];
                     [DownloadManager setDelegate:self];
-                    [hud showInView:topMostController().view];
+                    if (!([BHTManager DirectSave])) {
+                        hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
+                        hud.textLabel.text = @"Downloading";
+                        [hud showInView:topMostController().view];
+                    }
                 }];
                 [alert addAction:download];
             }
@@ -143,8 +191,12 @@ JGProgressHUD *hud;
     NSFileManager *manager = [NSFileManager defaultManager];
     NSURL *newFilePath = [[NSURL fileURLWithPath:DocPath] URLByAppendingPathComponent:[NSString stringWithFormat:@"%@.mp4", NSUUID.UUID.UUIDString]];
     [manager moveItemAtURL:filePath toURL:newFilePath error:nil];
-    [hud dismiss];
-    [BHTManager showSaveVC:newFilePath];
+    if (!([BHTManager DirectSave])) {
+        [hud dismiss];
+        [BHTManager showSaveVC:newFilePath];
+    } else {
+        [BHTManager save:newFilePath];
+    }
 }
 %new - (void)downloadDidFailureWithError:(NSError *)error {
     if (error) {
@@ -153,26 +205,27 @@ JGProgressHUD *hud;
 }
 %end
 
+
 %hook TFNTwitterAccount
+- (bool)isVODInlineAudioToggleEnabled {
+    return YES;
+}
 - (_Bool)isConversationThreadingVoiceOverSupportEnabled {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    if ([defaults boolForKey:@"voice"]) {
+    if ([BHTManager VoiceFeature]) {
         return true;
     } else {
         return %orig;
     }
 }
 - (_Bool)isDMVoiceRenderingEnabled {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    if ([defaults boolForKey:@"voice"]) {
+    if ([BHTManager VoiceFeature]) {
         return true;
     } else {
         return %orig;
     }
 }
 - (_Bool)isDMVoiceCreationEnabled {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    if ([defaults boolForKey:@"voice"]) {
+    if ([BHTManager VoiceFeature]) {
         return true;
     } else {
         return %orig;
@@ -181,8 +234,7 @@ JGProgressHUD *hud;
 %end
 %hook TFNTwitterComposition
 - (BOOL)hasVoiceRecordingAttachment {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    if ([defaults boolForKey:@"voice"]) {
+    if ([BHTManager VoiceFeature]) {
         return true;
     } else {
         return %orig;
@@ -192,16 +244,14 @@ JGProgressHUD *hud;
 
 %hook T1MediaAutoplaySettings
 - (_Bool)voiceOverEnabled {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    if ([defaults boolForKey:@"voice"]) {
+    if ([BHTManager VoiceFeature]) {
         return true;
     } else {
         return %orig;
     }
 }
 - (void)setVoiceOverEnabled:(_Bool)arg1 {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    if ([defaults boolForKey:@"voice"]) {
+    if ([BHTManager VoiceFeature]) {
         arg1 = true;
     }
     return %orig(arg1);
@@ -210,26 +260,22 @@ JGProgressHUD *hud;
 
 %hook T1PhotoMediaRailViewController
 - (void)setVoiceButtonHidden:(BOOL)arg1 {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    if ([defaults boolForKey:@"voice"]) {
+    if ([BHTManager VoiceFeature]) {
         arg1 = false;
     }
     return %orig(arg1);
 }
 - (BOOL)isVoiceButtonHidden {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    if ([defaults boolForKey:@"voice"]) {
+    if ([BHTManager VoiceFeature]) {
         return false;
     }
     return %orig;
 }
 %end
 
-
 %hook T1TweetComposeViewController
 - (void)_t1_handleTweet {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    if ([defaults boolForKey:@"tweet_con"]) {
+    if ([BHTManager TweetConfirm]) {
         [FLEXAlert makeAlert:^(FLEXAlert *make) {
             make.message(@"Are you sure?");
             make.button(@"Yes").handler(^(NSArray<NSString *> *strings) {
@@ -245,8 +291,7 @@ JGProgressHUD *hud;
 
 %hook T1StatusInlineFavoriteButton
 - (void)didTap {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    if ([defaults boolForKey:@"like_con"]) {
+    if ([BHTManager LikeConfirm]) {
         [FLEXAlert makeAlert:^(FLEXAlert *make) {
             make.message(@"Are you sure?");
             make.button(@"Yes").handler(^(NSArray<NSString *> *strings) {
@@ -263,8 +308,7 @@ JGProgressHUD *hud;
 
 %hook T1TweetDetailsViewController
 - (void)_t1_toggleFavoriteOnCurrentStatus {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    if ([defaults boolForKey:@"like_con"]) {
+    if ([BHTManager LikeConfirm]) {
         [FLEXAlert makeAlert:^(FLEXAlert *make) {
             make.message(@"Are you sure?");
             make.button(@"Yes").handler(^(NSArray<NSString *> *strings) {
@@ -284,11 +328,8 @@ JGProgressHUD *hud;
     %orig;
     if ([self.sections count] == 2) {
         TFNItemsDataViewControllerBackingStore *DataViewControllerBackingStore = self.backingStore;
-        //Insert section at Top "TFNItemsDataViewSectionController"
         [DataViewControllerBackingStore insertSection:0 atIndex:0];
-        //insert Row 0 in section 0 "TFNDataViewItem"
         [DataViewControllerBackingStore insertItem:@"Row 0 " atIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
-        //Insert Row1 in section 0 "TFNDataViewItem"
         [DataViewControllerBackingStore insertItem:@"Row1" atIndexPath:[NSIndexPath indexPathForRow:1 inSection:0]];
     }
 }
@@ -324,7 +365,7 @@ JGProgressHUD *hud;
 
 
 
-
+// Fix login keychain in non-JB (IPA).
 //%hook TFSKeychain
 //- (NSString *)providerDefaultAccessGroup {
 //    NSDictionary *query = [NSDictionary dictionaryWithObjectsAndKeys:

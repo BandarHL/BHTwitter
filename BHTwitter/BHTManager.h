@@ -29,5 +29,12 @@
 + (BOOL)doesContainDigitsOnly:(NSString *)string;
 + (void)showSettings:(UIViewController *)_self;
 + (void)showSaveVC:(NSURL *)url;
-+ (BOOL)isLTR;
++ (void)save:(NSURL *)url;
+
++ (BOOL)DownloadingVideos;
++ (BOOL)DirectSave;
++ (BOOL)VoiceFeature;
++ (BOOL)LikeConfirm;
++ (BOOL)TweetConfirm;
++ (BOOL)HidePromoted;
 @end

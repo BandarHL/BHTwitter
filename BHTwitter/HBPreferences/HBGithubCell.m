@@ -10,11 +10,9 @@
 
 @implementation HBGithubCell
 
-NSString *GithubURL;
-
 - (instancetype)initGithubCellWithTitle:(NSString *)title detailTitle:(NSString *)Dtitle GithubURL:(NSString *)gURL {
     HBGithubCell *cell = [self init];
-    GithubURL = gURL;
+    self.GithubURL = gURL;
     
     [self setupUI:Dtitle title:title];
     [cell setSeparatorInset:UIEdgeInsetsMake(0, 60, 0, 0)];
@@ -69,15 +67,14 @@ NSString *GithubURL;
 
 - (void)didSelectFromTable:(HBPreferences *)viewController {
     
-    if (GithubURL.length == 0) {
+    if (self.GithubURL.length == 0) {
         NSIndexPath *indexPath = [viewController.tableView indexPathForCell:self];
         [viewController.tableView deselectRowAtIndexPath:indexPath animated:YES];
     } else {
         NSIndexPath *indexPath = [viewController.tableView indexPathForCell:self];
         [viewController.tableView deselectRowAtIndexPath:indexPath animated:YES];
         
-        SFSafariViewController *SafariVC = [[SFSafariViewController alloc] initWithURL:[NSURL URLWithString:GithubURL]];
-//        [[UIApplication.sharedApplication keyWindow].rootViewController.childViewControllers[0] presentViewController:SafariVC animated:true completion:nil];
+        SFSafariViewController *SafariVC = [[SFSafariViewController alloc] initWithURL:[NSURL URLWithString:self.GithubURL]];
         [viewController presentViewController:SafariVC animated:true completion:nil];
     }
 }

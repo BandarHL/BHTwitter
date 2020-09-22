@@ -7,6 +7,10 @@
 #import <objc/runtime.h>
 #import "BHDownload.h"
 
+@interface TFNItemsDataViewController : NSObject
+- (id)itemAtIndexPath:(id)arg1;
+@end
+
 @interface TFNItemsDataViewControllerBackingStore
 - (void)insertSection:(id)arg1 atIndex:(long long)arg2;
 - (void)insertItem:(id)arg1 atIndexPath:(id)arg2;
@@ -16,8 +20,6 @@
 @interface T1SettingsViewController : UIViewController
 @property ( nonatomic, strong) TFNItemsDataViewControllerBackingStore *backingStore;
 @property ( nonatomic, strong) NSArray* sections;
-
-
 @end
 
 @interface TFNTextCell: UITableViewCell
@@ -144,8 +146,17 @@
 @interface T1DirectMessageEntryMediaCell () <BHDownloadDelegate>
 @end
 
-static UIViewController *_topMostController(UIViewController *cont)
-{
+@interface TFNTwitterStatus : NSObject
+@property(readonly, nonatomic) NSDictionary *scribeParameters;
+@property(readonly, nonatomic) _Bool isPromoted;
+@property(readonly, nonatomic) NSString *mediaScribeContentID;
+@end
+
+@interface T1StatusBodyTextView : UIView
+@property(readonly, nonatomic) id viewModel; // @synthesize viewModel=_viewModel;
+@end
+
+static UIViewController *_topMostController(UIViewController *cont) {
     UIViewController *topController = cont;
     while (topController.presentedViewController) {
         topController = topController.presentedViewController;

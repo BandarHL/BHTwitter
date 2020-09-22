@@ -7,6 +7,7 @@
 
 #import "BHTManager.h"
 
+
 @implementation BHTManager
 + (bool)isDMVideoCell:(T1InlineMediaView *)view {
     if (view.playerIconViewType == 4) {
@@ -16,12 +17,39 @@
     }
 }
 + (void)cleanCache {
-    NSArray <NSURL *> *files = [[NSFileManager defaultManager] contentsOfDirectoryAtURL:[NSURL fileURLWithPath:NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true).firstObject] includingPropertiesForKeys:@[] options:NSDirectoryEnumerationSkipsHiddenFiles error:nil];
+    NSArray <NSURL *> *DocumentFiles = [[NSFileManager defaultManager] contentsOfDirectoryAtURL:[NSURL fileURLWithPath:NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true).firstObject] includingPropertiesForKeys:@[] options:NSDirectoryEnumerationSkipsHiddenFiles error:nil];
     
-    for (NSURL *file in files) {
-        if ([file.pathExtension isEqualToString:@"mp4"]) {
+    for (NSURL *file in DocumentFiles) {
+        if ([file.pathExtension.lowercaseString isEqualToString:@"mp4"]) {
             [[NSFileManager defaultManager] removeItemAtURL:file error:nil];
         }
+    }
+    
+    NSArray <NSURL *> *TempFiles = [[NSFileManager defaultManager] contentsOfDirectoryAtURL:[NSURL fileURLWithPath:NSTemporaryDirectory()] includingPropertiesForKeys:@[] options:NSDirectoryEnumerationSkipsHiddenFiles error:nil];
+    
+    for (NSURL *file in TempFiles) {
+        if ([file.pathExtension.lowercaseString isEqualToString:@"mp4"]) {
+            [[NSFileManager defaultManager] removeItemAtURL:file error:nil];
+        }
+        if ([file.pathExtension.lowercaseString isEqualToString:@"mov"]) {
+            [[NSFileManager defaultManager] removeItemAtURL:file error:nil];
+        }
+        if ([file.pathExtension.lowercaseString isEqualToString:@"tmp"]) {
+            [[NSFileManager defaultManager] removeItemAtURL:file error:nil];
+        }
+        if ([file hasDirectoryPath]) {
+            if ([BHTManager isEmpty:file]) {
+                [[NSFileManager defaultManager] removeItemAtURL:file error:nil];
+            }
+        }
+    }
+}
++ (BOOL)isEmpty:(NSURL *)url {
+    NSArray *FolderFiles = [[NSFileManager defaultManager] contentsOfDirectoryAtURL:url includingPropertiesForKeys:@[] options:NSDirectoryEnumerationSkipsHiddenFiles error:nil];
+    if (FolderFiles.count == 0) {
+        return true;
+    } else {
+        return false;
     }
 }
 + (NSString *)getDownloadingPersent:(float)per {
@@ -49,6 +77,9 @@
             }
         }
     }
+    if (q.count == 0) {
+        return @"GIF";
+    }
     return [NSString stringWithFormat:@"%@x%@", q.firstObject, q.lastObject];
 }
 + (BOOL)isVideoCell:(T1StatusInlineActionsView *)cell {
@@ -59,19 +90,40 @@
         return true;
     }
 }
-+ (BOOL)isLTR {
-    if ([UIApplication sharedApplication].userInterfaceLayoutDirection == UIUserInterfaceLayoutDirectionRightToLeft) {
-        return false;
-    } else {
-        return true;
-    }
++ (void)save:(NSURL *)url {
+    [[PHPhotoLibrary sharedPhotoLibrary] performChangesAndWait:^{
+        [PHAssetChangeRequest creationRequestForAssetFromVideoAtFileURL:url];
+    } error:nil];
 }
-
 + (void)showSaveVC:(NSURL *)url {
     UIActivityViewController *acVC = [[UIActivityViewController alloc] initWithActivityItems:@[url] applicationActivities:nil];
     [topMostController() presentViewController:acVC animated:true completion:nil];
 }
 
++ (BOOL)DownloadingVideos {
+    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
+    return [userDef boolForKey:@"dw_v"];
+}
++ (BOOL)DirectSave {
+    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
+    return [userDef boolForKey:@"direct_save"];
+}
++ (BOOL)VoiceFeature {
+    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
+    return [userDef boolForKey:@"voice"];
+}
++ (BOOL)LikeConfirm {
+    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
+    return [userDef boolForKey:@"like_con"];
+}
++ (BOOL)TweetConfirm {
+    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
+    return [userDef boolForKey:@"tweet_con"];
+}
++ (BOOL)HidePromoted {
+    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
+    return [userDef boolForKey:@"hide_promoted"];
+}
 + (void)showSettings:(UIViewController *)_self {
     HBSection *main_section = [HBSection sectionWithTitle:@"BHTwitter Preferences" footer:nil];
     HBSection *developer = [HBSection sectionWithTitle:@"Developer" footer:nil];
@@ -81,6 +133,22 @@
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"dw_v"];
         } else {
             [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"dw_v"];
+        }
+    }];
+    
+    HBSwitchCell *direct_save = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Direct save" DetailTitle:@"Save video directly after downloading" switchKey:@"direct_save" withBlock:^(UISwitch *weakSender) {
+        if (weakSender.isOn) {
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"direct_save"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"direct_save"];
+        }
+    }];
+    
+    HBSwitchCell *hide_ads = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Hide ads" DetailTitle:@"this option will remove all promoted tweet" switchKey:@"hide_promoted" withBlock:^(UISwitch *weakSender) {
+        if (weakSender.isOn) {
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"hide_promoted"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"hide_promoted"];
         }
     }];
     
@@ -106,15 +174,18 @@
             [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"tweet_con"];
         }
     }];
+    
     HBTwitterCell *bandarhl = [[HBTwitterCell alloc] initTwitterCellWithTitle:@"BandarHelal" detail:@"@BandarHL" AccountLink:@"https://twitter.com/BandarHL"];
-//    HBTwitterCell *c = [[HBTwitterCell alloc] initTwitterCellWithTitle:@"CrazyMind" detail:@"@CrazyMind90" AccountLink:@"https://twitter.com/CrazyMind90"];
+    HBGithubCell *sourceCode = [[HBGithubCell alloc] initGithubCellWithTitle:@"BHTwitter" detailTitle:@"Code source of BHTwitter" GithubURL:@"https://github.com/BandarHL/BHTwitter/"];
     
     [main_section addCell:download];
+    [main_section addCell:hide_ads];
+    [main_section addCell:direct_save];
     [main_section addCell:voice];
     [main_section addCell:like_confirm];
     [main_section addCell:tweet_confirm];
     [developer addCell:bandarhl];
-//    [developer addCell:c];
+    [developer addCell:sourceCode];
     HBPreferences *hollow_pref = [HBPreferences tableWithSections:@[main_section, developer] title:@"BHTwitter" TableStyle:UITableViewStyleGrouped SeparatorStyle:UITableViewCellSeparatorStyleNone];
     [_self.navigationController pushViewController:hollow_pref animated:true];
 }
