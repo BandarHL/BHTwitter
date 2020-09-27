@@ -10,11 +10,9 @@
 
 @implementation HBLinkCell
 
-NSString *URL;
-
 - (instancetype)initLinkCellWithImage:(UIImage *)img Title:(NSString *)title DetailTitle:(NSString *)Dtitle Link:(NSString *)url {
     HBLinkCell *cell = [self init];
-    URL = url;
+    self.URL = url;
     
     [self setupUI:Dtitle img:img title:title];
     
@@ -107,18 +105,43 @@ NSString *URL;
     }
 }
 
+- (SFSafariViewController *)SafariViewControllerForURL {
+    SFSafariViewController *SafariVC = [[SFSafariViewController alloc] initWithURL:[NSURL URLWithString:self.URL]];
+    return SafariVC;
+}
+
 - (void)didSelectFromTable:(HBPreferences *)viewController {
-    if (URL.length == 0) {
+    if (self.URL.length == 0) {
         NSIndexPath *indexPath = [viewController.tableView indexPathForCell:self];
         [viewController.tableView deselectRowAtIndexPath:indexPath animated:YES];
     } else {
         NSIndexPath *indexPath = [viewController.tableView indexPathForCell:self];
         [viewController.tableView deselectRowAtIndexPath:indexPath animated:YES];
         
-        SFSafariViewController *SafariVC = [[SFSafariViewController alloc] initWithURL:[NSURL URLWithString:URL]];
-//        [[UIApplication.sharedApplication keyWindow].rootViewController.childViewControllers[0] presentViewController:SafariVC animated:true completion:nil];
-        [viewController presentViewController:SafariVC animated:true completion:nil];
+        [viewController presentViewController:[self SafariViewControllerForURL] animated:true completion:nil];
     }
+}
+
+- (UIContextMenuConfiguration *)contextMenuConfigurationForRowAtCell:(HBCell *)cell FromTable:(HBPreferences *)viewController API_AVAILABLE(ios(13.0)) {
+    UIContextMenuConfiguration *configuration = [UIContextMenuConfiguration configurationWithIdentifier:nil previewProvider:^UIViewController * _Nullable{
+        return [self SafariViewControllerForURL];
+    } actionProvider:^UIMenu * _Nullable(NSArray<UIMenuElement *> * _Nonnull suggestedActions) {
+        UIAction *open = [UIAction actionWithTitle:@"Open Link" image:[UIImage systemImageNamed:@"safari"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
+            [viewController presentViewController:[self SafariViewControllerForURL] animated:true completion:nil];
+        }];
+        
+        UIAction *copy = [UIAction actionWithTitle:@"Copy Link" image:[UIImage systemImageNamed:@"doc.on.doc"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
+            UIPasteboard.generalPasteboard.string = self.URL;
+        }];
+        
+        UIAction *share = [UIAction actionWithTitle:@"Share..." image:[UIImage systemImageNamed:@"square.and.arrow.up"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
+            UIActivityViewController *ac = [[UIActivityViewController alloc] initWithActivityItems:@[[NSURL URLWithString:self.URL]] applicationActivities:nil];
+            [viewController presentViewController:ac animated:true completion:nil];
+        }];
+        return [UIMenu menuWithTitle:@"" children:@[open, copy, share]];
+    }];
+    
+    return configuration;
 }
 
 @end

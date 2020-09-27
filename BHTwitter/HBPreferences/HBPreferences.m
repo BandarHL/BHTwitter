@@ -15,6 +15,7 @@
 #import "HBSwitchCell.h"
 #import "HBButtonCell.h"
 #include <objc/runtime.h>
+#import <SafariServices/SafariServices.h>
 
 @interface HBPreferences () //<UIDocumentPickerDelegate>
 
@@ -107,6 +108,15 @@
     
     if ([cell respondsToSelector:@selector(didSelectFromTable:)]) {
         [cell didSelectFromTable:self];
+    }
+}
+
+- (UIContextMenuConfiguration *)tableView:(UITableView *)tableView contextMenuConfigurationForRowAtIndexPath:(NSIndexPath *)indexPath point:(CGPoint)point  API_AVAILABLE(ios(13.0)) {
+    HBCell *cell = [self cellForIndexPath:indexPath];
+    if ([cell isKindOfClass:HBGithubCell.class] || [cell isKindOfClass:HBTwitterCell.class] || [cell isKindOfClass:HBLinkCell.class]) {
+        return [cell contextMenuConfigurationForRowAtCell:cell FromTable:self];
+    } else {
+        return UIContextMenuConfiguration.new;
     }
 }
 @end

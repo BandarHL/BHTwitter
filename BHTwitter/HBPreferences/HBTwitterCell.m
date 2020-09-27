@@ -75,18 +75,41 @@
     return [NSURL URLWithString:[NSString stringWithFormat:@"https://twitter-avatar.now.sh/%@", username]];
 }
 
+- (SFSafariViewController *)SafariViewControllerForURL {
+    SFSafariViewController *SafariVC = [[SFSafariViewController alloc] initWithURL:[NSURL URLWithString:self.AccountURL]];
+    return SafariVC;
+}
 
 - (void)didSelectFromTable:(HBPreferences *)viewController {
     if (self.AccountURL.length == 0) {
         NSIndexPath *indexPath = [viewController.tableView indexPathForCell:self];
         [viewController.tableView deselectRowAtIndexPath:indexPath animated:YES];
     } else {
-        SFSafariViewController *SafariVC = [[SFSafariViewController alloc] initWithURL:[NSURL URLWithString:self.AccountURL]];
-//        [[UIApplication.sharedApplication windows][0].rootViewController.navigationController presentViewController:SafariVC animated:true completion:nil];
-//        [viewController.navigationController pushViewController:SafariVC animated:true];
-        [viewController presentViewController:SafariVC animated:true completion:nil];
+        [viewController presentViewController:[self SafariViewControllerForURL] animated:true completion:nil];
     }
     
+}
+
+- (UIContextMenuConfiguration *)contextMenuConfigurationForRowAtCell:(HBCell *)cell FromTable:(HBPreferences *)viewController API_AVAILABLE(ios(13.0)) {
+    UIContextMenuConfiguration *configuration = [UIContextMenuConfiguration configurationWithIdentifier:nil previewProvider:^UIViewController * _Nullable{
+        return [self SafariViewControllerForURL];
+    } actionProvider:^UIMenu * _Nullable(NSArray<UIMenuElement *> * _Nonnull suggestedActions) {
+        UIAction *open = [UIAction actionWithTitle:@"Open Link" image:[UIImage systemImageNamed:@"safari"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
+            [viewController presentViewController:[self SafariViewControllerForURL] animated:true completion:nil];
+        }];
+        
+        UIAction *copy = [UIAction actionWithTitle:@"Copy Link" image:[UIImage systemImageNamed:@"doc.on.doc"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
+            UIPasteboard.generalPasteboard.string = self.AccountURL;
+        }];
+        
+        UIAction *share = [UIAction actionWithTitle:@"Share..." image:[UIImage systemImageNamed:@"square.and.arrow.up"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
+            UIActivityViewController *ac = [[UIActivityViewController alloc] initWithActivityItems:@[[NSURL URLWithString:self.AccountURL]] applicationActivities:nil];
+            [viewController presentViewController:ac animated:true completion:nil];
+        }];
+        return [UIMenu menuWithTitle:@"" children:@[open, copy, share]];
+    }];
+    
+    return configuration;
 }
 
 @end

@@ -23,4 +23,7 @@
     
 }
 
+- (UIContextMenuConfiguration *)contextMenuConfigurationForRowAtCell:(HBCell *)cell FromTable:(HBPreferences *)viewController {
+    
+}
 @end

@@ -18,7 +18,6 @@
 #import "HBPreferences/HBSwitchCell.h"
 #import "HBPreferences/HBGithubCell.h"
 #import "HBPreferences/HBLinkCell.h"
-#import "FCFileManager.h"
 
 @interface BHTManager : NSObject
 + (NSString *)getDownloadingPersent:(float)per;

@@ -8,8 +8,6 @@
 
 #import "HBCell.h"
 
-//typedef void (^HBPValueChanged)(id sender);
-
 @interface HBButtonCell : HBCell
 - (instancetype)initButtonCellWithTitle:(NSString *)title actionBlock:(HBPValueChanged)actionBlock image:(UIImage *)img DetailTitle:(NSString *)Dtitle;
 @property (nonatomic, strong) UILabel *title;

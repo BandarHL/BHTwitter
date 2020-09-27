@@ -15,4 +15,5 @@
 @property (nonatomic, strong) UILabel *title;
 @property (nonatomic, strong) UILabel *detailLabel;
 @property (nonatomic, strong) UIButton *openURLbutton;
+@property (nonatomic, strong) NSString *URL;
 @end

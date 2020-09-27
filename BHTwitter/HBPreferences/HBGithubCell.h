@@ -15,5 +15,4 @@
 @property (nonatomic, strong) UILabel *title;
 @property (nonatomic, strong) UILabel *detailLabel;
 @property (nonatomic, strong) NSString *GithubURL;
-//@property (nonatomic, strong) UIButton *openURLbutton;
 @end
