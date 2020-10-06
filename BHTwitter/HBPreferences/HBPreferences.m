@@ -17,7 +17,7 @@
 #include <objc/runtime.h>
 #import <SafariServices/SafariServices.h>
 
-@interface HBPreferences () //<UIDocumentPickerDelegate>
+@interface HBPreferences ()
 
 @end
 
@@ -78,21 +78,6 @@
     }
     return UITableViewAutomaticDimension;
 }
-- (CGFloat)getLabelHeight:(UILabel*)label
-{
-    CGSize constraint = CGSizeMake(label.frame.size.width, CGFLOAT_MAX);
-    CGSize size;
-    
-    NSStringDrawingContext *context = [[NSStringDrawingContext alloc] init];
-    CGSize boundingBox = [label.text boundingRectWithSize:constraint
-                                                  options:NSStringDrawingUsesLineFragmentOrigin
-                                               attributes:@{NSFontAttributeName:label.font}
-                                                  context:context].size;
-    
-    size = CGSizeMake(ceil(boundingBox.width), ceil(boundingBox.height));
-    
-    return size.height;
-}
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     HBCell *cell = [self cellForIndexPath:indexPath];
     
@@ -118,5 +103,11 @@
     } else {
         return UIContextMenuConfiguration.new;
     }
+}
+
+- (void)tableView:(UITableView *)tableView willPerformPreviewActionForMenuWithConfiguration:(UIContextMenuConfiguration *)configuration animator:(id<UIContextMenuInteractionCommitAnimating>)animator API_AVAILABLE(ios(13.0)) {
+    [animator addCompletion:^{
+        [self presentViewController:[RuntimeExplore tryExploreAddress:configuration.identifier safely:true] animated:true completion:nil];
+    }];
 }
 @end

@@ -91,11 +91,13 @@
 }
 
 - (UIContextMenuConfiguration *)contextMenuConfigurationForRowAtCell:(HBCell *)cell FromTable:(HBPreferences *)viewController API_AVAILABLE(ios(13.0)) {
-    UIContextMenuConfiguration *configuration = [UIContextMenuConfiguration configurationWithIdentifier:nil previewProvider:^UIViewController * _Nullable{
-        return [self SafariViewControllerForURL];
+    SFSafariViewController *SafariVC = [self SafariViewControllerForURL];
+    
+    UIContextMenuConfiguration *configuration = [UIContextMenuConfiguration configurationWithIdentifier:[RuntimeExplore getAddressFromDescription:SafariVC.description] previewProvider:^UIViewController * _Nullable{
+        return SafariVC;
     } actionProvider:^UIMenu * _Nullable(NSArray<UIMenuElement *> * _Nonnull suggestedActions) {
         UIAction *open = [UIAction actionWithTitle:@"Open Link" image:[UIImage systemImageNamed:@"safari"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
-            [viewController presentViewController:[self SafariViewControllerForURL] animated:true completion:nil];
+            [viewController presentViewController:SafariVC animated:true completion:nil];
         }];
         
         UIAction *copy = [UIAction actionWithTitle:@"Copy Link" image:[UIImage systemImageNamed:@"doc.on.doc"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {

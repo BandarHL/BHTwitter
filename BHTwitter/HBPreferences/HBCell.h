@@ -8,6 +8,7 @@
 
 #import <UIKit/UIKit.h>
 #import "HBPreferences.h"
+#import "../Classes/GlobalStateExplorers/RuntimeExplore.h"
 #import "../SDWebImage/Core/UIImageView+WebCache.m"
 #import <SafariServices/SafariServices.h>
 #import "ALActionBlocks.h"

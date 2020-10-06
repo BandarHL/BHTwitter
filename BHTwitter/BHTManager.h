@@ -8,7 +8,7 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import <Photos/Photos.h>
-#import "FLEXAlert.h"
+#import "./Classes/Utility/FLEXAlert.h"
 #import "TWHeaders.h"
 #import "JGProgressHUD/include/JGProgressHUD.h"
 #import "HBPreferences/HBPreferences.h"
