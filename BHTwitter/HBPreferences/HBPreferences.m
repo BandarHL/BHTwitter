@@ -107,7 +107,10 @@
 
 - (void)tableView:(UITableView *)tableView willPerformPreviewActionForMenuWithConfiguration:(UIContextMenuConfiguration *)configuration animator:(id<UIContextMenuInteractionCommitAnimating>)animator API_AVAILABLE(ios(13.0)) {
     [animator addCompletion:^{
-        [self presentViewController:[RuntimeExplore tryExploreAddress:configuration.identifier safely:true] animated:true completion:nil];
+        SFSafariViewController *vcFromIdentifier = [RuntimeExplore tryExploreAddress:configuration.identifier safely:true];
+        if (!(vcFromIdentifier == nil)) {
+            [self presentViewController:vcFromIdentifier animated:true completion:nil];
+        }
     }];
 }
 @end
