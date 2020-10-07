@@ -7,19 +7,19 @@
 //  Copyright (c) 2020 Flipboard. All rights reserved.
 //
 
-#import <FLEX/FLEXManager.h>
-#import <FLEX/FLEXManager+Extensibility.h>
-#import <FLEX/FLEXManager+Networking.h>
+#import "Manager/FLEXManager.h"
+#import "Manager/FLEXManager+Extensibility.h"
+#import "Manager/FLEXManager+Networking.h"
 
-#import <FLEX/FLEXExplorerToolbar.h>
-#import <FLEX/FLEXExplorerToolbarItem.h>
-#import <FLEX/FLEXGlobalsEntry.h>
+#import "Toolbar/FLEXExplorerToolbar.h"
+#import "Toolbar/FLEXExplorerToolbarItem.h"
+#import "GlobalStateExplorers/Globals/FLEXGlobalsEntry.h"
 
-#import <FLEX/FLEX-Core.h>
-#import <FLEX/FLEX-Runtime.h>
-#import <FLEX/FLEX-Categories.h>
-#import <FLEX/FLEX-ObjectExploring.h>
+#import "FLEX-Core.h"
+#import "FLEX-Runtime.h"
+#import "FLEX-Categories.h"
+#import "FLEX-ObjectExploring.h"
 
-#import <FLEX/FLEXMacros.h>
-#import <FLEX/FLEXAlert.h>
-#import <FLEX/FLEXResources.h>
+#import "Utility/FLEXMacros.h"
+#import "Utility/FLEXAlert.h"
+#import "Utility/FLEXResources.h"

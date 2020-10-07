@@ -6,18 +6,18 @@
 //  Copyright © 2020 Flipboard. All rights reserved.
 //
 
-#import <FLEX/FLEXFilteringTableViewController.h>
-#import <FLEX/FLEXNavigationController.h>
-#import <FLEX/FLEXTableViewController.h>
-#import <FLEX/FLEXTableView.h>
+#import "Core/Controllers/FLEXFilteringTableViewController.h"
+#import "Core/Controllers/FLEXNavigationController.h"
+#import "Core/Controllers/FLEXTableViewController.h"
+#import "Core/Views/FLEXTableView.h"
 
-#import <FLEX/FLEXSingleRowSection.h>
-#import <FLEX/FLEXTableViewSection.h>
+#import "Core/FLEXSingleRowSection.h"
+#import "Core/FLEXTableViewSection.h"
 
-#import <FLEX/FLEXCodeFontCell.h>
-#import <FLEX/FLEXSubtitleTableViewCell.h>
-#import <FLEX/FLEXTableViewCell.h>
-#import <FLEX/FLEXMultilineTableViewCell.h>
-#import <FLEX/FLEXKeyValueTableViewCell.h>
+#import "Core/Views/Cells/FLEXCodeFontCell.h"
+#import "Core/Views/Cells/FLEXSubtitleTableViewCell.h"
+#import "Core/Views/Cells/FLEXTableViewCell.h"
+#import "Core/Views/Cells/FLEXMultilineTableViewCell.h"
+#import "Core/Views/Cells/FLEXKeyValueTableViewCell.h"
 
-#import <FLEX/FLEXScopeCarousel.h>
+#import "Core/Views/Carousel/FLEXScopeCarousel.h"

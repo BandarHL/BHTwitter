@@ -6,25 +6,25 @@
 //  Copyright © 2020 Flipboard. All rights reserved.
 //
 
-#import <FLEX/FLEXObjectExplorerFactory.h>
-#import <FLEX/FLEXObjectExplorerViewController.h>
+#import "ObjectExplorers/FLEXObjectExplorerFactory.h"
+#import "ObjectExplorers/FLEXObjectExplorerViewController.h"
 
-#import <FLEX/FLEXObjectExplorer.h>
+#import "ObjectExplorers/FLEXObjectExplorer.h"
 
-#import <FLEX/FLEXShortcut.h>
-#import <FLEX/FLEXShortcutsFactory+Defaults.h>
-#import <FLEX/FLEXShortcutsSection.h>
-#import <FLEX/FLEXBlockShortcuts.h>
-#import <FLEX/FLEXBundleShortcuts.h>
-#import <FLEX/FLEXClassShortcuts.h>
-#import <FLEX/FLEXImageShortcuts.h>
-#import <FLEX/FLEXLayerShortcuts.h>
-#import <FLEX/FLEXViewControllerShortcuts.h>
-#import <FLEX/FLEXViewShortcuts.h>
+#import "ObjectExplorers/Sections/Shortcuts/FLEXShortcut.h"
+#import "ObjectExplorers/Sections/Shortcuts/FLEXShortcutsFactory+Defaults.h"
+#import "ObjectExplorers/Sections/Shortcuts/FLEXShortcutsSection.h"
+#import "ObjectExplorers/Sections/Shortcuts/FLEXBlockShortcuts.h"
+#import "ObjectExplorers/Sections/Shortcuts/FLEXBundleShortcuts.h"
+#import "ObjectExplorers/Sections/Shortcuts/FLEXClassShortcuts.h"
+#import "ObjectExplorers/Sections/Shortcuts/FLEXImageShortcuts.h"
+#import "ObjectExplorers/Sections/Shortcuts/FLEXLayerShortcuts.h"
+#import "ObjectExplorers/Sections/Shortcuts/FLEXViewControllerShortcuts.h"
+#import "ObjectExplorers/Sections/Shortcuts/FLEXViewShortcuts.h"
 
-#import <FLEX/FLEXCollectionContentSection.h>
-#import <FLEX/FLEXColorPreviewSection.h>
-#import <FLEX/FLEXDefaultsContentSection.h>
-#import <FLEX/FLEXMetadataSection.h>
-#import <FLEX/FLEXMutableListSection.h>
-#import <FLEX/FLEXObjectInfoSection.h>
+#import "ObjectExplorers/Sections/FLEXCollectionContentSection.h"
+#import "ObjectExplorers/Sections/FLEXColorPreviewSection.h"
+#import "ObjectExplorers/Sections/FLEXDefaultsContentSection.h"
+#import "ObjectExplorers/Sections/FLEXMetadataSection.h"
+#import "ObjectExplorers/Sections/FLEXMutableListSection.h"
+#import "ObjectExplorers/Sections/FLEXObjectInfoSection.h"

@@ -21,6 +21,9 @@ JGProgressHUD *hud;
         [[NSUserDefaults standardUserDefaults] synchronize];
     }
     [BHTManager cleanCache];
+    if ([BHTManager FLEX]) {
+        [[FLEXManager sharedManager] showExplorer];
+    }
     return true;
 }
 %end

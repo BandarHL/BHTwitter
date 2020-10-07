@@ -124,8 +124,13 @@
     NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
     return [userDef boolForKey:@"hide_promoted"];
 }
++ (BOOL)FLEX {
+    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
+    return [userDef boolForKey:@"flex_twitter"];
+}
 + (void)showSettings:(UIViewController *)_self {
     HBSection *main_section = [HBSection sectionWithTitle:@"BHTwitter Preferences" footer:nil];
+    HBSection *debug = [HBSection sectionWithTitle:@"Debugging" footer:nil];
     HBSection *developer = [HBSection sectionWithTitle:@"Developer" footer:nil];
     
     HBSwitchCell *download = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Downloading videos" DetailTitle:@"this option will enabel downloading videos" switchKey:@"dw_v" withBlock:^(UISwitch *weakSender) {
@@ -175,6 +180,19 @@
         }
     }];
     
+    HBSwitchCell *flex = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Enable FLEX" DetailTitle:@"Show FLEX on twitter app" switchKey:@"flex_twitter" withBlock:^(UISwitch *weakSender) {
+        if (weakSender.isOn) {
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"flex_twitter"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"flex_twitter"];
+        }
+        [FLEXAlert makeAlert:^(FLEXAlert *make) {
+            make.title(@"Note");
+            make.message(@"Close the app and open it again to apply changes.");
+            make.button(@"ok").cancelStyle();
+        } showFrom:_self];
+    }];
+    
     HBTwitterCell *bandarhl = [[HBTwitterCell alloc] initTwitterCellWithTitle:@"BandarHelal" detail:@"@BandarHL" AccountLink:@"https://twitter.com/BandarHL"];
     HBGithubCell *sourceCode = [[HBGithubCell alloc] initGithubCellWithTitle:@"BHTwitter" detailTitle:@"Code source of BHTwitter" GithubURL:@"https://github.com/BandarHL/BHTwitter/"];
     
@@ -184,9 +202,10 @@
     [main_section addCell:voice];
     [main_section addCell:like_confirm];
     [main_section addCell:tweet_confirm];
+    [debug addCell:flex];
     [developer addCell:bandarhl];
     [developer addCell:sourceCode];
-    HBPreferences *hollow_pref = [HBPreferences tableWithSections:@[main_section, developer] title:@"BHTwitter" TableStyle:UITableViewStyleGrouped SeparatorStyle:UITableViewCellSeparatorStyleNone];
+    HBPreferences *hollow_pref = [HBPreferences tableWithSections:@[main_section, debug, developer] title:@"BHTwitter" TableStyle:UITableViewStyleGrouped SeparatorStyle:UITableViewCellSeparatorStyleNone];
     [_self.navigationController pushViewController:hollow_pref animated:true];
 }
 

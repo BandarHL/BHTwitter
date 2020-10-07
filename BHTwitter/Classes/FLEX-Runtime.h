@@ -6,20 +6,21 @@
 //  Copyright © 2020 Flipboard. All rights reserved.
 //
 
-#import <FLEX/FLEXObjcInternal.h>
-#import <FLEX/FLEXRuntimeSafety.h>
-#import <FLEX/FLEXBlockDescription.h>
-#import <FLEX/FLEXTypeEncodingParser.h>
+#import "Utility/Runtime/Objc/FLEXObjcInternal.h"
+#import "Utility/Runtime/Objc/FLEXRuntimeSafety.h"
+#import "Utility/Runtime/Objc/Reflection/FLEXBlockDescription.h"
+#import "Utility/Runtime/Objc/FLEXTypeEncodingParser.h"
 
-#import <FLEX/FLEXMirror.h>
-#import <FLEX/FLEXProtocol.h>
-#import <FLEX/FLEXProperty.h>
-#import <FLEX/FLEXIvar.h>
-#import <FLEX/FLEXMethodBase.h>
-#import <FLEX/FLEXMethod.h>
-#import <FLEX/FLEXPropertyAttributes.h>
-#import <FLEX/FLEXRuntime+Compare.h>
-#import <FLEX/FLEXRuntime+UIKitHelpers.h>
+#import "Utility/Runtime/Objc/Reflection/FLEXMirror.h"
+#import "Utility/Runtime/Objc/Reflection/FLEXProtocol.h"
+#import "Utility/Runtime/Objc/Reflection/FLEXProperty.h"
+#import "Utility/Runtime/Objc/Reflection/FLEXIvar.h"
+#import "Utility/Runtime/Objc/Reflection/FLEXMethodBase.h"
+#import "Utility/Runtime/Objc/Reflection/FLEXMethod.h"
+#import "Utility/Runtime/Objc/Reflection/FLEXPropertyAttributes.h"
 
-#import <FLEX/FLEXProtocolBuilder.h>
-#import <FLEX/FLEXClassBuilder.h>
+#import "Utility/Categories/FLEXRuntime+Compare.h"
+#import "Utility/Categories/FLEXRuntime+UIKitHelpers.h"
+
+#import "Utility/Runtime/Objc/Reflection/FLEXProtocolBuilder.h"
+#import "Utility/Runtime/Objc/Reflection/FLEXClassBuilder.h"

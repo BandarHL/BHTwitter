@@ -36,4 +36,5 @@
 + (BOOL)LikeConfirm;
 + (BOOL)TweetConfirm;
 + (BOOL)HidePromoted;
++ (BOOL)FLEX;
 @end
