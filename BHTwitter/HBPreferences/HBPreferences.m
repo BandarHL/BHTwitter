@@ -22,7 +22,6 @@
 @end
 
 @implementation HBPreferences
-
 + (instancetype)tableWithSections:(NSArray *)sections title:(NSString *)title TableStyle:(UITableViewStyle *)style SeparatorStyle:(UITableViewCellSeparatorStyle)SeparatorStyle {
     HBPreferences *table = [[self alloc] initTableWithSections:sections TableStyle:style SeparatorStyle:SeparatorStyle];
     table.title = title;

@@ -208,6 +208,15 @@ JGProgressHUD *hud;
 }
 %end
 
+%hook TFNTwitterComposition
+- (BOOL)isReply {
+    if ([BHTManager VoiceFeature]) {
+        return false;
+    } else {
+        return %orig;
+    }
+}
+%end
 
 %hook TFNTwitterAccount
 - (bool)isVODInlineAudioToggleEnabled {

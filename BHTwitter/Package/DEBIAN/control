@@ -1,6 +1,6 @@
 Package: com.bandarhl.BHTwitter
 Name: BHTwitter
-Version: 1.7
+Version: 1.8
 Description: Awesome tweak for Twitter
 Section: Tweaks
 Depends: firmware (>= 11.0), mobilesubstrate

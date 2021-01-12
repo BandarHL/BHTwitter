@@ -157,6 +157,9 @@
 @property(readonly, nonatomic) id viewModel; // @synthesize viewModel=_viewModel;
 @end
 
+@interface TFNTwitterComposition : NSObject
+@end
+
 static UIViewController *_topMostController(UIViewController *cont) {
     UIViewController *topController = cont;
     while (topController.presentedViewController) {
