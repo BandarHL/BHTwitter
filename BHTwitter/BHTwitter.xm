@@ -210,7 +210,7 @@ JGProgressHUD *hud;
 
 %hook TFNTwitterComposition
 - (BOOL)isReply {
-    if ([BHTManager VoiceFeature]) {
+    if ([BHTManager voice_in_replay]) {
         return false;
     } else {
         return %orig;
@@ -219,8 +219,15 @@ JGProgressHUD *hud;
 %end
 
 %hook TFNTwitterAccount
+- (BOOL)isProfileTipJarSettingsEnabled {
+    if ([BHTManager tipjar]) {
+        return true;
+    } else {
+        return %orig;
+    }
+}
 - (bool)isVODInlineAudioToggleEnabled {
-    return YES;
+    return true;
 }
 - (_Bool)isConversationThreadingVoiceOverSupportEnabled {
     if ([BHTManager VoiceFeature]) {

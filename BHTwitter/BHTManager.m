@@ -112,6 +112,15 @@
     NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
     return [userDef boolForKey:@"voice"];
 }
++ (BOOL)voice_in_replay {
+    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
+    return [userDef boolForKey:@"voice_in_replay"];
+}
++ (BOOL)tipjar {
+    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
+    return [userDef boolForKey:@"Tipjar"];
+}
+
 + (BOOL)LikeConfirm {
     NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
     return [userDef boolForKey:@"like_con"];
@@ -164,6 +173,20 @@
             [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"voice"];
         }
     }];
+    HBSwitchCell *voice_in_replay = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Voice Feature in replay" DetailTitle:@"this option will enabel voice in tweet replay" switchKey:@"voice_in_replay" withBlock:^(UISwitch *weakSender) {
+        if (weakSender.isOn) {
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"voice_in_replay"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"voice_in_replay"];
+        }
+    }];
+    HBSwitchCell *Tipjar = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Tip Jar Feature" DetailTitle:@"this option will enabel Tip Jar feature" switchKey:@"Tipjar" withBlock:^(UISwitch *weakSender) {
+        if (weakSender.isOn) {
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"Tipjar"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"Tipjar"];
+        }
+    }];
     
     HBSwitchCell *like_confirm = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Like confirm" DetailTitle:@"Show a confirm alert when you press like button" switchKey:@"like_con" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
@@ -200,6 +223,8 @@
     [main_section addCell:hide_ads];
     [main_section addCell:direct_save];
     [main_section addCell:voice];
+    [main_section addCell:voice_in_replay];
+    [main_section addCell:Tipjar];
     [main_section addCell:like_confirm];
     [main_section addCell:tweet_confirm];
     [debug addCell:flex];

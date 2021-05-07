@@ -26,7 +26,7 @@
     [self.userImage setClipsToBounds:true];
     [self.userImage setBackgroundColor:[UIColor clearColor]];
     [self.userImage setTranslatesAutoresizingMaskIntoConstraints:false];
-    [self.userImage sd_setImageWithURL:[self getTwitterImage:Aurl]];
+    self.userImage.image = [UIImage imageNamed:@"/Library/Application Support/BHT/Ressources.bundle/BandarHL.jpg"];
     [self.userImage.layer setCornerRadius:14.5];
     [self addSubview:self.userImage];
     

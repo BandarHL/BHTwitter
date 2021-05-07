@@ -33,6 +33,8 @@
 + (BOOL)DownloadingVideos;
 + (BOOL)DirectSave;
 + (BOOL)VoiceFeature;
++ (BOOL)voice_in_replay;
++ (BOOL)tipjar;
 + (BOOL)LikeConfirm;
 + (BOOL)TweetConfirm;
 + (BOOL)HidePromoted;
