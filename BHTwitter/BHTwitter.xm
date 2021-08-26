@@ -28,6 +28,7 @@ JGProgressHUD *hud;
 }
 %end
 
+// MARK: hide ADs
 // credit goes to haoict https://github.com/haoict/twitter-no-ads
 %hook TFNItemsDataViewController
 - (id)tableViewCellForItem:(id)arg1 atIndexPath:(id)arg2 {
@@ -36,6 +37,13 @@ JGProgressHUD *hud;
         id tweet = [self itemAtIndexPath:arg2];
         if ([tweet isKindOfClass:NSClassFromString(@"TFNTwitterStatus")]) {
             TFNTwitterStatus *fullTweet = tweet;
+            if (fullTweet.isPromoted) {
+                [_orig setHidden:true];
+                return _orig;
+            }
+        }
+        if ([tweet isKindOfClass:NSClassFromString(@"T1URTTimelineStatusItemViewModel")]) {
+            T1URTTimelineStatusItemViewModel *fullTweet = tweet;
             if (fullTweet.isPromoted) {
                 [_orig setHidden:true];
                 return _orig;
@@ -55,38 +63,48 @@ JGProgressHUD *hud;
                 return %orig;
             }
         }
+        if ([tweet isKindOfClass:NSClassFromString(@"T1URTTimelineStatusItemViewModel")]) {
+            T1URTTimelineStatusItemViewModel *fullTweet = tweet;
+            if (fullTweet.isPromoted) {
+                return 0;
+            } else {
+                return %orig;
+            }
+        }
     }
     return %orig;
 }
 %end
 
 %hook T1DirectMessageEntryMediaCell
-- (id)initWithFrame:(struct CGRect)arg1 {
+- (void)setEntryViewModel:(id)arg1 {
+    %orig;
     if ([BHTManager DownloadingVideos]) {
-        UILongPressGestureRecognizer *longGes = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(DownloadHandler)];
+        UILongPressGestureRecognizer *longGes = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(DownloadHandler:)];
         [self addGestureRecognizer:longGes];
     }
-    return %orig(arg1);
 }
-%new - (void)DownloadHandler {
-    if ([BHTManager isDMVideoCell:self.inlineMediaView]) {
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"hi" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
-        T1PlayerMediaEntitySessionProducible *session = self.inlineMediaView.viewModel.playerSessionProducer.sessionProducible;
-        for (TFSTwitterEntityMediaVideoVariant *i in session.mediaEntity.videoInfo.variants) {
-            if ([i.contentType isEqualToString:@"video/mp4"]) {
-                UIAlertAction *download = [UIAlertAction actionWithTitle:[BHTManager getVideoQuality:i.url] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-                    BHDownload *DownloadManager = [[BHDownload alloc] initWithBackgroundSessionID:NSUUID.UUID.UUIDString];
-                    hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
-                    hud.textLabel.text = @"Downloading";
-                    [DownloadManager downloadFileWithURL:[NSURL URLWithString:i.url]];
-                    [DownloadManager setDelegate:self];
-                    [hud showInView:topMostController().view];
-                }];
-                [alert addAction:download];
+%new - (void)DownloadHandler:(UILongPressGestureRecognizer *)sender {
+    if (sender.state == UIGestureRecognizerStateEnded) {
+        if ([BHTManager isDMVideoCell:self.inlineMediaView]) {
+            UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"hi" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
+            T1PlayerMediaEntitySessionProducible *session = self.inlineMediaView.viewModel.playerSessionProducer.sessionProducible;
+            for (TFSTwitterEntityMediaVideoVariant *i in session.mediaEntity.videoInfo.variants) {
+                if ([i.contentType isEqualToString:@"video/mp4"]) {
+                    UIAlertAction *download = [UIAlertAction actionWithTitle:[BHTManager getVideoQuality:i.url] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+                        BHDownload *DownloadManager = [[BHDownload alloc] initWithBackgroundSessionID:NSUUID.UUID.UUIDString];
+                        hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
+                        hud.textLabel.text = @"Downloading";
+                        [DownloadManager downloadFileWithURL:[NSURL URLWithString:i.url]];
+                        [DownloadManager setDelegate:self];
+                        [hud showInView:topMostController().view];
+                    }];
+                    [alert addAction:download];
+                }
             }
+            [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+            [topMostController() presentViewController:alert animated:true completion:nil];
         }
-        [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
-        [topMostController() presentViewController:alert animated:true completion:nil];
     }
 }
 %new - (void)downloadProgress:(float)progress {
@@ -108,39 +126,27 @@ JGProgressHUD *hud;
 }
 %end
 
-%hook T1AppEventHandler
-- (void)_t1_configureRightToLeftSupport {
-    return;
-}
-%end
-
-%hook T1StatusBodyTextView
-- (_Bool)openURL {
-    if ([self.viewModel isKindOfClass:NSClassFromString(@"TFNTwitterStatus")]) {
-        TFNTwitterStatus *tweet = self.viewModel;
-        if ([tweet.mediaScribeContentID containsString:@"youtube"]) {
-            [[UIApplication sharedApplication] openURL:[NSURL URLWithString:tweet.mediaScribeContentID] options:@{} completionHandler:nil];
-            return true;
-        } else {
-            return %orig;
-        }
+%hook T1SlideshowStatusView
+- (void)setViewModel:(id)arg1 media:(id)arg2 animated:(BOOL)arg3 {
+    %orig;
+    if ([BHTManager DownloadingVideos]) {
+        T1StatusInlineActionsView *vis = [self valueForKey:@"_actionsView"];
+        [vis appendNewButton:true];
     }
-    return %orig;
 }
 %end
-
 %hook T1StandardStatusView
 - (void)setViewModel:(id)arg1 options:(unsigned long long)arg2 account:(id)arg3 {
     %orig;
     if ([BHTManager DownloadingVideos]) {
         T1StatusInlineActionsView *vis = self.visibleInlineActionsView;
-        [vis appendNewButton];
+        [vis appendNewButton:false];
     }
 }
 %end
 
 %hook T1StatusInlineActionsView
-%new - (void)appendNewButton {
+%new - (void)appendNewButton:(BOOL)isSlideshow {
     if ([BHTManager isVideoCell:self]) {
         UIButton *newButton = [UIButton buttonWithType:UIButtonTypeCustom];
         if (@available(iOS 13.0, *)) {
@@ -150,17 +156,24 @@ JGProgressHUD *hud;
         }
         [newButton addTarget:self action:@selector(DownloadHandler) forControlEvents:UIControlEventTouchUpInside];
         [newButton setTranslatesAutoresizingMaskIntoConstraints:false];
-        [newButton setTintColor:[UIColor colorFromHexString:@"6D6E70"]];
+        [newButton setTintColor:isSlideshow ? UIColor.whiteColor : [UIColor colorFromHexString:@"6D6E70"]];
         [self addSubview:newButton];
         
-        TFNButton *lastButton = self.inlineActionButtons.lastObject;
-        [NSLayoutConstraint activateConstraints:@[
-            [newButton.heightAnchor constraintEqualToConstant:24],
-            [newButton.widthAnchor constraintEqualToConstant:30],
-            [newButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
-            [newButton.leadingAnchor constraintEqualToAnchor:lastButton.trailingAnchor constant:13]
-        ]];
-
+        if ([BHTManager isDeviceLanguageRTL]) {
+            [NSLayoutConstraint activateConstraints:@[
+                [newButton.heightAnchor constraintEqualToConstant:isSlideshow ? 34 : 24],
+                [newButton.widthAnchor constraintEqualToConstant:isSlideshow ? 36 : 30],
+                [newButton.topAnchor constraintEqualToAnchor:self.topAnchor constant:-4],
+                [newButton.leadingAnchor constraintEqualToAnchor:self.leadingAnchor]
+            ]];
+        } else {
+            [NSLayoutConstraint activateConstraints:@[
+                [newButton.heightAnchor constraintEqualToConstant:isSlideshow ? 34 : 24],
+                [newButton.widthAnchor constraintEqualToConstant:isSlideshow ? 36 : 30],
+                [newButton.topAnchor constraintEqualToAnchor:self.topAnchor constant:-4],
+                [newButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor]
+            ]];
+        }
     }
 }
 %new - (void)DownloadHandler {
