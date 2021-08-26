@@ -55,11 +55,14 @@
 @property(nonatomic, readonly) TFSTwitterEntitySet *entities;
 @end
 
+@interface T1SlideshowStatusView: NSObject
+@end
+
 @interface T1StatusInlineActionsView : UIView
 {
     NSMutableArray *_inlineActionButtons;
 }
-- (void)appendNewButton;
+- (void)appendNewButton:(BOOL)isSlideshow;
 @property(readonly, nonatomic) id <T1StatusViewModel> viewModel;
 @property(retain, nonatomic) NSMutableArray *inlineActionButtons;
 - (void)DownloadHandler;
@@ -141,10 +144,14 @@
 - (void)dealloc;
 - (void)layoutSubviews;
 - (id)initWithFrame:(struct CGRect)arg1;
-- (void)DownloadHandler;
+- (void)DownloadHandler:(UILongPressGestureRecognizer *)sender;
 @end
 
 @interface T1DirectMessageEntryMediaCell () <BHDownloadDelegate>
+@end
+
+@interface T1URTTimelineStatusItemViewModel : NSObject
+@property(nonatomic, readonly) _Bool isPromoted;
 @end
 
 @interface TFNTwitterStatus : NSObject
@@ -158,6 +165,13 @@
 @end
 
 @interface TFNTwitterComposition : NSObject
+@end
+
+@interface T1URTViewController : UIViewController
+@end
+
+@interface T1ConversationContainerViewController : UIViewController
+- (void)didTapReaderModeButtonWithSender:(id)arg1;
 @end
 
 static UIViewController *_topMostController(UIViewController *cont) {
@@ -181,3 +195,4 @@ static UIViewController *topMostController() {
     }
     return topController;
 }
+
