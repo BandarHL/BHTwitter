@@ -29,6 +29,7 @@
 + (void)showSettings:(UIViewController *)_self;
 + (void)showSaveVC:(NSURL *)url;
 + (void)save:(NSURL *)url;
++ (BOOL)isDeviceLanguageRTL;
 
 + (BOOL)DownloadingVideos;
 + (BOOL)DirectSave;
@@ -40,3 +41,4 @@
 + (BOOL)HidePromoted;
 + (BOOL)FLEX;
 @end
+
