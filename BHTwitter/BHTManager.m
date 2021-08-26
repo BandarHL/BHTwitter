@@ -9,6 +9,9 @@
 
 
 @implementation BHTManager
++ (BOOL)isDeviceLanguageRTL {
+  return ([NSLocale characterDirectionForLanguage:[[NSLocale preferredLanguages] objectAtIndex:0]] == NSLocaleLanguageDirectionRightToLeft);
+}
 + (bool)isDMVideoCell:(T1InlineMediaView *)view {
     if (view.playerIconViewType == 4) {
         return true;
@@ -205,15 +208,12 @@
     
     HBSwitchCell *flex = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Enable FLEX" DetailTitle:@"Show FLEX on twitter app" switchKey:@"flex_twitter" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
+            [[FLEXManager sharedManager] showExplorer];
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"flex_twitter"];
         } else {
+            [[FLEXManager sharedManager] hideExplorer];
             [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"flex_twitter"];
         }
-        [FLEXAlert makeAlert:^(FLEXAlert *make) {
-            make.title(@"Note");
-            make.message(@"Close the app and open it again to apply changes.");
-            make.button(@"ok").cancelStyle();
-        } showFrom:_self];
     }];
     
     HBTwitterCell *bandarhl = [[HBTwitterCell alloc] initTwitterCellWithTitle:@"BandarHelal" detail:@"@BandarHL" AccountLink:@"https://twitter.com/BandarHL"];
@@ -252,3 +252,4 @@
 }
 
 @end
+
