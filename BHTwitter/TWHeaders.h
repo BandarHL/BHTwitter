@@ -144,10 +144,10 @@
 - (void)dealloc;
 - (void)layoutSubviews;
 - (id)initWithFrame:(struct CGRect)arg1;
-- (void)DownloadHandler:(UILongPressGestureRecognizer *)sender;
+- (void)DownloadHandler;
 @end
 
-@interface T1DirectMessageEntryMediaCell () <BHDownloadDelegate>
+@interface T1DirectMessageEntryMediaCell () <BHDownloadDelegate, UIContextMenuInteractionDelegate>
 @end
 
 @interface T1URTTimelineStatusItemViewModel : NSObject

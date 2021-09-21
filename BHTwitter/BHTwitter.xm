@@ -80,32 +80,40 @@ JGProgressHUD *hud;
 - (void)setEntryViewModel:(id)arg1 {
     %orig;
     if ([BHTManager DownloadingVideos]) {
-        UILongPressGestureRecognizer *longGes = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(DownloadHandler:)];
-        [self addGestureRecognizer:longGes];
-    }
-}
-%new - (void)DownloadHandler:(UILongPressGestureRecognizer *)sender {
-    if (sender.state == UIGestureRecognizerStateEnded) {
+        UIContextMenuInteraction *menuInteraction = [[UIContextMenuInteraction alloc] initWithDelegate:self];
+        [self setUserInteractionEnabled:true];
+        
         if ([BHTManager isDMVideoCell:self.inlineMediaView]) {
-            UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"hi" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
-            T1PlayerMediaEntitySessionProducible *session = self.inlineMediaView.viewModel.playerSessionProducer.sessionProducible;
-            for (TFSTwitterEntityMediaVideoVariant *i in session.mediaEntity.videoInfo.variants) {
-                if ([i.contentType isEqualToString:@"video/mp4"]) {
-                    UIAlertAction *download = [UIAlertAction actionWithTitle:[BHTManager getVideoQuality:i.url] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-                        BHDownload *DownloadManager = [[BHDownload alloc] initWithBackgroundSessionID:NSUUID.UUID.UUIDString];
-                        hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
-                        hud.textLabel.text = @"Downloading";
-                        [DownloadManager downloadFileWithURL:[NSURL URLWithString:i.url]];
-                        [DownloadManager setDelegate:self];
-                        [hud showInView:topMostController().view];
-                    }];
-                    [alert addAction:download];
-                }
-            }
-            [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
-            [topMostController() presentViewController:alert animated:true completion:nil];
+            [self addInteraction:menuInteraction];
         }
     }
+}
+%new - (UIContextMenuConfiguration *)contextMenuInteraction:(UIContextMenuInteraction *)interaction configurationForMenuAtLocation:(CGPoint)location {
+    return [UIContextMenuConfiguration configurationWithIdentifier:nil previewProvider:nil actionProvider:^UIMenu * _Nullable(NSArray<UIMenuElement *> * _Nonnull suggestedActions) {
+        UIAction *saveAction = [UIAction actionWithTitle:@"Download" image:[UIImage systemImageNamed:@"square.and.arrow.down"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
+            [self DownloadHandler];
+        }];
+        return [UIMenu menuWithTitle:@"" children:@[saveAction]];
+    }];
+}
+%new - (void)DownloadHandler {
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"hi" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
+    T1PlayerMediaEntitySessionProducible *session = self.inlineMediaView.viewModel.playerSessionProducer.sessionProducible;
+    for (TFSTwitterEntityMediaVideoVariant *i in session.mediaEntity.videoInfo.variants) {
+        if ([i.contentType isEqualToString:@"video/mp4"]) {
+            UIAlertAction *download = [UIAlertAction actionWithTitle:[BHTManager getVideoQuality:i.url] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+                BHDownload *DownloadManager = [[BHDownload alloc] initWithBackgroundSessionID:NSUUID.UUID.UUIDString];
+                hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
+                hud.textLabel.text = @"Downloading";
+                [DownloadManager downloadFileWithURL:[NSURL URLWithString:i.url]];
+                [DownloadManager setDelegate:self];
+                [hud showInView:topMostController().view];
+            }];
+            [alert addAction:download];
+        }
+    }
+    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+    [topMostController() presentViewController:alert animated:true completion:nil];
 }
 %new - (void)downloadProgress:(float)progress {
     hud.detailTextLabel.text = [BHTManager getDownloadingPersent:progress];
