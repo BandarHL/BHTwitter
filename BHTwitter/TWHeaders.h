@@ -7,6 +7,11 @@
 #import <objc/runtime.h>
 #import "./Classes/FLEX.h"
 #import "BHDownload.h"
+#import "JGProgressHUD/include/JGProgressHUD.h"
+
+@interface T1AppDelegate : UIResponder <UIApplicationDelegate>
+@property(retain, nonatomic) UIWindow *window;
+@end
 
 @interface TFNItemsDataViewController : NSObject
 - (id)itemAtIndexPath:(id)arg1;
@@ -65,6 +70,7 @@
 - (void)appendNewButton:(BOOL)isSlideshow;
 @property(readonly, nonatomic) id <T1StatusViewModel> viewModel;
 @property(retain, nonatomic) NSMutableArray *inlineActionButtons;
+@property (nonatomic, strong) JGProgressHUD *hud;
 - (void)DownloadHandler;
 @end
 
@@ -76,17 +82,17 @@
 @end
 
 
-@interface TFSKeychainDefaultTwitterConfiguration : NSObject
-{
-    NSString *_serviceName;
-    NSString *_defaultAccessGroup;
-    NSString *_sharedAccessGroup;
-}
-@property(readonly, nonatomic) NSString *sharedAccessGroup; // @synthesize sharedAccessGroup=_sharedAccessGroup;
-@property(readonly, nonatomic) NSString *defaultAccessGroup; // @synthesize defaultAccessGroup=_defaultAccessGroup;
-@property(readonly, nonatomic) NSString *serviceName; // @synthesize serviceName=_serviceName;
-- (id)init;
-@end
+//@interface TFSKeychainDefaultTwitterConfiguration : NSObject
+//{
+//    NSString *_serviceName;
+//    NSString *_defaultAccessGroup;
+//    NSString *_sharedAccessGroup;
+//}
+//@property(readonly, nonatomic) NSString *sharedAccessGroup; // @synthesize sharedAccessGroup=_sharedAccessGroup;
+//@property(readonly, nonatomic) NSString *defaultAccessGroup; // @synthesize defaultAccessGroup=_defaultAccessGroup;
+//@property(readonly, nonatomic) NSString *serviceName; // @synthesize serviceName=_serviceName;
+//- (id)init;
+//@end
 
 @interface TFNButtonBarView : UIView
 @property(nonatomic) double trailingViewsSpacing;
@@ -137,6 +143,7 @@
 @end
 
 @interface T1DirectMessageEntryMediaCell : T1DirectMessageEntryBaseCell
+@property (nonatomic, strong) JGProgressHUD *hud;
 - (void)mediaUploadProgress:(id)arg1;
 @property(nonatomic, readonly) T1InlineMediaView *inlineMediaView; // @synthesize inlineMediaView;
 - (void)updateConstraints;
@@ -174,6 +181,8 @@
 - (void)didTapReaderModeButtonWithSender:(id)arg1;
 @end
 
+
+// https://github.com/julioverne/MImport/blob/0275405812ff41ed2ca56e98f495fd05c38f41f2/mimporthook/MImport.xm#L59
 static UIViewController *_topMostController(UIViewController *cont) {
     UIViewController *topController = cont;
     while (topController.presentedViewController) {

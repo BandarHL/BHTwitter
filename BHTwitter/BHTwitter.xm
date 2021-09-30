@@ -1,13 +1,12 @@
 #import <UIKit/UIKit.h>
-#import "TWHeaders.h"
 #import "BHTManager.h"
+#import "SAMKeychain/AuthViewController.h"
 #import "Colours.h"
 
 %config(generator=internal)
-JGProgressHUD *hud;
 
+// MARK: Clean cache and Padlock
 %hook T1AppDelegate
-
 - (_Bool)application:(UIApplication *)application didFinishLaunchingWithOptions:(id)arg2 {
     %orig;
     if (![[NSUserDefaults standardUserDefaults] objectForKey:@"FirstRun"]) {
@@ -25,6 +24,45 @@ JGProgressHUD *hud;
         [[FLEXManager sharedManager] showExplorer];
     }
     return true;
+}
+
+- (void)applicationDidBecomeActive:(id)arg1 {
+    %orig;
+    if ([BHTManager Padlock]) {
+        NSDictionary *keychainData = [[keychain shared] getData];
+        if (keychainData != nil) {
+            id isAuthenticated = [keychainData valueForKey:@"isAuthenticated"];
+            if (isAuthenticated == nil || [isAuthenticated isEqual:@NO]) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    AuthViewController *auth = [[AuthViewController alloc] init];
+                    [auth setModalPresentationStyle:UIModalPresentationFullScreen];
+                    [self.window.rootViewController presentViewController:auth animated:true completion:nil];
+                });
+            }
+        }
+        UIImageView *image = [self.window viewWithTag:909];
+        if (image != nil) {
+            [image removeFromSuperview];
+        }
+    }
+}
+
+- (void)applicationWillTerminate:(id)arg1 {
+    %orig;
+    if ([BHTManager Padlock]) {
+        [[keychain shared] saveDictionary:@{@"isAuthenticated": @NO}];
+    }
+}
+
+- (void)applicationWillResignActive:(id)arg1 {
+    %orig;
+    if ([BHTManager Padlock]) {
+        UIImageView *image = [[UIImageView alloc] initWithFrame:self.window.bounds];
+        [image setTag:909];
+        [image setBackgroundColor:UIColor.systemBackgroundColor];
+        [image setContentMode:UIViewContentModeCenter];
+        [self.window addSubview:image];
+    }
 }
 %end
 
@@ -76,7 +114,9 @@ JGProgressHUD *hud;
 }
 %end
 
+// MARK: DM download
 %hook T1DirectMessageEntryMediaCell
+%property (nonatomic, strong) JGProgressHUD *hud;
 - (void)setEntryViewModel:(id)arg1 {
     %orig;
     if ([BHTManager DownloadingVideos]) {
@@ -103,11 +143,11 @@ JGProgressHUD *hud;
         if ([i.contentType isEqualToString:@"video/mp4"]) {
             UIAlertAction *download = [UIAlertAction actionWithTitle:[BHTManager getVideoQuality:i.url] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
                 BHDownload *DownloadManager = [[BHDownload alloc] initWithBackgroundSessionID:NSUUID.UUID.UUIDString];
-                hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
-                hud.textLabel.text = @"Downloading";
+                self.hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
+                self.hud.textLabel.text = @"Downloading";
                 [DownloadManager downloadFileWithURL:[NSURL URLWithString:i.url]];
                 [DownloadManager setDelegate:self];
-                [hud showInView:topMostController().view];
+                [self.hud showInView:topMostController().view];
             }];
             [alert addAction:download];
         }
@@ -116,7 +156,7 @@ JGProgressHUD *hud;
     [topMostController() presentViewController:alert animated:true completion:nil];
 }
 %new - (void)downloadProgress:(float)progress {
-    hud.detailTextLabel.text = [BHTManager getDownloadingPersent:progress];
+    self.hud.detailTextLabel.text = [BHTManager getDownloadingPersent:progress];
 }
 
 %new - (void)downloadDidFinish:(NSURL *)filePath Filename:(NSString *)fileName {
@@ -124,16 +164,18 @@ JGProgressHUD *hud;
     NSFileManager *manager = [NSFileManager defaultManager];
     NSURL *newFilePath = [[NSURL fileURLWithPath:DocPath] URLByAppendingPathComponent:[NSString stringWithFormat:@"%@.mp4", NSUUID.UUID.UUIDString]];
     [manager moveItemAtURL:filePath toURL:newFilePath error:nil];
-    [hud dismiss];
+    [self.hud dismiss];
     [BHTManager showSaveVC:newFilePath];
 }
 %new - (void)downloadDidFailureWithError:(NSError *)error {
     if (error) {
-        [hud dismiss];
+        [self.hud dismiss];
     }
 }
 %end
 
+
+// MARK: Timeline download
 %hook T1SlideshowStatusView
 - (void)setViewModel:(id)arg1 media:(id)arg2 animated:(BOOL)arg3 {
     %orig;
@@ -154,6 +196,7 @@ JGProgressHUD *hud;
 %end
 
 %hook T1StatusInlineActionsView
+%property (nonatomic, strong) JGProgressHUD *hud;
 %new - (void)appendNewButton:(BOOL)isSlideshow {
     if ([BHTManager isVideoCell:self]) {
         UIButton *newButton = [UIButton buttonWithType:UIButtonTypeCustom];
@@ -194,9 +237,9 @@ JGProgressHUD *hud;
                     [DownloadManager downloadFileWithURL:[NSURL URLWithString:k.url]];
                     [DownloadManager setDelegate:self];
                     if (!([BHTManager DirectSave])) {
-                        hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
-                        hud.textLabel.text = @"Downloading";
-                        [hud showInView:topMostController().view];
+                        self.hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
+                        self.hud.textLabel.text = @"Downloading";
+                        [self.hud showInView:topMostController().view];
                     }
                 }];
                 [alert addAction:download];
@@ -207,7 +250,7 @@ JGProgressHUD *hud;
     [topMostController() presentViewController:alert animated:true completion:nil];
 }
 %new - (void)downloadProgress:(float)progress {
-    hud.detailTextLabel.text = [BHTManager getDownloadingPersent:progress];
+    self.hud.detailTextLabel.text = [BHTManager getDownloadingPersent:progress];
 }
 
 %new - (void)downloadDidFinish:(NSURL *)filePath Filename:(NSString *)fileName {
@@ -216,7 +259,7 @@ JGProgressHUD *hud;
     NSURL *newFilePath = [[NSURL fileURLWithPath:DocPath] URLByAppendingPathComponent:[NSString stringWithFormat:@"%@.mp4", NSUUID.UUID.UUIDString]];
     [manager moveItemAtURL:filePath toURL:newFilePath error:nil];
     if (!([BHTManager DirectSave])) {
-        [hud dismiss];
+        [self.hud dismiss];
         [BHTManager showSaveVC:newFilePath];
     } else {
         [BHTManager save:newFilePath];
@@ -224,11 +267,12 @@ JGProgressHUD *hud;
 }
 %new - (void)downloadDidFailureWithError:(NSError *)error {
     if (error) {
-        [hud dismiss];
+        [self.hud dismiss];
     }
 }
 %end
 
+// MARK: Voice feature and Tipjar
 %hook TFNTwitterComposition
 - (BOOL)isReply {
     if ([BHTManager voice_in_replay]) {
@@ -313,6 +357,7 @@ JGProgressHUD *hud;
 }
 %end
 
+// MARK: Tweet confirm
 %hook T1TweetComposeViewController
 - (void)_t1_handleTweet {
     if ([BHTManager TweetConfirm]) {
@@ -329,6 +374,7 @@ JGProgressHUD *hud;
 }
 %end
 
+// MARK: Like confirm
 %hook T1StatusInlineFavoriteButton
 - (void)didTap {
     if ([BHTManager LikeConfirm]) {
@@ -363,6 +409,7 @@ JGProgressHUD *hud;
 %end
 
 
+// MARK: BHTwitter settings
 %hook T1SettingsViewController
 - (void)viewWillAppear:(BOOL)arg1 {
     %orig;

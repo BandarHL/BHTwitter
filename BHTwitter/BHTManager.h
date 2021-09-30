@@ -10,7 +10,7 @@
 #import <Photos/Photos.h>
 #import "./Classes/Utility/FLEXAlert.h"
 #import "TWHeaders.h"
-#import "JGProgressHUD/include/JGProgressHUD.h"
+#import "SAMKeychain/keychain.h"
 #import "HBPreferences/HBPreferences.h"
 #import "HBPreferences/HBButtonCell.h"
 #import "HBPreferences/HBSection.h"
@@ -39,6 +39,7 @@
 + (BOOL)LikeConfirm;
 + (BOOL)TweetConfirm;
 + (BOOL)HidePromoted;
++ (BOOL)Padlock;
 + (BOOL)FLEX;
 @end
 
