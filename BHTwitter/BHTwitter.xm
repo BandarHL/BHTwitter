@@ -410,6 +410,31 @@
 
 
 // MARK: BHTwitter settings
+%hook TFNSettingsNavigationItem
+- (id)initWithTitle:(id)arg1 detail:(id)arg2 iconName:(id)arg3 controllerFactory:(id)arg4 {
+    if ([arg3 isKindOfClass:NSClassFromString(@"NSString")] && [arg3 isEqual:@"gear"]) {
+        TFNSettingsNavigationItem *_orig = %orig;
+        [_orig setValue:[UIImage systemImageNamed:@"gear"] forKey:@"_icon"];
+        return _orig;
+    }
+    return %orig(arg1, arg2, arg3, arg4);
+}
+%end
+
+%hook T1GenericSettingsViewController
+- (void)viewWillAppear:(BOOL)arg1 {
+    %orig;
+    if ([self.sections count] == 1) {
+        TFNItemsDataViewControllerBackingStore *DataViewControllerBackingStore = self.backingStore;
+        TFNSettingsNavigationItem *bhtwitter = [[%c(TFNSettingsNavigationItem) alloc] initWithTitle:@"Settings" detail:@"BHTwitter preferences" iconName:@"gear" controllerFactory:^UIViewController *{
+            return [BHTManager BHTSettings];
+        }];
+        [DataViewControllerBackingStore insertSection:0 atIndex:0];
+        [DataViewControllerBackingStore insertItem:bhtwitter atIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
+    }
+}
+%end
+
 %hook T1SettingsViewController
 - (void)viewWillAppear:(BOOL)arg1 {
     %orig;

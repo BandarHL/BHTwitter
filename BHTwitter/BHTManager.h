@@ -26,6 +26,7 @@
 + (BOOL)isVideoCell:(T1StatusInlineActionsView *)cell;
 + (bool)isDMVideoCell:(T1InlineMediaView *)view;
 + (BOOL)doesContainDigitsOnly:(NSString *)string;
++ (UIViewController *)BHTSettings;
 + (void)showSettings:(UIViewController *)_self;
 + (void)showSaveVC:(NSURL *)url;
 + (void)save:(NSURL *)url;

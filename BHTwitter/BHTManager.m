@@ -144,7 +144,7 @@
     NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
     return [userDef boolForKey:@"flex_twitter"];
 }
-+ (void)showSettings:(UIViewController *)_self {
++ (UIViewController *)BHTSettings {
     HBSection *main_section = [HBSection sectionWithTitle:@"BHTwitter Preferences" footer:nil];
     HBSection *debug = [HBSection sectionWithTitle:@"Debugging" footer:nil];
     HBSection *developer = [HBSection sectionWithTitle:@"Developer" footer:nil];
@@ -214,7 +214,7 @@
             [[keychain shared] saveDictionary:@{@"isAuthenticated": @YES}];
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"padlock"];
         } else {
-//            [[keychain shared] deleteService];
+            //            [[keychain shared] deleteService];
             [[keychain shared] saveDictionary:@{@"isAuthenticated": @NO}];
             [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"padlock"];
         }
@@ -245,8 +245,11 @@
     [debug addCell:flex];
     [developer addCell:bandarhl];
     [developer addCell:sourceCode];
-    HBPreferences *hollow_pref = [HBPreferences tableWithSections:@[main_section, debug, developer] title:@"BHTwitter" TableStyle:UITableViewStyleGrouped SeparatorStyle:UITableViewCellSeparatorStyleNone];
-    [_self.navigationController pushViewController:hollow_pref animated:true];
+    HBPreferences *pref = [HBPreferences tableWithSections:@[main_section, debug, developer] title:@"BHTwitter" TableStyle:UITableViewStyleGrouped SeparatorStyle:UITableViewCellSeparatorStyleNone];
+    return pref;
+}
++ (void)showSettings:(UIViewController *)_self {
+    [_self.navigationController pushViewController:[BHTManager BHTSettings] animated:true];
 }
 
 // https://stackoverflow.com/a/45356575/9910699

@@ -22,12 +22,20 @@
 - (void)insertItem:(id)arg1 atIndexPath:(id)arg2;
 @end
 
+@interface T1GenericSettingsViewController: UIViewController
+@property ( nonatomic, strong) TFNItemsDataViewControllerBackingStore *backingStore;
+@property ( nonatomic, strong) NSArray* sections;
+@end
 
 @interface T1SettingsViewController : UIViewController
 @property ( nonatomic, strong) TFNItemsDataViewControllerBackingStore *backingStore;
 @property ( nonatomic, strong) NSArray* sections;
 @end
 
+@interface TFNSettingsNavigationItem : NSObject
+- (id)initWithTitle:(NSString *)arg1 detail:(NSString *)arg2 iconName:(NSString *)arg3 controllerFactory:(UIViewController* (^_Nonnull)(void))arg4;
+- (id)initWithTitle:(NSString *)arg1 detail:(NSString *)arg2 controllerFactory:(UIViewController* (^_Nonnull)(void))arg4;
+@end
 @interface TFNTextCell: UITableViewCell
 @end
 
