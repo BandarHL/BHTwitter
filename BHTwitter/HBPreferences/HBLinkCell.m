@@ -39,7 +39,7 @@
         
         self.SafariImage = UIImageView.new;
         [self.SafariImage setBackgroundColor:[UIColor clearColor]];
-        [self.SafariImage setImage:[UIImage imageNamed:@"/Library/Application Support/BHT/Ressources.bundle/safari"]];
+        [self.SafariImage setImage:[UIImage systemImageNamed:@"safari"]];
         [self.SafariImage setTranslatesAutoresizingMaskIntoConstraints:false];
         [self addSubview:self.SafariImage];
         

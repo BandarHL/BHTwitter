@@ -136,6 +136,10 @@
     NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
     return [userDef boolForKey:@"hide_promoted"];
 }
++ (BOOL)UndoTweet {
+    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
+    return [userDef boolForKey:@"undo_tweet"];
+}
 + (BOOL)Padlock {
     NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
     return [userDef boolForKey:@"padlock"];
@@ -194,7 +198,13 @@
             [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"Tipjar"];
         }
     }];
-    
+    HBSwitchCell *UndoTweet = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Undo tweets feature" DetailTitle:@"Undo tweets after tweeting" switchKey:@"undo_tweet" withBlock:^(UISwitch *weakSender) {
+        if (weakSender.isOn) {
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"undo_tweet"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"undo_tweet"];
+        }
+    }];
     HBSwitchCell *like_confirm = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Like confirm" DetailTitle:@"Show a confirm alert when you press like button" switchKey:@"like_con" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"like_con"];
@@ -239,6 +249,7 @@
     [main_section addCell:voice];
     [main_section addCell:voice_in_replay];
     [main_section addCell:Tipjar];
+    [main_section addCell:UndoTweet];
     [main_section addCell:like_confirm];
     [main_section addCell:tweet_confirm];
     [main_section addCell:padlock];

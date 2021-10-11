@@ -23,7 +23,7 @@
     
     self.GithubImage = UIImageView.new;
     [self.GithubImage setBackgroundColor:[UIColor clearColor]];
-    [self.GithubImage setImage:[UIImage imageNamed:@"/Library/Application Support/BHT/Ressources.bundle/github"]];
+    [self.GithubImage setImage:[UIImage imageNamed:@"github"]];
     [self.GithubImage setTranslatesAutoresizingMaskIntoConstraints:false];
     [self addSubview:self.GithubImage];
     
@@ -34,7 +34,7 @@
     
     self.SafariImage = UIImageView.new;
     [self.SafariImage setBackgroundColor:[UIColor clearColor]];
-    [self.SafariImage setImage:[UIImage imageNamed:@"/Library/Application Support/BHT/Ressources.bundle/safari"]];
+    [self.SafariImage setImage:[UIImage systemImageNamed:@"safari"]];
     [self.SafariImage setTranslatesAutoresizingMaskIntoConstraints:false];
     [self addSubview:self.SafariImage];
     

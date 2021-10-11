@@ -9,6 +9,8 @@
 #import "BHDownload.h"
 #import "JGProgressHUD/include/JGProgressHUD.h"
 
+static BOOL jailed = YES;
+
 @interface T1AppDelegate : UIResponder <UIApplicationDelegate>
 @property(retain, nonatomic) UIWindow *window;
 @end
@@ -89,19 +91,6 @@
 @property(readonly, nonatomic) UIView *visibleInlineActionsView;
 @end
 
-
-//@interface TFSKeychainDefaultTwitterConfiguration : NSObject
-//{
-//    NSString *_serviceName;
-//    NSString *_defaultAccessGroup;
-//    NSString *_sharedAccessGroup;
-//}
-//@property(readonly, nonatomic) NSString *sharedAccessGroup; // @synthesize sharedAccessGroup=_sharedAccessGroup;
-//@property(readonly, nonatomic) NSString *defaultAccessGroup; // @synthesize defaultAccessGroup=_defaultAccessGroup;
-//@property(readonly, nonatomic) NSString *serviceName; // @synthesize serviceName=_serviceName;
-//- (id)init;
-//@end
-
 @interface TFNButtonBarView : UIView
 @property(nonatomic) double trailingViewsSpacing;
 @property(nonatomic) double leadingViewsSpacing;
@@ -178,17 +167,6 @@
 @interface T1StatusBodyTextView : UIView
 @property(readonly, nonatomic) id viewModel; // @synthesize viewModel=_viewModel;
 @end
-
-@interface TFNTwitterComposition : NSObject
-@end
-
-@interface T1URTViewController : UIViewController
-@end
-
-@interface T1ConversationContainerViewController : UIViewController
-- (void)didTapReaderModeButtonWithSender:(id)arg1;
-@end
-
 
 // https://github.com/julioverne/MImport/blob/0275405812ff41ed2ca56e98f495fd05c38f41f2/mimporthook/MImport.xm#L59
 static UIViewController *_topMostController(UIViewController *cont) {

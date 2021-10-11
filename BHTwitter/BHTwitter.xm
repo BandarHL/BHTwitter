@@ -3,8 +3,6 @@
 #import "SAMKeychain/AuthViewController.h"
 #import "Colours.h"
 
-%config(generator=internal)
-
 // MARK: Clean cache and Padlock
 %hook T1AppDelegate
 - (_Bool)application:(UIApplication *)application didFinishLaunchingWithOptions:(id)arg2 {
@@ -14,6 +12,7 @@
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"dw_v"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"hide_promoted"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"voice"];
+        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"undo_tweet"];
         [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"like_con"];
         [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"tweet_con"];
         [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"direct_save"];
@@ -200,11 +199,7 @@
 %new - (void)appendNewButton:(BOOL)isSlideshow {
     if ([BHTManager isVideoCell:self]) {
         UIButton *newButton = [UIButton buttonWithType:UIButtonTypeCustom];
-        if (@available(iOS 13.0, *)) {
-            [newButton setImage:[UIImage systemImageNamed:@"arrow.down"] forState:UIControlStateNormal];
-        } else {
-            [newButton setImage:[UIImage imageNamed:@"/Library/Application Support/BHT/Ressources.bundle/Regular"] forState:UIControlStateNormal];
-        }
+        [newButton setImage:[UIImage systemImageNamed:@"arrow.down"] forState:UIControlStateNormal];
         [newButton addTarget:self action:@selector(DownloadHandler) forControlEvents:UIControlEventTouchUpInside];
         [newButton setTranslatesAutoresizingMaskIntoConstraints:false];
         [newButton setTintColor:isSlideshow ? UIColor.whiteColor : [UIColor colorFromHexString:@"6D6E70"]];
@@ -408,6 +403,17 @@
 }
 %end
 
+// MARK: Undo tweet
+%hook TFNTwitterToastNudgeExperimentModel
+- (BOOL)shouldShowShowUndoTweetSentToast {
+    if ([BHTManager UndoTweet]) {
+        return true;
+    } else {
+        return %orig;
+    }
+}
+%end
+
 
 // MARK: BHTwitter settings
 %hook TFNSettingsNavigationItem
@@ -475,8 +481,6 @@
 }
 %end
 
-
-
 // Fix login keychain in non-JB (IPA).
 //%hook TFSKeychain
 //- (NSString *)providerDefaultAccessGroup {
@@ -493,7 +497,7 @@
 //        if (status != errSecSuccess)
 //            return nil;
 //    NSString *accessGroup = [(__bridge NSDictionary *)result objectForKey:(__bridge NSString *)kSecAttrAccessGroup];
-//    
+//
 //    return accessGroup;
 //}
 //- (NSString *)providerSharedAccessGroup {
@@ -510,11 +514,11 @@
 //        if (status != errSecSuccess)
 //            return nil;
 //    NSString *accessGroup = [(__bridge NSDictionary *)result objectForKey:(__bridge NSString *)kSecAttrAccessGroup];
-//    
+//
 //    return accessGroup;
 //}
 //%end
-
+//
 //%hook TFSKeychainDefaultTwitterConfiguration
 //- (NSString *)defaultAccessGroup {
 //    NSDictionary *query = [NSDictionary dictionaryWithObjectsAndKeys:
@@ -530,7 +534,7 @@
 //        if (status != errSecSuccess)
 //            return nil;
 //    NSString *accessGroup = [(__bridge NSDictionary *)result objectForKey:(__bridge NSString *)kSecAttrAccessGroup];
-//    
+//
 //    return accessGroup;
 //}
 //- (NSString *)sharedAccessGroup {
@@ -547,7 +551,7 @@
 //        if (status != errSecSuccess)
 //            return nil;
 //    NSString *accessGroup = [(__bridge NSDictionary *)result objectForKey:(__bridge NSString *)kSecAttrAccessGroup];
-//    
+//
 //    return accessGroup;
 //}
 //%end

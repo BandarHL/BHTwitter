@@ -37,6 +37,7 @@
 + (BOOL)VoiceFeature;
 + (BOOL)voice_in_replay;
 + (BOOL)tipjar;
++ (BOOL)UndoTweet;
 + (BOOL)LikeConfirm;
 + (BOOL)TweetConfirm;
 + (BOOL)HidePromoted;

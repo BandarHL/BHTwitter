@@ -28,7 +28,7 @@
 - (instancetype )initWithBackgroundSessionID:(NSString *)ID {
     self = [super init];
     if (self) {
-        self.Session = [NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:ID] delegate:self delegateQueue:[NSOperationQueue mainQueue]];
+        self.Session = [NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration defaultSessionConfiguration] delegate:self delegateQueue:[NSOperationQueue mainQueue]];
     }
     return self;
 }

@@ -7,6 +7,7 @@
 //
 
 #import <UIKit/UIKit.h>
+#import "../BHTwitter+UIImage.h"
 #import "HBPreferences.h"
 #import "../Classes/GlobalStateExplorers/RuntimeExplore.h"
 #import <SafariServices/SafariServices.h>

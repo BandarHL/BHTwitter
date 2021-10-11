@@ -87,6 +87,8 @@
 		5052558F25206556004D7089 /* UIBarButtonItem+ALActionBlocks.h in Headers */ = {isa = PBXBuildFile; fileRef = 5052558525206556004D7089 /* UIBarButtonItem+ALActionBlocks.h */; };
 		5052559025206556004D7089 /* ALActionBlocks.h in Headers */ = {isa = PBXBuildFile; fileRef = 5052558625206556004D7089 /* ALActionBlocks.h */; };
 		5052559125206556004D7089 /* UIGestureRecognizer+ALActionBlocks.h in Headers */ = {isa = PBXBuildFile; fileRef = 5052558725206556004D7089 /* UIGestureRecognizer+ALActionBlocks.h */; };
+		50C15C982713930600E8B5E8 /* CydiaSubstrate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 50C15C972713930600E8B5E8 /* CydiaSubstrate.framework */; };
+		50C15C9D271401CB00E8B5E8 /* BHTwitter+NSURL.h in Headers */ = {isa = PBXBuildFile; fileRef = 50C15C9C271401CB00E8B5E8 /* BHTwitter+NSURL.h */; };
 		50D733AD252CBE88007838C7 /* FLEX-Runtime.h in Headers */ = {isa = PBXBuildFile; fileRef = 50D73233252CBE87007838C7 /* FLEX-Runtime.h */; };
 		50D733AE252CBE88007838C7 /* FLEXTableViewSection.h in Headers */ = {isa = PBXBuildFile; fileRef = 50D73235252CBE87007838C7 /* FLEXTableViewSection.h */; };
 		50D733AF252CBE88007838C7 /* FLEXSingleRowSection.m in Sources */ = {isa = PBXBuildFile; fileRef = 50D73236252CBE87007838C7 /* FLEXSingleRowSection.m */; };
@@ -522,6 +524,9 @@
 		5052558525206556004D7089 /* UIBarButtonItem+ALActionBlocks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIBarButtonItem+ALActionBlocks.h"; sourceTree = "<group>"; };
 		5052558625206556004D7089 /* ALActionBlocks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ALActionBlocks.h; sourceTree = "<group>"; };
 		5052558725206556004D7089 /* UIGestureRecognizer+ALActionBlocks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIGestureRecognizer+ALActionBlocks.h"; sourceTree = "<group>"; };
+		50C15C972713930600E8B5E8 /* CydiaSubstrate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CydiaSubstrate.framework; path = ../../../../../opt/theos/lib/CydiaSubstrate.framework; sourceTree = "<group>"; };
+		50C15C9B271400DA00E8B5E8 /* BHTwitter+UIImage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "BHTwitter+UIImage.h"; sourceTree = "<group>"; };
+		50C15C9C271401CB00E8B5E8 /* BHTwitter+NSURL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "BHTwitter+NSURL.h"; sourceTree = "<group>"; };
 		50D73233252CBE87007838C7 /* FLEX-Runtime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "FLEX-Runtime.h"; sourceTree = "<group>"; };
 		50D73235252CBE87007838C7 /* FLEXTableViewSection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FLEXTableViewSection.h; sourceTree = "<group>"; };
 		50D73236252CBE87007838C7 /* FLEXSingleRowSection.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FLEXSingleRowSection.m; sourceTree = "<group>"; };
@@ -886,6 +891,7 @@
 				5020AA7524E7598D0080F292 /* CoreServices.framework in Frameworks */,
 				5020A87824E758E00080F292 /* UIKit.framework in Frameworks */,
 				5020AA7724E759910080F292 /* SystemConfiguration.framework in Frameworks */,
+				50C15C982713930600E8B5E8 /* CydiaSubstrate.framework in Frameworks */,
 				5020A87A24E758E00080F292 /* Foundation.framework in Frameworks */,
 				5020AA6D24E759790080F292 /* CoreImage.framework in Frameworks */,
 				5020AA6E24E759790080F292 /* CoreMedia.framework in Frameworks */,
@@ -933,6 +939,7 @@
 		5020A87624E758E00080F292 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				50C15C972713930600E8B5E8 /* CydiaSubstrate.framework */,
 				50D73503252CBFCB007838C7 /* libsqlite3.tbd */,
 				50D73501252CBFC6007838C7 /* SceneKit.framework */,
 				50D734FF252CBFBD007838C7 /* libz.tbd */,
@@ -971,6 +978,8 @@
 				5020A8D724E759190080F292 /* BHTManager.m */,
 				5020AA5E24E759590080F292 /* Colours.h */,
 				5020AA6024E759590080F292 /* Colours.m */,
+				50C15C9B271400DA00E8B5E8 /* BHTwitter+UIImage.h */,
+				50C15C9C271401CB00E8B5E8 /* BHTwitter+NSURL.h */,
 				500DA69526FF92F500C020B2 /* SAMKeychain */,
 				50D73232252CBE87007838C7 /* Classes */,
 				503F4EA825173F2D00D05033 /* HBPreferences */,
@@ -1930,6 +1939,7 @@
 				50D734DF252CBE88007838C7 /* NSMapTable+FLEX_Subscripting.h in Headers */,
 				50D73476252CBE88007838C7 /* FLEXSQLResult.h in Headers */,
 				50D73432252CBE88007838C7 /* FLEXTabList.h in Headers */,
+				50C15C9D271401CB00E8B5E8 /* BHTwitter+NSURL.h in Headers */,
 				50D734AD252CBE88007838C7 /* FLEXMacros.h in Headers */,
 				50D7340F252CBE88007838C7 /* FLEXVariableEditorViewController.h in Headers */,
 				50D733DB252CBE88007838C7 /* FLEXViewControllerShortcuts.h in Headers */,
@@ -2336,6 +2346,10 @@
 				DEVELOPMENT_TEAM = 8JMV3RHX32;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					/opt/theos/lib,
+				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "BHTwitter/BHTwitter-Prefix.pch";
 				INFOPLIST_FILE = "";
@@ -2387,6 +2401,10 @@
 				DEVELOPMENT_TEAM = 8JMV3RHX32;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					/opt/theos/lib,
+				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "BHTwitter/BHTwitter-Prefix.pch";
 				INFOPLIST_FILE = "";

@@ -26,7 +26,7 @@
     [self.userImage setClipsToBounds:true];
     [self.userImage setBackgroundColor:[UIColor clearColor]];
     [self.userImage setTranslatesAutoresizingMaskIntoConstraints:false];
-    self.userImage.image = [UIImage imageNamed:@"/Library/Application Support/BHT/Ressources.bundle/BandarHL.jpg"];
+    self.userImage.image = [UIImage bhtwitter_imageNamed:@"BandarHL.jpg"];
     [self.userImage.layer setCornerRadius:14.5];
     [self addSubview:self.userImage];
     
@@ -37,7 +37,7 @@
     
     self.TwitterImage = UIImageView.new;
     [self.TwitterImage setBackgroundColor:[UIColor clearColor]];
-    [self.TwitterImage setImage:[UIImage imageNamed:@"/Library/Application Support/BHT/Ressources.bundle/twitter"]];
+    [self.TwitterImage setImage:[UIImage bhtwitter_imageNamed:@"twitter"]];
     [self.TwitterImage setTranslatesAutoresizingMaskIntoConstraints:false];
     [self addSubview:self.TwitterImage];
     
@@ -67,12 +67,6 @@
     
     [self.detailLabel.topAnchor constraintEqualToAnchor:self.userName.bottomAnchor constant:-1].active = true;
     [self.detailLabel.leadingAnchor constraintEqualToAnchor:self.userImage.trailingAnchor constant:12].active = true;
-}
-
-- (NSURL *)getTwitterImage:(NSString *)url {
-    NSString *username = [url stringByReplacingOccurrencesOfString:@"https://twitter.com/" withString:@""];
-    
-    return [NSURL URLWithString:[NSString stringWithFormat:@"https://twitter-avatar.now.sh/%@", username]];
 }
 
 - (SFSafariViewController *)SafariViewControllerForURL {
