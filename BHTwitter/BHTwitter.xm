@@ -423,6 +423,13 @@
 
 // MARK: Old tweet style
 %hook TTACoreAnatomyFeatures
+- (BOOL)isUnifiedCardEnabled {
+    if ([BHTManager OldStyle]) {
+        return false;
+    } else {
+        return %orig;
+    }
+}
 - (BOOL)isModernStatusViewsQuoteTweetEnabled {
     if ([BHTManager OldStyle]) {
         return false;
