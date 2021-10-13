@@ -144,12 +144,21 @@
     NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
     return [userDef boolForKey:@"padlock"];
 }
++ (BOOL)OldStyle {
+    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
+    return [userDef boolForKey:@"old_style"];
+}
++ (BOOL)DwbLayout {
+    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
+    return [userDef boolForKey:@"dwb_layout"];
+}
 + (BOOL)FLEX {
     NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
     return [userDef boolForKey:@"flex_twitter"];
 }
 + (UIViewController *)BHTSettings {
     HBSection *main_section = [HBSection sectionWithTitle:@"BHTwitter Preferences" footer:nil];
+    HBSection *layout_section = [HBSection sectionWithTitle:@"Layout customization" footer:nil];
     HBSection *debug = [HBSection sectionWithTitle:@"Debugging" footer:nil];
     HBSection *developer = [HBSection sectionWithTitle:@"Developer" footer:nil];
     
@@ -230,6 +239,22 @@
         }
     }];
     
+    HBSwitchCell *oldTweetStyle = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Disable edge to edge tweet style" DetailTitle:@"Force Twitter to use the old tweet style" switchKey:@"old_style" withBlock:^(UISwitch *weakSender) {
+        if (weakSender.isOn) {
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"old_style"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"old_style"];
+        }
+    }];
+    
+    HBSwitchCell *dwbLayout = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Download button always on the trailing side" DetailTitle:@"Force the download button to be always in the trailing side" switchKey:@"dwb_layout" withBlock:^(UISwitch *weakSender) {
+        if (weakSender.isOn) {
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"dwb_layout"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"dwb_layout"];
+        }
+    }];
+    
     HBSwitchCell *flex = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Enable FLEX" DetailTitle:@"Show FLEX on twitter app" switchKey:@"flex_twitter" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
             [[FLEXManager sharedManager] showExplorer];
@@ -253,10 +278,12 @@
     [main_section addCell:like_confirm];
     [main_section addCell:tweet_confirm];
     [main_section addCell:padlock];
+    [layout_section addCell:oldTweetStyle];
+    [layout_section addCell:dwbLayout];
     [debug addCell:flex];
     [developer addCell:bandarhl];
     [developer addCell:sourceCode];
-    HBPreferences *pref = [HBPreferences tableWithSections:@[main_section, debug, developer] title:@"BHTwitter" TableStyle:UITableViewStyleGrouped SeparatorStyle:UITableViewCellSeparatorStyleNone];
+    HBPreferences *pref = [HBPreferences tableWithSections:@[main_section, layout_section, debug, developer] title:@"BHTwitter" TableStyle:UITableViewStyleGrouped SeparatorStyle:UITableViewCellSeparatorStyleNone];
     return pref;
 }
 + (void)showSettings:(UIViewController *)_self {

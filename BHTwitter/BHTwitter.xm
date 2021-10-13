@@ -205,20 +205,26 @@
         [newButton setTintColor:isSlideshow ? UIColor.whiteColor : [UIColor colorFromHexString:@"6D6E70"]];
         [self addSubview:newButton];
         
-        if ([BHTManager isDeviceLanguageRTL]) {
+        [NSLayoutConstraint activateConstraints:@[
+            [newButton.heightAnchor constraintEqualToConstant:isSlideshow ? 34 : 24],
+            [newButton.widthAnchor constraintEqualToConstant:isSlideshow ? 36 : 30],
+            [newButton.topAnchor constraintEqualToAnchor:self.topAnchor constant:-4]
+        ]];
+        
+        if ([BHTManager DwbLayout]) {
             [NSLayoutConstraint activateConstraints:@[
-                [newButton.heightAnchor constraintEqualToConstant:isSlideshow ? 34 : 24],
-                [newButton.widthAnchor constraintEqualToConstant:isSlideshow ? 36 : 30],
-                [newButton.topAnchor constraintEqualToAnchor:self.topAnchor constant:-4],
-                [newButton.leadingAnchor constraintEqualToAnchor:self.leadingAnchor]
-            ]];
-        } else {
-            [NSLayoutConstraint activateConstraints:@[
-                [newButton.heightAnchor constraintEqualToConstant:isSlideshow ? 34 : 24],
-                [newButton.widthAnchor constraintEqualToConstant:isSlideshow ? 36 : 30],
-                [newButton.topAnchor constraintEqualToAnchor:self.topAnchor constant:-4],
                 [newButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor]
             ]];
+        } else {
+            if ([BHTManager isDeviceLanguageRTL]) {
+                [NSLayoutConstraint activateConstraints:@[
+                    [newButton.leadingAnchor constraintEqualToAnchor:self.leadingAnchor]
+                ]];
+            } else {
+                [NSLayoutConstraint activateConstraints:@[
+                    [newButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor]
+                ]];
+            }
         }
     }
 }
@@ -414,6 +420,24 @@
 }
 %end
 
+
+// MARK: Old tweet style
+%hook TTACoreAnatomyFeatures
+- (BOOL)isModernStatusViewsQuoteTweetEnabled {
+    if ([BHTManager OldStyle]) {
+        return false;
+    } else {
+        return %orig;
+    }
+}
+- (BOOL)isEdgeToEdgeContentEnabled {
+    if ([BHTManager OldStyle]) {
+        return false;
+    } else {
+        return %orig;
+    }
+}
+%end
 
 // MARK: BHTwitter settings
 %hook TFNSettingsNavigationItem

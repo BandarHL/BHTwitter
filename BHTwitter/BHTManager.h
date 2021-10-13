@@ -42,6 +42,8 @@
 + (BOOL)TweetConfirm;
 + (BOOL)HidePromoted;
 + (BOOL)Padlock;
++ (BOOL)OldStyle;
++ (BOOL)DwbLayout;
 + (BOOL)FLEX;
 @end
 
