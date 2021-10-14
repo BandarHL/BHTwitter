@@ -420,6 +420,17 @@
 }
 %end
 
+// MARK: Reader mode
+%hook T1ReaderModeConfig
+- (_Bool)isReaderModeEnabled {
+    if ([BHTManager ReaderMode]) {
+        return true;
+    } else {
+        return %orig;
+    }
+}
+%end
+
 
 // MARK: Old tweet style
 %hook TTACoreAnatomyFeatures

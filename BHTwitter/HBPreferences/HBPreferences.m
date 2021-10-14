@@ -1,19 +1,14 @@
 //
 //  HBPreferences.m
 //  Cephei
-//
-//  Created by BandarHelal on 03/05/1441 AH.
-//  Copyright © 1441 BandarHelal. All rights reserved.
-//
 
 #import "HBPreferences.h"
 #import "HBCell.h"
 #import "HBSection.h"
 #import "HBTwitterCell.h"
 #import "HBGithubCell.h"
-#import "HBLinkCell.h"
 #import "HBSwitchCell.h"
-#import "HBButtonCell.h"
+#import "HBViewControllerCell.h"
 #include <objc/runtime.h>
 #import <SafariServices/SafariServices.h>
 
@@ -57,24 +52,6 @@
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
     HBCell *cell = [self cellForIndexPath:indexPath];
     
-    if ([cell isKindOfClass:HBTwitterCell.class]) {
-        return 53;
-    }
-    
-    if ([cell isKindOfClass:HBGithubCell.class]) {
-        return 53;
-    }
-    
-    if ([cell isKindOfClass:HBLinkCell.class]) {
-        return 53;
-    }
-    
-    if ([cell isKindOfClass:HBButtonCell.class]) {
-        return 53;
-    }
-    if ([cell isKindOfClass:HBSwitchCell.class]) {
-        return 53;
-    }
     return UITableViewAutomaticDimension;
 }
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -95,19 +72,19 @@
     }
 }
 
-- (UIContextMenuConfiguration *)tableView:(UITableView *)tableView contextMenuConfigurationForRowAtIndexPath:(NSIndexPath *)indexPath point:(CGPoint)point  API_AVAILABLE(ios(13.0)) {
+- (UIContextMenuConfiguration *)tableView:(UITableView *)tableView contextMenuConfigurationForRowAtIndexPath:(NSIndexPath *)indexPath point:(CGPoint)point {
     HBCell *cell = [self cellForIndexPath:indexPath];
-    if ([cell isKindOfClass:HBGithubCell.class] || [cell isKindOfClass:HBTwitterCell.class] || [cell isKindOfClass:HBLinkCell.class]) {
+    if ([cell isKindOfClass:HBGithubCell.class] || [cell isKindOfClass:HBTwitterCell.class] || [cell isKindOfClass:HBViewControllerCell.class]) {
         return [cell contextMenuConfigurationForRowAtCell:cell FromTable:self];
     } else {
         return UIContextMenuConfiguration.new;
     }
 }
 
-- (void)tableView:(UITableView *)tableView willPerformPreviewActionForMenuWithConfiguration:(UIContextMenuConfiguration *)configuration animator:(id<UIContextMenuInteractionCommitAnimating>)animator API_AVAILABLE(ios(13.0)) {
+- (void)tableView:(UITableView *)tableView willPerformPreviewActionForMenuWithConfiguration:(UIContextMenuConfiguration *)configuration animator:(id<UIContextMenuInteractionCommitAnimating>)animator {
     [animator addCompletion:^{
-        SFSafariViewController *vcFromIdentifier = [RuntimeExplore tryExploreAddress:configuration.identifier safely:true];
-        if (!(vcFromIdentifier == nil)) {
+        UIViewController *vcFromIdentifier = [RuntimeExplore tryExploreAddress:configuration.identifier safely:true];
+        if (vcFromIdentifier != nil) {
             [self presentViewController:vcFromIdentifier animated:true completion:nil];
         }
     }];

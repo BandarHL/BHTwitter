@@ -15,7 +15,7 @@ static BOOL jailed = YES;
 @property(retain, nonatomic) UIWindow *window;
 @end
 
-@interface TFNItemsDataViewController : NSObject
+@interface TFNItemsDataViewController : UIViewController
 - (id)itemAtIndexPath:(id)arg1;
 @end
 

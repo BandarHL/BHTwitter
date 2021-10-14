@@ -104,57 +104,47 @@
 }
 
 + (BOOL)DownloadingVideos {
-    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
-    return [userDef boolForKey:@"dw_v"];
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"dw_v"];
 }
 + (BOOL)DirectSave {
-    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
-    return [userDef boolForKey:@"direct_save"];
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"direct_save"];
 }
 + (BOOL)VoiceFeature {
-    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
-    return [userDef boolForKey:@"voice"];
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"voice"];
 }
 + (BOOL)voice_in_replay {
-    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
-    return [userDef boolForKey:@"voice_in_replay"];
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"voice_in_replay"];
 }
 + (BOOL)tipjar {
-    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
-    return [userDef boolForKey:@"Tipjar"];
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"Tipjar"];
 }
 
 + (BOOL)LikeConfirm {
-    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
-    return [userDef boolForKey:@"like_con"];
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"like_con"];
 }
 + (BOOL)TweetConfirm {
-    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
-    return [userDef boolForKey:@"tweet_con"];
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"tweet_con"];
 }
 + (BOOL)HidePromoted {
-    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
-    return [userDef boolForKey:@"hide_promoted"];
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_promoted"];
 }
 + (BOOL)UndoTweet {
-    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
-    return [userDef boolForKey:@"undo_tweet"];
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"undo_tweet"];
+}
++ (BOOL)ReaderMode {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"reader_mode"];
 }
 + (BOOL)Padlock {
-    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
-    return [userDef boolForKey:@"padlock"];
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"padlock"];
 }
 + (BOOL)OldStyle {
-    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
-    return [userDef boolForKey:@"old_style"];
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"old_style"];
 }
 + (BOOL)DwbLayout {
-    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
-    return [userDef boolForKey:@"dwb_layout"];
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"dwb_layout"];
 }
 + (BOOL)FLEX {
-    NSUserDefaults *userDef = [NSUserDefaults standardUserDefaults];
-    return [userDef boolForKey:@"flex_twitter"];
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"flex_twitter"];
 }
 + (UIViewController *)BHTSettings {
     HBSection *main_section = [HBSection sectionWithTitle:@"BHTwitter Preferences" footer:nil];
@@ -162,7 +152,7 @@
     HBSection *debug = [HBSection sectionWithTitle:@"Debugging" footer:nil];
     HBSection *developer = [HBSection sectionWithTitle:@"Developer" footer:nil];
     
-    HBSwitchCell *download = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Downloading videos" DetailTitle:@"this option will enabel downloading videos" switchKey:@"dw_v" withBlock:^(UISwitch *weakSender) {
+    HBSwitchCell *download = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Downloading videos" DetailTitle:@"this option will enable downloading videos" switchKey:@"dw_v" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"dw_v"];
         } else {
@@ -186,21 +176,21 @@
         }
     }];
     
-    HBSwitchCell *voice = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Voice feature" DetailTitle:@"this option will enabel voice in tweet and DM" switchKey:@"voice" withBlock:^(UISwitch *weakSender) {
+    HBSwitchCell *voice = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Voice feature" DetailTitle:@"this option will enable voice in tweet and DM" switchKey:@"voice" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"voice"];
         } else {
             [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"voice"];
         }
     }];
-    HBSwitchCell *voice_in_replay = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Voice feature in replay" DetailTitle:@"this option will enabel voice in tweet replay" switchKey:@"voice_in_replay" withBlock:^(UISwitch *weakSender) {
+    HBSwitchCell *voice_in_replay = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Voice feature in replay" DetailTitle:@"this option will enable voice in tweet replay" switchKey:@"voice_in_replay" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"voice_in_replay"];
         } else {
             [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"voice_in_replay"];
         }
     }];
-    HBSwitchCell *Tipjar = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Tip Jar feature" DetailTitle:@"this option will enabel Tip Jar feature" switchKey:@"Tipjar" withBlock:^(UISwitch *weakSender) {
+    HBSwitchCell *Tipjar = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Tip Jar feature" DetailTitle:@"this option will enable Tip Jar feature" switchKey:@"Tipjar" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"Tipjar"];
         } else {
@@ -212,6 +202,13 @@
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"undo_tweet"];
         } else {
             [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"undo_tweet"];
+        }
+    }];
+    HBSwitchCell *ReaderMode = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Reader mode feature" DetailTitle:@"this option will enable reader mode in threads" switchKey:@"reader_mode" withBlock:^(UISwitch *weakSender) {
+        if (weakSender.isOn) {
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"reader_mode"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"reader_mode"];
         }
     }];
     HBSwitchCell *like_confirm = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Like confirm" DetailTitle:@"Show a confirm alert when you press like button" switchKey:@"like_con" withBlock:^(UISwitch *weakSender) {
@@ -247,6 +244,12 @@
         }
     }];
     
+//    HBViewControllerCell *icons = [[HBViewControllerCell alloc] initCellWithTitle:@"Change Twitter icon" detail:@"Use Twitter alertnative icons" action:^UIViewController *{
+//        UIViewController *v = UIViewController.new;
+//        [v.view setBackgroundColor:UIColor.redColor];
+//        return v;
+//    }];
+    
     HBSwitchCell *dwbLayout = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Download button always on the trailing side" DetailTitle:@"Force the download button to be always in the trailing side" switchKey:@"dwb_layout" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"dwb_layout"];
@@ -275,15 +278,17 @@
     [main_section addCell:voice_in_replay];
     [main_section addCell:Tipjar];
     [main_section addCell:UndoTweet];
+    [main_section addCell:ReaderMode];
     [main_section addCell:like_confirm];
     [main_section addCell:tweet_confirm];
     [main_section addCell:padlock];
     [layout_section addCell:oldTweetStyle];
     [layout_section addCell:dwbLayout];
+//    [layout_section addCell:icons];
     [debug addCell:flex];
     [developer addCell:bandarhl];
     [developer addCell:sourceCode];
-    HBPreferences *pref = [HBPreferences tableWithSections:@[main_section, layout_section, debug, developer] title:@"BHTwitter" TableStyle:UITableViewStyleGrouped SeparatorStyle:UITableViewCellSeparatorStyleNone];
+    HBPreferences *pref = [HBPreferences tableWithSections:@[main_section, layout_section, debug, developer] title:@"BHTwitter" TableStyle:UITableViewStyleInsetGrouped SeparatorStyle:UITableViewCellSeparatorStyleNone];
     return pref;
 }
 + (void)showSettings:(UIViewController *)_self {

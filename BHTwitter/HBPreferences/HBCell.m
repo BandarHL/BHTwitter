@@ -1,10 +1,6 @@
 //
 //  HPCell.m
 //  Cephei
-//
-//  Created by BandarHelal on 03/05/1441 AH.
-//  Copyright © 1441 BandarHelal. All rights reserved.
-//
 
 #import "HBCell.h"
 
@@ -15,7 +11,7 @@
 }
 
 - (instancetype)init {
-    self = [super initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:nil];
+    self = [super initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
     return self;
 }
 

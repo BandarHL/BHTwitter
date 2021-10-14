@@ -12,12 +12,11 @@
 #import "TWHeaders.h"
 #import "SAMKeychain/keychain.h"
 #import "HBPreferences/HBPreferences.h"
-#import "HBPreferences/HBButtonCell.h"
 #import "HBPreferences/HBSection.h"
 #import "HBPreferences/HBTwitterCell.h"
 #import "HBPreferences/HBSwitchCell.h"
 #import "HBPreferences/HBGithubCell.h"
-#import "HBPreferences/HBLinkCell.h"
+#import "HBPreferences/HBViewControllerCell.h"
 
 @interface BHTManager : NSObject
 + (NSString *)getDownloadingPersent:(float)per;
@@ -38,6 +37,7 @@
 + (BOOL)voice_in_replay;
 + (BOOL)tipjar;
 + (BOOL)UndoTweet;
++ (BOOL)ReaderMode;
 + (BOOL)LikeConfirm;
 + (BOOL)TweetConfirm;
 + (BOOL)HidePromoted;

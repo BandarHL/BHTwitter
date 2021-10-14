@@ -1,10 +1,6 @@
 //
 //  HBTwitterCell.m
 //  Cephei
-//
-//  Created by BandarHelal on 03/05/1441 AH.
-//  Copyright © 1441 BandarHelal. All rights reserved.
-//
 
 #import "HBTwitterCell.h"
 
@@ -13,60 +9,43 @@
 - (instancetype)initTwitterCellWithTitle:(NSString *)title detail:(NSString *)detail AccountLink:(NSString *)Aurl {
     HBTwitterCell *cell = [super init];
     self.AccountURL = Aurl;
-    
     [self setupUI:Aurl detail:detail title:title];
-    
-    [cell setSeparatorInset:UIEdgeInsetsMake(0, 60, 0, 0)];
     return cell;
 }
 
-
 - (void)setupUI:(NSString *)Aurl detail:(NSString *)detail title:(NSString *)title {
-    self.userImage = UIImageView.new;
-    [self.userImage setClipsToBounds:true];
-    [self.userImage setBackgroundColor:[UIColor clearColor]];
-    [self.userImage setTranslatesAutoresizingMaskIntoConstraints:false];
-    self.userImage.image = [UIImage bhtwitter_imageNamed:@"BandarHL.jpg"];
-    [self.userImage.layer setCornerRadius:14.5];
-    [self addSubview:self.userImage];
     
-    [self.userImage.topAnchor constraintEqualToAnchor:self.topAnchor constant:12].active = true;
-    [self.userImage.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:20].active = true;
-    [self.userImage.widthAnchor constraintEqualToConstant:29].active = true;
-    [self.userImage.heightAnchor constraintEqualToConstant:29].active = true;
+    [self.imageView setImage:[UIImage bhtwitter_imageNamed:@"BandarHL.jpg"]];
+    [self.imageView setClipsToBounds:true];
+    [self.imageView.layer setCornerRadius:(29/2)];
+    
+    CGSize size = CGSizeMake(29, 29);
+    UIGraphicsBeginImageContextWithOptions(size, NO, UIScreen.mainScreen.scale);
+    [self.image drawInRect:CGRectMake(0, 0, size.width, size.height)];
+    UIImage *newThumbnail = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    self.imageView.image = newThumbnail;
     
     self.TwitterImage = UIImageView.new;
-    [self.TwitterImage setBackgroundColor:[UIColor clearColor]];
     [self.TwitterImage setImage:[UIImage bhtwitter_imageNamed:@"twitter"]];
+    [self.TwitterImage setTintColor:[UIColor systemGray3Color]];
     [self.TwitterImage setTranslatesAutoresizingMaskIntoConstraints:false];
     [self addSubview:self.TwitterImage];
     
-    [self.TwitterImage.topAnchor constraintEqualToAnchor:self.topAnchor constant:20].active = true;
+    [self.TwitterImage.centerYAnchor constraintEqualToAnchor:self.centerYAnchor].active = true;
     [self.TwitterImage.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-20].active = true;
     [self.TwitterImage.widthAnchor constraintEqualToConstant:16].active = true;
     [self.TwitterImage.heightAnchor constraintEqualToConstant:13].active = true;
     
+    [self.textLabel setText:title];
+    [self.textLabel setTextColor:[UIColor colorWithRed:0.35 green:0.78 blue:0.98 alpha:1]];
+    [self.textLabel setNumberOfLines:0];
     
-    self.userName = UILabel.new;
-    [self.userName setText:title];
-    [self.userName setFont:[UIFont systemFontOfSize:17]];
-    [self.userName setNumberOfLines:0];
-    [self.userName setTranslatesAutoresizingMaskIntoConstraints:false];
-    [self addSubview:self.userName];
+    [self.detailTextLabel setText:detail];
+    [self.detailTextLabel setTextColor:[UIColor secondaryLabelColor]];
+    [self.detailTextLabel setFont:[UIFont systemFontOfSize:12]];
+    [self.detailTextLabel setNumberOfLines:0];
     
-    [self.userName.topAnchor constraintEqualToAnchor:self.topAnchor constant:12].active = true;
-    [self.userName.leadingAnchor constraintEqualToAnchor:self.userImage.trailingAnchor constant:12].active = true;
-    
-    self.detailLabel = UILabel.new;
-    [self.detailLabel setText:detail];
-    [self.detailLabel setTextColor:[UIColor systemGrayColor]];
-    [self.detailLabel setFont:[UIFont systemFontOfSize:12]];
-    [self.detailLabel setNumberOfLines:0];
-    [self.detailLabel setTranslatesAutoresizingMaskIntoConstraints:false];
-    [self addSubview:self.detailLabel];
-    
-    [self.detailLabel.topAnchor constraintEqualToAnchor:self.userName.bottomAnchor constant:-1].active = true;
-    [self.detailLabel.leadingAnchor constraintEqualToAnchor:self.userImage.trailingAnchor constant:12].active = true;
 }
 
 - (SFSafariViewController *)SafariViewControllerForURL {
@@ -84,7 +63,7 @@
     
 }
 
-- (UIContextMenuConfiguration *)contextMenuConfigurationForRowAtCell:(HBCell *)cell FromTable:(HBPreferences *)viewController API_AVAILABLE(ios(13.0)) {
+- (UIContextMenuConfiguration *)contextMenuConfigurationForRowAtCell:(HBCell *)cell FromTable:(HBPreferences *)viewController {
     SFSafariViewController *SafariVC = [self SafariViewControllerForURL];
     
     UIContextMenuConfiguration *configuration = [UIContextMenuConfiguration configurationWithIdentifier:[RuntimeExplore getAddressFromDescription:SafariVC.description] previewProvider:^UIViewController * _Nullable{
