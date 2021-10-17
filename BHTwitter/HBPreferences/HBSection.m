@@ -23,5 +23,9 @@
 - (void)addCell:(UITableViewCell *)cell {
     [self.cells addObject:cell];
 }
-
+- (void)addCells:(NSArray <UITableViewCell *> *)cells {
+    for (UITableViewCell *cell in cells) {
+        [self.cells addObject:cell];
+    }
+}
 @end

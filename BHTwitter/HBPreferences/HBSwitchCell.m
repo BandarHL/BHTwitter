@@ -31,10 +31,8 @@
     self.Switch = UISwitch.new;
     if ([[NSUserDefaults standardUserDefaults] boolForKey:key]) {
         [self.Switch setOn:true];
-        [[NSUserDefaults standardUserDefaults] setBool:true forKey:key];
     } else {
         [self.Switch setOn:false];
-        [[NSUserDefaults standardUserDefaults] setBool:false forKey:key];
     }
     [self.Switch handleControlEvents:UIControlEventValueChanged withBlock:actionBlock];
     self.accessoryView = self.Switch;

@@ -22,10 +22,8 @@ NS_ASSUME_NONNULL_BEGIN
 {
    id delegate;
 }
-+ (instancetype)sharedSessionWithID:(NSString *)ID;
 - (void)setDelegate:(id)newDelegate;
 - (instancetype)init;
-- (instancetype)initWithBackgroundSessionID:(NSString *)ID;
 - (void)downloadFileWithURL:(NSURL *)url;
 @property (nonatomic, strong) NSString *fileName;
 @end

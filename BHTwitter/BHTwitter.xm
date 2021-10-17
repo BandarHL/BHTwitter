@@ -141,7 +141,7 @@
     for (TFSTwitterEntityMediaVideoVariant *i in session.mediaEntity.videoInfo.variants) {
         if ([i.contentType isEqualToString:@"video/mp4"]) {
             UIAlertAction *download = [UIAlertAction actionWithTitle:[BHTManager getVideoQuality:i.url] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-                BHDownload *DownloadManager = [[BHDownload alloc] initWithBackgroundSessionID:NSUUID.UUID.UUIDString];
+                BHDownload *DownloadManager = [[BHDownload alloc] init];
                 self.hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
                 self.hud.textLabel.text = @"Downloading";
                 [DownloadManager downloadFileWithURL:[NSURL URLWithString:i.url]];
@@ -234,7 +234,7 @@
         for (TFSTwitterEntityMediaVideoVariant *k in i.videoInfo.variants) {
             if ([k.contentType isEqualToString:@"video/mp4"]) {
                 UIAlertAction *download = [UIAlertAction actionWithTitle:[BHTManager getVideoQuality:k.url] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-                    BHDownload *DownloadManager = [[BHDownload alloc] initWithBackgroundSessionID:NSUUID.UUID.UUIDString];
+                    BHDownload *DownloadManager = [[BHDownload alloc] init];
                     [DownloadManager downloadFileWithURL:[NSURL URLWithString:k.url]];
                     [DownloadManager setDelegate:self];
                     if (!([BHTManager DirectSave])) {
@@ -285,6 +285,20 @@
 %end
 
 %hook TFNTwitterAccount
+- (_Bool)isVideoZoomEnabled {
+    if ([BHTManager VideoZoom]) {
+        return true;
+    } else {
+        return %orig;
+    }
+}
+- (_Bool)isReplyLaterEnabled {
+    if ([BHTManager ReplyLater]) {
+        return true;
+    } else {
+        return %orig;
+    }
+}
 - (BOOL)isProfileTipJarSettingsEnabled {
     if ([BHTManager tipjar]) {
         return true;

@@ -134,6 +134,12 @@
 + (BOOL)ReaderMode {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"reader_mode"];
 }
++ (BOOL)ReplyLater {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"reply_layer"];
+}
++ (BOOL)VideoZoom {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"video_zoom"];
+}
 + (BOOL)Padlock {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"padlock"];
 }
@@ -152,7 +158,7 @@
     HBSection *debug = [HBSection sectionWithTitle:@"Debugging" footer:nil];
     HBSection *developer = [HBSection sectionWithTitle:@"Developer" footer:nil];
     
-    HBSwitchCell *download = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Downloading videos" DetailTitle:@"this option will enable downloading videos" switchKey:@"dw_v" withBlock:^(UISwitch *weakSender) {
+    HBSwitchCell *download = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Downloading videos" DetailTitle:@"This option will enable downloading videos" switchKey:@"dw_v" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"dw_v"];
         } else {
@@ -168,7 +174,7 @@
         }
     }];
     
-    HBSwitchCell *hide_ads = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Hide ads" DetailTitle:@"this option will remove all promoted tweet" switchKey:@"hide_promoted" withBlock:^(UISwitch *weakSender) {
+    HBSwitchCell *hide_ads = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Hide ads" DetailTitle:@"This option will remove all promoted tweet" switchKey:@"hide_promoted" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"hide_promoted"];
         } else {
@@ -176,21 +182,21 @@
         }
     }];
     
-    HBSwitchCell *voice = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Voice feature" DetailTitle:@"this option will enable voice in tweet and DM" switchKey:@"voice" withBlock:^(UISwitch *weakSender) {
+    HBSwitchCell *voice = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Voice feature" DetailTitle:@"This option will enable voice in tweet and DM" switchKey:@"voice" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"voice"];
         } else {
             [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"voice"];
         }
     }];
-    HBSwitchCell *voice_in_replay = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Voice feature in replay" DetailTitle:@"this option will enable voice in tweet replay" switchKey:@"voice_in_replay" withBlock:^(UISwitch *weakSender) {
+    HBSwitchCell *voice_in_replay = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Voice feature in replay" DetailTitle:@"This option will enable voice in tweet replay" switchKey:@"voice_in_replay" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"voice_in_replay"];
         } else {
             [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"voice_in_replay"];
         }
     }];
-    HBSwitchCell *Tipjar = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Tip Jar feature" DetailTitle:@"this option will enable Tip Jar feature" switchKey:@"Tipjar" withBlock:^(UISwitch *weakSender) {
+    HBSwitchCell *Tipjar = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Tip Jar feature" DetailTitle:@"This option will enable Tip Jar feature" switchKey:@"Tipjar" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"Tipjar"];
         } else {
@@ -204,11 +210,25 @@
             [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"undo_tweet"];
         }
     }];
-    HBSwitchCell *ReaderMode = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Reader mode feature" DetailTitle:@"this option will enable reader mode in threads" switchKey:@"reader_mode" withBlock:^(UISwitch *weakSender) {
+    HBSwitchCell *ReaderMode = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Reader mode feature" DetailTitle:@"This option will enable reader mode in threads" switchKey:@"reader_mode" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"reader_mode"];
         } else {
             [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"reader_mode"];
+        }
+    }];
+    HBSwitchCell *ReplyLater = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Reply later feature" DetailTitle:@"This option will enable you to mark DM conversations as replay later" switchKey:@"reply_layer" withBlock:^(UISwitch *weakSender) {
+        if (weakSender.isOn) {
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"reply_layer"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"reply_layer"];
+        }
+    }];
+    HBSwitchCell *VideoZoom = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Video zoom feature" DetailTitle:@"You can zoom the video by dobule clicking in the center of the video" switchKey:@"video_zoom" withBlock:^(UISwitch *weakSender) {
+        if (weakSender.isOn) {
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"video_zoom"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"video_zoom"];
         }
     }];
     HBSwitchCell *like_confirm = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Like confirm" DetailTitle:@"Show a confirm alert when you press like button" switchKey:@"like_con" withBlock:^(UISwitch *weakSender) {
@@ -271,23 +291,14 @@
     HBTwitterCell *bandarhl = [[HBTwitterCell alloc] initTwitterCellWithTitle:@"BandarHelal" detail:@"@BandarHL" AccountLink:@"https://twitter.com/BandarHL"];
     HBGithubCell *sourceCode = [[HBGithubCell alloc] initGithubCellWithTitle:@"BHTwitter" detailTitle:@"Code source of BHTwitter" GithubURL:@"https://github.com/BandarHL/BHTwitter/"];
     
-    [main_section addCell:download];
-    [main_section addCell:hide_ads];
-    [main_section addCell:direct_save];
-    [main_section addCell:voice];
-    [main_section addCell:voice_in_replay];
-    [main_section addCell:Tipjar];
-    [main_section addCell:UndoTweet];
-    [main_section addCell:ReaderMode];
-    [main_section addCell:like_confirm];
-    [main_section addCell:tweet_confirm];
-    [main_section addCell:padlock];
-    [layout_section addCell:oldTweetStyle];
-    [layout_section addCell:dwbLayout];
+    
+    [main_section addCells:@[download, hide_ads, direct_save, voice, voice_in_replay, Tipjar, UndoTweet, ReaderMode, ReplyLater, VideoZoom, like_confirm, tweet_confirm, padlock]];
+    
+    [layout_section addCells:@[oldTweetStyle, dwbLayout]];
 //    [layout_section addCell:icons];
     [debug addCell:flex];
-    [developer addCell:bandarhl];
-    [developer addCell:sourceCode];
+    [developer addCells:@[bandarhl, sourceCode]];
+    
     HBPreferences *pref = [HBPreferences tableWithSections:@[main_section, layout_section, debug, developer] title:@"BHTwitter" TableStyle:UITableViewStyleInsetGrouped SeparatorStyle:UITableViewCellSeparatorStyleNone];
     return pref;
 }

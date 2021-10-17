@@ -38,6 +38,8 @@
 + (BOOL)tipjar;
 + (BOOL)UndoTweet;
 + (BOOL)ReaderMode;
++ (BOOL)ReplyLater;
++ (BOOL)VideoZoom;
 + (BOOL)LikeConfirm;
 + (BOOL)TweetConfirm;
 + (BOOL)HidePromoted;
