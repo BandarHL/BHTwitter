@@ -42,9 +42,24 @@ static BOOL jailed = YES;
 @end
 
 @interface TFNButton : UIButton
++ (id)buttonWithImage:(id)arg1 style:(long long)arg2 sizeClass:(long long)arg3;
 @end
 
-@interface T1StatusInlineActionButton : UIButton
+@interface TFNLegacyButtonAnimator : NSObject
+@end
+
+@interface TFNAnimatableButton : TFNButton
+@property(nonatomic) __weak id animationCoordinator;
+@end
+
+@interface T1StatusInlineActionButton : UIView
+{
+    TFNAnimatableButton *_modernButton;
+    UIButton *_button;
+}
+@property (nonatomic, assign, readwrite) UIEdgeInsets touchInsets;
+@property(readonly, nonatomic) TFNLegacyButtonAnimator *animator;
+- (id)initWithOptions:(unsigned long long)arg1 overrideSize:(id)arg2 account:(id)arg3;
 @end
 
 @interface TFSTwitterEntityMediaVideoVariant : NSObject
@@ -82,6 +97,7 @@ static BOOL jailed = YES;
 @property(retain, nonatomic) NSMutableArray *inlineActionButtons;
 @property (nonatomic, strong) JGProgressHUD *hud;
 - (void)DownloadHandler;
+- (void)_t1_layoutInlineActionButtons;
 @end
 
 @interface T1StatusInlineActionsView () <BHDownloadDelegate>
@@ -190,4 +206,3 @@ static UIViewController *topMostController() {
     }
     return topController;
 }
-

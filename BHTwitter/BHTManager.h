@@ -40,6 +40,8 @@
 + (BOOL)ReaderMode;
 + (BOOL)ReplyLater;
 + (BOOL)VideoZoom;
++ (BOOL)NoHistory;
++ (BOOL)BioTranslate;
 + (BOOL)LikeConfirm;
 + (BOOL)TweetConfirm;
 + (BOOL)HidePromoted;

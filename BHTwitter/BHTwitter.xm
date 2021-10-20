@@ -194,10 +194,29 @@
 }
 %end
 
+%hook T1StatusInlineActionButton
+- (NSUInteger)visibility {
+    return 1;
+}
+%end
+
 %hook T1StatusInlineActionsView
 %property (nonatomic, strong) JGProgressHUD *hud;
 %new - (void)appendNewButton:(BOOL)isSlideshow {
     if ([BHTManager isVideoCell:self]) {
+        if (isSlideshow) {
+            NSMutableArray *inlineActionButtons = [self valueForKey:@"_inlineActionButtons"];
+            TFNAnimatableButton *emptyButton = [%c(TFNAnimatableButton) buttonWithImage:[UIImage systemImageNamed:@"arrow.down"] style:0 sizeClass:0];
+            T1StatusInlineActionButton *emptySpace = [[%c(T1StatusInlineActionButton) alloc] initWithOptions:3 overrideSize:0 account:nil];
+            [emptySpace setTranslatesAutoresizingMaskIntoConstraints:false];
+            [emptyButton setAnimationCoordinator:emptySpace.animator];
+            [emptySpace setTouchInsets:UIEdgeInsetsMake(-5, -14, -5, -14)];
+            [emptySpace setValue:emptyButton forKey:@"_modernButton"];
+            [emptySpace setValue:emptyButton forKey:@"_button"];
+            [emptySpace setValue:nil forKey:@"_legacyButton"];
+            [inlineActionButtons addObject:emptySpace];
+        }
+        
         UIButton *newButton = [UIButton buttonWithType:UIButtonTypeCustom];
         [newButton setImage:[UIImage systemImageNamed:@"arrow.down"] forState:UIControlStateNormal];
         [newButton addTarget:self action:@selector(DownloadHandler) forControlEvents:UIControlEventTouchUpInside];
@@ -208,7 +227,7 @@
         [NSLayoutConstraint activateConstraints:@[
             [newButton.heightAnchor constraintEqualToConstant:isSlideshow ? 34 : 24],
             [newButton.widthAnchor constraintEqualToConstant:isSlideshow ? 36 : 30],
-            [newButton.topAnchor constraintEqualToAnchor:self.topAnchor constant:-4]
+            [newButton.topAnchor constraintEqualToAnchor:self.topAnchor constant:isSlideshow ? 5 : -4]
         ]];
         
         if ([BHTManager DwbLayout]) {
@@ -269,6 +288,42 @@
 %new - (void)downloadDidFailureWithError:(NSError *)error {
     if (error) {
         [self.hud dismiss];
+    }
+}
+%end
+
+// MARK: Bio Translate
+%hook TFNTwitterCanonicalUser
+- (_Bool)isProfileBioTranslatable {
+    if ([BHTManager BioTranslate]) {
+        return true;
+    } else {
+        return %orig;
+    }
+}
+%end
+
+// MARK: No search history
+%hook T1SearchTypeaheadViewController
+- (NSArray *)recentUsers {
+    if ([BHTManager NoHistory]) {
+        return @[];
+    } else {
+        return %orig;
+    }
+}
+- (NSArray *)recentUserIDs {
+    if ([BHTManager NoHistory]) {
+        return @[];
+    } else {
+        return %orig;
+    }
+}
+- (NSArray *)recentQueries {
+    if ([BHTManager NoHistory]) {
+        return @[];
+    } else {
+        return %orig;
     }
 }
 %end

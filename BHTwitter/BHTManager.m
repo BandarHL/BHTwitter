@@ -140,6 +140,12 @@
 + (BOOL)VideoZoom {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"video_zoom"];
 }
++ (BOOL)NoHistory {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"no_his"];
+}
++ (BOOL)BioTranslate {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"bio_translate"];
+}
 + (BOOL)Padlock {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"padlock"];
 }
@@ -231,6 +237,20 @@
             [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"video_zoom"];
         }
     }];
+    HBSwitchCell *NoHistory = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"No search history" DetailTitle:@"Force Twitter to stop recording search history" switchKey:@"no_his" withBlock:^(UISwitch *weakSender) {
+        if (weakSender.isOn) {
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"no_his"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"no_his"];
+        }
+    }];
+    HBSwitchCell *BioTranslate = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Translate bio" DetailTitle:@"This option will show you a button in user bio to trnaslate it" switchKey:@"bio_translate" withBlock:^(UISwitch *weakSender) {
+        if (weakSender.isOn) {
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"bio_translate"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"bio_translate"];
+        }
+    }];
     HBSwitchCell *like_confirm = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Like confirm" DetailTitle:@"Show a confirm alert when you press like button" switchKey:@"like_con" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"like_con"];
@@ -292,7 +312,7 @@
     HBGithubCell *sourceCode = [[HBGithubCell alloc] initGithubCellWithTitle:@"BHTwitter" detailTitle:@"Code source of BHTwitter" GithubURL:@"https://github.com/BandarHL/BHTwitter/"];
     
     
-    [main_section addCells:@[download, hide_ads, direct_save, voice, voice_in_replay, Tipjar, UndoTweet, ReaderMode, ReplyLater, VideoZoom, like_confirm, tweet_confirm, padlock]];
+    [main_section addCells:@[download, hide_ads, direct_save, voice, voice_in_replay, Tipjar, UndoTweet, ReaderMode, ReplyLater, VideoZoom, NoHistory, BioTranslate, like_confirm, tweet_confirm, padlock]];
     
     [layout_section addCells:@[oldTweetStyle, dwbLayout]];
 //    [layout_section addCell:icons];
