@@ -61,6 +61,7 @@
     searchBar.keyboardType = UIKeyboardTypeWebSearch;
     searchBar.autocorrectionType = UITextAutocorrectionTypeNo;
     if (@available(iOS 11, *)) {
+        searchBar.smartQuotesType = UITextSmartQuotesTypeNo;
         searchBar.smartInsertDeleteType = UITextSmartInsertDeleteTypeNo;
     }
 
@@ -101,7 +102,7 @@
 
     // Change "Bundle.fooba" to "Bundle.foobar."
     NSString *orig = self.delegate.searchController.searchBar.text;
-    NSString *keyPath = [orig stringByReplacingLastKeyPathComponent:text];
+    NSString *keyPath = [orig flex_stringByReplacingLastKeyPathComponent:text];
     self.delegate.searchController.searchBar.text = keyPath;
 
     self.keyPath = [FLEXRuntimeKeyPathTokenizer tokenizeString:keyPath];
@@ -130,7 +131,7 @@
     // Available since at least iOS 9, still present in iOS 13
     UITextField *field = [searchBar valueForKey:@"_searchBarTextField"];
 
-    if ([self searchBar:searchBar shouldChangeTextInRange:field.selectedRange replacementText:text]) {
+    if ([self searchBar:searchBar shouldChangeTextInRange:field.flex_selectedRange replacementText:text]) {
         [field replaceRange:field.selectedTextRange withText:text];
     }
 }
@@ -266,7 +267,7 @@
             self.filteredClasses = nil;
         }
 
-        self.timer = [NSTimer fireSecondsFromNow:0.15 block:^{
+        self.timer = [NSTimer flex_fireSecondsFromNow:0.15 block:^{
             [self updateTable];
         }];
     }

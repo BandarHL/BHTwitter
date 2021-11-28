@@ -3,12 +3,13 @@
 //  FLEX
 //
 //  Created by Tanner on 3/9/20.
-//  Copyright © 2020 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXFilteringTableViewController.h"
 #import "FLEXTableViewSection.h"
 #import "NSArray+FLEX.h"
+#import "FLEXMacros.h"
 
 @interface FLEXFilteringTableViewController ()
 
@@ -73,7 +74,7 @@
 #pragma mark - Search
 
 - (void)updateSearchResults:(NSString *)newText {
-    NSArray *(^filter)() = ^NSArray *{
+    NSArray *(^filter)(void) = ^NSArray *{
         self.filterText = newText;
 
         // Sections will adjust data based on this property
@@ -111,7 +112,16 @@
 
 - (void)setAllSections:(NSArray<FLEXTableViewSection *> *)allSections {
     _allSections = allSections.copy;
+    // Only display nonempty sections
     self.sections = self.nonemptySections;
+}
+
+- (void)setSections:(NSArray<FLEXTableViewSection *> *)sections {
+    // Allow sections to reload a portion of the table view at will
+    [sections enumerateObjectsUsingBlock:^(FLEXTableViewSection *s, NSUInteger idx, BOOL *stop) {
+        [s setTable:self.tableView section:idx];
+    }];
+    _sections = sections.copy;
 }
 
 
@@ -178,8 +188,6 @@
     [self.filterDelegate.sections[indexPath.section] didPressInfoButtonAction:indexPath.row](self);
 }
 
-#if FLEX_AT_LEAST_IOS13_SDK
-
 - (UIContextMenuConfiguration *)tableView:(UITableView *)tableView contextMenuConfigurationForRowAtIndexPath:(NSIndexPath *)indexPath point:(CGPoint)point __IOS_AVAILABLE(13.0) {
     FLEXTableViewSection *section = self.filterDelegate.sections[indexPath.section];
     NSString *title = [section menuTitleForRow:indexPath.row];
@@ -197,7 +205,5 @@
     
     return nil;
 }
-
-#endif
 
 @end

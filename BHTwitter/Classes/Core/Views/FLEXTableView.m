@@ -3,7 +3,7 @@
 //  FLEX
 //
 //  Created by Tanner on 4/17/19.
-//  Copyright © 2019 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXTableView.h"
@@ -30,29 +30,21 @@ FLEXTableViewCellReuseIdentifier const kFLEXCodeFontCell = @"kFLEXCodeFontCell";
 @implementation FLEXTableView
 
 + (instancetype)flexDefaultTableView {
-#if FLEX_AT_LEAST_IOS13_SDK
     if (@available(iOS 13.0, *)) {
         return [[self alloc] initWithFrame:CGRectZero style:UITableViewStyleInsetGrouped];
     } else {
         return [[self alloc] initWithFrame:CGRectZero style:UITableViewStyleGrouped];
     }
-#else
-    return [[self alloc] initWithFrame:CGRectZero style:UITableViewStyleGrouped];
-#endif
 }
 
 #pragma mark - Initialization
 
 + (id)groupedTableView {
-#if FLEX_AT_LEAST_IOS13_SDK
     if (@available(iOS 13.0, *)) {
         return [[self alloc] initWithFrame:CGRectZero style:UITableViewStyleInsetGrouped];
     } else {
         return [[self alloc] initWithFrame:CGRectZero style:UITableViewStyleGrouped];
     }
-#else
-    return [[self alloc] initWithFrame:CGRectZero style:UITableViewStyleGrouped];
-#endif
 }
 
 + (id)plainTableView {

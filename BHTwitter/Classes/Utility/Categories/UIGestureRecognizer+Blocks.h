@@ -3,7 +3,7 @@
 //  FLEX
 //
 //  Created by Tanner Bennett on 12/20/19.
-//  Copyright © 2019 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import <UIKit/UIKit.h>
@@ -13,9 +13,9 @@ typedef void (^GestureBlock)(UIGestureRecognizer *gesture);
 
 @interface UIGestureRecognizer (Blocks)
 
-+ (instancetype)action:(GestureBlock)action;
++ (instancetype)flex_action:(GestureBlock)action;
 
-@property (nonatomic) GestureBlock action;
+@property (nonatomic, setter=flex_setAction:) GestureBlock flex_action;
 
 @end
 

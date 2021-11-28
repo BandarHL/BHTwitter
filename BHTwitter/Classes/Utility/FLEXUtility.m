@@ -3,7 +3,7 @@
 //  Flipboard
 //
 //  Created by Ryan Olson on 4/18/14.
-//  Copyright (c) 2020 Flipboard. All rights reserved.
+//  Copyright (c) 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXColor.h"
@@ -11,8 +11,26 @@
 #import "FLEXResources.h"
 #import "FLEXWindow.h"
 #import <ImageIO/ImageIO.h>
-#import <zlib.h>
 #import <objc/runtime.h>
+#import <zlib.h>
+
+BOOL FLEXConstructorsShouldRun() {
+    #if FLEX_DISABLE_CTORS
+        return NO;
+    #else
+        static BOOL _FLEXConstructorsShouldRun_storage = YES;
+        
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
+            NSString *key = @"FLEX_SKIP_INIT";
+            if (getenv(key.UTF8String) || [NSUserDefaults.standardUserDefaults boolForKey:key]) {
+                _FLEXConstructorsShouldRun_storage = NO;
+            }
+        });
+        
+        return _FLEXConstructorsShouldRun_storage;
+    #endif
+}
 
 @implementation FLEXUtility
 
@@ -45,7 +63,6 @@
     return nil;
 }
 
-#if FLEX_AT_LEAST_IOS13_SDK
 + (UIWindowScene *)activeScene {
     for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
         // Look for an active UIWindowScene
@@ -57,7 +74,6 @@
     
     return nil;
 }
-#endif
 
 + (UIViewController *)topViewControllerInWindow:(UIWindow *)window {
     UIViewController *topViewController = window.rootViewController;
@@ -117,7 +133,7 @@
 
 + (UIImage *)previewImageForView:(UIView *)view {
     if (CGRectIsEmpty(view.bounds)) {
-        return nil;
+        return [UIImage new];
     }
     
     CGSize viewSize = view.bounds.size;
@@ -162,8 +178,6 @@
     dispatch_once(&onceToken, ^{
         UIImage *indentationPatternImage = FLEXResources.hierarchyIndentPattern;
         patternColor = [UIColor colorWithPatternImage:indentationPatternImage];
-
-#if FLEX_AT_LEAST_IOS13_SDK
         if (@available(iOS 13.0, *)) {
             // Create a dark mode version
             UIGraphicsBeginImageContextWithOptions(
@@ -183,7 +197,6 @@
                         : [UIColor colorWithPatternImage:darkModePatternImage]);
             }];
         }
-#endif
     });
 
     return patternColor;
@@ -341,14 +354,18 @@
     
     id jsonObject = [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
     if ([NSJSONSerialization isValidJSONObject:jsonObject]) {
-        prettyString = [NSString stringWithCString:[NSJSONSerialization
-            dataWithJSONObject:jsonObject options:NSJSONWritingPrettyPrinted error:NULL
-        ].bytes encoding:NSUTF8StringEncoding];
+        // Thanks RaziPour1993
+        prettyString = [[NSString alloc]
+            initWithData:[NSJSONSerialization
+                dataWithJSONObject:jsonObject options:NSJSONWritingPrettyPrinted error:NULL
+            ]
+            encoding:NSUTF8StringEncoding
+        ];
         // NSJSONSerialization escapes forward slashes.
         // We want pretty json, so run through and unescape the slashes.
         prettyString = [prettyString stringByReplacingOccurrencesOfString:@"\\/" withString:@"/"];
     } else {
-        prettyString = [NSString stringWithCString:data.bytes encoding:NSUTF8StringEncoding];
+        prettyString = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
     }
     
     return prettyString;
@@ -458,19 +475,19 @@
 }
 
 + (void)replaceImplementationOfKnownSelector:(SEL)originalSelector
-                                     onClass:(Class)cls
+                                     onClass:(Class)_class
                                    withBlock:(id)block
                             swizzledSelector:(SEL)swizzledSelector {
     // This method is only intended for swizzling methods that are know to exist on the class.
     // Bail if that isn't the case.
-    Method originalMethod = class_getInstanceMethod(cls, originalSelector);
+    Method originalMethod = class_getInstanceMethod(_class, originalSelector);
     if (!originalMethod) {
         return;
     }
     
     IMP implementation = imp_implementationWithBlock(block);
-    class_addMethod(cls, swizzledSelector, implementation, method_getTypeEncoding(originalMethod));
-    Method newMethod = class_getInstanceMethod(cls, swizzledSelector);
+    class_addMethod(_class, swizzledSelector, implementation, method_getTypeEncoding(originalMethod));
+    Method newMethod = class_getInstanceMethod(_class, swizzledSelector);
     method_exchangeImplementations(originalMethod, newMethod);
 }
 

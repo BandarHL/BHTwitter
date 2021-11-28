@@ -4,7 +4,7 @@
 //
 //  Derived from MirrorKit.
 //  Created by Tanner on 7/5/15.
-//  Copyright (c) 2015 Tanner Bennett. All rights reserved.
+//  Copyright (c) 2020 FLEX Team. All rights reserved.
 //
 
 #import <Foundation/Foundation.h>
@@ -46,7 +46,7 @@ NS_ASSUME_NONNULL_BEGIN
 /// A human-readable version of the property attributes.
 @property (nonatomic, readonly) NSString *fullDeclaration;
 /// A dictionary of the property attributes.
-/// Values are either a string or \c @YES. Boolean attributes
+/// Values are either a string or \c YES. Boolean attributes
 /// which are false will not be present in the dictionary.
 @property (nonatomic, readonly) NSDictionary *dictionary;
 

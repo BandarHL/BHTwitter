@@ -195,7 +195,7 @@ static inline NSString * TBWildcardMap(NSString *token, NSString *candidate, TBW
             "/System/Library/PrivateFrameworks/WebKitLegacy.framework/WebKitLegacy",
             RTLD_LAZY
         );
-        void (*WebKitInitialize)() = dlsym(handle, "WebKitInitialize");
+        void (*WebKitInitialize)(void) = dlsym(handle, "WebKitInitialize");
         if (WebKitInitialize) {
             NSAssert(NSThread.isMainThread,
                 @"WebKitInitialize can only be called on the main thread"
@@ -303,14 +303,14 @@ static inline NSString * TBWildcardMap(NSString *token, NSString *candidate, TBW
         if (options == TBWildcardOptionsAny) {
             return [[bundles flex_flatmapped:^NSArray *(NSString *bundlePath, NSUInteger idx) {
                 return [self classNamesInImageAtPath:bundlePath];
-            }] sortedUsingSelector:@selector(caseInsensitiveCompare:)];
+            }] flex_sortedUsingSelector:@selector(caseInsensitiveCompare:)];
         }
 
         return [[bundles flex_flatmapped:^NSArray *(NSString *bundlePath, NSUInteger idx) {
             return [[self classNamesInImageAtPath:bundlePath] flex_mapped:^id(NSString *className, NSUInteger idx) {
                 return TBWildcardMap(query, className, options);
             }];
-        }] sortedUsingSelector:@selector(caseInsensitiveCompare:)];
+        }] flex_sortedUsingSelector:@selector(caseInsensitiveCompare:)];
     }
 }
 

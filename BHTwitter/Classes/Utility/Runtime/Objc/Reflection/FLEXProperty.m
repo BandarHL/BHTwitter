@@ -4,7 +4,7 @@
 //
 //  Derived from MirrorKit.
 //  Created by Tanner on 6/30/15.
-//  Copyright (c) 2015 Tanner Bennett. All rights reserved.
+//  Copyright (c) 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXProperty.h"
@@ -56,34 +56,34 @@
 
 - (id)initWithProperty:(objc_property_t)property onClass:(Class)cls {
     NSParameterAssert(property);
-
+    
     self = [super init];
     if (self) {
         _objc_property = property;
         _attributes    = [FLEXPropertyAttributes attributesForProperty:property];
         _name          = @(property_getName(property) ?: "(nil)");
         _cls           = cls;
-
+        
         if (!_attributes) [NSException raise:NSInternalInconsistencyException format:@"Error retrieving property attributes"];
         if (!_name) [NSException raise:NSInternalInconsistencyException format:@"Error retrieving property name"];
-
+        
         [self examine];
     }
-
+    
     return self;
 }
 
 - (id)initWithName:(NSString *)name attributes:(FLEXPropertyAttributes *)attributes {
     NSParameterAssert(name); NSParameterAssert(attributes);
-
+    
     self = [super init];
     if (self) {
         _attributes    = attributes;
         _name          = name;
-
+        
         [self examine];
     }
-
+    
     return self;
 }
 
@@ -96,7 +96,7 @@
 
     // Return the given selector if the class responds to it
     Class cls = _cls;
-    SEL (^selectorIfValid)() = ^SEL(SEL sel) {
+    SEL (^selectorIfValid)(SEL) = ^SEL(SEL sel) {
         if (!sel || !cls) return nil;
         return [cls instancesRespondToSelector:sel] ? sel : nil;
     };
@@ -124,6 +124,10 @@
     _likelySetterString = NSStringFromSelector(_likelySetter);
 
     _isClassProperty = _cls ? class_isMetaClass(_cls) : NO;
+    
+    _likelyIvarName = _isClassProperty ? nil : (
+        self.attributes.backingIvar ?: [@"_" stringByAppendingString:_name]
+    );
 }
 
 #pragma mark Overrides
@@ -161,7 +165,7 @@
     if (dladdr(_objc_property, &exeInfo)) {
         _imagePath = exeInfo.dli_fname ? @(exeInfo.dli_fname) : nil;
     }
-
+    
     if ((!_multiple || !_uniqueCheckFlag) && _cls) {
         _multiple = _objc_property != class_getProperty(_cls, self.name.UTF8String);
 
@@ -185,6 +189,14 @@
 - (NSString *)imageName {
     [self computeSymbolInfo:YES];
     return _imageName;
+}
+
+- (BOOL)likelyIvarExists {
+    if (_likelyIvarName && _cls) {
+        return class_getInstanceVariable(_cls, _likelyIvarName.UTF8String) != nil;
+    }
+    
+    return NO;
 }
 
 - (NSString *)fullDescription {
@@ -215,7 +227,7 @@
     } else {
         [attributesStrings addObject:@"readwrite"];
     }
-
+    
     // Class or not
     if (self.isClassProperty) {
         [attributesStrings addObject:@"class"];
@@ -237,7 +249,7 @@
 
 - (id)getValue:(id)target {
     if (!target) return nil;
-
+    
     // We don't care about checking dynamically whether the getter
     // _now_ exists on this object. If the getter doesn't exist
     // when this property is initialized, it will never call it.

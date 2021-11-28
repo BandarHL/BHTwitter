@@ -3,7 +3,7 @@
 //  FLEX
 //
 //  Created by Tanner on 3/9/20.
-//  Copyright © 2020 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXCollectionContentSection.h"
@@ -39,19 +39,20 @@ typedef void (^FLEXMutableListCellForElement)(__kindof UITableViewCell *cell, id
 @property (nonatomic, copy) void (^selectionHandler)(__kindof UIViewController *host, id element);
 
 /// The objects representing all possible rows in the section.
-@property (nonatomic, strong) NSArray<ObjectType> *list;
+@property (nonatomic) NSArray<ObjectType> *list;
 /// The objects representing the currently unfiltered rows in the section.
-@property (nonatomic, strong, readonly) NSArray<ObjectType> *filteredList;
+@property (nonatomic, readonly) NSArray<ObjectType> *filteredList;
 
 /// A readwrite version of the same property in \c FLEXTableViewSection.h
 ///
 /// This property expects one entry. An exception is thrown if more than one
 /// entry is supplied. If you need more than one reuse identifier within a single
 /// section, your view probably has more complexity than this class can handle.
-@property (nonatomic, strong, readwrite) NSDictionary<NSString *, Class> *cellRegistrationMapping;
+@property (nonatomic, readwrite) NSDictionary<NSString *, Class> *cellRegistrationMapping;
 
 /// Call this method to mutate the full, unfiltered list.
 /// This ensures that \c filteredList is updated after any mutations.
 - (void)mutate:(void(^)(NSMutableArray *list))block;
 
 @end
+

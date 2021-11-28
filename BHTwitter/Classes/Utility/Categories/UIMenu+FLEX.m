@@ -3,14 +3,14 @@
 //  FLEX
 //
 //  Created by Tanner on 1/28/20.
-//  Copyright © 2020 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import "UIMenu+FLEX.h"
 
 @implementation UIMenu (FLEX)
 
-+ (instancetype)inlineMenuWithTitle:(NSString *)title image:(UIImage *)image children:(NSArray<UIMenuElement *> *)children {
++ (instancetype)flex_inlineMenuWithTitle:(NSString *)title image:(UIImage *)image children:(NSArray *)children {
     return [UIMenu
         menuWithTitle:title
         image:image
@@ -20,7 +20,7 @@
     ];
 }
 
-- (instancetype)collapsed {
+- (instancetype)flex_collapsed {
     return [UIMenu
         menuWithTitle:@""
         image:nil

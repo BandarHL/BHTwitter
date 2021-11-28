@@ -3,7 +3,7 @@
 //  Flipboard
 //
 //  Created by Ryan Olson on 2/4/15.
-//  Copyright (c) 2020 Flipboard. All rights reserved.
+//  Copyright (c) 2020 FLEX Team. All rights reserved.
 //
 
 #import <Foundation/Foundation.h>
@@ -14,7 +14,7 @@ extern NSString *const kFLEXNetworkRecorderTransactionUpdatedNotification;
 extern NSString *const kFLEXNetworkRecorderUserInfoTransactionKey;
 extern NSString *const kFLEXNetworkRecorderTransactionsClearedNotification;
 
-@class FLEXNetworkTransaction;
+@class FLEXNetworkTransaction, FLEXHTTPTransaction, FLEXWebsocketTransaction;
 
 @interface FLEXNetworkRecorder : NSObject
 
@@ -28,28 +28,30 @@ extern NSString *const kFLEXNetworkRecorderTransactionsClearedNotification;
 /// with an "image", "video", or "audio" prefix.
 @property (nonatomic) BOOL shouldCacheMediaResponses;
 
-@property (nonatomic) NSMutableArray<NSString *> *hostBlacklist;
+@property (nonatomic) NSMutableArray<NSString *> *hostDenylist;
 
-/// Call this after adding to or setting the \c hostBlacklist to remove blacklisted transactions
-- (void)clearBlacklistedTransactions;
+/// Call this after adding to or setting the \c hostDenylist to remove excluded transactions
+- (void)clearExcludedTransactions;
 
-/// Call this to save the blacklist to the disk to be loaded next time
-- (void)synchronizeBlacklist;
+/// Call this to save the denylist to the disk to be loaded next time
+- (void)synchronizeDenylist;
 
 
-// Accessing recorded network activity
+#pragma mark Accessing recorded network activity
 
-/// Array of FLEXNetworkTransaction objects ordered by start time with the newest first.
-- (NSArray<FLEXNetworkTransaction *> *)networkTransactions;
+/// Array of FLEXHTTPTransaction objects ordered by start time with the newest first.
+@property (nonatomic, readonly) NSArray<FLEXHTTPTransaction *> *HTTPTransactions;
+/// Array of FLEXWebsocketTransaction objects ordered by start time with the newest first.
+@property (nonatomic, readonly) NSArray<FLEXWebsocketTransaction *> *websocketTransactions API_AVAILABLE(ios(13.0));
 
 /// The full response data IFF it hasn't been purged due to memory pressure.
-- (NSData *)cachedResponseBodyForTransaction:(FLEXNetworkTransaction *)transaction;
+- (NSData *)cachedResponseBodyForTransaction:(FLEXHTTPTransaction *)transaction;
 
 /// Dumps all network transactions and cached response bodies.
 - (void)clearRecordedActivity;
 
 
-// Recording network activity
+#pragma mark Recording network activity
 
 /// Call when app is about to send HTTP request.
 - (void)recordRequestWillBeSentWithRequestID:(NSString *)requestID
@@ -71,5 +73,13 @@ extern NSString *const kFLEXNetworkRecorderTransactionsClearedNotification;
 /// Call to set the request mechanism anytime after recordRequestWillBeSent... has been called.
 /// This string can be set to anything useful about the API used to make the request.
 - (void)recordMechanism:(NSString *)mechanism forRequestID:(NSString *)requestID;
+
+- (void)recordWebsocketMessageSend:(NSURLSessionWebSocketMessage *)message
+                              task:(NSURLSessionWebSocketTask *)task API_AVAILABLE(ios(13.0));
+- (void)recordWebsocketMessageSendCompletion:(NSURLSessionWebSocketMessage *)message
+                                       error:(NSError *)error API_AVAILABLE(ios(13.0));
+
+- (void)recordWebsocketMessageReceived:(NSURLSessionWebSocketMessage *)message
+                                  task:(NSURLSessionWebSocketTask *)task API_AVAILABLE(ios(13.0));
 
 @end

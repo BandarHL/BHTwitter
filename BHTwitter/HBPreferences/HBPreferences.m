@@ -8,11 +8,12 @@
 #import "HBTwitterCell.h"
 #import "HBGithubCell.h"
 #import "HBSwitchCell.h"
+#import "HBlinkCell.h"
 #import "HBViewControllerCell.h"
 #include <objc/runtime.h>
 #import <SafariServices/SafariServices.h>
 
-@interface HBPreferences ()
+@interface HBPreferences () <UIFontPickerViewControllerDelegate>
 
 @end
 
@@ -23,6 +24,13 @@
     return table;
 }
 
+- (instancetype)initTableWithTableStyle:(UITableViewStyle *)style title:(NSString *)title SeparatorStyle:(UITableViewCellSeparatorStyle)SeparatorStyle {
+    if (self = [super initWithStyle:style]) {
+        [self.tableView setSeparatorStyle:SeparatorStyle];
+        self.title = title;
+    }
+    return self;
+}
 - (instancetype)initTableWithSections:(NSArray *)sections TableStyle:(UITableViewStyle *)style SeparatorStyle:(UITableViewCellSeparatorStyle)SeparatorStyle {
     if (self = [super initWithStyle:style]) {
         self.sections = sections;
@@ -30,7 +38,9 @@
     }
     return self;
 }
-
+- (void)addSections:(NSArray *)sections {
+    self.sections = sections;
+}
 - (HBCell *)cellForIndexPath:(NSIndexPath *)indexPath {
     return [self.sections[indexPath.section] cells][indexPath.row];
 }
@@ -50,8 +60,6 @@
 }
 
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
-    HBCell *cell = [self cellForIndexPath:indexPath];
-    
     return UITableViewAutomaticDimension;
 }
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -74,7 +82,7 @@
 
 - (UIContextMenuConfiguration *)tableView:(UITableView *)tableView contextMenuConfigurationForRowAtIndexPath:(NSIndexPath *)indexPath point:(CGPoint)point {
     HBCell *cell = [self cellForIndexPath:indexPath];
-    if ([cell isKindOfClass:HBGithubCell.class] || [cell isKindOfClass:HBTwitterCell.class] || [cell isKindOfClass:HBViewControllerCell.class]) {
+    if ([cell isKindOfClass:HBGithubCell.class] || [cell isKindOfClass:HBTwitterCell.class] || [cell isKindOfClass:HBViewControllerCell.class] || [cell isKindOfClass:HBlinkCell.class]) {
         return [cell contextMenuConfigurationForRowAtCell:cell FromTable:self];
     } else {
         return UIContextMenuConfiguration.new;
@@ -88,5 +96,29 @@
             [self presentViewController:vcFromIdentifier animated:true completion:nil];
         }
     }];
+}
+
+- (void)fontPickerViewControllerDidCancel:(UIFontPickerViewController *)viewController {
+    [viewController dismissViewControllerAnimated:true completion:nil];
+}
+
+- (void)fontPickerViewControllerDidPickFont:(UIFontPickerViewController *)viewController {
+    NSString *fontName = viewController.selectedFontDescriptor.fontAttributes[UIFontDescriptorNameAttribute];
+    NSString *fontFamily = viewController.selectedFontDescriptor.fontAttributes[UIFontDescriptorFamilyAttribute];
+    
+    if (viewController.configuration.includeFaces) {
+        [[NSUserDefaults standardUserDefaults] setObject:fontName forKey:@"bhtwitter_font_2"];
+        [viewController dismissViewControllerAnimated:true completion:^{
+            HBCell *cell = [self.sections[1] cells][4];
+            [cell.detailTextLabel setText:fontName];
+        }];
+    } else {
+        [[NSUserDefaults standardUserDefaults] setObject:fontFamily forKey:@"bhtwitter_font_1"];
+        [viewController dismissViewControllerAnimated:true completion:^{
+            HBCell *cell = [self.sections[1] cells][3];
+            [cell.detailTextLabel setText:fontFamily];
+        }];
+    }
+    [viewController.navigationController popViewControllerAnimated:true];
 }
 @end

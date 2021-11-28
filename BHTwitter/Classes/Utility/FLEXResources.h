@@ -3,7 +3,7 @@
 //  FLEX
 //
 //  Created by Ryan Olson on 6/8/14.
-//  Copyright (c) 2020 Flipboard. All rights reserved.
+//  Copyright (c) 2020 FLEX Team. All rights reserved.
 //
 
 #import <UIKit/UIKit.h>
@@ -52,7 +52,8 @@
 
 #pragma mark - Misc Icons
 
-@property(readonly, class) UIImage *checkerPattern;
-@property(readonly, class) UIImage *hierarchyIndentPattern;
+@property (readonly, class) UIImage *checkerPattern;
+@property (readonly, class) UIColor *checkerPatternColor;
+@property (readonly, class) UIImage *hierarchyIndentPattern;
 
 @end

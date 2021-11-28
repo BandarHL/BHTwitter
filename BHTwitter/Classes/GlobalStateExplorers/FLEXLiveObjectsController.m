@@ -3,7 +3,7 @@
 //  Flipboard
 //
 //  Created by Ryan Olson on 5/28/14.
-//  Copyright (c) 2020 Flipboard. All rights reserved.
+//  Copyright (c) 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXLiveObjectsController.h"
@@ -35,6 +35,7 @@ static const NSInteger kFLEXLiveObjectsSortBySizeIndex = 2;
 
     self.showsSearchBar = YES;
     self.showSearchBarInitially = YES;
+    self.activatesSearchBarAutomatically = YES;
     self.searchBarDebounceInterval = kFLEXDebounceInstant;
     self.showsCarousel = YES;
     self.carousel.items = @[@"A→Z", @"Count", @"Size"];
@@ -225,7 +226,10 @@ static const NSInteger kFLEXLiveObjectsSortBySizeIndex = 2;
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     NSString *className = self.filteredClassNames[indexPath.row];
-    UIViewController *instances = [FLEXObjectListViewController instancesOfClassWithName:className];
+    UIViewController *instances = [FLEXObjectListViewController
+        instancesOfClassWithName:className
+        retained:YES
+    ];
     [self.navigationController pushViewController:instances animated:YES];
 }
 

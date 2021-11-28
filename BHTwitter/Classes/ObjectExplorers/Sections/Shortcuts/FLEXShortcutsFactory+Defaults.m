@@ -3,19 +3,23 @@
 //  FLEX
 //
 //  Created by Tanner Bennett on 8/29/19.
-//  Copyright © 2019 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXShortcutsFactory+Defaults.h"
 #import "FLEXShortcut.h"
+#import "FLEXMacros.h"
 #import "FLEXRuntimeUtility.h"
+#import "NSArray+FLEX.h"
 #import "NSObject+FLEX_Reflection.h"
+#import "FLEXObjcInternal.h"
+#import "Cocoa+FLEXShortcuts.h"
 
 #pragma mark - UIApplication
 
 @implementation FLEXShortcutsFactory (UIApplication)
 
-+ (void)load { FLEX_EXIT_IF_TESTING()
++ (void)load { FLEX_EXIT_IF_NO_CTORS()
     // sharedApplication class property possibly not added
     // as a literal class property until iOS 10
     FLEXRuntimeUtilityTryAddObjectProperty(
@@ -40,7 +44,7 @@
 
 @implementation FLEXShortcutsFactory (Views)
 
-+ (void)load { FLEX_EXIT_IF_TESTING()
++ (void)load { FLEX_EXIT_IF_NO_CTORS()
     // A quirk of UIView and some other classes: a lot of the `@property`s are
     // not actually properties from the perspective of the runtime.
     //
@@ -59,6 +63,7 @@
     FLEXRuntimeUtilityTryAddObjectProperty(6, constraints, UIView_, NSArray, PropertyKey(ReadOnly));
     FLEXRuntimeUtilityTryAddObjectProperty(2, subviews, UIView_, NSArray, PropertyKey(ReadOnly));
     FLEXRuntimeUtilityTryAddObjectProperty(2, superview, UIView_, UIView, PropertyKey(ReadOnly));
+    FLEXRuntimeUtilityTryAddObjectProperty(7, tintColor, UIView_, UIView);
 
     // UIButton, private
     FLEXRuntimeUtilityTryAddObjectProperty(2, font, UIButton.class, UIFont, PropertyKey(ReadOnly));
@@ -131,7 +136,7 @@
 
 @implementation FLEXShortcutsFactory (ViewControllers)
 
-+ (void)load { FLEX_EXIT_IF_TESTING()
++ (void)load { FLEX_EXIT_IF_NO_CTORS()
     // toolbarItems is not really a property, make it one 
     FLEXRuntimeUtilityTryAddObjectProperty(3, toolbarItems, UIViewController.class, NSArray);
     
@@ -141,7 +146,26 @@
             @"viewIfLoaded", @"title", @"navigationItem", @"toolbarItems", @"tabBarItem",
             @"childViewControllers", @"navigationController", @"tabBarController", @"splitViewController",
             @"parentViewController", @"presentedViewController", @"presentingViewController",
-        ]).methods(@[@"view"]).forClass(UIViewController.class);
+        ])
+        .methods(@[@"view"])
+        .forClass(UIViewController.class);
+    
+    // UIAlertController
+    NSMutableArray *alertControllerProps = @[
+        @"title", @"message", @"actions", @"textFields",
+        @"preferredAction", @"presentingViewController", @"viewIfLoaded",
+    ].mutableCopy;
+    if (@available(iOS 14.0, *)) {
+        [alertControllerProps insertObject:@"image" atIndex:4];
+    }
+    self.append
+        .properties(alertControllerProps)
+        .methods(@[@"addAction:"])
+        .forClass(UIAlertController.class);
+    self.append.properties(@[
+        @"title", @"style", @"enabled", @"flex_styleName",
+        @"image", @"keyCommandInput", @"_isPreferred", @"_alertController",
+    ]).forClass(UIAlertAction.class);
 }
 
 @end
@@ -151,7 +175,7 @@
 
 @implementation FLEXShortcutsFactory (UIImage)
 
-+ (void)load { FLEX_EXIT_IF_TESTING()
++ (void)load { FLEX_EXIT_IF_NO_CTORS()
     self.append.methods(@[
         @"CGImage", @"CIImage"
     ]).properties(@[
@@ -171,7 +195,7 @@
 
 @implementation FLEXShortcutsFactory (NSBundle)
 
-+ (void)load { FLEX_EXIT_IF_TESTING()
++ (void)load { FLEX_EXIT_IF_NO_CTORS()
     self.append.properties(@[
         @"bundleIdentifier", @"principalClass",
         @"infoDictionary", @"bundlePath",
@@ -186,7 +210,7 @@
 
 @implementation FLEXShortcutsFactory (Classes)
 
-+ (void)load { FLEX_EXIT_IF_TESTING()
++ (void)load { FLEX_EXIT_IF_NO_CTORS()
     self.append.classMethods(@[@"new", @"alloc"]).forClass(NSObject.flex_metaclass);
 }
 
@@ -197,7 +221,7 @@
 
 @implementation FLEXShortcutsFactory (Activities)
 
-+ (void)load { FLEX_EXIT_IF_TESTING()
++ (void)load { FLEX_EXIT_IF_NO_CTORS()
     // Property was added in iOS 10 but we want it on iOS 9 too
     FLEXRuntimeUtilityTryAddNonatomicProperty(9, item, UIActivityItemProvider.class, id, PropertyKey(ReadOnly));
     
@@ -217,7 +241,7 @@
 
 @implementation FLEXShortcutsFactory (Blocks)
 
-+ (void)load { FLEX_EXIT_IF_TESTING()
++ (void)load { FLEX_EXIT_IF_NO_CTORS()
     self.append.methods(@[@"invoke"]).forClass(NSClassFromString(@"NSBlock"));
 }
 
@@ -227,7 +251,7 @@
 
 @implementation FLEXShortcutsFactory (Foundation)
 
-+ (void)load { FLEX_EXIT_IF_TESTING()
++ (void)load { FLEX_EXIT_IF_NO_CTORS()
     self.append.properties(@[
         @"configuration", @"delegate", @"delegateQueue", @"sessionDescription",
     ]).methods(@[
@@ -256,12 +280,177 @@
     FLEXRuntimeUtilityTryAddObjectProperty(2, abbreviationDictionary, NSTimeZone.flex_metaclass, NSDictionary);
     
     self.append.classMethods(@[
-        @"timeZoneWithName:", @"timeZoneWithAbbreviation:", @"timeZoneForSecondsFromGMT:", @"", @"", @"", 
+        @"timeZoneWithName:", @"timeZoneWithAbbreviation:", @"timeZoneForSecondsFromGMT:",
     ]).forClass(NSTimeZone.flex_metaclass);
     
     self.append.classProperties(@[
-        @"defaultTimeZone", @"systemTimeZone", @"localTimeZone"
+        @"defaultTimeZone", @"systemTimeZone", @"localTimeZone",
     ]).forClass(NSTimeZone.class);
+    
+    // UTF8String is not a real property under the hood
+    FLEXRuntimeUtilityTryAddNonatomicProperty(2, UTF8String, NSString.class, const char *, PropertyKey(ReadOnly));
+    
+    self.append.properties(@[@"length"]).methods(@[@"characterAtIndex:"]).forClass(NSString.class);
+    self.append.methods(@[
+        @"writeToFile:atomically:", @"subdataWithRange:", @"isEqualToData:",
+    ]).properties(@[
+        @"length", @"bytes",
+    ]).forClass(NSData.class);
+    
+    self.append.classMethods(@[
+        @"dataWithJSONObject:options:error:",
+        @"JSONObjectWithData:options:error:",
+        @"isValidJSONObject:",
+    ]).forClass(NSJSONSerialization.class);
+    
+    // NSArray
+    self.append.classMethods(@[
+        @"arrayWithObject:", @"arrayWithContentsOfFile:"
+    ]).forClass(NSArray.flex_metaclass);
+    self.append.methods(@[
+        @"valueForKeyPath:", @"subarrayWithRange:",
+        @"arrayByAddingObject:", @"arrayByAddingObjectsFromArray:",
+        @"filteredArrayUsingPredicate:", @"subarrayWithRange:",
+        @"containsObject:", @"objectAtIndex:", @"indexOfObject:",
+        @"makeObjectsPerformSelector:", @"makeObjectsPerformSelector:withObject:",
+        @"sortedArrayUsingSelector:", @"reverseObjectEnumerator",
+        @"isEqualToArray:", @"mutableCopy",
+    ]).forClass(NSArray.class);
+    // NSDictionary
+    self.append.methods(@[
+        @"objectForKey:", @"valueForKeyPath:",
+        @"isEqualToDictionary:", @"mutableCopy",
+    ]).forClass(NSDictionary.class);
+    // NSSet
+    self.append.classMethods(@[
+        @"setWithObject:", @"setWithArray:"
+    ]).forClass(NSSet.flex_metaclass);
+    self.append.methods(@[
+        @"allObjects", @"valueForKeyPath:", @"containsObject:",
+        @"setByAddingObject:", @"setByAddingObjectsFromArray:",
+        @"filteredSetUsingPredicate:", @"isSubsetOfSet:",
+        @"makeObjectsPerformSelector:", @"makeObjectsPerformSelector:withObject:",
+        @"reverseObjectEnumerator", @"isEqualToSet:", @"mutableCopy",
+    ]).forClass(NSSet.class);
+    
+    // NSMutableArray
+    self.prepend.methods(@[
+        @"addObject:", @"insertObject:atIndex:", @"addObjectsFromArray:", 
+        @"removeObject:", @"removeObjectAtIndex:",
+        @"removeObjectsInArray:", @"removeAllObjects", 
+        @"removeLastObject", @"filterUsingPredicate:",
+        @"sortUsingSelector:", @"copy",
+    ]).forClass(NSMutableArray.class);
+    // NSMutableDictionary
+    self.prepend.methods(@[
+        @"setObject:forKey:", @"removeObjectForKey:",
+        @"removeAllObjects", @"removeObjectsForKeys:", @"copy",
+    ]).forClass(NSMutableDictionary.class);
+    // NSMutableSet
+    self.prepend.methods(@[
+        @"addObject:", @"removeObject:", @"filterUsingPredicate:",
+        @"removeAllObjects", @"addObjectsFromArray:",
+        @"unionSet:", @"minusSet:", @"intersectSet:", @"copy"
+    ]).forClass(NSMutableSet.class);
+    
+    self.append.methods(@[@"nextObject", @"allObjects"]).forClass(NSEnumerator.class);
+    
+    self.append.properties(@[@"flex_observers"]).forClass(NSNotificationCenter.class);
+}
+
+@end
+
+#pragma mark - WebKit / Safari
+
+@implementation FLEXShortcutsFactory (WebKit_Safari)
+
++ (void)load { FLEX_EXIT_IF_NO_CTORS()
+    Class WKWebView = NSClassFromString(@"WKWebView");
+    Class SafariVC = NSClassFromString(@"SFSafariViewController");
+    
+    if (WKWebView) {
+        self.append.properties(@[
+            @"configuration", @"scrollView", @"title", @"URL",
+            @"customUserAgent", @"navigationDelegate"
+        ]).methods(@[@"reload", @"stopLoading"]).forClass(WKWebView);
+    }
+    
+    if (SafariVC) {
+        self.append.properties(@[
+            @"delegate"
+        ]).forClass(SafariVC);
+        if (@available(iOS 10.0, *)) {
+            self.append.properties(@[
+                @"preferredBarTintColor", @"preferredControlTintColor"
+            ]).forClass(SafariVC);
+        }
+        if (@available(iOS 11.0, *)) {
+            self.append.properties(@[
+                @"configuration", @"dismissButtonStyle"
+            ]).forClass(SafariVC);
+        }
+    }
+}
+
+@end
+
+#pragma mark - Pasteboard
+
+@implementation FLEXShortcutsFactory (Pasteboard)
+
++ (void)load { FLEX_EXIT_IF_NO_CTORS()
+    self.append.properties(@[
+        @"name", @"numberOfItems", @"items",
+        @"string", @"image", @"color", @"URL",
+    ]).forClass(UIPasteboard.class);
+}
+
+@end
+
+@interface NSNotificationCenter (Observers)
+@property (readonly) NSArray<NSString *> *flex_observers;
+@end
+
+@implementation NSNotificationCenter (Observers)
+- (id)flex_observers {
+    NSString *debug = self.debugDescription;
+    NSArray<NSString *> *observers = [debug componentsSeparatedByString:@"\n"];
+    NSArray<NSArray<NSString *> *> *splitObservers = [observers flex_mapped:^id(NSString *entry, NSUInteger idx) {
+        return [entry componentsSeparatedByString:@","];
+    }];
+    
+    NSArray *names = [splitObservers flex_mapped:^id(NSArray<NSString *> *entry, NSUInteger idx) {
+        return entry[0];
+    }];
+    NSArray *objects = [splitObservers flex_mapped:^id(NSArray<NSString *> *entry, NSUInteger idx) {
+        if (entry.count < 2) return NSNull.null;
+        NSScanner *scanner = [NSScanner scannerWithString:entry[1]];
+
+        unsigned long long objectPointerValue;
+        if ([scanner scanHexLongLong:&objectPointerValue]) {
+            void *objectPointer = (void *)objectPointerValue;
+            if (FLEXPointerIsValidObjcObject(objectPointer))
+                return (__bridge id)(void *)objectPointer;
+        }
+        
+        return NSNull.null;
+    }];
+    
+    return [NSArray flex_forEachUpTo:names.count map:^id(NSUInteger i) {
+        return @[names[i], objects[i]];
+    }];
+}
+@end
+
+#pragma mark - Firebase Firestore
+
+@implementation FLEXShortcutsFactory (FirebaseFirestore)
+
++ (void)load { FLEX_EXIT_IF_NO_CTORS()
+    Class FIRDocumentSnap = NSClassFromString(@"FIRDocumentSnapshot");
+    if (FIRDocumentSnap) {
+        FLEXRuntimeUtilityTryAddObjectProperty(2, data, FIRDocumentSnap, NSDictionary, PropertyKey(ReadOnly));        
+    }
 }
 
 @end

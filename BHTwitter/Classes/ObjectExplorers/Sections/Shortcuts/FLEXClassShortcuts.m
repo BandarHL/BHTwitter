@@ -3,7 +3,7 @@
 //  FLEX
 //
 //  Created by Tanner Bennett on 11/22/19.
-//  Copyright © 2019 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXClassShortcuts.h"
@@ -27,6 +27,7 @@
             viewer:^UIViewController *(id obj) {
                 return [FLEXObjectListViewController
                     instancesOfClassWithName:NSStringFromClass(obj)
+                    retained:NO
                 ];
             }
             accessoryType:^UITableViewCellAccessoryType(id obj) {

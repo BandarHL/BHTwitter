@@ -3,7 +3,7 @@
 //  FLEX
 //
 //  Created by Tanner Bennett on 1/7/20.
-//  Copyright © 2020 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import "FHSSnapshotView.h"
@@ -296,7 +296,7 @@
 - (void)depthSliderDidChange:(FHSRangeSlider *)slider {
     CGFloat min = slider.minValue, max = slider.maxValue;
     for (FHSSnapshotNodes *nodes in self.nodesMap.allValues) {
-        CGFloat depth = self.maxDepth - nodes.depth;
+        CGFloat depth = nodes.depth;
         nodes.snapshot.hidden = depth < min || max < depth;
     }
 }

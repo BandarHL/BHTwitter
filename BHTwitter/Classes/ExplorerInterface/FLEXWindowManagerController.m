@@ -3,7 +3,7 @@
 //  FLEX
 //
 //  Created by Tanner on 2/6/20.
-//  Copyright © 2020 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXWindowManagerController.h"
@@ -72,7 +72,7 @@
     [self dismissViewControllerAnimated:YES completion:nil];
 }
 
-- (void)showRevertOrDismissAlert:(void(^)())revertBlock {
+- (void)showRevertOrDismissAlert:(void(^)(void))revertBlock {
     [self.tableView deselectRowAtIndexPath:self.tableView.indexPathForSelectedRow animated:YES];
     [self reloadData];
     [self.tableView reloadData];

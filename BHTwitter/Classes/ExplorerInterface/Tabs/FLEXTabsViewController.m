@@ -3,7 +3,7 @@
 //  FLEX
 //
 //  Created by Tanner on 2/4/20.
-//  Copyright © 2020 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXTabsViewController.h"
@@ -121,12 +121,12 @@
 - (void)setupEditingBarItems {
     self.navigationItem.rightBarButtonItem = nil;
     self.toolbarItems = @[
-        [UIBarButtonItem itemWithTitle:@"Close All" target:self action:@selector(closeAllButtonPressed:)],
+        [UIBarButtonItem flex_itemWithTitle:@"Close All" target:self action:@selector(closeAllButtonPressed:)],
         UIBarButtonItem.flex_flexibleSpace,
-        [UIBarButtonItem disabledSystemItem:UIBarButtonSystemItemAdd],
+        [UIBarButtonItem flex_disabledSystemItem:UIBarButtonSystemItemAdd],
         UIBarButtonItem.flex_flexibleSpace,
         // We use a non-system done item because we change its title dynamically
-        [UIBarButtonItem doneStyleitemWithTitle:@"Done" target:self action:@selector(toggleEditing)]
+        [UIBarButtonItem flex_doneStyleitemWithTitle:@"Done" target:self action:@selector(toggleEditing)]
     ];
     
     self.toolbarItems.firstObject.tintColor = FLEXColor.destructiveColor;

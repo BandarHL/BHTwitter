@@ -3,7 +3,7 @@
 //  FLEX
 //
 //  Created by Ryan Olson on 6/8/14.
-//  Copyright (c) 2020 Flipboard. All rights reserved.
+//  Copyright (c) 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXResources.h"
@@ -8836,6 +8836,10 @@ static const u_int8_t FLEXHierarchyIndentPattern3x[] = {
 
 + (UIImage *)checkerPattern {
     return FLEXImage(FLEXCheckerPattern);
+}
+
++ (UIColor *)checkerPatternColor {
+    return [UIColor colorWithPatternImage:FLEXResources.checkerPattern];
 }
 
 + (UIImage *)hierarchyIndentPattern {

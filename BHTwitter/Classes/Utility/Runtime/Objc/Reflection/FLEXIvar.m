@@ -4,7 +4,7 @@
 //
 //  Derived from MirrorKit.
 //  Created by Tanner on 6/30/15.
-//  Copyright (c) 2015 Tanner Bennett. All rights reserved.
+//  Copyright (c) 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXIvar.h"
@@ -23,14 +23,6 @@
 @implementation FLEXIvar
 
 #pragma mark Initializers
-
-- (id)init {
-    [NSException
-        raise:NSInternalInconsistencyException
-        format:@"Class instance should not be created with -init"
-    ];
-    return nil;
-}
 
 + (instancetype)ivar:(Ivar)ivar {
     return [[self alloc] initWithIvar:ivar];

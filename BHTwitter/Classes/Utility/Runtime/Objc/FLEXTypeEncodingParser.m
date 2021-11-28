@@ -3,7 +3,7 @@
 //  FLEX
 //
 //  Created by Tanner Bennett on 8/22/19.
-//  Copyright © 2019 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXTypeEncodingParser.h"
@@ -810,7 +810,7 @@ BOOL FLEXGetSizeAndAlignment(const char *type, NSUInteger *sizep, NSUInteger *al
     self.scan.scanLocation = scanLocation;
     
     // The return / cleanup code for when the scanned type is already clean
-    NSString * (^typeIsClean)() = ^NSString * {
+    NSString * (^typeIsClean)(void) = ^NSString * {
         NSString *clean = [self.scan.string
             substringWithRange:NSMakeRange(scanLocation, self.scan.scanLocation - scanLocation)
         ];

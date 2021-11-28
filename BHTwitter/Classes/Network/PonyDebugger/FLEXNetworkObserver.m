@@ -11,10 +11,14 @@
 //  See the LICENSE file distributed with this work for the terms under
 //  which Square, Inc. licenses this file to you.
 //
+//  Heavily modified and added to by Tanner Bennett and various other contributors.
+//  git blame details these modifications.
+//
 
 #import "FLEXNetworkObserver.h"
 #import "FLEXNetworkRecorder.h"
 #import "FLEXUtility.h"
+#import "NSUserDefaults+FLEX.h"
 #import "NSObject+FLEX_Reflection.h"
 #import "FLEXMethod.h"
 
@@ -24,7 +28,6 @@
 #include <dlfcn.h>
 
 NSString *const kFLEXNetworkObserverEnabledStateChangedNotification = @"kFLEXNetworkObserverEnabledStateChangedNotification";
-static NSString *const kFLEXNetworkObserverEnabledDefaultsKey = @"com.flex.FLEXNetworkObserver.enableOnLaunch";
 
 typedef void (^NSURLSessionAsyncCompletion)(id fileURLOrData, NSURLResponse *response, NSError *error);
 typedef NSURLSessionTask * (^NSURLSessionNewTaskMethod)(NSURLSession *, id, NSURLSessionAsyncCompletion);
@@ -68,6 +71,15 @@ didBecomeDownloadTask:(NSURLSessionDownloadTask *)downloadTask delegate:(id<NSUR
 
 - (void)URLSessionTaskWillResume:(NSURLSessionTask *)task;
 
+- (void)websocketTask:(NSURLSessionWebSocketTask *)task
+        sendMessagage:(NSURLSessionWebSocketMessage *)message API_AVAILABLE(ios(13.0));
+- (void)websocketTaskMessageSendCompletion:(NSURLSessionWebSocketMessage *)message
+                                     error:(NSError *)error API_AVAILABLE(ios(13.0));
+
+- (void)websocketTask:(NSURLSessionWebSocketTask *)task
+     receiveMessagage:(NSURLSessionWebSocketMessage *)message
+                error:(NSError *)error API_AVAILABLE(ios(13.0));
+
 @end
 
 @interface FLEXNetworkObserver ()
@@ -84,12 +96,12 @@ didBecomeDownloadTask:(NSURLSessionDownloadTask *)downloadTask delegate:(id<NSUR
 + (void)setEnabled:(BOOL)enabled {
     BOOL previouslyEnabled = [self isEnabled];
     
-    [NSUserDefaults.standardUserDefaults setBool:enabled forKey:kFLEXNetworkObserverEnabledDefaultsKey];
+    NSUserDefaults.standardUserDefaults.flex_networkObserverEnabled = enabled;
     
     if (enabled) {
         // Inject if needed. This injection is protected with a dispatch_once, so we're ok calling it multiple times.
         // By doing the injection lazily, we keep the impact of the tool lower when this feature isn't enabled.
-        [self injectIntoAllNSURLConnectionDelegateClasses];
+        [self injectIntoAllNSURLThings];
     }
     
     if (previouslyEnabled != enabled) {
@@ -98,14 +110,14 @@ didBecomeDownloadTask:(NSURLSessionDownloadTask *)downloadTask delegate:(id<NSUR
 }
 
 + (BOOL)isEnabled {
-    return [[NSUserDefaults.standardUserDefaults objectForKey:kFLEXNetworkObserverEnabledDefaultsKey] boolValue];
+    return NSUserDefaults.standardUserDefaults.flex_networkObserverEnabled;
 }
 
 + (void)load {
     // We don't want to do the swizzling from +load because not all the classes may be loaded at this point.
     dispatch_async(dispatch_get_main_queue(), ^{
         if ([self isEnabled]) {
-            [self injectIntoAllNSURLConnectionDelegateClasses];
+            [self injectIntoAllNSURLThings];
         }
     });
 }
@@ -128,9 +140,11 @@ didBecomeDownloadTask:(NSURLSessionDownloadTask *)downloadTask delegate:(id<NSUR
 #pragma mark Delegate Injection Convenience Methods
 
 /// All swizzled delegate methods should make use of this guard.
-/// This will prevent duplicated sniffing when the original implementation calls up to a superclass implementation which we've also swizzled.
-/// The superclass implementation (and implementations in classes above that) will be executed without interference if called from the original implementation.
-+ (void)sniffWithoutDuplicationForObject:(NSObject *)object selector:(SEL)selector sniffingBlock:(void (^)(void))sniffingBlock originalImplementationBlock:(void (^)(void))originalImplementationBlock {
+/// This will prevent duplicated sniffing when the original implementation calls up to a superclass
+/// implementation which we've also swizzled. The superclass implementation (and implementations in
+/// classes above that) will be executed without interference if called from the original implementation.
++ (void)sniffWithoutDuplicationForObject:(NSObject *)object selector:(SEL)selector
+                           sniffingBlock:(void (^)(void))sniffingBlock originalImplementationBlock:(void (^)(void))originalImplementationBlock {
     // If we don't have an object to detect nested calls on, just run the original implementation and bail.
     // This case can happen if someone besides the URL loading system calls the delegate methods directly.
     // See https://github.com/Flipboard/FLEX/issues/61 for an example.
@@ -154,7 +168,7 @@ didBecomeDownloadTask:(NSURLSessionDownloadTask *)downloadTask delegate:(id<NSUR
 
 #pragma mark - Delegate Injection
 
-+ (void)injectIntoAllNSURLConnectionDelegateClasses {
++ (void)injectIntoAllNSURLThings {
     // Only allow swizzling once.
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -224,6 +238,15 @@ didBecomeDownloadTask:(NSURLSessionDownloadTask *)downloadTask delegate:(id<NSUR
 
         [self injectIntoNSURLSessionAsyncDataAndDownloadTaskMethods];
         [self injectIntoNSURLSessionAsyncUploadTaskMethods];
+        
+        if (@available(iOS 13.0, *)) {
+            Class websocketTask = NSClassFromString(@"__NSURLSessionWebSocketTask");
+            [self injectWebsocketSendMessage:websocketTask];
+            [self injectWebsocketReceiveMessage:websocketTask];
+            websocketTask = [NSURLSessionWebSocketTask class];
+            [self injectWebsocketSendMessage:websocketTask];
+            [self injectWebsocketReceiveMessage:websocketTask];
+        }
     });
 }
 
@@ -1266,7 +1289,76 @@ didBecomeDownloadTask:(NSURLSessionDownloadTask *)downloadTask delegate:(id<NSUR
         implementationBlock:implementationBlock
         undefinedBlock:undefinedBlock
     ];
+}
 
++ (void)injectWebsocketSendMessage:(Class)cls API_AVAILABLE(ios(13.0)) {
+    SEL selector = @selector(sendMessage:completionHandler:);
+    SEL swizzledSelector = [FLEXUtility swizzledSelectorForSelector:selector];
+
+    typedef void (^SendMessageBlock)(
+        NSURLSessionWebSocketTask *slf,
+        NSURLSessionWebSocketMessage *message,
+        void (^completion)(NSError *error)
+    );
+
+    SendMessageBlock implementationBlock = ^(
+        NSURLSessionWebSocketTask *slf,
+        NSURLSessionWebSocketMessage *message,
+        void (^completion)(NSError *error)
+    ) {
+        [FLEXNetworkObserver.sharedObserver
+            websocketTask:slf sendMessagage:message
+        ];
+        completion = ^(NSError *error) {
+            [FLEXNetworkObserver.sharedObserver
+                websocketTaskMessageSendCompletion:message
+                error:error
+            ];
+        };
+        
+        ((void(*)(id, SEL, id, id))objc_msgSend)(
+            slf, swizzledSelector, message, completion
+        );
+    };
+
+    [FLEXUtility replaceImplementationOfKnownSelector:selector
+        onClass:cls
+        withBlock:implementationBlock
+        swizzledSelector:swizzledSelector
+    ];
+}
+
++ (void)injectWebsocketReceiveMessage:(Class)cls API_AVAILABLE(ios(13.0)) {
+    SEL selector = @selector(receiveMessageWithCompletionHandler:);
+    SEL swizzledSelector = [FLEXUtility swizzledSelectorForSelector:selector];
+
+    typedef void (^SendMessageBlock)(
+        NSURLSessionWebSocketTask *slf,
+        void (^completion)(NSURLSessionWebSocketMessage *message, NSError *error)
+    );
+
+    SendMessageBlock implementationBlock = ^(
+        NSURLSessionWebSocketTask *slf,
+        void (^completion)(NSURLSessionWebSocketMessage *message, NSError *error)
+    ) {        
+        id completionHook = ^(NSURLSessionWebSocketMessage *message, NSError *error) {
+            [FLEXNetworkObserver.sharedObserver
+                websocketTask:slf receiveMessagage:message error:error
+            ];
+            completion(message, error);
+        };
+        
+        ((void(*)(id, SEL, id))objc_msgSend)(
+            slf, swizzledSelector, completionHook
+        );
+
+    };
+
+    [FLEXUtility replaceImplementationOfKnownSelector:selector
+        onClass:cls
+        withBlock:implementationBlock
+        swizzledSelector:swizzledSelector
+    ];
 }
 
 static char const * const kFLEXRequestIDKey = "kFLEXRequestIDKey";
@@ -1585,6 +1677,37 @@ didFinishDownloadingToURL:(NSURL *)location data:(NSData *)data
                 request:task.currentRequest
                 redirectResponse:nil
             ];
+        }
+    }];
+}
+
+- (void)websocketTask:(NSURLSessionWebSocketTask *)task
+        sendMessagage:(NSURLSessionWebSocketMessage *)message {
+    [self performBlock:^{
+//        NSString *requestID = [[self class] requestIDForConnectionOrTask:task];
+        [FLEXNetworkRecorder.defaultRecorder recordWebsocketMessageSend:message task:task];
+    }];
+}
+
+- (void)websocketTaskMessageSendCompletion:(NSURLSessionWebSocketMessage *)message
+                                     error:(NSError *)error {
+    [self performBlock:^{
+        [FLEXNetworkRecorder.defaultRecorder
+            recordWebsocketMessageSendCompletion:message
+            error:error
+        ];
+    }];
+}
+
+- (void)websocketTask:(NSURLSessionWebSocketTask *)task
+     receiveMessagage:(NSURLSessionWebSocketMessage *)message
+                error:(NSError *)error {
+    [self performBlock:^{
+        if (!error && message) {
+            [FLEXNetworkRecorder.defaultRecorder
+                recordWebsocketMessageReceived:message
+                task:task
+            ];            
         }
     }];
 }

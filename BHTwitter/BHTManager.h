@@ -16,6 +16,7 @@
 #import "HBPreferences/HBTwitterCell.h"
 #import "HBPreferences/HBSwitchCell.h"
 #import "HBPreferences/HBGithubCell.h"
+#import "HBPreferences/HBlinkCell.h"
 #import "HBPreferences/HBViewControllerCell.h"
 
 @interface BHTManager : NSObject
@@ -26,10 +27,9 @@
 + (bool)isDMVideoCell:(T1InlineMediaView *)view;
 + (BOOL)doesContainDigitsOnly:(NSString *)string;
 + (UIViewController *)BHTSettings;
-+ (void)showSettings:(UIViewController *)_self;
 + (void)showSaveVC:(NSURL *)url;
 + (void)save:(NSURL *)url;
-+ (BOOL)isDeviceLanguageRTL;
++ (float)TwitterVersion;
 
 + (BOOL)DownloadingVideos;
 + (BOOL)DirectSave;
@@ -48,6 +48,8 @@
 + (BOOL)Padlock;
 + (BOOL)OldStyle;
 + (BOOL)DwbLayout;
++ (BOOL)changeFont;
 + (BOOL)FLEX;
++ (BOOL)autoHighestLoad;
 @end
 

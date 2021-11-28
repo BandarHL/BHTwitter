@@ -3,12 +3,10 @@
 //  Flipboard
 //
 //  Created by Ryan Olson on 2/8/15.
-//  Copyright (c) 2020 Flipboard. All rights reserved.
+//  Copyright (c) 2020 FLEX Team. All rights reserved.
 //
 
 #import <UIKit/UIKit.h>
-
-extern NSString * const kFLEXNetworkTransactionCellIdentifier;
 
 @class FLEXNetworkTransaction;
 
@@ -16,6 +14,7 @@ extern NSString * const kFLEXNetworkTransactionCellIdentifier;
 
 @property (nonatomic) FLEXNetworkTransaction *transaction;
 
-+ (CGFloat)preferredCellHeight;
+@property (nonatomic, readonly, class) NSString *reuseID;
+@property (nonatomic, readonly, class) CGFloat preferredCellHeight;
 
 @end

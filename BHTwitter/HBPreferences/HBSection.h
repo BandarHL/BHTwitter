@@ -10,5 +10,7 @@
 @property (nonatomic, strong) NSMutableArray *cells;
 + (instancetype)sectionWithTitle:(NSString *)title footer:(NSString *)footer;
 - (void)addCell:(UITableViewCell *)cell;
+- (void)removeCell:(UITableViewCell *)cell;
 - (void)addCells:(NSArray <UITableViewCell *> *)cells;
+- (void)removeCells:(NSArray <UITableViewCell *> *)cells;
 @end

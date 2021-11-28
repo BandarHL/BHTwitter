@@ -3,7 +3,7 @@
 //  Flipboard
 //
 //  Created by Ryan Olson on 4/4/14.
-//  Copyright (c) 2020 Flipboard. All rights reserved.
+//  Copyright (c) 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXManager.h"
@@ -49,7 +49,7 @@
     NSAssert(NSThread.isMainThread, @"You must use %@ from the main thread only.", NSStringFromClass([self class]));
     
     if (!_explorerWindow) {
-        _explorerWindow = [[FLEXWindow alloc] initWithFrame:UIScreen.mainScreen.bounds];
+        _explorerWindow = [[FLEXWindow alloc] initWithFrame:FLEXUtility.appKeyWindow.bounds];
         _explorerWindow.eventDelegate = self;
         _explorerWindow.rootViewController = self.explorerViewController;
     }
@@ -69,14 +69,12 @@
 - (void)showExplorer {
     UIWindow *flex = self.explorerWindow;
     flex.hidden = NO;
-#if FLEX_AT_LEAST_IOS13_SDK
     if (@available(iOS 13.0, *)) {
         // Only look for a new scene if we don't have one
         if (!flex.windowScene) {
-            flex.windowScene = FLEXUtility.activeScene;
+            flex.windowScene = FLEXUtility.appKeyWindow.windowScene;
         }
     }
-#endif
 }
 
 - (void)hideExplorer {
@@ -85,18 +83,33 @@
 
 - (void)toggleExplorer {
     if (self.explorerWindow.isHidden) {
-        [self showExplorer];
+        if (@available(iOS 13.0, *)) {
+            [self showExplorerFromScene:FLEXUtility.appKeyWindow.windowScene];
+        } else {
+            [self showExplorer];
+        }
     } else {
         [self hideExplorer];
     }
 }
 
+- (void)dismissAnyPresentedTools:(void (^)(void))completion {
+    if (self.explorerViewController.presentedViewController) {
+        [self.explorerViewController dismissViewControllerAnimated:YES completion:completion];
+    } else if (completion) {
+        completion();
+    }
+}
+
+- (void)presentTool:(UINavigationController * _Nonnull (^)(void))future completion:(void (^)(void))completion {
+    [self showExplorer];
+    [self.explorerViewController presentTool:future completion:completion];
+}
+
 - (void)showExplorerFromScene:(UIWindowScene *)scene {
-    #if FLEX_AT_LEAST_IOS13_SDK
     if (@available(iOS 13.0, *)) {
         self.explorerWindow.windowScene = scene;
     }
-    #endif
     self.explorerWindow.hidden = NO;
 }
 

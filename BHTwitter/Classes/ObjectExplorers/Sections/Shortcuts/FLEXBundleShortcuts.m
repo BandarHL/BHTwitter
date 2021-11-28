@@ -3,12 +3,13 @@
 //  FLEX
 //
 //  Created by Tanner Bennett on 12/12/19.
-//  Copyright © 2019 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXBundleShortcuts.h"
 #import "FLEXShortcut.h"
 #import "FLEXAlert.h"
+#import "FLEXMacros.h"
 #import "FLEXRuntimeExporter.h"
 #import "FLEXTableListViewController.h"
 #import "FLEXFileBrowserController.h"
@@ -17,8 +18,7 @@
 @implementation FLEXBundleShortcuts
 #pragma mark Overrides
 
-+ (instancetype)forObject:(NSBundle *)bundle {
-    __weak __typeof(self) weakSelf = self;
++ (instancetype)forObject:(NSBundle *)bundle { weakify(self)
     return [self forObject:bundle additionalRows:@[
         [FLEXActionShortcut
             title:@"Browse Bundle Directory" subtitle:nil
@@ -30,11 +30,8 @@
             }
         ],
         [FLEXActionShortcut title:@"Browse Bundle as Database…" subtitle:nil
-            selectionHandler:^(UIViewController *host, NSBundle *bundle) {
-                __strong __typeof(self) strongSelf = weakSelf;
-                if (strongSelf) {
-                    [strongSelf promptToExportBundleAsDatabase:bundle host:host];
-                }
+            selectionHandler:^(UIViewController *host, NSBundle *bundle) { strongify(self)
+                [self promptToExportBundleAsDatabase:bundle host:host];
             }
             accessoryType:^UITableViewCellAccessoryType(NSBundle *bundle) {
                 return UITableViewCellAccessoryDisclosureIndicator;

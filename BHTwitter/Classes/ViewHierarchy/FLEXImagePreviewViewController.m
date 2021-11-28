@@ -3,7 +3,7 @@
 //  Flipboard
 //
 //  Created by Ryan Olson on 6/12/14.
-//  Copyright (c) 2020 Flipboard. All rights reserved.
+//  Copyright (c) 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXImagePreviewViewController.h"
@@ -15,6 +15,9 @@
 @property (nonatomic) UIImage *image;
 @property (nonatomic) UIScrollView *scrollView;
 @property (nonatomic) UIImageView *imageView;
+@property (nonatomic) UITapGestureRecognizer *bgColorTapGesture;
+@property (nonatomic) NSInteger backgroundColorIndex;
+@property (nonatomic, readonly) NSArray<UIColor *> *backgroundColors;
 @end
 
 #pragma mark -
@@ -31,19 +34,19 @@
 }
 
 + (instancetype)forImage:(UIImage *)image {
-    if (!image) {
-        return nil;
-    }
-    
     return [[self alloc] initWithImage:image];
 }
 
 - (id)initWithImage:(UIImage *)image {
+    NSParameterAssert(image);
+    
     self = [super init];
     if (self) {
         self.title = @"Preview";
         self.image = image;
+        _backgroundColors = @[FLEXResources.checkerPatternColor, UIColor.whiteColor, UIColor.blackColor];
     }
+    
     return self;
 }
 
@@ -53,12 +56,10 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     
-    self.view.backgroundColor = [UIColor colorWithPatternImage:FLEXResources.checkerPattern];
-    
     self.imageView = [[UIImageView alloc] initWithImage:self.image];
     self.scrollView = [[UIScrollView alloc] initWithFrame:self.view.bounds];
     self.scrollView.delegate = self;
-    self.scrollView.backgroundColor = self.view.backgroundColor;
+    self.scrollView.backgroundColor = self.backgroundColors.firstObject;
     self.scrollView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     [self.scrollView addSubview:self.imageView];
     self.scrollView.contentSize = self.imageView.frame.size;
@@ -66,7 +67,14 @@
     self.scrollView.maximumZoomScale = 2.0;
     [self.view addSubview:self.scrollView];
     
-    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAction target:self action:@selector(actionButtonPressed:)];
+    self.bgColorTapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(changeBackground)];
+    [self.scrollView addGestureRecognizer:self.bgColorTapGesture];
+    
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc]
+        initWithBarButtonSystemItem:UIBarButtonSystemItemAction
+        target:self
+        action:@selector(actionButtonPressed:)
+    ];
 }
 
 - (void)viewDidLayoutSubviews {
@@ -97,6 +105,12 @@
         verticalInset = (self.scrollView.bounds.size.height - self.scrollView.contentSize.height) / 2.0;
     }
     self.scrollView.contentInset = UIEdgeInsetsMake(verticalInset, horizontalInset, verticalInset, horizontalInset);
+}
+
+- (void)changeBackground {
+    self.backgroundColorIndex++;
+    self.backgroundColorIndex %= self.backgroundColors.count;
+    self.scrollView.backgroundColor = self.backgroundColors[self.backgroundColorIndex];
 }
 
 - (void)actionButtonPressed:(id)sender {

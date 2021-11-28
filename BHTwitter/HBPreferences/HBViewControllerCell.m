@@ -28,6 +28,9 @@
 }
 
 - (void)didSelectFromTable:(HBPreferences *)viewController {
+    NSIndexPath *indexPath = [viewController.tableView indexPathForCell:self];
+    [viewController.tableView deselectRowAtIndexPath:indexPath animated:YES];
+//    [viewController presentViewController:self.destanationVC animated:true completion:nil];
     [viewController.navigationController pushViewController:self.destanationVC animated:true];
 }
 

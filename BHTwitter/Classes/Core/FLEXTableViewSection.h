@@ -3,11 +3,10 @@
 //  FLEX
 //
 //  Created by Tanner on 1/29/20.
-//  Copyright © 2020 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import <UIKit/UIKit.h>
-#import "FLEXMacros.h"
 #import "NSArray+FLEX.h"
 @class FLEXTableView;
 
@@ -24,6 +23,10 @@ NS_ASSUME_NONNULL_BEGIN
     @protected
     /// Unused by default, use if you want
     NSString *_title;
+    
+    @private
+    __weak UITableView *_tableView;
+    NSInteger _sectionIndex;
 }
 
 #pragma mark - Data
@@ -38,7 +41,7 @@ NS_ASSUME_NONNULL_BEGIN
 /// Subclasses \e may override this as necessary, but are not required to.
 /// See \c FLEXTableView.h for more information.
 /// @return nil by default.
-@property (nonatomic, readonly, nullable, strong) NSDictionary<NSString *, Class> *cellRegistrationMapping;
+@property (nonatomic, readonly, nullable) NSDictionary<NSString *, Class> *cellRegistrationMapping;
 
 /// The section should filter itself based on the contents of this property
 /// as it is set. If it is set to nil or an empty string, it should not filter.
@@ -47,7 +50,7 @@ NS_ASSUME_NONNULL_BEGIN
 /// It is common practice to use two arrays for the underlying model:
 /// One to hold all rows, and one to hold unfiltered rows. When \c setFilterText:
 /// is called, call \c super to store the new value, and re-filter your model accordingly.
-@property (nonatomic, nullable, strong) NSString *filterText;
+@property (nonatomic, nullable) NSString *filterText;
 
 /// Provides an avenue for the section to refresh data or change the number of rows.
 ///
@@ -56,6 +59,17 @@ NS_ASSUME_NONNULL_BEGIN
 /// If your section does not, then it might be simpler for you to just override
 /// \c setFilterText: to call \c super and call \c reloadData.
 - (void)reloadData;
+
+/// Like \c reloadData, but optionally reloads the table view section
+/// associated with this section object, if any. Do not override.
+/// Do not call outside of the main thread.
+- (void)reloadData:(BOOL)updateTable;
+
+/// Provide a table view and section index to allow the section to efficiently reload
+/// its own section of the table when something changes it. The table reference is
+/// held weakly, and subclasses cannot access it or the index. Call this method again
+/// if the section numbers have changed since you last called it.
+- (void)setTable:(UITableView *)tableView section:(NSInteger)index;
 
 #pragma mark - Row Selection
 
@@ -86,7 +100,6 @@ NS_ASSUME_NONNULL_BEGIN
 - (nullable void(^)(__kindof UIViewController *host))didPressInfoButtonAction:(NSInteger)row;
 
 #pragma mark - Context Menus
-#if FLEX_AT_LEAST_IOS13_SDK
 
 /// By default, this is the title of the row.
 /// @return The title of the context menu, if any.
@@ -106,7 +119,6 @@ NS_ASSUME_NONNULL_BEGIN
 /// should be a description of what will be copied, and the values should be
 /// the strings to copy. Return an empty string as a value to show a disabled action.
 - (nullable NSArray<NSString *> *)copyMenuItemsForRow:(NSInteger)row API_AVAILABLE(ios(13.0));
-#endif
 
 #pragma mark - Cell Configuration
 

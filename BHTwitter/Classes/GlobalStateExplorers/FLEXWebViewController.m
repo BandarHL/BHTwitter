@@ -3,7 +3,7 @@
 //  Flipboard
 //
 //  Created by Ryan Olson on 6/10/14.
-//  Copyright (c) 2020 Flipboard. All rights reserved.
+//  Copyright (c) 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXWebViewController.h"
@@ -25,7 +25,7 @@
         WKWebViewConfiguration *configuration = [WKWebViewConfiguration new];
 
         if (@available(iOS 10.0, *)) {
-            configuration.dataDetectorTypes = UIDataDetectorTypeLink;
+            configuration.dataDetectorTypes = WKDataDetectorTypeLink;
         }
 
         self.webView = [[WKWebView alloc] initWithFrame:CGRectZero configuration:configuration];
@@ -38,7 +38,7 @@
     self = [self initWithNibName:nil bundle:nil];
     if (self) {
         self.originalText = text;
-        NSString *htmlString = [NSString stringWithFormat:@"<head><meta name='viewport' content='initial-scale=1.0'></head><body><pre>%@</pre></body>", [FLEXUtility stringByEscapingHTMLEntitiesInString:text]];
+        NSString *htmlString = [NSString stringWithFormat:@"<head><style>:root{ color-scheme: light dark; }</style><meta name='viewport' content='initial-scale=1.0'></head><body><pre>%@</pre></body>", [FLEXUtility stringByEscapingHTMLEntitiesInString:text]];
         [self.webView loadHTMLString:htmlString baseURL:nil];
     }
     return self;

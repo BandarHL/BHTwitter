@@ -3,7 +3,7 @@
 //  FLEX
 //
 //  Created by Tanner Bennett on 7/17/19.
-//  Copyright © 2019 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXCarouselCell.h"
@@ -77,7 +77,7 @@
     self.selectionIndicatorStripe.translatesAutoresizingMaskIntoConstraints = NO;
 
     UIView *superview = self.contentView;
-    [self.titleLabel pinEdgesToSuperviewWithInsets:UIEdgeInsetsMake(10, 15, 8 + stripeHeight, 15)];
+    [self.titleLabel flex_pinEdgesToSuperviewWithInsets:UIEdgeInsetsMake(10, 15, 8 + stripeHeight, 15)];
 
     [self.selectionIndicatorStripe.leadingAnchor constraintEqualToAnchor:superview.leadingAnchor].active = YES;
     [self.selectionIndicatorStripe.bottomAnchor constraintEqualToAnchor:superview.bottomAnchor].active = YES;

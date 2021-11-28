@@ -3,7 +3,7 @@
 //  Flipboard
 //
 //  Created by Ryan Olson on 5/15/14.
-//  Copyright (c) 2020 Flipboard. All rights reserved.
+//  Copyright (c) 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXObjectExplorerFactory.h"
@@ -17,17 +17,27 @@
 #import "FLEXColorPreviewSection.h"
 #import "FLEXDefaultsContentSection.h"
 #import "FLEXBundleShortcuts.h"
+#import "FLEXNSStringShortcuts.h"
+#import "FLEXNSDataShortcuts.h"
 #import "FLEXBlockShortcuts.h"
 #import "FLEXUtility.h"
 
 @implementation FLEXObjectExplorerFactory
-static NSMutableDictionary<Class, Class> *classesToRegisteredSections = nil;
+static NSMutableDictionary<id<NSCopying>, Class> *classesToRegisteredSections = nil;
 
 + (void)initialize {
     if (self == [FLEXObjectExplorerFactory class]) {
-        #define ClassKey(name) (Class<NSCopying>)[name class]
-        #define ClassKeyByName(str) (Class<NSCopying>)NSClassFromString(@ #str)
-        #define MetaclassKey(meta) (Class<NSCopying>)object_getClass([meta class])
+        // DO NOT USE STRING KEYS HERE
+        // We NEED to use the class as a key, because we CANNOT
+        // differentiate a class's name from the metaclass's name.
+        // These mappings are per-class-object, not per-class-name.
+        //
+        // For example, if we used class names, this would result in
+        // the object explorer trying to render a color preview for
+        // the UIColor class object, which is not a color itself.
+        #define ClassKey(name) (id<NSCopying>)[name class]
+        #define ClassKeyByName(str) (id<NSCopying>)NSClassFromString(@ #str)
+        #define MetaclassKey(meta) (id<NSCopying>)object_getClass([meta class])
         classesToRegisteredSections = [NSMutableDictionary dictionaryWithDictionary:@{
             MetaclassKey(NSObject)     : [FLEXClassShortcuts class],
             ClassKey(NSArray)          : [FLEXCollectionContentSection class],
@@ -42,6 +52,8 @@ static NSMutableDictionary<Class, Class> *classesToRegisteredSections = nil;
             ClassKey(CALayer)          : [FLEXLayerShortcuts class],
             ClassKey(UIColor)          : [FLEXColorPreviewSection class],
             ClassKey(NSBundle)         : [FLEXBundleShortcuts class],
+            ClassKey(NSString)         : [FLEXNSStringShortcuts class],
+            ClassKey(NSData)           : [FLEXNSDataShortcuts class],
             ClassKeyByName(NSBlock)    : [FLEXBlockShortcuts class],
         }];
         #undef ClassKey
@@ -64,24 +76,38 @@ static NSMutableDictionary<Class, Class> *classesToRegisteredSections = nil;
     // shortcut section for NSObject.
     //
     // TODO: rename it to FLEXNSObjectShortcuts or something?
-    Class sectionClass = nil;
+    FLEXShortcutsSection *shortcutsSection = [FLEXShortcutsSection forObject:object];
+    NSArray *sections = @[shortcutsSection];
+    
+    Class customSectionClass = nil;
     Class cls = object_getClass(object);
     do {
-        sectionClass = classesToRegisteredSections[(Class<NSCopying>)cls];
-    } while (!sectionClass && (cls = [cls superclass]));
+        customSectionClass = classesToRegisteredSections[(id<NSCopying>)cls];
+    } while (!customSectionClass && (cls = [cls superclass]));
 
-    if (!sectionClass) {
-        sectionClass = [FLEXShortcutsSection class];
+    if (customSectionClass) {
+        id customSection = [customSectionClass forObject:object];
+        BOOL isFLEXShortcutSection = [customSection respondsToSelector:@selector(isNewSection)];
+        
+        // If the section "replaces" the default shortcuts section,
+        // only return that section. Otherwise, return both this
+        // section and the default shortcuts section.
+        if (isFLEXShortcutSection && ![customSection isNewSection]) {
+            sections = @[customSection];
+        } else {
+            // Custom section will go before shortcuts
+            sections = @[customSection, shortcutsSection];            
+        }
     }
 
     return [FLEXObjectExplorerViewController
         exploringObject:object
-        customSection:[sectionClass forObject:object]
+        customSections:sections
     ];
 }
 
 + (void)registerExplorerSection:(Class)explorerClass forClass:(Class)objectClass {
-    classesToRegisteredSections[(Class<NSCopying>)objectClass] = explorerClass;
+    classesToRegisteredSections[(id<NSCopying>)objectClass] = explorerClass;
 }
 
 #pragma mark - FLEXGlobalsEntry
@@ -176,7 +202,7 @@ static NSMutableDictionary<Class, Class> *classesToRegisteredSections = nil;
             return [self explorerViewControllerForObject:NSThread.mainThread];
         case FLEXGlobalsRowOperationQueue:
             return [self explorerViewControllerForObject:NSOperationQueue.mainQueue];
-            
+
         case FLEXGlobalsRowKeyWindow:
             return [FLEXObjectExplorerFactory
                 explorerViewControllerForObject:FLEXUtility.appKeyWindow

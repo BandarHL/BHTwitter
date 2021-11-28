@@ -3,7 +3,7 @@
 //  FLEX
 //
 //  Created by Tanner Bennett on 12/16/19.
-//  Copyright © 2019 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import <UIKit/UIKit.h>
@@ -11,6 +11,7 @@
 #import "FLEXIvar.h"
 #import "FLEXMethod.h"
 #import "FLEXProtocol.h"
+#import "FLEXTableViewSection.h"
 
 @class FLEXObjectExplorerDefaults;
 
@@ -42,13 +43,12 @@
 /// For methods, a method calling screen. For all else, an object explorer.
 - (UIViewController *)viewerWithTarget:(id)object;
 /// For methods and protocols, nil. For all else, an a field editor screen.
-- (UIViewController *)editorWithTarget:(id)object;
+/// The given section is reloaded on commit of any changes.
+- (UIViewController *)editorWithTarget:(id)object section:(FLEXTableViewSection *)section;
 /// Used to determine present which interactions are possible to the user
 - (UITableViewCellAccessoryType)suggestedAccessoryTypeWithTarget:(id)object;
 /// Return nil to use the default reuse identifier
 - (NSString *)reuseIdentifierWithTarget:(id)object;
-
-#if FLEX_AT_LEAST_IOS13_SDK
 
 /// An array of actions to place in the first section of the context menu.
 - (NSArray<UIAction *> *)additionalActionsWithTarget:(id)object sender:(UIViewController *)sender API_AVAILABLE(ios(13.0));
@@ -57,8 +57,6 @@
 - (NSArray<NSString *> *)copiableMetadataWithTarget:(id)object;
 /// Properties and ivars return the address of an object, if they hold one.
 - (NSString *)contextualSubtitleWithTarget:(id)object;
-
-#endif
 
 @end
 

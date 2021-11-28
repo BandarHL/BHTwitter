@@ -3,14 +3,10 @@
 //  Flipboard
 //
 //  Created by Ryan Olson on 4/4/14.
-//  Copyright (c) 2020 Flipboard. All rights reserved.
+//  Copyright (c) 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXExplorerToolbar.h"
-
-#if !FLEX_AT_LEAST_IOS13_SDK
-@class UIWindowScene;
-#endif
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -24,6 +20,14 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)showExplorer;
 - (void)hideExplorer;
 - (void)toggleExplorer;
+
+/// Programmatically dismiss anything presented by FLEX, leaving only the toolbar visible.
+- (void)dismissAnyPresentedTools:(void (^_Nullable)(void))completion;
+/// Programmatically present something on top of the FLEX toolbar.
+/// This method will automatically dismiss any currently presented tool,
+/// so you do not need to call \c dismissAnyPresentedTools: yourself.
+- (void)presentTool:(UINavigationController *(^)(void))viewControllerFuture
+         completion:(void (^_Nullable)(void))completion;
 
 /// Use this to present the explorer in a specific scene when the one
 /// it chooses by default is not the one you wish to display it in.

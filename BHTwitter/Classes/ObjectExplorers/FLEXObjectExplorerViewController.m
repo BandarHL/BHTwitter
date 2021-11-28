@@ -3,7 +3,7 @@
 //  Flipboard
 //
 //  Created by Ryan Olson on 2014-05-03.
-//  Copyright (c) 2020 Flipboard. All rights reserved.
+//  Copyright (c) 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXObjectExplorerViewController.h"
@@ -30,7 +30,7 @@
 #pragma mark - Private properties
 @interface FLEXObjectExplorerViewController () <UIGestureRecognizerDelegate>
 @property (nonatomic, readonly) FLEXSingleRowSection *descriptionSection;
-@property (nonatomic, readonly) FLEXTableViewSection *customSection;
+@property (nonatomic, readonly) NSArray<FLEXTableViewSection *> *customSections;
 @property (nonatomic) NSIndexSet *customSectionVisibleIndexes;
 
 @property (nonatomic, readonly) NSArray<NSString *> *observedNotifications;
@@ -46,23 +46,27 @@
 }
 
 + (instancetype)exploringObject:(id)target customSection:(FLEXTableViewSection *)section {
+    return [self exploringObject:target customSections:@[section]];
+}
+
++ (instancetype)exploringObject:(id)target customSections:(NSArray *)customSections {
     return [[self alloc]
         initWithObject:target
         explorer:[FLEXObjectExplorer forObject:target]
-        customSection:section
+        customSections:customSections
     ];
 }
 
 - (id)initWithObject:(id)target
             explorer:(__kindof FLEXObjectExplorer *)explorer
-       customSection:(FLEXTableViewSection *)customSection {
+       customSections:(NSArray<FLEXTableViewSection *> *)customSections {
     NSParameterAssert(target);
     
     self = [super initWithStyle:UITableViewStyleGrouped];
     if (self) {
         _object = target;
         _explorer = explorer;
-        _customSection = customSection;
+        _customSections = customSections;
     }
 
     return self;
@@ -72,7 +76,8 @@
     return @[
         kFLEXDefaultsHidePropertyIvarsKey,
         kFLEXDefaultsHidePropertyMethodsKey,
-        kFLEXDefaultsHideMethodOverridesKey,
+        kFLEXDefaultsHidePrivateMethodsKey,
+        kFLEXDefaultsShowMethodOverridesKey,
         kFLEXDefaultsHideVariablePreviewsKey,
     ];
 }
@@ -87,7 +92,7 @@
 
     // Use [object class] here rather than object_getClass
     // to avoid the KVO prefix for observed objects
-    self.title = [[self.object class] description];
+    self.title = [FLEXRuntimeUtility safeClassNameForObject:self.object];
 
     // Search
     self.showsSearchBar = YES;
@@ -102,7 +107,7 @@
     
     // ... button for extra options
     [self addToolbarItems:@[[UIBarButtonItem
-        itemWithImage:FLEXResources.moreIcon target:self action:@selector(moreButtonPressed:)
+        flex_itemWithImage:FLEXResources.moreIcon target:self action:@selector(moreButtonPressed:)
     ]]];
 
     // Swipe gestures to swipe between classes in the hierarchy
@@ -178,6 +183,7 @@
     referencesSection.selectionAction = ^(UIViewController *host) {
         UIViewController *references = [FLEXObjectListViewController
             objectsWithReferencesToObject:explorer.object
+            retained:NO
         ];
         [host.navigationController pushViewController:references animated:YES];
     };
@@ -194,8 +200,10 @@
         referencesSection
     ]];
 
-    if (self.customSection) {
-        [sections insertObject:self.customSection atIndex:0];
+    if (self.customSections) {
+        [sections insertObjects:self.customSections atIndexes:[NSIndexSet
+            indexSetWithIndexesInRange:NSMakeRange(0, self.customSections.count)
+        ]];
     }
     if (self.descriptionSection) {
         [sections insertObject:self.descriptionSection atIndex:0];
@@ -265,9 +273,11 @@
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)g1 shouldBeRequiredToFailByGestureRecognizer:(UIGestureRecognizer *)g2 {
     // Prioritize important pan gestures over our swipe gesture
     if ([g2 isKindOfClass:[UIPanGestureRecognizer class]]) {
-        if (g2 == self.navigationController.interactivePopGestureRecognizer ||
-            g2 == self.navigationController.barHideOnSwipeGestureRecognizer ||
-            g2 == self.tableView.panGestureRecognizer) {
+        if (g2 == self.navigationController.interactivePopGestureRecognizer) {
+            return NO;
+        }
+        
+        if (g2 == self.tableView.panGestureRecognizer) {
             return NO;
         }
     }
@@ -291,7 +301,8 @@
     NSDictionary<NSString *, NSString *> *explorerToggles = @{
         kFLEXDefaultsHidePropertyIvarsKey:    @"Property-Backing Ivars",
         kFLEXDefaultsHidePropertyMethodsKey:  @"Property-Backing Methods",
-        kFLEXDefaultsHideMethodOverridesKey:  @"Method Overrides",
+        kFLEXDefaultsHidePrivateMethodsKey:   @"Likely Private Methods",
+        kFLEXDefaultsShowMethodOverridesKey:  @"Method Overrides",
         kFLEXDefaultsHideVariablePreviewsKey: @"Variable Previews"
     };
     
@@ -302,7 +313,8 @@
     NSDictionary<NSString *, NSDictionary *> *nextStateDescriptions = @{
         kFLEXDefaultsHidePropertyIvarsKey:    @{ @NO: @"Hide ", @YES: @"Show " },
         kFLEXDefaultsHidePropertyMethodsKey:  @{ @NO: @"Hide ", @YES: @"Show " },
-        kFLEXDefaultsHideMethodOverridesKey:  @{ @NO: @"Show ", @YES: @"Hide " },
+        kFLEXDefaultsHidePrivateMethodsKey:   @{ @NO: @"Hide ", @YES: @"Show " },
+        kFLEXDefaultsShowMethodOverridesKey:  @{ @NO: @"Show ", @YES: @"Hide " },
         kFLEXDefaultsHideVariablePreviewsKey: @{ @NO: @"Hide ", @YES: @"Show " },
     };
     
@@ -315,7 +327,7 @@
                 stringByAppendingString:explorerToggles[option]
             ];
             make.button(title).handler(^(NSArray<NSString *> *strings) {
-                [NSUserDefaults.standardUserDefaults toggleBoolForKey:option];
+                [NSUserDefaults.standardUserDefaults flex_toggleBoolForKey:option];
                 [self fullyReloadData];
             });
         }

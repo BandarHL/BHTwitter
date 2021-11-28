@@ -3,7 +3,7 @@
 //  FLEX
 //
 //  Created by Tanner Bennett on 1/7/20.
-//  Copyright © 2020 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import "FHSRangeSlider.h"
@@ -37,7 +37,7 @@
 
 - (void)initSubviews {
     self.userInteractionEnabled = YES;
-    UIImageView * (^newSubviewImageView)() = ^UIImageView *(UIImage *image) {
+    UIImageView * (^newSubviewImageView)(UIImage *) = ^UIImageView *(UIImage *image) {
         UIImageView *iv = [UIImageView new];
         iv.image = image;
 //        iv.userInteractionEnabled = YES;

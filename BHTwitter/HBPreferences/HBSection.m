@@ -23,9 +23,17 @@
 - (void)addCell:(UITableViewCell *)cell {
     [self.cells addObject:cell];
 }
+- (void)removeCell:(UITableViewCell *)cell {
+    [self.cells removeObject:cell];
+}
 - (void)addCells:(NSArray <UITableViewCell *> *)cells {
     for (UITableViewCell *cell in cells) {
         [self.cells addObject:cell];
+    }
+}
+- (void)removeCells:(NSArray <UITableViewCell *> *)cells {
+    for (UITableViewCell *cell in cells) {
+        [self.cells removeObject:cell];
     }
 }
 @end

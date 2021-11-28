@@ -3,7 +3,7 @@
 //  FLEX
 //
 //  Created by Tanner Bennett on 8/28/19.
-//  Copyright © 2019 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXCollectionContentSection.h"
@@ -12,6 +12,7 @@
 #import "FLEXSubtitleTableViewCell.h"
 #import "FLEXTableView.h"
 #import "FLEXObjectExplorerFactory.h"
+#import "FLEXDefaultEditorViewController.h"
 
 typedef NS_ENUM(NSUInteger, FLEXCollectionType) {
     FLEXUnsupportedCollection,
@@ -20,11 +21,27 @@ typedef NS_ENUM(NSUInteger, FLEXCollectionType) {
     FLEXKeyedCollection
 };
 
+@interface NSArray (FLEXCollection) <FLEXCollection> @end
+@interface NSSet (FLEXCollection) <FLEXCollection> @end
+@interface NSOrderedSet (FLEXCollection) <FLEXCollection> @end
+@interface NSDictionary (FLEXCollection) <FLEXCollection> @end
+
+@interface NSMutableArray (FLEXMutableCollection) <FLEXMutableCollection> @end
+@interface NSMutableSet (FLEXMutableCollection) <FLEXMutableCollection> @end
+@interface NSMutableOrderedSet (FLEXMutableCollection) <FLEXMutableCollection> @end
+@interface NSMutableDictionary (FLEXMutableCollection) <FLEXMutableCollection>
+- (void)filterUsingPredicate:(NSPredicate *)predicate;
+@end
+
 @interface FLEXCollectionContentSection ()
+/// Generated from \c collectionFuture or \c collection
 @property (nonatomic, copy) id<FLEXCollection> cachedCollection;
+/// A static collection to display
 @property (nonatomic, readonly) id<FLEXCollection> collection;
+/// A collection that may change over time and can be called upon for new data
 @property (nonatomic, readonly) FLEXCollectionContentFuture collectionFuture;
 @property (nonatomic, readonly) FLEXCollectionType collectionType;
+@property (nonatomic, readonly) BOOL isMutable;
 @end
 
 @implementation FLEXCollectionContentSection
@@ -41,14 +58,16 @@ typedef NS_ENUM(NSUInteger, FLEXCollectionType) {
     section->_collectionType = [self typeForCollection:collection];
     section->_collection = collection;
     section.cachedCollection = collection;
+    section->_isMutable = [collection respondsToSelector:@selector(filterUsingPredicate:)];
     return section;
 }
 
 + (id)forReusableFuture:(FLEXCollectionContentFuture)collectionFuture {
     FLEXCollectionContentSection *section = [self new];
     section->_collectionFuture = collectionFuture;
-    section.cachedCollection = collectionFuture(section);
+    section.cachedCollection = (id<FLEXCollection>)collectionFuture(section);
     section->_collectionType = [self typeForCollection:section.cachedCollection];
+    section->_isMutable = [section->_cachedCollection respondsToSelector:@selector(filterUsingPredicate:)];
     return section;
 }
 
@@ -132,6 +151,11 @@ typedef NS_ENUM(NSUInteger, FLEXCollectionType) {
     }
 }
 
+- (UITableViewCellAccessoryType)accessoryTypeForRow:(NSInteger)row {
+    return UITableViewCellAccessoryDisclosureIndicator;
+//    return self.isMutable ? UITableViewCellAccessoryDetailDisclosureButton : UITableViewCellAccessoryDisclosureIndicator;
+}
+
 
 #pragma mark - Overrides
 
@@ -163,17 +187,17 @@ typedef NS_ENUM(NSUInteger, FLEXCollectionType) {
             return matcher(filterText, obj);
         }];
         
-        id<FLEXMutableCollection> tmp = self.collection.mutableCopy;
+        id<FLEXMutableCollection> tmp = self.cachedCollection.mutableCopy;
         [tmp filterUsingPredicate:filter];
         self.cachedCollection = tmp;
     } else {
-        self.cachedCollection = self.collection ?: self.collectionFuture(self);
+        self.cachedCollection = self.collection ?: (id<FLEXCollection>)self.collectionFuture(self);
     }
 }
 
 - (void)reloadData {
     if (self.collectionFuture) {
-        self.cachedCollection = self.collectionFuture(self);
+        self.cachedCollection = (id<FLEXCollection>)self.collectionFuture(self);
     } else {
         self.cachedCollection = self.collection.copy;
     }
@@ -194,7 +218,7 @@ typedef NS_ENUM(NSUInteger, FLEXCollectionType) {
 - (void)configureCell:(__kindof FLEXTableViewCell *)cell forRow:(NSInteger)row {
     cell.titleLabel.text = [self titleForRow:row];
     cell.subtitleLabel.text = [self subtitleForRow:row];
-    cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+    cell.accessoryType = [self accessoryTypeForRow:row];
 }
 
 @end

@@ -3,7 +3,7 @@
 //  Flipboard
 //
 //  Created by Ryan Olson on 4/18/14.
-//  Copyright (c) 2020 Flipboard. All rights reserved.
+//  Copyright (c) 2020 FLEX Team. All rights reserved.
 //
 
 #import <Availability.h>
@@ -15,12 +15,7 @@
 #import "FLEXAlert.h"
 #import "NSArray+FLEX.h"
 #import "UIFont+FLEX.h"
-#import "NSMapTable+FLEX_Subscripting.h"
 #import "FLEXMacros.h"
-
-#if !FLEX_AT_LEAST_IOS13_SDK
-@class UIWindowScene;
-#endif
 
 @interface FLEXUtility : NSObject
 
@@ -61,7 +56,7 @@
 
 + (SEL)swizzledSelectorForSelector:(SEL)selector;
 + (BOOL)instanceRespondsButDoesNotImplementSelector:(SEL)selector class:(Class)cls;
-+ (void)replaceImplementationOfKnownSelector:(SEL)originalSelector onClass:(Class)cls withBlock:(id)block swizzledSelector:(SEL)swizzledSelector;
++ (void)replaceImplementationOfKnownSelector:(SEL)originalSelector onClass:(Class)_class withBlock:(id)block swizzledSelector:(SEL)swizzledSelector;
 + (void)replaceImplementationOfSelector:(SEL)selector withSelector:(SEL)swizzledSelector forClass:(Class)cls withMethodDescription:(struct objc_method_description)methodDescription implementationBlock:(id)implementationBlock undefinedBlock:(id)undefinedBlock;
 
 @end

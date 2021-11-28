@@ -3,7 +3,7 @@
 //  FLEX
 //
 //  Created by Tanner Bennett on 12/11/19.
-//  Copyright © 2019 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXViewShortcuts.h"
@@ -70,15 +70,18 @@
                 return [FLEXObjectExplorerFactory explorerViewControllerForObject:controller];
             }
             accessoryType:^UITableViewCellAccessoryType(id view) {
-                return controller ? UITableViewCellAccessoryDisclosureIndicator : 0;
+                return controller ? UITableViewCellAccessoryDisclosureIndicator : UITableViewCellAccessoryNone;
             }
         ],
-        [FLEXActionShortcut title:@"Preview Image" subtitle:nil
-            viewer:^UIViewController *(id view) {
+        [FLEXActionShortcut title:@"Preview Image" subtitle:^NSString *(UIView *view) {
+                return !CGRectIsEmpty(view.bounds) ? @"" : @"Unavailable with empty bounds";
+            }
+            viewer:^UIViewController *(UIView *view) {
                 return [FLEXImagePreviewViewController previewForView:view];
             }
-            accessoryType:^UITableViewCellAccessoryType(id view) {
-                return UITableViewCellAccessoryDisclosureIndicator;
+            accessoryType:^UITableViewCellAccessoryType(UIView *view) {
+                // Disable preview if bounds are CGRectZero
+                return !CGRectIsEmpty(view.bounds) ? UITableViewCellAccessoryDisclosureIndicator : UITableViewCellAccessoryNone;
             }
         ]
     ]];

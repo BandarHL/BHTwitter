@@ -3,7 +3,7 @@
 //  FLEX
 //
 //  Created by Tanner on 7/5/19.
-//  Copyright © 2019 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import <UIKit/UIKit.h>
@@ -41,7 +41,7 @@ extern CGFloat const kFLEXDebounceForExpensiveIO;
 /// Subclasses may override to configure the controller before \c viewDidLoad:
 - (id)initWithStyle:(UITableViewStyle)style;
 
-@property (nonatomic, strong) FLEXTableView *tableView;
+@property (nonatomic) FLEXTableView *tableView;
 
 /// If your subclass conforms to \c FLEXSearchResultsUpdating
 /// then this property is assigned to \c self automatically.
@@ -56,7 +56,7 @@ extern CGFloat const kFLEXDebounceForExpensiveIO;
 /// A horizontally scrolling list with functionality similar to
 /// that of a search bar's scope bar. You'd want to use this when
 /// you have potentially more than 4 scope options.
-@property (nonatomic, strong) FLEXScopeCarousel *carousel;
+@property (nonatomic) FLEXScopeCarousel *carousel;
 
 /// Defaults to NO.
 ///
@@ -67,15 +67,19 @@ extern CGFloat const kFLEXDebounceForExpensiveIO;
 /// Setting this to YES will make the search bar appear whenever the view appears.
 /// Otherwise, iOS will only show the search bar when you scroll up.
 @property (nonatomic) BOOL showSearchBarInitially;
+/// Defaults to NO.
+///
+/// Setting this to YES will make the search bar activate whenever the view appears.
+@property (nonatomic) BOOL activatesSearchBarAutomatically;
 
 /// nil unless showsSearchBar is set to YES.
 ///
 /// self is used as the default search results updater and delegate.
 /// The search bar will not dim the background or hide the navigation bar by default.
 /// On iOS 11 and up, the search bar will appear in the navigation bar below the title.
-@property (nonatomic, strong) UISearchController *searchController;
+@property (nonatomic) UISearchController *searchController;
 /// Used to initialize the search controller. Defaults to nil.
-@property (nonatomic, strong) UIViewController *searchResultsController;
+@property (nonatomic) UIViewController *searchResultsController;
 /// Defaults to "Fast"
 ///
 /// Determines how often search bar results will be "debounced."
@@ -109,7 +113,7 @@ extern CGFloat const kFLEXDebounceForExpensiveIO;
 @property (nonatomic, weak) id<FLEXSearchResultsUpdating> searchResultsUpdater;
 
 /// self.view.window as a \c FLEXWindow
-@property (nonatomic, readonly, strong) FLEXWindow *window;
+@property (nonatomic, readonly) FLEXWindow *window;
 
 /// Convenient for doing some async processor-intensive searching
 /// in the background before updating the UI back on the main queue.
@@ -129,9 +133,9 @@ extern CGFloat const kFLEXDebounceForExpensiveIO;
 /// Subclasses may override. You should not need to call this method directly.
 - (void)setupToolbarItems;
 
-@property (nonatomic, readonly, strong) UIBarButtonItem *shareToolbarItem;
-@property (nonatomic, readonly, strong) UIBarButtonItem *bookmarksToolbarItem;
-@property (nonatomic, readonly, strong) UIBarButtonItem *openTabsToolbarItem;
+@property (nonatomic, readonly) UIBarButtonItem *shareToolbarItem;
+@property (nonatomic, readonly) UIBarButtonItem *bookmarksToolbarItem;
+@property (nonatomic, readonly) UIBarButtonItem *openTabsToolbarItem;
 
 /// Whether or not to display the "share" icon in the middle of the toolbar. NO by default.
 ///

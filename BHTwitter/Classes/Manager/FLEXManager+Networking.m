@@ -3,7 +3,7 @@
 //  FLEX
 //
 //  Created by Tanner on 2/1/20.
-//  Copyright © 2020 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXManager+Networking.h"
@@ -48,12 +48,12 @@
     FLEXNetworkRecorder.defaultRecorder.responseCacheByteLimit = networkResponseCacheByteLimit;
 }
 
-- (NSMutableArray<NSString *> *)networkRequestHostBlacklist {
-    return FLEXNetworkRecorder.defaultRecorder.hostBlacklist;
+- (NSMutableArray<NSString *> *)networkRequestHostDenylist {
+    return FLEXNetworkRecorder.defaultRecorder.hostDenylist;
 }
 
-- (void)setNetworkRequestHostBlacklist:(NSMutableArray<NSString *> *)networkRequestHostBlacklist {
-    FLEXNetworkRecorder.defaultRecorder.hostBlacklist = networkRequestHostBlacklist;
+- (void)setNetworkRequestHostDenylist:(NSMutableArray<NSString *> *)networkRequestHostDenylist {
+    FLEXNetworkRecorder.defaultRecorder.hostDenylist = networkRequestHostDenylist;
 }
 
 - (void)setCustomViewerForContentType:(NSString *)contentType

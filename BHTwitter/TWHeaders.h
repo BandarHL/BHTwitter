@@ -9,13 +9,19 @@
 #import "BHDownload.h"
 #import "JGProgressHUD/include/JGProgressHUD.h"
 
-static BOOL jailed = YES;
-
 @interface T1AppDelegate : UIResponder <UIApplicationDelegate>
 @property(retain, nonatomic) UIWindow *window;
 @end
 
-@interface TFNItemsDataViewController : UIViewController
+@interface TFNTableView: UITableView
+@end
+
+@interface TFNDataViewController : UIViewController
+@property(readonly, nonatomic) TFNTableView *tableView;
+@end
+
+@interface TFNItemsDataViewController : TFNDataViewController
+- (void)updateSections:(id)arg1 withRowAnimation:(long long)arg2;
 - (id)itemAtIndexPath:(id)arg1;
 @end
 
@@ -25,19 +31,53 @@ static BOOL jailed = YES;
 @end
 
 @interface T1GenericSettingsViewController: UIViewController
-@property ( nonatomic, strong) TFNItemsDataViewControllerBackingStore *backingStore;
-@property ( nonatomic, strong) NSArray* sections;
+@property (nonatomic, strong) TFNItemsDataViewControllerBackingStore *backingStore;
+@property (nonatomic, strong) NSArray *sections;
+@end
+
+// For future use. Instead of UIAlertViewController
+@interface TFNActionItem : NSObject
++ (id)cancelActionItemWithAction:(void (^)(void))arg1;
++ (id)cancelActionItemWithTitle:(NSString *)arg1;
++ (id)actionItemWithTitle:(NSString *)arg1 action:(void (^)(void))arg2;
++ (id)actionItemWithTitle:(NSString *)arg1 imageName:(NSString *)arg2 action:(void (^)(void))arg3;
++ (id)actionItemWithTitle:(NSString *)arg1 systemImageName:(NSString *)arg2 action:(void (^)(void))arg3;
+@end
+
+@interface TFNMenuSheetConfiguration : NSObject
+@property(copy, nonatomic) NSString *title;
+@end
+
+@interface TFNModalSheetViewController : UIViewController
+@property(nonatomic, getter=isExpandable) _Bool expandable;
+- (id)initWithModalContentViewController:(id)arg1;
+@end
+
+@interface TFNMenuSheetViewController : TFNItemsDataViewController
+@property(nonatomic) __weak TFNModalSheetViewController *modalSheet;
+@property(retain, nonatomic) UIView *sourceView;
+@property(retain, nonatomic) TFNMenuSheetConfiguration *configuration;
+@property(nonatomic, assign, readwrite) BOOL shouldPresentAsMenu;
+- (id)initWithTitle:(id)arg1 actionItems:(id)arg2;
+- (id)initWithMessage:(id)arg1 actionItems:(id)arg2;
+- (id)initWithActionItems:(id)arg1;
+@end
+
+@interface TFNNavigationController : UINavigationController
+- (id)initWithRootViewController:(id)arg1;
 @end
 
 @interface T1SettingsViewController : UIViewController
-@property ( nonatomic, strong) TFNItemsDataViewControllerBackingStore *backingStore;
-@property ( nonatomic, strong) NSArray* sections;
+@property (nonatomic, strong) TFNItemsDataViewControllerBackingStore *backingStore;
+@property (nonatomic, strong) NSArray *sections;
 @end
 
 @interface TFNSettingsNavigationItem : NSObject
-- (id)initWithTitle:(NSString *)arg1 detail:(NSString *)arg2 iconName:(NSString *)arg3 controllerFactory:(UIViewController* (^_Nonnull)(void))arg4;
-- (id)initWithTitle:(NSString *)arg1 detail:(NSString *)arg2 controllerFactory:(UIViewController* (^_Nonnull)(void))arg4;
+- (id)initWithTitle:(NSString *)arg1 detail:(NSString *)arg2 iconName:(NSString *)arg3 controllerFactory:(UIViewController* (^)(void))arg4;
+- (id)initWithTitle:(NSString *)arg1 detail:(NSString *)arg2 systemIconName:(NSString *)arg3 controllerFactory:(UIViewController* (^)(void))arg4;
+- (id)initWithTitle:(NSString *)arg1 detail:(NSString *)arg2 controllerFactory:(UIViewController* (^)(void))arg4;
 @end
+
 @interface TFNTextCell: UITableViewCell
 @end
 
@@ -50,6 +90,25 @@ static BOOL jailed = YES;
 
 @interface TFNAnimatableButton : TFNButton
 @property(nonatomic) __weak id animationCoordinator;
+@end
+
+@interface T1ProfileActionButtonsView : UIView
+@end
+
+@interface T1ProfileHeaderView : UIView
+@property(readonly, nonatomic) T1ProfileActionButtonsView *actionButtonsView;
+@end
+
+@interface T1ProfileUserViewModel : NSObject
+@property(readonly, copy, nonatomic) NSString *fullName;
+@property(readonly, copy, nonatomic) NSString *username;
+@property(readonly, copy, nonatomic) NSString *bio;
+@property(readonly, copy, nonatomic) NSString *url;
+@end
+
+@interface T1ProfileHeaderViewController: UIViewController
+- (void)copyButtonHandler;
+@property(retain, nonatomic) T1ProfileUserViewModel *viewModel;
 @end
 
 @interface T1StatusInlineActionButton : UIView
@@ -171,6 +230,7 @@ static BOOL jailed = YES;
 @end
 
 @interface T1URTTimelineStatusItemViewModel : NSObject
+@property(nonatomic, readonly) NSString *text;
 @property(nonatomic, readonly) _Bool isPromoted;
 @end
 
@@ -183,6 +243,16 @@ static BOOL jailed = YES;
 @interface T1StatusBodyTextView : UIView
 @property(readonly, nonatomic) id viewModel; // @synthesize viewModel=_viewModel;
 @end
+
+static BOOL isDeviceLanguageRTL() {
+  return ([NSLocale characterDirectionForLanguage:[[NSLocale preferredLanguages] objectAtIndex:0]] == NSLocaleLanguageDirectionRightToLeft);
+}
+static BOOL is_iPad() {
+    if ([(NSString *)[UIDevice currentDevice].model hasPrefix:@"iPad"]) {
+        return YES;
+    }
+    return NO;
+}
 
 // https://github.com/julioverne/MImport/blob/0275405812ff41ed2ca56e98f495fd05c38f41f2/mimporthook/MImport.xm#L59
 static UIViewController *_topMostController(UIViewController *cont) {

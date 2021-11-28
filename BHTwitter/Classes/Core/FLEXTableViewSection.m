@@ -3,7 +3,7 @@
 //  FLEX
 //
 //  Created by Tanner on 1/29/20.
-//  Copyright © 2020 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXTableViewSection.h"
@@ -21,6 +21,19 @@
 }
 
 - (void)reloadData { }
+
+- (void)reloadData:(BOOL)updateTable {
+    [self reloadData];
+    if (updateTable) {
+        NSIndexSet *index = [NSIndexSet indexSetWithIndex:_sectionIndex];
+        [_tableView reloadSections:index withRowAnimation:UITableViewRowAnimationNone];
+    }
+}
+
+- (void)setTable:(UITableView *)tableView section:(NSInteger)index {
+    _tableView = tableView;
+    _sectionIndex = index;
+}
 
 - (NSDictionary<NSString *,Class> *)cellRegistrationMapping {
     return nil;
@@ -50,8 +63,6 @@
 - (NSString *)reuseIdentifierForRow:(NSInteger)row {
     return kFLEXDefaultCell;
 }
-
-#if FLEX_AT_LEAST_IOS13_SDK
 
 - (NSString *)menuTitleForRow:(NSInteger)row {
     NSString *title = [self titleForRow:row];
@@ -99,13 +110,13 @@
         }
         
         UIMenu *copyMenu = [UIMenu
-            inlineMenuWithTitle:@"Copy…" 
+            flex_inlineMenuWithTitle:@"Copy…" 
             image:copyIcon
             children:actions
         ];
         
         if (collapseMenu) {
-            return @[[copyMenu collapsed]];
+            return @[[copyMenu flex_collapsed]];
         } else {
             return @[copyMenu];
         }
@@ -113,8 +124,6 @@
     
     return @[];
 }
-
-#endif
 
 - (NSArray<NSString *> *)copyMenuItemsForRow:(NSInteger)row {
     return nil;

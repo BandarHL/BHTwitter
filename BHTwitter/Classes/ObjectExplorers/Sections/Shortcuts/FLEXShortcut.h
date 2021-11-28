@@ -3,7 +3,7 @@
 //  FLEX
 //
 //  Created by Tanner Bennett on 12/10/19.
-//  Copyright © 2019 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXObjectExplorer.h"
@@ -32,7 +32,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @optional
 /// Called when the (i) button is pressed if the accessory type includes it
-- (UIViewController *)editorWith:(id)object;
+- (UIViewController *)editorWith:(id)object forSection:(FLEXTableViewSection *)section;
 
 @end
 

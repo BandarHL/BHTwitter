@@ -7,10 +7,10 @@
 
 #import "BHTManager.h"
 
-
 @implementation BHTManager
-+ (BOOL)isDeviceLanguageRTL {
-  return ([NSLocale characterDirectionForLanguage:[[NSLocale preferredLanguages] objectAtIndex:0]] == NSLocaleLanguageDirectionRightToLeft);
++ (float)TwitterVersion {
+    NSString *ver = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"];
+    return [ver floatValue];
 }
 + (bool)isDMVideoCell:(T1InlineMediaView *)view {
     if (view.playerIconViewType == 4) {
@@ -155,12 +155,19 @@
 + (BOOL)DwbLayout {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"dwb_layout"];
 }
++ (BOOL)changeFont {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"en_font"];
+}
 + (BOOL)FLEX {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"flex_twitter"];
 }
++ (BOOL)autoHighestLoad {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"autoHighestLoad"];
+}
 + (UIViewController *)BHTSettings {
+    HBPreferences *pref = [[HBPreferences alloc] initTableWithTableStyle:UITableViewStyleInsetGrouped title:@"BHTwitter" SeparatorStyle:UITableViewCellSeparatorStyleNone];
     HBSection *main_section = [HBSection sectionWithTitle:@"BHTwitter Preferences" footer:nil];
-    HBSection *layout_section = [HBSection sectionWithTitle:@"Layout customization" footer:nil];
+    HBSection *layout_section = [HBSection sectionWithTitle:@"Layout customization" footer:@"Restart Twitter app to apply changes"];
     HBSection *debug = [HBSection sectionWithTitle:@"Debugging" footer:nil];
     HBSection *developer = [HBSection sectionWithTitle:@"Developer" footer:nil];
     
@@ -270,9 +277,15 @@
             [[keychain shared] saveDictionary:@{@"isAuthenticated": @YES}];
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"padlock"];
         } else {
-            //            [[keychain shared] deleteService];
             [[keychain shared] saveDictionary:@{@"isAuthenticated": @NO}];
             [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"padlock"];
+        }
+    }];
+    HBSwitchCell *autoHighestLoad = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Auto load photos in highest quality" DetailTitle:@"This option will let you upload photos and load it in highest quality possible" switchKey:@"autoHighestLoad" withBlock:^(UISwitch *weakSender) {
+        if (weakSender.isOn) {
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"autoHighestLoad"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"autoHighestLoad"];
         }
     }];
     
@@ -284,11 +297,39 @@
         }
     }];
     
-//    HBViewControllerCell *icons = [[HBViewControllerCell alloc] initCellWithTitle:@"Change Twitter icon" detail:@"Use Twitter alertnative icons" action:^UIViewController *{
-//        UIViewController *v = UIViewController.new;
-//        [v.view setBackgroundColor:UIColor.redColor];
-//        return v;
-//    }];
+    HBViewControllerCell *fontsPicker = [[HBViewControllerCell alloc] initCellWithTitle:@"Font" detail:[[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"] action:^UIViewController *{
+        UIFontPickerViewControllerConfiguration *configuration = [[UIFontPickerViewControllerConfiguration alloc] init];
+        [configuration setFilteredTraits:UIFontDescriptorClassMask];
+        [configuration setIncludeFaces:false];
+        UIFontPickerViewController *fontPicker = [[UIFontPickerViewController alloc] initWithConfiguration:configuration];
+        [fontPicker setTitle:@"Choose Font"];
+        fontPicker.delegate = pref;
+        return fontPicker;
+    }];
+    HBViewControllerCell *BoldfontsPicker = [[HBViewControllerCell alloc] initCellWithTitle:@"Bold Font" detail:[[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"] action:^UIViewController *{
+        UIFontPickerViewControllerConfiguration *configuration = [[UIFontPickerViewControllerConfiguration alloc] init];
+        [configuration setIncludeFaces:true];
+        [configuration setFilteredTraits:UIFontDescriptorClassModernSerifs];
+        [configuration setFilteredTraits:UIFontDescriptorClassMask];
+        UIFontPickerViewController *fontPicker = [[UIFontPickerViewController alloc] initWithConfiguration:configuration];
+        [fontPicker setTitle:@"Choose Font"];
+        fontPicker.delegate = pref;
+        return fontPicker;
+    }];
+    
+    HBSwitchCell *font = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Enable changing font" DetailTitle:@"Option to allow changing Twitter font and show font picker to choese one" switchKey:@"en_font" withBlock:^(UISwitch *weakSender) {
+        if (weakSender.isOn) {
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"en_font"];
+            [layout_section addCells:@[fontsPicker, BoldfontsPicker]];
+            [pref.tableView insertRowsAtIndexPaths:@[[NSIndexPath indexPathForRow:3 inSection:1], [NSIndexPath indexPathForRow:4 inSection:1]] withRowAnimation:UITableViewRowAnimationAutomatic];
+        } else {
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"en_font"];
+            [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"bhtwitter_font_1"];
+            [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"bhtwitter_font_2"];
+            [layout_section removeCells:@[fontsPicker, BoldfontsPicker]];
+            [pref.tableView deleteRowsAtIndexPaths:@[[NSIndexPath indexPathForRow:3 inSection:1], [NSIndexPath indexPathForRow:4 inSection:1]] withRowAnimation:UITableViewRowAnimationAutomatic];
+        }
+    }];
     
     HBSwitchCell *dwbLayout = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Download button always on the trailing side" DetailTitle:@"Force the download button to be always in the trailing side" switchKey:@"dwb_layout" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
@@ -309,21 +350,21 @@
     }];
     
     HBTwitterCell *bandarhl = [[HBTwitterCell alloc] initTwitterCellWithTitle:@"BandarHelal" detail:@"@BandarHL" AccountLink:@"https://twitter.com/BandarHL"];
+    HBlinkCell *tipJar = [[HBlinkCell alloc] initLinkCellWithTitle:@"Tip Jar" detailTitle:@"Donate" link:@"https://www.paypal.me/BandarHL"];
     HBGithubCell *sourceCode = [[HBGithubCell alloc] initGithubCellWithTitle:@"BHTwitter" detailTitle:@"Code source of BHTwitter" GithubURL:@"https://github.com/BandarHL/BHTwitter/"];
     
     
-    [main_section addCells:@[download, hide_ads, direct_save, voice, voice_in_replay, Tipjar, UndoTweet, ReaderMode, ReplyLater, VideoZoom, NoHistory, BioTranslate, like_confirm, tweet_confirm, padlock]];
+    [main_section addCells:@[download, hide_ads, direct_save, voice, voice_in_replay, Tipjar, UndoTweet, ReaderMode, ReplyLater, VideoZoom, NoHistory, BioTranslate, like_confirm, tweet_confirm, padlock, autoHighestLoad]];
     
-    [layout_section addCells:@[oldTweetStyle, dwbLayout]];
-//    [layout_section addCell:icons];
+    [layout_section addCells:@[oldTweetStyle, dwbLayout, font]];
+    if ([BHTManager changeFont]) {
+        [layout_section addCells:@[fontsPicker, BoldfontsPicker]];
+    }
     [debug addCell:flex];
-    [developer addCells:@[bandarhl, sourceCode]];
-    
-    HBPreferences *pref = [HBPreferences tableWithSections:@[main_section, layout_section, debug, developer] title:@"BHTwitter" TableStyle:UITableViewStyleInsetGrouped SeparatorStyle:UITableViewCellSeparatorStyleNone];
+    [developer addCells:@[bandarhl, tipJar, sourceCode]];
+
+    [pref addSections:@[main_section, layout_section, debug, developer]];
     return pref;
-}
-+ (void)showSettings:(UIViewController *)_self {
-    [_self.navigationController pushViewController:[BHTManager BHTSettings] animated:true];
 }
 
 // https://stackoverflow.com/a/45356575/9910699

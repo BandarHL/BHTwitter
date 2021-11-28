@@ -3,24 +3,23 @@
 //  FLEX
 //
 //  Created by Tanner on 3/11/20.
-//  Copyright © 2020 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
-#import "Utility/Runtime/Objc/FLEXObjcInternal.h"
-#import "Utility/Runtime/Objc/FLEXRuntimeSafety.h"
-#import "Utility/Runtime/Objc/Reflection/FLEXBlockDescription.h"
-#import "Utility/Runtime/Objc/FLEXTypeEncodingParser.h"
+#import "FLEXObjcInternal.h"
+#import "FLEXRuntimeSafety.h"
+#import "FLEXBlockDescription.h"
+#import "FLEXTypeEncodingParser.h"
 
-#import "Utility/Runtime/Objc/Reflection/FLEXMirror.h"
-#import "Utility/Runtime/Objc/Reflection/FLEXProtocol.h"
-#import "Utility/Runtime/Objc/Reflection/FLEXProperty.h"
-#import "Utility/Runtime/Objc/Reflection/FLEXIvar.h"
-#import "Utility/Runtime/Objc/Reflection/FLEXMethodBase.h"
-#import "Utility/Runtime/Objc/Reflection/FLEXMethod.h"
-#import "Utility/Runtime/Objc/Reflection/FLEXPropertyAttributes.h"
+#import "FLEXMirror.h"
+#import "FLEXProtocol.h"
+#import "FLEXProperty.h"
+#import "FLEXIvar.h"
+#import "FLEXMethodBase.h"
+#import "FLEXMethod.h"
+#import "FLEXPropertyAttributes.h"
+#import "FLEXRuntime+Compare.h"
+#import "FLEXRuntime+UIKitHelpers.h"
 
-#import "Utility/Categories/FLEXRuntime+Compare.h"
-#import "Utility/Categories/FLEXRuntime+UIKitHelpers.h"
-
-#import "Utility/Runtime/Objc/Reflection/FLEXProtocolBuilder.h"
-#import "Utility/Runtime/Objc/Reflection/FLEXClassBuilder.h"
+#import "FLEXProtocolBuilder.h"
+#import "FLEXClassBuilder.h"

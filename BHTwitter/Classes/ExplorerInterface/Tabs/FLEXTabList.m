@@ -3,7 +3,7 @@
 //  FLEX
 //
 //  Created by Tanner on 2/1/20.
-//  Copyright © 2020 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXTabList.h"
@@ -80,10 +80,10 @@
 
 - (void)closeTab:(UINavigationController *)tab {
     NSParameterAssert(tab);
-    NSParameterAssert([self.openTabs containsObject:tab]);
     NSInteger idx = [self.openTabs indexOfObject:tab];
-    
-    [self closeTabAtIndex:idx];
+    if (idx != NSNotFound) {
+        [self closeTabAtIndex:idx];
+    }
 }
 
 - (void)closeTabAtIndex:(NSInteger)idx {

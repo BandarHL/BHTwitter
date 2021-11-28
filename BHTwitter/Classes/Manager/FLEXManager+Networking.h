@@ -3,7 +3,7 @@
 //  FLEX
 //
 //  Created by Tanner on 2/1/20.
-//  Copyright © 2020 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXManager.h"
@@ -21,10 +21,10 @@ NS_ASSUME_NONNULL_BEGIN
 /// The response cache uses an NSCache, so it may purge prior to hitting the limit when the app is under memory pressure.
 @property (nonatomic) NSUInteger networkResponseCacheByteLimit;
 
-/// Requests whose host ends with one of the blacklisted entries in this array will be not be recorded (eg. google.com).
+/// Requests whose host ends with one of the excluded entries in this array will be not be recorded (eg. google.com).
 /// Wildcard or subdomain entries are not required (eg. google.com will match any subdomain under google.com).
 /// Useful to remove requests that are typically noisy, such as analytics requests that you aren't interested in tracking.
-@property (nonatomic) NSMutableArray<NSString *> *networkRequestHostBlacklist;
+@property (nonatomic) NSMutableArray<NSString *> *networkRequestHostDenylist;
 
 /// Sets custom viewer for specific content type.
 /// @param contentType Mime type like application/json

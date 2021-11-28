@@ -3,13 +3,14 @@
 //  FLEX
 //
 //  Created by Tanner Bennett on 8/29/19.
-//  Copyright © 2019 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXImageShortcuts.h"
 #import "FLEXImagePreviewViewController.h"
 #import "FLEXShortcut.h"
 #import "FLEXAlert.h"
+#import "FLEXMacros.h"
 
 @interface UIAlertController (FLEXImageShortcuts)
 - (void)flex_image:(UIImage *)image disSaveWithError:(NSError *)error :(void *)context;

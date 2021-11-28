@@ -3,7 +3,7 @@
 //  Flipboard
 //
 //  Created by Ryan Olson on 2014-05-03.
-//  Copyright (c) 2020 Flipboard. All rights reserved.
+//  Copyright (c) 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXGlobalsViewController.h"
@@ -165,7 +165,7 @@
     self.title = @"💪  FLEX";
     self.showsSearchBar = YES;
     self.searchBarDebounceInterval = kFLEXDebounceInstant;
-    self.navigationItem.backBarButtonItem = [UIBarButtonItem backItemWithTitle:@"Back"];
+    self.navigationItem.backBarButtonItem = [UIBarButtonItem flex_backItemWithTitle:@"Back"];
     
     _manuallyDeselectOnAppear = NSProcessInfo.processInfo.operatingSystemVersion.majorVersion < 10;
 }

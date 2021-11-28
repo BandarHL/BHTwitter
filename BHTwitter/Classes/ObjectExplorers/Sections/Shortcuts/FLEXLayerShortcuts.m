@@ -3,7 +3,7 @@
 //  FLEX
 //
 //  Created by Tanner Bennett on 12/12/19.
-//  Copyright © 2019 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXLayerShortcuts.h"
@@ -15,11 +15,11 @@
 + (instancetype)forObject:(CALayer *)layer {
     return [self forObject:layer additionalRows:@[
         [FLEXActionShortcut title:@"Preview Image" subtitle:nil
-            viewer:^UIViewController *(id layer) {
+            viewer:^UIViewController *(CALayer *layer) {
                 return [FLEXImagePreviewViewController previewForLayer:layer];
             }
-            accessoryType:^UITableViewCellAccessoryType(id layer) {
-                return UITableViewCellAccessoryDisclosureIndicator;
+            accessoryType:^UITableViewCellAccessoryType(CALayer *layer) {
+                return CGRectIsEmpty(layer.bounds) ? UITableViewCellAccessoryNone : UITableViewCellAccessoryDisclosureIndicator;
             }
         ]
     ]];

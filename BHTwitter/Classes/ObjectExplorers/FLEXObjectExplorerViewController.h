@@ -3,7 +3,7 @@
 //  Flipboard
 //
 //  Created by Ryan Olson on 2014-05-03.
-//  Copyright (c) 2020 Flipboard. All rights reserved.
+//  Copyright (c) 2020 FLEX Team. All rights reserved.
 //
 
 #ifndef _FLEXObjectExplorerViewController_h
@@ -29,6 +29,9 @@ NS_ASSUME_NONNULL_BEGIN
 + (instancetype)exploringObject:(id)objectOrClass;
 /// No custom section unless you provide one.
 + (instancetype)exploringObject:(id)objectOrClass customSection:(nullable FLEXTableViewSection *)customSection;
+/// No custom sections unless you provide some.
++ (instancetype)exploringObject:(id)objectOrClass
+                 customSections:(nullable NSArray<FLEXTableViewSection *> *)customSections;
 
 /// The object being explored, which may be an instance of a class or a class itself.
 @property (nonatomic, readonly) id object;

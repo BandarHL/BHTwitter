@@ -3,7 +3,7 @@
 //  FLEX
 //
 //  Created by Tanner Bennett on 9/19/19.
-//  Copyright © 2019 Flipboard. All rights reserved.
+//  Copyright © 2020 FLEX Team. All rights reserved.
 //
 
 #import "FLEXMetadataSection.h"
@@ -180,7 +180,7 @@
 }
 
 - (UIViewController *)editorForRow:(NSInteger)row {
-    return [self.metadata[row] editorWithTarget:self.explorer.object];
+    return [self.metadata[row] editorWithTarget:self.explorer.object section:self];
 }
 
 - (void)configureCell:(__kindof FLEXTableViewCell *)cell forRow:(NSInteger)row {
@@ -188,8 +188,6 @@
     cell.subtitleLabel.text = [self subtitleForRow:row];
     cell.accessoryType = [self accessoryTypeForRow:row];
 }
-
-#if FLEX_AT_LEAST_IOS13_SDK
 
 - (NSString *)menuSubtitleForRow:(NSInteger)row {
     return [self.metadata[row] contextualSubtitleWithTarget:self.explorer.object];
@@ -231,7 +229,5 @@
 - (NSArray<NSString *> *)copyMenuItemsForRow:(NSInteger)row {
     return [self.metadata[row] copiableMetadataWithTarget:self.explorer.object];
 }
-
-#endif
 
 @end
