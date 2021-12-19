@@ -666,9 +666,6 @@ static UIViewAnimationOptions UIViewAnimationOptionsFromUIViewAnimationCurve(UIV
         else if (self.style == JGProgressHUDStyleLight) {
             effect = UIBlurEffectStyleLight;
         }
-        else if (self.style == JGProgressHUDStyleAuto) {
-            
-        }
         else {
             effect = UIBlurEffectStyleExtraLight;
         }

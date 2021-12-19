@@ -35,6 +35,14 @@
 @property (nonatomic, strong) NSArray *sections;
 @end
 
+@interface TTSSearchTypeaheadViewController : TFNItemsDataViewController
+- (void)clearActionControlWantsClear:(id)arg1;
+@end
+@interface T1SearchTypeaheadViewController : TFNItemsDataViewController
+- (void)clearActionControlWantsClear:(id)arg1;
+@end
+
+
 // For future use. Instead of UIAlertViewController
 @interface TFNActionItem : NSObject
 + (id)cancelActionItemWithAction:(void (^)(void))arg1;
@@ -229,9 +237,19 @@
 @interface T1DirectMessageEntryMediaCell () <BHDownloadDelegate, UIContextMenuInteractionDelegate>
 @end
 
+@protocol TFNTwitterStatusBanner <NSObject>
+@end
+
+@interface TFNTwitterURTTimelineStatusBanner : NSObject <TFNTwitterStatusBanner>
+@end
+
+@interface TFNTwitterURTTimelineStatusTopicBanner : TFNTwitterURTTimelineStatusBanner
+@end
+
 @interface T1URTTimelineStatusItemViewModel : NSObject
 @property(nonatomic, readonly) NSString *text;
 @property(nonatomic, readonly) _Bool isPromoted;
+@property(nonatomic, retain) id <TFNTwitterStatusBanner> banner;
 @end
 
 @interface TFNTwitterStatus : NSObject

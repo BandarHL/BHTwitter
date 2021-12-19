@@ -45,6 +45,8 @@
 + (BOOL)LikeConfirm;
 + (BOOL)TweetConfirm;
 + (BOOL)HidePromoted;
++ (BOOL)HideTopics;
++ (BOOL)DisableVODCaptions;
 + (BOOL)Padlock;
 + (BOOL)OldStyle;
 + (BOOL)DwbLayout;

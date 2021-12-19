@@ -18,20 +18,20 @@
 @end
 
 @implementation HBPreferences
-+ (instancetype)tableWithSections:(NSArray *)sections title:(NSString *)title TableStyle:(UITableViewStyle *)style SeparatorStyle:(UITableViewCellSeparatorStyle)SeparatorStyle {
++ (instancetype)tableWithSections:(NSArray *)sections title:(NSString *)title TableStyle:(UITableViewStyle)style SeparatorStyle:(UITableViewCellSeparatorStyle)SeparatorStyle {
     HBPreferences *table = [[self alloc] initTableWithSections:sections TableStyle:style SeparatorStyle:SeparatorStyle];
     table.title = title;
     return table;
 }
 
-- (instancetype)initTableWithTableStyle:(UITableViewStyle *)style title:(NSString *)title SeparatorStyle:(UITableViewCellSeparatorStyle)SeparatorStyle {
+- (instancetype)initTableWithTableStyle:(UITableViewStyle)style title:(NSString *)title SeparatorStyle:(UITableViewCellSeparatorStyle)SeparatorStyle {
     if (self = [super initWithStyle:style]) {
         [self.tableView setSeparatorStyle:SeparatorStyle];
         self.title = title;
     }
     return self;
 }
-- (instancetype)initTableWithSections:(NSArray *)sections TableStyle:(UITableViewStyle *)style SeparatorStyle:(UITableViewCellSeparatorStyle)SeparatorStyle {
+- (instancetype)initTableWithSections:(NSArray *)sections TableStyle:(UITableViewStyle)style SeparatorStyle:(UITableViewCellSeparatorStyle)SeparatorStyle {
     if (self = [super initWithStyle:style]) {
         self.sections = sections;
         [self.tableView setSeparatorStyle:SeparatorStyle];

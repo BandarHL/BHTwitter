@@ -105,15 +105,20 @@
         [copyButton.heightAnchor constraintEqualToConstant:32],
     ]];
     
-    
-    if (isDeviceLanguageRTL()) {
-        [NSLayoutConstraint activateConstraints:@[
-            [copyButton.leadingAnchor constraintEqualToAnchor:innerContentView.trailingAnchor constant:7],
-        ]];
-    } else {
+    if ([BHTManager DwbLayout]) {
         [NSLayoutConstraint activateConstraints:@[
             [copyButton.trailingAnchor constraintEqualToAnchor:innerContentView.leadingAnchor constant:-7],
         ]];
+    } else {
+        if (isDeviceLanguageRTL()) {
+            [NSLayoutConstraint activateConstraints:@[
+                [copyButton.leadingAnchor constraintEqualToAnchor:innerContentView.trailingAnchor constant:7],
+            ]];
+        } else {
+            [NSLayoutConstraint activateConstraints:@[
+                [copyButton.trailingAnchor constraintEqualToAnchor:innerContentView.leadingAnchor constant:-7],
+            ]];
+        }
     }
 }
 %new - (void)copyButtonHandler:(UIButton *)sender {
@@ -148,45 +153,73 @@
 %hook TFNItemsDataViewController
 - (id)tableViewCellForItem:(id)arg1 atIndexPath:(id)arg2 {
     UITableViewCell *_orig = %orig;
-    if ([BHTManager HidePromoted]) {
-        id tweet = [self itemAtIndexPath:arg2];
-        if ([tweet isKindOfClass:NSClassFromString(@"TFNTwitterStatus")]) {
-            TFNTwitterStatus *fullTweet = tweet;
+    id tweet = [self itemAtIndexPath:arg2];
+    
+    if ([tweet isKindOfClass:%c(TFNTwitterStatus)]) {
+        TFNTwitterStatus *fullTweet = tweet;
+        if ([BHTManager HidePromoted]) {
             if (fullTweet.isPromoted) {
                 [_orig setHidden:true];
-                return _orig;
-            }
-        }
-        if ([tweet isKindOfClass:NSClassFromString(@"T1URTTimelineStatusItemViewModel")]) {
-            T1URTTimelineStatusItemViewModel *fullTweet = tweet;
-            if (fullTweet.isPromoted) {
-                [_orig setHidden:true];
-                return _orig;
             }
         }
     }
+    
+    if ([tweet isKindOfClass:%c(T1URTTimelineStatusItemViewModel)]) {
+        T1URTTimelineStatusItemViewModel *fullTweet = tweet;
+        if ([BHTManager HidePromoted]) {
+            if (fullTweet.isPromoted) {
+                [_orig setHidden:true];
+            }
+        }
+        
+        if ([BHTManager HideTopics]) {
+            if ((fullTweet.banner != nil) && [fullTweet.banner isKindOfClass:%c(TFNTwitterURTTimelineStatusTopicBanner)]) {
+                [_orig setHidden:true];
+            }
+        }
+    }
+    
+    if ([BHTManager HideTopics]) {
+        if ([tweet isKindOfClass:%c(_TtC10TwitterURT26URTTimelinePromptViewModel)]) {
+            [_orig setHidden:true];
+        }
+    }
+    
     return _orig;
 }
 - (double)tableView:(id)arg1 heightForRowAtIndexPath:(id)arg2 {
-    if ([BHTManager HidePromoted]) {
-        id tweet = [self itemAtIndexPath:arg2];
-        if ([tweet isKindOfClass:NSClassFromString(@"TFNTwitterStatus")]) {
-            TFNTwitterStatus *fullTweet = tweet;
+    id tweet = [self itemAtIndexPath:arg2];
+    
+    if ([tweet isKindOfClass:%c(TFNTwitterStatus)]) {
+        TFNTwitterStatus *fullTweet = tweet;
+        if ([BHTManager HidePromoted]) {
             if (fullTweet.isPromoted) {
                 return 0;
-            } else {
-                return %orig;
-            }
-        }
-        if ([tweet isKindOfClass:NSClassFromString(@"T1URTTimelineStatusItemViewModel")]) {
-            T1URTTimelineStatusItemViewModel *fullTweet = tweet;
-            if (fullTweet.isPromoted) {
-                return 0;
-            } else {
-                return %orig;
             }
         }
     }
+    
+    if ([tweet isKindOfClass:%c(T1URTTimelineStatusItemViewModel)]) {
+        T1URTTimelineStatusItemViewModel *fullTweet = tweet;
+        if ([BHTManager HidePromoted]) {
+            if (fullTweet.isPromoted) {
+                return 0;
+            }
+        }
+        
+        if ([BHTManager HideTopics]) {
+            if ((fullTweet.banner != nil) && [fullTweet.banner isKindOfClass:%c(TFNTwitterURTTimelineStatusTopicBanner)]) {
+                return 0;
+            }
+        }
+    }
+    
+    if ([BHTManager HideTopics]) {
+        if ([tweet isKindOfClass:%c(_TtC10TwitterURT26URTTimelinePromptViewModel)]) {
+            return 0;
+        }
+    }
+    
     return %orig;
 }
 %end
@@ -383,27 +416,25 @@
 %end
 
 // MARK: No search history
-%hook T1SearchTypeaheadViewController
-- (NSArray *)recentUsers {
-    if ([BHTManager NoHistory]) {
-        return @[];
-    } else {
-        return %orig;
+%hook T1SearchTypeaheadViewController // for old Twitter versions
+- (void)viewDidLoad {
+    if ([BHTManager NoHistory]) { // thanks @CrazyMind90
+        if ([self respondsToSelector:@selector(clearActionControlWantsClear:)]) {
+            [self performSelector:@selector(clearActionControlWantsClear:)];
+        }
     }
+    %orig;
 }
-- (NSArray *)recentUserIDs {
-    if ([BHTManager NoHistory]) {
-        return @[];
-    } else {
-        return %orig;
+%end
+
+%hook TTSSearchTypeaheadViewController
+- (void)viewDidLoad {
+    if ([BHTManager NoHistory]) { // thanks @CrazyMind90
+        if ([self respondsToSelector:@selector(clearActionControlWantsClear:)]) {
+            [self performSelector:@selector(clearActionControlWantsClear:)];
+        }
     }
-}
-- (NSArray *)recentQueries {
-    if ([BHTManager NoHistory]) {
-        return @[];
-    } else {
-        return %orig;
-    }
+    %orig;
 }
 %end
 
@@ -473,6 +504,13 @@
 %end
 
 %hook TFNTwitterAccount
+- (_Bool)isVODCaptionsEnabled {
+    if ([BHTManager DisableVODCaptions]) {
+        return false;
+    } else {
+        return %orig;
+    }
+}
 - (_Bool)photoUploadHighQualityImagesSettingIsVisible {
     if ([BHTManager autoHighestLoad]) {
         return true;

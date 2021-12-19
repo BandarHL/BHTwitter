@@ -40,7 +40,7 @@
     [self.SafariImage.heightAnchor constraintEqualToConstant:16].active = true;
     
     [self.textLabel setText:title];
-    [self.textLabel setTextColor:[UIColor colorWithRed:0.35 green:0.78 blue:0.98 alpha:1]];
+    [self.textLabel setTextColor:[UIColor colorWithRed:0.039 green:0.518 blue:1 alpha:1]];
     [self.textLabel setNumberOfLines:0];
     
     [self.detailTextLabel setText:Dtitle];
