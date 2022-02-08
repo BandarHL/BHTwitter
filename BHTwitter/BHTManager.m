@@ -170,6 +170,12 @@
 + (BOOL)autoHighestLoad {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"autoHighestLoad"];
 }
++ (BOOL)dis_DoubleTapToLike {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"dis_DoubleTapToLike"];
+}
++ (BOOL)DmModularSearch {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"DmModularSearch"];
+}
 + (UIViewController *)BHTSettings {
     HBPreferences *pref = [[HBPreferences alloc] initTableWithTableStyle:UITableViewStyleInsetGrouped title:@"BHTwitter" SeparatorStyle:UITableViewCellSeparatorStyleSingleLine];
     HBSection *main_section = [HBSection sectionWithTitle:@"BHTwitter Preferences" footer:nil];
@@ -315,6 +321,21 @@
         }
     }];
     
+    HBSwitchCell *dis_DoubleTapToLike = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Disable double tap to like" DetailTitle:@"Disable double tap to like" switchKey:@"dis_DoubleTapToLike" withBlock:^(UISwitch *weakSender) {
+        if (weakSender.isOn) {
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"dis_DoubleTapToLike"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"dis_DoubleTapToLike"];
+        }
+    }];
+    
+    HBSwitchCell *DmModularSearch = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Enable DM Modular Search" DetailTitle:@"Enable the new UI of DM search" switchKey:@"DmModularSearch" withBlock:^(UISwitch *weakSender) {
+        if (weakSender.isOn) {
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"DmModularSearch"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"DmModularSearch"];
+        }
+    }];
     HBSwitchCell *autoHighestLoad = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Auto load photos in highest quality" DetailTitle:@"This option let you upload photos and load it in highest quality possible." switchKey:@"autoHighestLoad" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"autoHighestLoad"];
@@ -388,7 +409,7 @@
     HBGithubCell *sourceCode = [[HBGithubCell alloc] initGithubCellWithTitle:@"BHTwitter" detailTitle:@"Code source of BHTwitter" GithubURL:@"https://github.com/BandarHL/BHTwitter/"];
     
     
-    [main_section addCells:@[download, hide_ads, hide_topics, disable_VODCaptions, direct_save, voice, voice_in_replay, Tipjar, UndoTweet, ReaderMode, ReplyLater, VideoZoom, NoHistory, BioTranslate, like_confirm, tweet_confirm, padlock, autoHighestLoad]];
+    [main_section addCells:@[download, hide_ads, hide_topics, disable_VODCaptions, direct_save, voice, voice_in_replay, Tipjar, UndoTweet, ReaderMode, ReplyLater, VideoZoom, NoHistory, BioTranslate, like_confirm, tweet_confirm, padlock, dis_DoubleTapToLike, DmModularSearch, autoHighestLoad]];
     
     [layout_section addCells:@[oldTweetStyle, dwbLayout, font]];
     if ([BHTManager changeFont]) {

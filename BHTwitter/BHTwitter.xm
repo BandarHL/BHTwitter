@@ -503,7 +503,28 @@
 }
 %end
 
+%hook TFSTwitterAPICommandAccountStateProvider
+- (_Bool)allowPromotedContent {
+    if ([BHTManager HidePromoted]) {
+        return false;
+    }
+}
+%end
+
 %hook TFNTwitterAccount
+- (_Bool)isDmModularSearchEnabled {
+    if ([BHTManager DmModularSearch]) {
+        return true;
+    } else {
+        return %orig;
+    }
+}
+- (_Bool)isVideoDynamicAdEnabled {
+    if ([BHTManager HidePromoted]) {
+        return false;
+    }
+}
+
 - (_Bool)isVODCaptionsEnabled {
     if ([BHTManager DisableVODCaptions]) {
         return false;
@@ -693,8 +714,55 @@
 %end
 
 
+%hook TTAStatusBodyTextView
+- (void)setViewModel:(id)arg1 options:(unsigned long long)arg2 displayType:(unsigned long long)arg3 displayTextOptions:(unsigned long long)arg4 isDisplayTextCachingEnabled:(_Bool)arg5 isReaderModeFontSettingsEnabled:(_Bool)arg6 isDoubleTapToLikeEnabled:(_Bool)arg7 {
+    if ([BHTManager dis_DoubleTapToLike]) {
+        arg7 = false;
+    }
+    return %orig(arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+}
+%end
+%hook T1MultiPhotoView
+- (_Bool)isDoubleTapToLikeEnabled {
+    if ([BHTManager dis_DoubleTapToLike]) {
+        return false;
+    } else {
+        return %orig;
+    }
+}
+%end
+%hook T1UnifiedCardView
+- (_Bool)doubleTapToLikeEnabled {
+    if ([BHTManager dis_DoubleTapToLike]) {
+        return false;
+    } else {
+        return %orig;
+    }
+}
++ (id)createVideoViewFor:(id)arg1 account:(id)arg2 scribeContext:(id)arg3 imageFetchHelper:(id)arg4 gestureResponder:(id)arg5 displayContext:(long long)arg6 adDisplayLocation:(id)arg7 isEligibleForEdgeToEdgeLayout:(_Bool)arg8 edgeToEdgeInsets:(struct UIEdgeInsets)arg9 isDoubleTapToLikeEnabled:(_Bool)arg10 {
+    if ([BHTManager dis_DoubleTapToLike]) {
+        arg10 = false;
+    }
+    return %orig(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+}
+%end
+
 // MARK: Old tweet style
 %hook TTACoreAnatomyFeatures
+- (_Bool)doubleTapToLikeUserSettingEnabled {
+    if ([BHTManager dis_DoubleTapToLike]) {
+        return false;
+    } else {
+        return %orig;
+    }
+}
+- (_Bool)doubleTapToLikeEnabled {
+    if ([BHTManager dis_DoubleTapToLike]) {
+        return false;
+    } else {
+        return %orig;
+    }
+}
 - (BOOL)isUnifiedCardEnabled {
     if ([BHTManager OldStyle]) {
         return false;
@@ -1706,74 +1774,18 @@
 // Fix login keychain in non-JB (IPA).
 //%hook TFSKeychain
 //- (NSString *)providerDefaultAccessGroup {
-//    NSDictionary *query = [NSDictionary dictionaryWithObjectsAndKeys:
-//                           (__bridge NSString *)kSecClassGenericPassword, (__bridge NSString *)kSecClass,
-//                           @"bundleSeedID", kSecAttrAccount,
-//                           @"", kSecAttrService,
-//                           (id)kCFBooleanTrue, kSecReturnAttributes,
-//                           nil];
-//    CFDictionaryRef result = nil;
-//    OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, (CFTypeRef *)&result);
-//    if (status == errSecItemNotFound)
-//        status = SecItemAdd((__bridge CFDictionaryRef)query, (CFTypeRef *)&result);
-//        if (status != errSecSuccess)
-//            return nil;
-//    NSString *accessGroup = [(__bridge NSDictionary *)result objectForKey:(__bridge NSString *)kSecAttrAccessGroup];
-//
-//    return accessGroup;
+//    return accessGroupID();
 //}
 //- (NSString *)providerSharedAccessGroup {
-//    NSDictionary *query = [NSDictionary dictionaryWithObjectsAndKeys:
-//                           (__bridge NSString *)kSecClassGenericPassword, (__bridge NSString *)kSecClass,
-//                           @"bundleSeedID", kSecAttrAccount,
-//                           @"", kSecAttrService,
-//                           (id)kCFBooleanTrue, kSecReturnAttributes,
-//                           nil];
-//    CFDictionaryRef result = nil;
-//    OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, (CFTypeRef *)&result);
-//    if (status == errSecItemNotFound)
-//        status = SecItemAdd((__bridge CFDictionaryRef)query, (CFTypeRef *)&result);
-//        if (status != errSecSuccess)
-//            return nil;
-//    NSString *accessGroup = [(__bridge NSDictionary *)result objectForKey:(__bridge NSString *)kSecAttrAccessGroup];
-//
-//    return accessGroup;
+//    return accessGroupID();
 //}
 //%end
 //
 //%hook TFSKeychainDefaultTwitterConfiguration
 //- (NSString *)defaultAccessGroup {
-//    NSDictionary *query = [NSDictionary dictionaryWithObjectsAndKeys:
-//                           (__bridge NSString *)kSecClassGenericPassword, (__bridge NSString *)kSecClass,
-//                           @"bundleSeedID", kSecAttrAccount,
-//                           @"", kSecAttrService,
-//                           (id)kCFBooleanTrue, kSecReturnAttributes,
-//                           nil];
-//    CFDictionaryRef result = nil;
-//    OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, (CFTypeRef *)&result);
-//    if (status == errSecItemNotFound)
-//        status = SecItemAdd((__bridge CFDictionaryRef)query, (CFTypeRef *)&result);
-//        if (status != errSecSuccess)
-//            return nil;
-//    NSString *accessGroup = [(__bridge NSDictionary *)result objectForKey:(__bridge NSString *)kSecAttrAccessGroup];
-//
-//    return accessGroup;
+//    return accessGroupID();
 //}
 //- (NSString *)sharedAccessGroup {
-//    NSDictionary *query = [NSDictionary dictionaryWithObjectsAndKeys:
-//                           (__bridge NSString *)kSecClassGenericPassword, (__bridge NSString *)kSecClass,
-//                           @"bundleSeedID", kSecAttrAccount,
-//                           @"", kSecAttrService,
-//                           (id)kCFBooleanTrue, kSecReturnAttributes,
-//                           nil];
-//    CFDictionaryRef result = nil;
-//    OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, (CFTypeRef *)&result);
-//    if (status == errSecItemNotFound)
-//        status = SecItemAdd((__bridge CFDictionaryRef)query, (CFTypeRef *)&result);
-//        if (status != errSecSuccess)
-//            return nil;
-//    NSString *accessGroup = [(__bridge NSDictionary *)result objectForKey:(__bridge NSString *)kSecAttrAccessGroup];
-//
-//    return accessGroup;
+//    return accessGroupID();
 //}
 //%end
