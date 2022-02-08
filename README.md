@@ -10,7 +10,9 @@
 - Disable video layer caption.
 - Padlock.
 - Font changer.
-- Auto load photos in highest quality feature
+- Disable double tap to like.
+- Enable the new UI of DM search.
+- Auto load photos in highest quality feature.
 - Undo tweet feature.
 - Reader mode feature.
 - Disable new tweet style (A.K.A edge to edge tweet)
