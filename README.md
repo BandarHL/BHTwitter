@@ -19,3 +19,8 @@
 - Confirm alert when hit the tweet button.
 - Confirm alert when hit like button.
 - FLEX for debugging.
+
+| | | |
+|:-------------------------:|:-------------------------:|:-------------------------:|
+|<img width="1604" alt="screen shot 2017-08-07 at 12 18 15 pm" src="1.png">  blah |  <img width="1604" alt="screen shot 2017-08-07 at 12 18 15 pm" src="2.png">|<img width="1604" alt="screen shot 2017-08-07 at 12 18 15 pm" src="3.png">|
+|<img width="1604" alt="screen shot 2017-08-07 at 12 18 15 pm" src="4.png">  |
