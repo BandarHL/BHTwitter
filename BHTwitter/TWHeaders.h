@@ -42,37 +42,38 @@
 - (void)clearActionControlWantsClear:(id)arg1;
 @end
 
+@interface TAEStandardFontGroup : NSObject
++ (id)sharedFontGroup;
+- (UIFont *)fixedLargeBoldFont;
+@end
 
-// For future use. Instead of UIAlertViewController
 @interface TFNActionItem : NSObject
 + (id)cancelActionItemWithAction:(void (^)(void))arg1;
 + (id)cancelActionItemWithTitle:(NSString *)arg1;
 + (id)actionItemWithTitle:(NSString *)arg1 action:(void (^)(void))arg2;
 + (id)actionItemWithTitle:(NSString *)arg1 imageName:(NSString *)arg2 action:(void (^)(void))arg3;
++ (id)actionItemWithTitle:(NSString *)arg1 subtitle:(NSString *)arg2 imageName:(NSString *)arg3 action:(void (^) (void))arg4;
 + (id)actionItemWithTitle:(NSString *)arg1 systemImageName:(NSString *)arg2 action:(void (^)(void))arg3;
 @end
 
-@interface TFNMenuSheetConfiguration : NSObject
-@property(copy, nonatomic) NSString *title;
+@interface TFNMenuSheetCenteredIconItem : NSObject
+- (id)initWithIconImageName:(id)imageName height:(CGFloat)arg1 fillColor:(id)Color;
 @end
 
-@interface TFNModalSheetViewController : UIViewController
-@property(nonatomic, getter=isExpandable) _Bool expandable;
-- (id)initWithModalContentViewController:(id)arg1;
+@interface TFNAttributedTextModel : NSObject
+- (id)initWithAttributedString:(NSMutableAttributedString *)arg;
+@end
+
+@interface TFNActiveTextItem : NSObject
+- (id)initWithTextModel:(id)arg activeRanges:(id)arg1;
 @end
 
 @interface TFNMenuSheetViewController : TFNItemsDataViewController
-@property(nonatomic) __weak TFNModalSheetViewController *modalSheet;
-@property(retain, nonatomic) UIView *sourceView;
-@property(retain, nonatomic) TFNMenuSheetConfiguration *configuration;
 @property(nonatomic, assign, readwrite) BOOL shouldPresentAsMenu;
 - (id)initWithTitle:(id)arg1 actionItems:(id)arg2;
 - (id)initWithMessage:(id)arg1 actionItems:(id)arg2;
 - (id)initWithActionItems:(id)arg1;
-@end
-
-@interface TFNNavigationController : UINavigationController
-- (id)initWithRootViewController:(id)arg1;
+- (void)tfnPresentedCustomPresentFromViewController:(id)arg1 animated:(BOOL)arg2 completion:(void (^) (void))arg3;
 @end
 
 @interface T1SettingsViewController : UIViewController
@@ -159,7 +160,7 @@
 {
     NSMutableArray *_inlineActionButtons;
 }
-- (void)appendNewButton:(BOOL)isSlideshow;
+- (void)appendNewButton;
 @property(readonly, nonatomic) id <T1StatusViewModel> viewModel;
 @property(retain, nonatomic) NSMutableArray *inlineActionButtons;
 @property (nonatomic, strong) JGProgressHUD *hud;

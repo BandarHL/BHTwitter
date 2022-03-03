@@ -53,7 +53,7 @@
 + (BOOL)changeFont;
 + (BOOL)FLEX;
 + (BOOL)autoHighestLoad;
-+ (BOOL)dis_DoubleTapToLike;
 + (BOOL)DmModularSearch;
++ (BOOL)disableSensitiveTweetWarnings;
 @end
 

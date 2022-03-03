@@ -18,8 +18,19 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     LAContext *context = [[LAContext alloc] init];
-    NSError *err;
-    if ([context canEvaluatePolicy:LAPolicyDeviceOwnerAuthentication error:&err]) {
+    if ([context canEvaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics error:nil]) {
+        [context evaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics localizedReason:@"Touch ID or Face ID is required to use Twitter" reply:^(BOOL success, NSError * _Nullable error) {
+            if (success) {
+                [[keychain shared] saveDictionary:@{@"isAuthenticated": @YES}];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [self dismissViewControllerAnimated:true completion:nil];
+                });
+            } else {
+                [[keychain shared] saveDictionary:@{@"isAuthenticated": @NO}];
+                NSLog(@"%@", error);
+            }
+        }];
+    } else if ([context canEvaluatePolicy:LAPolicyDeviceOwnerAuthentication error:nil]) {
         [context evaluatePolicy:LAPolicyDeviceOwnerAuthentication localizedReason:@"Passcode is required to use Twitter" reply:^(BOOL success, NSError * _Nullable error) {
             if (success) {
                 [[keychain shared] saveDictionary:@{@"isAuthenticated": @YES}];
@@ -33,7 +44,6 @@
         }];
     } else {
         [[keychain shared] saveDictionary:@{@"isAuthenticated": @NO}];
-        NSLog(@"%@", err);
     }
 }
 

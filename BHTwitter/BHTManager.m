@@ -170,8 +170,8 @@
 + (BOOL)autoHighestLoad {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"autoHighestLoad"];
 }
-+ (BOOL)dis_DoubleTapToLike {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"dis_DoubleTapToLike"];
++ (BOOL)disableSensitiveTweetWarnings {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"disableSensitiveTweetWarnings"];
 }
 + (BOOL)DmModularSearch {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"DmModularSearch"];
@@ -321,14 +321,6 @@
         }
     }];
     
-    HBSwitchCell *dis_DoubleTapToLike = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Disable double tap to like" DetailTitle:@"Disable double tap to like" switchKey:@"dis_DoubleTapToLike" withBlock:^(UISwitch *weakSender) {
-        if (weakSender.isOn) {
-            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"dis_DoubleTapToLike"];
-        } else {
-            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"dis_DoubleTapToLike"];
-        }
-    }];
-    
     HBSwitchCell *DmModularSearch = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Enable DM Modular Search" DetailTitle:@"Enable the new UI of DM search" switchKey:@"DmModularSearch" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"DmModularSearch"];
@@ -341,6 +333,14 @@
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"autoHighestLoad"];
         } else {
             [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"autoHighestLoad"];
+        }
+    }];
+    
+    HBSwitchCell *disableSensitiveTweetWarnings = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Disable sensitive tweet warning view" DetailTitle:nil switchKey:@"disableSensitiveTweetWarnings" withBlock:^(UISwitch *weakSender) {
+        if (weakSender.isOn) {
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"disableSensitiveTweetWarnings"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"disableSensitiveTweetWarnings"];
         }
     }];
     
@@ -409,7 +409,7 @@
     HBGithubCell *sourceCode = [[HBGithubCell alloc] initGithubCellWithTitle:@"BHTwitter" detailTitle:@"Code source of BHTwitter" GithubURL:@"https://github.com/BandarHL/BHTwitter/"];
     
     
-    [main_section addCells:@[download, hide_ads, hide_topics, disable_VODCaptions, direct_save, voice, voice_in_replay, Tipjar, UndoTweet, ReaderMode, ReplyLater, VideoZoom, NoHistory, BioTranslate, like_confirm, tweet_confirm, padlock, dis_DoubleTapToLike, DmModularSearch, autoHighestLoad]];
+    [main_section addCells:@[download, hide_ads, hide_topics, disable_VODCaptions, direct_save, voice, voice_in_replay, Tipjar, UndoTweet, ReaderMode, ReplyLater, VideoZoom, NoHistory, BioTranslate, like_confirm, tweet_confirm, padlock, DmModularSearch, autoHighestLoad, disableSensitiveTweetWarnings]];
     
     [layout_section addCells:@[oldTweetStyle, dwbLayout, font]];
     if ([BHTManager changeFont]) {

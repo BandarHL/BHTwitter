@@ -247,14 +247,21 @@
     }];
 }
 %new - (void)DownloadHandler {
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"hi" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
-    if (is_iPad()) {
-        alert.popoverPresentationController.sourceRect = CGRectMake(topMostController().view.bounds.size.width / 2.0, topMostController().view.bounds.size.height / 2.0, 1.0, 1.0);
-    }
+    NSAttributedString *AttString = [[NSAttributedString alloc] initWithString:@"\nSelect video quality you want to download" attributes:@{
+        NSFontAttributeName: [[%c(TAEStandardFontGroup) sharedFontGroup] fixedLargeBoldFont],
+        NSForegroundColorAttributeName: UIColor.labelColor
+    }];
+    TFNActiveTextItem *title = [[%c(TFNActiveTextItem) alloc] initWithTextModel:[[%c(TFNAttributedTextModel) alloc] initWithAttributedString:AttString] activeRanges:nil];
+    TFNMenuSheetCenteredIconItem *icon = [[%c(TFNMenuSheetCenteredIconItem) alloc] initWithIconImageName:@"2728" height:55 fillColor:UIColor.clearColor];
+    
+    NSMutableArray *actions = [[NSMutableArray alloc] init];
+    [actions addObject:icon];
+    [actions addObject:title];
+    
     T1PlayerMediaEntitySessionProducible *session = self.inlineMediaView.viewModel.playerSessionProducer.sessionProducible;
     for (TFSTwitterEntityMediaVideoVariant *i in session.mediaEntity.videoInfo.variants) {
         if ([i.contentType isEqualToString:@"video/mp4"]) {
-            UIAlertAction *download = [UIAlertAction actionWithTitle:[BHTManager getVideoQuality:i.url] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            TFNActionItem *download = [%c(TFNActionItem) actionItemWithTitle:[BHTManager getVideoQuality:i.url] imageName:@"arrow_down_circle_stroke" action:^{
                 BHDownload *DownloadManager = [[BHDownload alloc] init];
                 self.hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
                 self.hud.textLabel.text = @"Downloading";
@@ -262,11 +269,12 @@
                 [DownloadManager setDelegate:self];
                 [self.hud showInView:topMostController().view];
             }];
-            [alert addAction:download];
+            [actions addObject:download];
         }
     }
-    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
-    [topMostController() presentViewController:alert animated:true completion:nil];
+    
+    TFNMenuSheetViewController *alert = [[%c(TFNMenuSheetViewController) alloc] initWithActionItems:[NSArray arrayWithArray:actions]];
+    [alert tfnPresentedCustomPresentFromViewController:topMostController() animated:YES completion:nil];
 }
 %new - (void)downloadProgress:(float)progress {
     self.hud.detailTextLabel.text = [BHTManager getDownloadingPersent:progress];
@@ -289,54 +297,30 @@
 
 
 // MARK: Timeline download
-%hook T1SlideshowStatusView
-- (void)setViewModel:(id)arg1 media:(id)arg2 animated:(BOOL)arg3 {
-    %orig;
-    if ([BHTManager DownloadingVideos]) {
-        T1StatusInlineActionsView *vis = [self valueForKey:@"_actionsView"];
-        if (vis != nil) {
-            [vis appendNewButton:true];
-        }
-    }
-}
-%end
 %hook T1StandardStatusView
 - (void)setViewModel:(id)arg1 options:(unsigned long long)arg2 account:(id)arg3 {
     %orig;
     if ([BHTManager DownloadingVideos]) {
-        [((T1StatusInlineActionsView *)self.visibleInlineActionsView) appendNewButton:false];
+        [((T1StatusInlineActionsView *)self.visibleInlineActionsView) appendNewButton];
     }
 }
 %end
 
 %hook T1StatusInlineActionsView
 %property (nonatomic, strong) JGProgressHUD *hud;
-%new - (void)appendNewButton:(BOOL)isSlideshow {
+%new - (void)appendNewButton {
     if ([BHTManager isVideoCell:self]) {
-        if (isSlideshow && [BHTManager TwitterVersion] > 8.61) {
-            NSMutableArray *inlineActionButtons = [self valueForKey:@"_inlineActionButtons"];
-            TFNAnimatableButton *emptyButton = [%c(TFNAnimatableButton) buttonWithImage:[UIImage systemImageNamed:@"arrow.down"] style:0 sizeClass:0];
-            T1StatusInlineActionButton *emptySpace = [[%c(T1StatusInlineActionButton) alloc] initWithOptions:3 overrideSize:0 account:nil];
-            [emptySpace setTranslatesAutoresizingMaskIntoConstraints:false];
-            [emptyButton setAnimationCoordinator:emptySpace.animator];
-            [emptySpace setTouchInsets:UIEdgeInsetsMake(-5, -14, -5, -14)];
-            [emptySpace setValue:emptyButton forKey:@"_modernButton"];
-            [emptySpace setValue:emptyButton forKey:@"_button"];
-            [emptySpace setValue:nil forKey:@"_legacyButton"];
-            [inlineActionButtons addObject:emptySpace];
-        }
-        
         UIButton *newButton = [UIButton buttonWithType:UIButtonTypeCustom];
         [newButton setImage:[UIImage systemImageNamed:@"arrow.down"] forState:UIControlStateNormal];
         [newButton addTarget:self action:@selector(DownloadHandler) forControlEvents:UIControlEventTouchUpInside];
         [newButton setTranslatesAutoresizingMaskIntoConstraints:false];
-        [newButton setTintColor:isSlideshow ? UIColor.whiteColor : [UIColor colorFromHexString:@"6D6E70"]];
+        [newButton setTintColor:[UIColor colorFromHexString:@"6D6E70"]];
         [self addSubview:newButton];
         
         [NSLayoutConstraint activateConstraints:@[
-            [newButton.heightAnchor constraintEqualToConstant:isSlideshow ? 34 : 24],
-            [newButton.widthAnchor constraintEqualToConstant:isSlideshow ? 36 : 30],
-            [newButton.topAnchor constraintEqualToAnchor:self.topAnchor constant:isSlideshow ? 5 : -4]
+            [newButton.heightAnchor constraintEqualToConstant:24],
+            [newButton.widthAnchor constraintEqualToConstant:30],
+            [newButton.topAnchor constraintEqualToAnchor:self.topAnchor constant:-4]
         ]];
         
         if ([BHTManager DwbLayout]) {
@@ -357,14 +341,21 @@
     }
 }
 %new - (void)DownloadHandler {
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"hi" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
-    if (is_iPad()) {
-        alert.popoverPresentationController.sourceRect = CGRectMake(topMostController().view.bounds.size.width / 2.0, topMostController().view.bounds.size.height / 2.0, 1.0, 1.0);
-    }
+    NSAttributedString *AttString = [[NSAttributedString alloc] initWithString:@"\nSelect video quality you want to download" attributes:@{
+        NSFontAttributeName: [[%c(TAEStandardFontGroup) sharedFontGroup] fixedLargeBoldFont],
+        NSForegroundColorAttributeName: UIColor.labelColor
+    }];
+    TFNActiveTextItem *title = [[%c(TFNActiveTextItem) alloc] initWithTextModel:[[%c(TFNAttributedTextModel) alloc] initWithAttributedString:AttString] activeRanges:nil];
+    TFNMenuSheetCenteredIconItem *icon = [[%c(TFNMenuSheetCenteredIconItem) alloc] initWithIconImageName:@"2728" height:55 fillColor:UIColor.clearColor];
+    
+    NSMutableArray *actions = [[NSMutableArray alloc] init];
+    [actions addObject:icon];
+    [actions addObject:title];
+    
     for (TFSTwitterEntityMedia *i in self.viewModel.entities.media) {
         for (TFSTwitterEntityMediaVideoVariant *k in i.videoInfo.variants) {
             if ([k.contentType isEqualToString:@"video/mp4"]) {
-                UIAlertAction *download = [UIAlertAction actionWithTitle:[BHTManager getVideoQuality:k.url] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+                TFNActionItem *download = [%c(TFNActionItem) actionItemWithTitle:[BHTManager getVideoQuality:k.url] imageName:@"arrow_down_circle_stroke" action:^{
                     BHDownload *DownloadManager = [[BHDownload alloc] init];
                     [DownloadManager downloadFileWithURL:[NSURL URLWithString:k.url]];
                     [DownloadManager setDelegate:self];
@@ -374,12 +365,13 @@
                         [self.hud showInView:topMostController().view];
                     }
                 }];
-                [alert addAction:download];
+                [actions addObject:download];
             }
         }
     }
-    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
-    [topMostController() presentViewController:alert animated:true completion:nil];
+    
+    TFNMenuSheetViewController *alert = [[%c(TFNMenuSheetViewController) alloc] initWithActionItems:[NSArray arrayWithArray:actions]];
+    [alert tfnPresentedCustomPresentFromViewController:topMostController() animated:YES completion:nil];
 }
 %new - (void)downloadProgress:(float)progress {
     self.hud.detailTextLabel.text = [BHTManager getDownloadingPersent:progress];
@@ -507,11 +499,27 @@
 - (_Bool)allowPromotedContent {
     if ([BHTManager HidePromoted]) {
         return false;
+    } else {
+        return %orig;
     }
 }
 %end
 
 %hook TFNTwitterAccount
+- (_Bool)isSensitiveTweetWarningsComposeEnabled {
+    if ([BHTManager disableSensitiveTweetWarnings]) {
+        return false;
+    } else {
+        return %orig;
+    }
+}
+- (_Bool)isSensitiveTweetWarningsConsumeEnabled {
+    if ([BHTManager disableSensitiveTweetWarnings]) {
+        return false;
+    } else {
+        return %orig;
+    }
+}
 - (_Bool)isDmModularSearchEnabled {
     if ([BHTManager DmModularSearch]) {
         return true;
@@ -713,56 +721,8 @@
 }
 %end
 
-
-%hook TTAStatusBodyTextView
-- (void)setViewModel:(id)arg1 options:(unsigned long long)arg2 displayType:(unsigned long long)arg3 displayTextOptions:(unsigned long long)arg4 isDisplayTextCachingEnabled:(_Bool)arg5 isReaderModeFontSettingsEnabled:(_Bool)arg6 isDoubleTapToLikeEnabled:(_Bool)arg7 {
-    if ([BHTManager dis_DoubleTapToLike]) {
-        arg7 = false;
-    }
-    return %orig(arg1, arg2, arg3, arg4, arg5, arg6, arg7);
-}
-%end
-%hook T1MultiPhotoView
-- (_Bool)isDoubleTapToLikeEnabled {
-    if ([BHTManager dis_DoubleTapToLike]) {
-        return false;
-    } else {
-        return %orig;
-    }
-}
-%end
-%hook T1UnifiedCardView
-- (_Bool)doubleTapToLikeEnabled {
-    if ([BHTManager dis_DoubleTapToLike]) {
-        return false;
-    } else {
-        return %orig;
-    }
-}
-+ (id)createVideoViewFor:(id)arg1 account:(id)arg2 scribeContext:(id)arg3 imageFetchHelper:(id)arg4 gestureResponder:(id)arg5 displayContext:(long long)arg6 adDisplayLocation:(id)arg7 isEligibleForEdgeToEdgeLayout:(_Bool)arg8 edgeToEdgeInsets:(struct UIEdgeInsets)arg9 isDoubleTapToLikeEnabled:(_Bool)arg10 {
-    if ([BHTManager dis_DoubleTapToLike]) {
-        arg10 = false;
-    }
-    return %orig(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
-}
-%end
-
 // MARK: Old tweet style
 %hook TTACoreAnatomyFeatures
-- (_Bool)doubleTapToLikeUserSettingEnabled {
-    if ([BHTManager dis_DoubleTapToLike]) {
-        return false;
-    } else {
-        return %orig;
-    }
-}
-- (_Bool)doubleTapToLikeEnabled {
-    if ([BHTManager dis_DoubleTapToLike]) {
-        return false;
-    } else {
-        return %orig;
-    }
-}
 - (BOOL)isUnifiedCardEnabled {
     if ([BHTManager OldStyle]) {
         return false;
@@ -864,17 +824,23 @@
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Custom fonts" style:UIBarButtonItemStylePlain target:self action:@selector(customFontsHandler)];
 }
 %new - (void)customFontsHandler {
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Hi" message:@"Choose Font" preferredStyle:UIAlertControllerStyleActionSheet];
-    if (is_iPad()) {
-        alert.popoverPresentationController.sourceRect = CGRectMake(self.view.bounds.size.width / 2.0, self.view.bounds.size.height / 2.0, 1.0, 1.0);
-    }
+    NSAttributedString *AttString = [[NSAttributedString alloc] initWithString:@"\nSelect your custom font" attributes:@{
+        NSFontAttributeName: [[%c(TAEStandardFontGroup) sharedFontGroup] fixedLargeBoldFont],
+        NSForegroundColorAttributeName: UIColor.labelColor
+    }];
+    TFNActiveTextItem *title = [[%c(TFNActiveTextItem) alloc] initWithTextModel:[[%c(TFNAttributedTextModel) alloc] initWithAttributedString:AttString] activeRanges:nil];
+    TFNMenuSheetCenteredIconItem *icon = [[%c(TFNMenuSheetCenteredIconItem) alloc] initWithIconImageName:@"2728" height:55 fillColor:UIColor.clearColor];
+    
+    NSMutableArray *actions = [[NSMutableArray alloc] init];
+    [actions addObject:icon];
+    [actions addObject:title];
     
     NSPropertyListFormat plistFormat;
     NSMutableDictionary *plistDictionary = [NSPropertyListSerialization propertyListWithData:[NSData dataWithContentsOfURL:[NSURL fileURLWithPath:@"/var/mobile/Library/Fonts/AddedFontCache.plist"]] options:NSPropertyListImmutable format:&plistFormat error:nil];
     [plistDictionary enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
         @try {
             NSString *fontName = ((NSMutableArray *)[[plistDictionary valueForKey:key] valueForKey:@"psNames"]).firstObject;
-            UIAlertAction *font = [UIAlertAction actionWithTitle:fontName style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            TFNActionItem *fontAction = [%c(TFNActionItem) actionItemWithTitle:fontName action:^{
                 if (self.configuration.includeFaces) {
                     [self setSelectedFontDescriptor:[UIFontDescriptor fontDescriptorWithFontAttributes:@{
                         UIFontDescriptorNameAttribute: fontName
@@ -886,14 +852,14 @@
                 }
                 [self.delegate fontPickerViewControllerDidPickFont:self];
             }];
-            [alert addAction:font];
+            [actions addObject:fontAction];
         } @catch (NSException *exception) {
-            [alert setMessage:[NSString stringWithFormat:@"Unable to find installed fonts /n reason: %@", exception.reason]];
+            NSLog(@"Unable to find installed fonts /n reason: %@", exception.reason);
         }
     }];
     
-    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
-    [self presentViewController:alert animated:true completion:nil];
+    TFNMenuSheetViewController *alert = [[%c(TFNMenuSheetViewController) alloc] initWithActionItems:[NSArray arrayWithArray:actions]];
+    [alert tfnPresentedCustomPresentFromViewController:self animated:YES completion:nil];
 }
 %end
 
