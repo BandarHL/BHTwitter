@@ -55,5 +55,6 @@
 + (BOOL)autoHighestLoad;
 + (BOOL)DmModularSearch;
 + (BOOL)disableSensitiveTweetWarnings;
++ (BOOL)alwaysOpenSafari;
 @end
 

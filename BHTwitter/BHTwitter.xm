@@ -396,6 +396,28 @@
 }
 %end
 
+// MARK: always Open Safari
+// thanks: @CrazyMind90
+%hook TFSTwitterEntityURL
+- (NSString *)url {
+    // https://github.com/haoict/twitter-no-ads/blob/master/Tweak.xm#L195
+    return self.expandedURL;
+}
+%end
+
+%hook T1SafariViewController
+- (void)tfnPresentedCustomPresentFromViewController:(id)arg1 animated:(BOOL)arg2 completion:(id)arg3 {
+    if ([BHTManager alwaysOpenSafari]) {
+        if ([[UIApplication sharedApplication] canOpenURL:self.rootURL]) {
+            [[UIApplication sharedApplication] openURL:self.rootURL options:@{} completionHandler:nil];
+            return;
+        }
+        return %orig;
+    }
+    return %orig;
+}
+%end
+
 // MARK: Bio Translate
 %hook TFNTwitterCanonicalUser
 - (_Bool)isProfileBioTranslatable {

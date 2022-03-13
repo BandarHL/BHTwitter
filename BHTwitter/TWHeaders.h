@@ -81,6 +81,14 @@
 @property (nonatomic, strong) NSArray *sections;
 @end
 
+@interface TFSTwitterEntityURL : NSObject
+@property(readonly, copy, nonatomic) NSString *expandedURL;
+@end
+
+@interface T1SafariViewController : UIViewController
+@property (readonly, nonatomic) NSURL *rootURL;
+@end
+
 @interface TFNSettingsNavigationItem : NSObject
 - (id)initWithTitle:(NSString *)arg1 detail:(NSString *)arg2 iconName:(NSString *)arg3 controllerFactory:(UIViewController* (^)(void))arg4;
 - (id)initWithTitle:(NSString *)arg1 detail:(NSString *)arg2 systemIconName:(NSString *)arg3 controllerFactory:(UIViewController* (^)(void))arg4;

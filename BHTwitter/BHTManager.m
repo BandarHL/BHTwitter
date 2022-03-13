@@ -176,6 +176,9 @@
 + (BOOL)DmModularSearch {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"DmModularSearch"];
 }
++ (BOOL)alwaysOpenSafari {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"openInBrowser"];
+}
 + (UIViewController *)BHTSettings {
     HBPreferences *pref = [[HBPreferences alloc] initTableWithTableStyle:UITableViewStyleInsetGrouped title:@"BHTwitter" SeparatorStyle:UITableViewCellSeparatorStyleSingleLine];
     HBSection *main_section = [HBSection sectionWithTitle:@"BHTwitter Preferences" footer:nil];
@@ -352,6 +355,14 @@
         }
     }];
     
+    HBSwitchCell *alwaysOpenSafari = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Always open in Safari" DetailTitle:@"Force twitter to open URLs in Safari or your default browser (support apps URL scheme)" switchKey:@"openInBrowser" withBlock:^(UISwitch *weakSender) {
+        if (weakSender.isOn) {
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"openInBrowser"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"openInBrowser"];
+        }
+    }];
+    
     HBViewControllerCell *fontsPicker = [[HBViewControllerCell alloc] initCellWithTitle:@"Font" detail:[[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"] action:^UIViewController *{
         UIFontPickerViewControllerConfiguration *configuration = [[UIFontPickerViewControllerConfiguration alloc] init];
         [configuration setFilteredTraits:UIFontDescriptorClassMask];
@@ -409,7 +420,7 @@
     HBGithubCell *sourceCode = [[HBGithubCell alloc] initGithubCellWithTitle:@"BHTwitter" detailTitle:@"Code source of BHTwitter" GithubURL:@"https://github.com/BandarHL/BHTwitter/"];
     
     
-    [main_section addCells:@[download, hide_ads, hide_topics, disable_VODCaptions, direct_save, voice, voice_in_replay, Tipjar, UndoTweet, ReaderMode, ReplyLater, VideoZoom, NoHistory, BioTranslate, like_confirm, tweet_confirm, padlock, DmModularSearch, autoHighestLoad, disableSensitiveTweetWarnings]];
+    [main_section addCells:@[download, hide_ads, hide_topics, disable_VODCaptions, direct_save, voice, voice_in_replay, Tipjar, UndoTweet, ReaderMode, ReplyLater, VideoZoom, NoHistory, BioTranslate, like_confirm, tweet_confirm, padlock, DmModularSearch, autoHighestLoad, disableSensitiveTweetWarnings, alwaysOpenSafari]];
     
     [layout_section addCells:@[oldTweetStyle, dwbLayout, font]];
     if ([BHTManager changeFont]) {
