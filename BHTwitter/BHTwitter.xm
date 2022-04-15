@@ -354,10 +354,6 @@
     if (BH_canOpenURL(arg1)) { return nil;}
     return %orig(arg1, arg2, arg3, arg4, arg5, arg6);
 }
-- (id)t1_openURL:(NSURL *)arg1 account:(id)arg2 scribeContext:(id)arg3 fromSourceStatus:(id)arg4 {
-    if (BH_canOpenURL(arg1)) { return nil;}
-    return %orig(arg1, arg2, arg3, arg4);
-}
 - (id)t1_openURL:(NSURL *)arg1 account:(id)arg2 scribeContext:(id)arg3 forceAuthenticateWebViewController:(_Bool)arg4 {
     if (BH_canOpenURL(arg1)) { return nil;}
     return %orig(arg1, arg2, arg3, arg4);
@@ -369,10 +365,6 @@
 - (id)t1_openURL:(NSURL *)arg1 account:(id)arg2 scribeContext:(id)arg3 {
     if (BH_canOpenURL(arg1)) { return nil;}
     return %orig(arg1, arg2, arg3);
-}
-- (id)t1_openURL:(NSURL *)arg1 account:(id)arg2 {
-    if (BH_canOpenURL(arg1)) { return nil;}
-    return %orig(arg1, arg2);
 }
 %end
 
