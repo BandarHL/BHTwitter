@@ -1,7 +1,7 @@
-#import <UIKit/UIKit.h>
-#import "BHTManager.h"
+#import "BHDownloadInlineButton.h"
 #import "SAMKeychain/AuthViewController.h"
 #import "Colours.h"
+#import "BHTManager.h"
 
 // MARK: Clean cache and Padlock
 %hook T1AppDelegate
@@ -61,6 +61,19 @@
         [image setBackgroundColor:UIColor.systemBackgroundColor];
         [image setContentMode:UIViewContentModeCenter];
         [self.window addSubview:image];
+    }
+}
+%end
+
+// MARK: Custom Tab bar
+%hook T1TabBarViewController
+- (void)loadView {
+    %orig;
+    NSArray <NSString *> *hiddenBars = [CustomTabBarUtility getHiddenTabBars];
+    for (T1TabView *tabView in self.tabViews) {
+        if ([hiddenBars containsObject:tabView.scribePage]) {
+            [tabView setHidden:true];
+        }
     }
 }
 %end
@@ -295,104 +308,19 @@
 }
 %end
 
-
 // MARK: Timeline download
-%hook T1StandardStatusView
-- (void)setViewModel:(id)arg1 options:(unsigned long long)arg2 account:(id)arg3 {
-    %orig;
-    if ([BHTManager DownloadingVideos]) {
-        [((T1StatusInlineActionsView *)self.visibleInlineActionsView) appendNewButton];
-    }
-}
-%end
-
+// THIS SOLUTION WAS TAKEN FROM Translomatic AFTER DISASSEMBLING THE DYLIB
+// SO THANKS: @foxfortmobile
 %hook T1StatusInlineActionsView
-%property (nonatomic, strong) JGProgressHUD *hud;
-%new - (void)appendNewButton {
-    if ([BHTManager isVideoCell:self]) {
-        UIButton *newButton = [UIButton buttonWithType:UIButtonTypeCustom];
-        [newButton setImage:[UIImage systemImageNamed:@"arrow.down"] forState:UIControlStateNormal];
-        [newButton addTarget:self action:@selector(DownloadHandler) forControlEvents:UIControlEventTouchUpInside];
-        [newButton setTranslatesAutoresizingMaskIntoConstraints:false];
-        [newButton setTintColor:[UIColor colorFromHexString:@"6D6E70"]];
-        [self addSubview:newButton];
-        
-        [NSLayoutConstraint activateConstraints:@[
-            [newButton.heightAnchor constraintEqualToConstant:24],
-            [newButton.widthAnchor constraintEqualToConstant:30],
-            [newButton.topAnchor constraintEqualToAnchor:self.topAnchor constant:-4]
-        ]];
-        
-        if ([BHTManager DwbLayout]) {
-            [NSLayoutConstraint activateConstraints:@[
-                [newButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor]
-            ]];
-        } else {
-            if (isDeviceLanguageRTL()) {
-                [NSLayoutConstraint activateConstraints:@[
-                    [newButton.leadingAnchor constraintEqualToAnchor:self.leadingAnchor]
-                ]];
-            } else {
-                [NSLayoutConstraint activateConstraints:@[
-                    [newButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor]
-                ]];
-            }
-        }
-    }
-}
-%new - (void)DownloadHandler {
-    NSAttributedString *AttString = [[NSAttributedString alloc] initWithString:@"\nSelect video quality you want to download" attributes:@{
-        NSFontAttributeName: [[%c(TAEStandardFontGroup) sharedFontGroup] fixedLargeBoldFont],
-        NSForegroundColorAttributeName: UIColor.labelColor
-    }];
-    TFNActiveTextItem *title = [[%c(TFNActiveTextItem) alloc] initWithTextModel:[[%c(TFNAttributedTextModel) alloc] initWithAttributedString:AttString] activeRanges:nil];
-    TFNMenuSheetCenteredIconItem *icon = [[%c(TFNMenuSheetCenteredIconItem) alloc] initWithIconImageName:@"2728" height:55 fillColor:UIColor.clearColor];
++ (NSArray *)_t1_inlineActionViewClassesForViewModel:(id)arg1 options:(unsigned long long)arg2 displayType:(unsigned long long)arg3 account:(id)arg4 {
+    NSArray *_orig = %orig;
+    NSMutableArray *newOrig = [_orig mutableCopy];
     
-    NSMutableArray *actions = [[NSMutableArray alloc] init];
-    [actions addObject:icon];
-    [actions addObject:title];
-    
-    for (TFSTwitterEntityMedia *i in self.viewModel.entities.media) {
-        for (TFSTwitterEntityMediaVideoVariant *k in i.videoInfo.variants) {
-            if ([k.contentType isEqualToString:@"video/mp4"]) {
-                TFNActionItem *download = [%c(TFNActionItem) actionItemWithTitle:[BHTManager getVideoQuality:k.url] imageName:@"arrow_down_circle_stroke" action:^{
-                    BHDownload *DownloadManager = [[BHDownload alloc] init];
-                    [DownloadManager downloadFileWithURL:[NSURL URLWithString:k.url]];
-                    [DownloadManager setDelegate:self];
-                    if (!([BHTManager DirectSave])) {
-                        self.hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
-                        self.hud.textLabel.text = @"Downloading";
-                        [self.hud showInView:topMostController().view];
-                    }
-                }];
-                [actions addObject:download];
-            }
-        }
+    if ([BHTManager isVideoCell:arg1]) {
+        [newOrig addObject:%c(BHDownloadInlineButton)];
     }
     
-    TFNMenuSheetViewController *alert = [[%c(TFNMenuSheetViewController) alloc] initWithActionItems:[NSArray arrayWithArray:actions]];
-    [alert tfnPresentedCustomPresentFromViewController:topMostController() animated:YES completion:nil];
-}
-%new - (void)downloadProgress:(float)progress {
-    self.hud.detailTextLabel.text = [BHTManager getDownloadingPersent:progress];
-}
-
-%new - (void)downloadDidFinish:(NSURL *)filePath Filename:(NSString *)fileName {
-    NSString *DocPath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true).firstObject;
-    NSFileManager *manager = [NSFileManager defaultManager];
-    NSURL *newFilePath = [[NSURL fileURLWithPath:DocPath] URLByAppendingPathComponent:[NSString stringWithFormat:@"%@.mp4", NSUUID.UUID.UUIDString]];
-    [manager moveItemAtURL:filePath toURL:newFilePath error:nil];
-    if (!([BHTManager DirectSave])) {
-        [self.hud dismiss];
-        [BHTManager showSaveVC:newFilePath];
-    } else {
-        [BHTManager save:newFilePath];
-    }
-}
-%new - (void)downloadDidFailureWithError:(NSError *)error {
-    if (error) {
-        [self.hud dismiss];
-    }
+    return [newOrig copy];
 }
 %end
 
@@ -405,16 +333,46 @@
 }
 %end
 
-%hook T1SafariViewController
-- (void)tfnPresentedCustomPresentFromViewController:(id)arg1 animated:(BOOL)arg2 completion:(id)arg3 {
-    if ([BHTManager alwaysOpenSafari]) {
-        if ([[UIApplication sharedApplication] canOpenURL:self.rootURL]) {
-            [[UIApplication sharedApplication] openURL:self.rootURL options:@{} completionHandler:nil];
-            return;
-        }
-        return %orig;
-    }
-    return %orig;
+%hook UIViewController
+- (id)t1_openURLParserResult:(NSURL *)arg1 account:(id)arg2 scribeContext:(id)arg3 {
+    if (BH_canOpenURL(arg1)) { return nil;}
+    return %orig(arg1, arg2, arg3);
+}
+- (id)t1_openURL:(NSURL *)arg1 account:(id)arg2 scribeContext:(id)arg3 fromCardDataSource:(id)arg4 {
+    if (BH_canOpenURL(arg1)) { return nil;}
+    return %orig(arg1, arg2, arg3, arg4);
+}
+- (id)t1_openURL:(NSURL *)arg1 account:(id)arg2 scribeContext:(id)arg3 fromSourceDirectMessageEntry:(id)arg4 {
+    if (BH_canOpenURL(arg1)) { return nil;}
+    return %orig(arg1, arg2, arg3, arg4);
+}
+- (id)t1_openURL:(NSURL *)arg1 account:(id)arg2 scribeContext:(id)arg3 fromSourceUser:(id)arg4 {
+    if (BH_canOpenURL(arg1)) { return nil;}
+    return %orig(arg1, arg2, arg3, arg4);
+}
+- (id)t1_openURL:(NSURL *)arg1 account:(id)arg2 scribeContext:(id)arg3 fromSourceStatus:(id)arg4 applyAdURLTransforms:(_Bool)arg5 forceAuthenticateWebViewController:(_Bool)arg6 {
+    if (BH_canOpenURL(arg1)) { return nil;}
+    return %orig(arg1, arg2, arg3, arg4, arg5, arg6);
+}
+- (id)t1_openURL:(NSURL *)arg1 account:(id)arg2 scribeContext:(id)arg3 fromSourceStatus:(id)arg4 {
+    if (BH_canOpenURL(arg1)) { return nil;}
+    return %orig(arg1, arg2, arg3, arg4);
+}
+- (id)t1_openURL:(NSURL *)arg1 account:(id)arg2 scribeContext:(id)arg3 forceAuthenticateWebViewController:(_Bool)arg4 {
+    if (BH_canOpenURL(arg1)) { return nil;}
+    return %orig(arg1, arg2, arg3, arg4);
+}
+- (id)t1_openURL:(NSURL *)arg1 account:(id)arg2 scribeContext:(id)arg3 expandedURL:(id)arg4 {
+    if (BH_canOpenURL(arg1)) { return nil;}
+    return %orig(arg1, arg2, arg3, arg4);
+}
+- (id)t1_openURL:(NSURL *)arg1 account:(id)arg2 scribeContext:(id)arg3 {
+    if (BH_canOpenURL(arg1)) { return nil;}
+    return %orig(arg1, arg2, arg3);
+}
+- (id)t1_openURL:(NSURL *)arg1 account:(id)arg2 {
+    if (BH_canOpenURL(arg1)) { return nil;}
+    return %orig(arg1, arg2);
 }
 %end
 
@@ -506,7 +464,7 @@
 }
 %end
 
-// MARK: Voice feature and Tipjar
+// MARK: Voice feature
 %hook TFNTwitterComposition
 - (BOOL)isReply {
     if ([BHTManager voice_in_replay]) {
@@ -597,13 +555,6 @@
         return %orig;
     }
 }
-- (BOOL)isProfileTipJarSettingsEnabled {
-    if ([BHTManager tipjar]) {
-        return true;
-    } else {
-        return %orig;
-    }
-}
 - (bool)isVODInlineAudioToggleEnabled {
     return true;
 }
@@ -681,6 +632,23 @@
             });
             make.button(@"No").cancelStyle();
         } showFrom:self];
+    } else {
+        return %orig;
+    }
+}
+%end
+
+// MARK: Follow confirm
+%hook TUIFollowControl
+- (void)_followUser:(id)arg1 event:(id)arg2 {
+    if ([BHTManager FollowConfirm]) {
+        [FLEXAlert makeAlert:^(FLEXAlert *make) {
+            make.message(@"Are you sure?");
+            make.button(@"Yes").handler(^(NSArray<NSString *> *strings) {
+                %orig;
+            });
+            make.button(@"No").cancelStyle();
+        } showFrom:topMostController()];
     } else {
         return %orig;
     }

@@ -9,7 +9,7 @@
 #import "BHDownload.h"
 
 @implementation BHDownload
-- (instancetype )init {
+- (instancetype)init {
     self = [super init];
     if (self) {
         self.Session = [NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration defaultSessionConfiguration] delegate:self delegateQueue:[NSOperationQueue mainQueue]];

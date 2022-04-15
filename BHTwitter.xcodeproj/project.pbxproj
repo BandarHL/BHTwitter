@@ -484,6 +484,9 @@
 		5052558F25206556004D7089 /* UIBarButtonItem+ALActionBlocks.h in Headers */ = {isa = PBXBuildFile; fileRef = 5052558525206556004D7089 /* UIBarButtonItem+ALActionBlocks.h */; };
 		5052559025206556004D7089 /* ALActionBlocks.h in Headers */ = {isa = PBXBuildFile; fileRef = 5052558625206556004D7089 /* ALActionBlocks.h */; };
 		5052559125206556004D7089 /* UIGestureRecognizer+ALActionBlocks.h in Headers */ = {isa = PBXBuildFile; fileRef = 5052558725206556004D7089 /* UIGestureRecognizer+ALActionBlocks.h */; };
+		505C0EBC2801ECAB0028D1C9 /* BHDownloadInlineButton.h in Headers */ = {isa = PBXBuildFile; fileRef = 505C0EBB2801ECAB0028D1C9 /* BHDownloadInlineButton.h */; };
+		505C0EBE2801ED020028D1C9 /* BHDownloadInlineButton.m in Sources */ = {isa = PBXBuildFile; fileRef = 505C0EBD2801ED020028D1C9 /* BHDownloadInlineButton.m */; };
+		5061F3C02806133400F3D5D3 /* CustomTabBarViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5061F3BF2806133400F3D5D3 /* CustomTabBarViewController.swift */; };
 		50C15C982713930600E8B5E8 /* CydiaSubstrate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 50C15C972713930600E8B5E8 /* CydiaSubstrate.framework */; };
 		50C15C9D271401CB00E8B5E8 /* BHTwitter+NSURL.h in Headers */ = {isa = PBXBuildFile; fileRef = 50C15C9C271401CB00E8B5E8 /* BHTwitter+NSURL.h */; };
 		50C15CB927178C0D00E8B5E8 /* HBCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 50C15CA927178C0D00E8B5E8 /* HBCell.m */; };
@@ -1000,6 +1003,10 @@
 		5052558525206556004D7089 /* UIBarButtonItem+ALActionBlocks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIBarButtonItem+ALActionBlocks.h"; sourceTree = "<group>"; };
 		5052558625206556004D7089 /* ALActionBlocks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ALActionBlocks.h; sourceTree = "<group>"; };
 		5052558725206556004D7089 /* UIGestureRecognizer+ALActionBlocks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIGestureRecognizer+ALActionBlocks.h"; sourceTree = "<group>"; };
+		505C0EBB2801ECAB0028D1C9 /* BHDownloadInlineButton.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BHDownloadInlineButton.h; sourceTree = "<group>"; };
+		505C0EBD2801ED020028D1C9 /* BHDownloadInlineButton.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BHDownloadInlineButton.m; sourceTree = "<group>"; };
+		505C0ED028038B810028D1C9 /* BHTwitter-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "BHTwitter-Bridging-Header.h"; sourceTree = "<group>"; };
+		5061F3BF2806133400F3D5D3 /* CustomTabBarViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CustomTabBarViewController.swift; sourceTree = "<group>"; };
 		50C15C972713930600E8B5E8 /* CydiaSubstrate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CydiaSubstrate.framework; path = ../../../../../opt/theos/lib/CydiaSubstrate.framework; sourceTree = "<group>"; };
 		50C15C9B271400DA00E8B5E8 /* BHTwitter+UIImage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "BHTwitter+UIImage.h"; sourceTree = "<group>"; };
 		50C15C9C271401CB00E8B5E8 /* BHTwitter+NSURL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "BHTwitter+NSURL.h"; sourceTree = "<group>"; };
@@ -1132,8 +1139,11 @@
 				5020A8D724E759190080F292 /* BHTManager.m */,
 				5020AA5E24E759590080F292 /* Colours.h */,
 				5020AA6024E759590080F292 /* Colours.m */,
+				505C0EBB2801ECAB0028D1C9 /* BHDownloadInlineButton.h */,
+				505C0EBD2801ED020028D1C9 /* BHDownloadInlineButton.m */,
 				50C15C9B271400DA00E8B5E8 /* BHTwitter+UIImage.h */,
 				50C15C9C271401CB00E8B5E8 /* BHTwitter+NSURL.h */,
+				5061F3BE2806132400F3D5D3 /* CustomTabBar */,
 				503FA66D2753F04A00BBB92A /* Classes */,
 				50C15CA827178C0D00E8B5E8 /* HBPreferences */,
 				500DA69526FF92F500C020B2 /* SAMKeychain */,
@@ -1141,6 +1151,7 @@
 				5052557D25206549004D7089 /* ALActionBlocks */,
 				5020A87E24E758E00080F292 /* Package */,
 				5020A88124E758E00080F292 /* Supporting Files */,
+				505C0ED028038B810028D1C9 /* BHTwitter-Bridging-Header.h */,
 			);
 			path = BHTwitter;
 			sourceTree = "<group>";
@@ -1987,6 +1998,14 @@
 			path = ALActionBlocks;
 			sourceTree = "<group>";
 		};
+		5061F3BE2806132400F3D5D3 /* CustomTabBar */ = {
+			isa = PBXGroup;
+			children = (
+				5061F3BF2806133400F3D5D3 /* CustomTabBarViewController.swift */,
+			);
+			path = CustomTabBar;
+			sourceTree = "<group>";
+		};
 		50C15CA827178C0D00E8B5E8 /* HBPreferences */ = {
 			isa = PBXGroup;
 			children = (
@@ -2075,6 +2094,7 @@
 				503FA92C2753F04C00BBB92A /* FLEXFileBrowserController.h in Headers */,
 				503FA9102753F04C00BBB92A /* FLEXWindowManagerController.h in Headers */,
 				503FA8F42753F04C00BBB92A /* FLEXRuntime+UIKitHelpers.h in Headers */,
+				505C0EBC2801ECAB0028D1C9 /* BHDownloadInlineButton.h in Headers */,
 				503FA8652753F04B00BBB92A /* FLEXNSDataShortcuts.h in Headers */,
 				5020AA4C24E759390080F292 /* JGProgressHUDRingIndicatorView.h in Headers */,
 				503FA9012753F04C00BBB92A /* FLEXMethod.h in Headers */,
@@ -2311,6 +2331,7 @@
 				5020A87024E758E00080F292 /* Frameworks */,
 				5020A87124E758E00080F292 /* Headers */,
 				5020A87224E758E00080F292 /* ShellScript */,
+				505C0ED32803B6020028D1C9 /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -2327,11 +2348,11 @@
 		5020A86A24E758E00080F292 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1310;
+				LastUpgradeCheck = 1330;
 				TargetAttributes = {
 					5020A87324E758E00080F292 = {
 						CreatedOnToolsVersion = 11.6;
-						LastSwiftMigration = 1160;
+						LastSwiftMigration = 1330;
 					};
 				};
 			};
@@ -2387,6 +2408,23 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "/opt/MonkeyDev/bin/md --xcbp\n";
+		};
+		505C0ED32803B6020028D1C9 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# /Users/bandarhelal/Desktop/resign/resign.sh\n\n\n\n\n\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -2502,6 +2540,7 @@
 				503FA8582753F04B00BBB92A /* FLEXCollectionContentSection.m in Sources */,
 				503FA8842753F04B00BBB92A /* FLEXNetworkTransactionCell.m in Sources */,
 				5052558C25206556004D7089 /* UIControl+ALActionBlocks.m in Sources */,
+				505C0EBE2801ED020028D1C9 /* BHDownloadInlineButton.m in Sources */,
 				503FA96E2753F04D00BBB92A /* FHSViewController.m in Sources */,
 				503FA9B22753F04D00BBB92A /* UITextField+Range.m in Sources */,
 				503FA9AC2753F04D00BBB92A /* NSTimer+FLEX.m in Sources */,
@@ -2550,6 +2589,7 @@
 				503FA86F2753F04B00BBB92A /* FLEXLayerShortcuts.m in Sources */,
 				503FA85F2753F04B00BBB92A /* FLEXBlockShortcuts.m in Sources */,
 				503FA9362753F04C00BBB92A /* FLEXOSLogController.m in Sources */,
+				5061F3C02806133400F3D5D3 /* CustomTabBarViewController.swift in Sources */,
 				503FA97B2753F04D00BBB92A /* FLEXHierarchyViewController.m in Sources */,
 				503FA98D2753F04D00BBB92A /* FLEXPropertyAttributes.m in Sources */,
 				503FA99F2753F04D00BBB92A /* FLEXMethodBase.m in Sources */,
@@ -2645,6 +2685,7 @@
 				MonkeyDevTheosPath = /opt/theos;
 				OTHER_CFLAGS = "-DTHEOS_INSTANCE_NAME=\"\\\"BHTwitter\\\"\"";
 				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
 			};
@@ -2754,6 +2795,7 @@
 				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTS_MACCATALYST = NO;
+				SWIFT_OBJC_BRIDGING_HEADER = "BHTwitter/BHTwitter-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				WARNING_CFLAGS = (
@@ -2810,6 +2852,7 @@
 				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTS_MACCATALYST = NO;
+				SWIFT_OBJC_BRIDGING_HEADER = "BHTwitter/BHTwitter-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

@@ -1,9 +1,10 @@
 Package: com.bandarhl.BHTwitter
 Name: BHTwitter
-Version: 2.9.3
+Version: 2.9.4
 Description: Awesome tweak for Twitter
 Section: Tweaks
 Depends: firmware (>= 13.0), mobilesubstrate
 Priority: optional
 Architecture: iphoneos-arm
 Author: BandarHelal
+Maintainer: BandarHelal

@@ -85,8 +85,8 @@
     }
     return [NSString stringWithFormat:@"%@x%@", q.firstObject, q.lastObject];
 }
-+ (BOOL)isVideoCell:(T1StatusInlineActionsView *)cell {
-    TFSTwitterEntityMedia *i = cell.viewModel.entities.media.firstObject;
++ (BOOL)isVideoCell:(id <T1StatusViewModel>)model {
+    TFSTwitterEntityMedia *i = model.entities.media.firstObject;
     if (i.videoInfo == nil) {
         return false;
     } else {
@@ -115,15 +115,14 @@
 + (BOOL)voice_in_replay {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"voice_in_replay"];
 }
-+ (BOOL)tipjar {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"Tipjar"];
-}
-
 + (BOOL)LikeConfirm {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"like_con"];
 }
 + (BOOL)TweetConfirm {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"tweet_con"];
+}
++ (BOOL)FollowConfirm {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"follow_con"];
 }
 + (BOOL)HidePromoted {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_promoted"];
@@ -181,8 +180,9 @@
 }
 + (UIViewController *)BHTSettings {
     HBPreferences *pref = [[HBPreferences alloc] initTableWithTableStyle:UITableViewStyleInsetGrouped title:@"BHTwitter" SeparatorStyle:UITableViewCellSeparatorStyleSingleLine];
-    HBSection *main_section = [HBSection sectionWithTitle:@"BHTwitter Preferences" footer:nil];
-    HBSection *layout_section = [HBSection sectionWithTitle:@"Layout customization" footer:@"Restart Twitter app to apply changes"];
+    HBSection *mainSection = [HBSection sectionWithTitle:@"BHTwitter Preferences" footer:nil];
+    HBSection *layoutSection = [HBSection sectionWithTitle:@"Layout customization" footer:@"Restart Twitter app to apply changes"];
+    HBSection *tabBarLayoutSection = [HBSection sectionWithTitle:@"Tab bar customization" footer:@"Restart Twitter app to apply changes"];
     HBSection *debug = [HBSection sectionWithTitle:@"Debugging" footer:nil];
     HBSection *developer = [HBSection sectionWithTitle:@"Developer" footer:nil];
     
@@ -218,7 +218,7 @@
         }
     }];
     
-    HBSwitchCell *disable_VODCaptions = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Disable vdieo layer captions." DetailTitle:nil switchKey:@"dis_VODCaptions" withBlock:^(UISwitch *weakSender) {
+    HBSwitchCell *disable_VODCaptions = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Disable video layer captions" DetailTitle:nil switchKey:@"dis_VODCaptions" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"dis_VODCaptions"];
         } else {
@@ -239,14 +239,6 @@
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"voice_in_replay"];
         } else {
             [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"voice_in_replay"];
-        }
-    }];
-    
-    HBSwitchCell *Tipjar = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Tip Jar feature" DetailTitle:@"Enable Tip Jar feature." switchKey:@"Tipjar" withBlock:^(UISwitch *weakSender) {
-        if (weakSender.isOn) {
-            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"Tipjar"];
-        } else {
-            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"Tipjar"];
         }
     }];
     
@@ -274,7 +266,7 @@
         }
     }];
     
-    HBSwitchCell *VideoZoom = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Video zoom feature" DetailTitle:@"You can zoom the video by dobule clicking in the center of the video." switchKey:@"video_zoom" withBlock:^(UISwitch *weakSender) {
+    HBSwitchCell *VideoZoom = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Video zoom feature" DetailTitle:@"You can zoom the video by double clicking in the center of the video." switchKey:@"video_zoom" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"video_zoom"];
         } else {
@@ -290,7 +282,7 @@
         }
     }];
     
-    HBSwitchCell *BioTranslate = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Translate bio" DetailTitle:@"Show you a button in user bio to trnaslate it." switchKey:@"bio_translate" withBlock:^(UISwitch *weakSender) {
+    HBSwitchCell *BioTranslate = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Translate bio" DetailTitle:@"Show you a button in user bio to translate it." switchKey:@"bio_translate" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"bio_translate"];
         } else {
@@ -311,6 +303,14 @@
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"tweet_con"];
         } else {
             [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"tweet_con"];
+        }
+    }];
+    
+    HBSwitchCell *follow_confirm = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"User follow confirm" DetailTitle:@"Show a confirm alert when you press follow button." switchKey:@"follow_con" withBlock:^(UISwitch *weakSender) {
+        if (weakSender.isOn) {
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"follow_con"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"follow_con"];
         }
     }];
     
@@ -383,16 +383,20 @@
         return fontPicker;
     }];
     
+    HBViewControllerCell *CustomTabBarVC = [[HBViewControllerCell alloc] initCellWithTitle:@"Custom Tab Bar" detail:nil action:^UIViewController *{
+        return [[CustomTabBarViewController alloc] init];
+    }];
+    
     HBSwitchCell *font = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Enable changing font" DetailTitle:@"Option to allow changing Twitter font and show font picker." switchKey:@"en_font" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"en_font"];
-            [layout_section addCells:@[fontsPicker, BoldfontsPicker]];
+            [layoutSection addCells:@[fontsPicker, BoldfontsPicker]];
             [pref.tableView insertRowsAtIndexPaths:@[[NSIndexPath indexPathForRow:3 inSection:1], [NSIndexPath indexPathForRow:4 inSection:1]] withRowAnimation:UITableViewRowAnimationAutomatic];
         } else {
             [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"en_font"];
             [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"bhtwitter_font_1"];
             [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"bhtwitter_font_2"];
-            [layout_section removeCells:@[fontsPicker, BoldfontsPicker]];
+            [layoutSection removeCells:@[fontsPicker, BoldfontsPicker]];
             [pref.tableView deleteRowsAtIndexPaths:@[[NSIndexPath indexPathForRow:3 inSection:1], [NSIndexPath indexPathForRow:4 inSection:1]] withRowAnimation:UITableViewRowAnimationAutomatic];
         }
     }];
@@ -420,16 +424,17 @@
     HBGithubCell *sourceCode = [[HBGithubCell alloc] initGithubCellWithTitle:@"BHTwitter" detailTitle:@"Code source of BHTwitter" GithubURL:@"https://github.com/BandarHL/BHTwitter/"];
     
     
-    [main_section addCells:@[download, hide_ads, hide_topics, disable_VODCaptions, direct_save, voice, voice_in_replay, Tipjar, UndoTweet, ReaderMode, ReplyLater, VideoZoom, NoHistory, BioTranslate, like_confirm, tweet_confirm, padlock, DmModularSearch, autoHighestLoad, disableSensitiveTweetWarnings, alwaysOpenSafari]];
+    [mainSection addCells:@[download, hide_ads, hide_topics, disable_VODCaptions, direct_save, voice, voice_in_replay, UndoTweet, ReaderMode, ReplyLater, VideoZoom, NoHistory, BioTranslate, like_confirm, tweet_confirm, follow_confirm, padlock, DmModularSearch, autoHighestLoad, disableSensitiveTweetWarnings, alwaysOpenSafari]];
     
-    [layout_section addCells:@[oldTweetStyle, dwbLayout, font]];
+    [layoutSection addCells:@[oldTweetStyle, dwbLayout, font]];
     if ([BHTManager changeFont]) {
-        [layout_section addCells:@[fontsPicker, BoldfontsPicker]];
+        [layoutSection addCells:@[fontsPicker, BoldfontsPicker]];
     }
+    [tabBarLayoutSection addCell:CustomTabBarVC];
     [debug addCell:flex];
     [developer addCells:@[bandarhl, sourceCode, tipJar]];
 
-    [pref addSections:@[main_section, layout_section, debug, developer]];
+    [pref addSections:@[mainSection, layoutSection, tabBarLayoutSection, debug, developer]];
     return pref;
 }
 

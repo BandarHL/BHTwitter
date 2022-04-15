@@ -4,6 +4,7 @@
 # Features
 - Download Videos (even if account private).
 - Replay later feature.
+- Custom Tab Bar
 - Video zoom feature.
 - No history feature.
 - Hide topics tweet feature.
@@ -20,6 +21,7 @@
 - Hide promoted tweet from the timeline.
 - Confirm alert when hit the tweet button.
 - Confirm alert when hit like button.
+- Confirm alert when hit follow button.
 - FLEX for debugging.
 
 | | | |

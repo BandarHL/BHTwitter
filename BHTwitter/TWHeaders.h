@@ -4,10 +4,24 @@
 //
 //  Created by BandarHelal on 23/12/1441 AH.
 //
+
 #import <objc/runtime.h>
+#import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
+#import <Photos/Photos.h>
+#import "BHTwitter-Swift.h"
+#import "./Classes/Utility/FLEXAlert.h"
 #import "./Classes/FLEX.h"
 #import "BHDownload.h"
 #import "JGProgressHUD/include/JGProgressHUD.h"
+#import "SAMKeychain/keychain.h"
+#import "HBPreferences/HBPreferences.h"
+#import "HBPreferences/HBSection.h"
+#import "HBPreferences/HBTwitterCell.h"
+#import "HBPreferences/HBSwitchCell.h"
+#import "HBPreferences/HBGithubCell.h"
+#import "HBPreferences/HBlinkCell.h"
+#import "HBPreferences/HBViewControllerCell.h"
 
 @interface T1AppDelegate : UIResponder <UIApplicationDelegate>
 @property(retain, nonatomic) UIWindow *window;
@@ -28,6 +42,16 @@
 @interface TFNItemsDataViewControllerBackingStore
 - (void)insertSection:(id)arg1 atIndex:(long long)arg2;
 - (void)insertItem:(id)arg1 atIndexPath:(id)arg2;
+@end
+
+@interface T1TabView : UIView
+@property(readonly, nonatomic) UILabel *titleLabel;
+@property(readonly, nonatomic) long long panelID;
+@property(copy, nonatomic) NSString *scribePage;
+@end
+
+@interface T1TabBarViewController : UIViewController
+@property(copy, nonatomic) NSArray *tabViews;
 @end
 
 @interface T1GenericSettingsViewController: UIViewController
@@ -165,18 +189,7 @@
 @end
 
 @interface T1StatusInlineActionsView : UIView
-{
-    NSMutableArray *_inlineActionButtons;
-}
-- (void)appendNewButton;
 @property(readonly, nonatomic) id <T1StatusViewModel> viewModel;
-@property(retain, nonatomic) NSMutableArray *inlineActionButtons;
-@property (nonatomic, strong) JGProgressHUD *hud;
-- (void)DownloadHandler;
-- (void)_t1_layoutInlineActionButtons;
-@end
-
-@interface T1StatusInlineActionsView () <BHDownloadDelegate>
 @end
 
 @interface T1StandardStatusView : UIView
@@ -271,6 +284,16 @@
 @property(readonly, nonatomic) id viewModel; // @synthesize viewModel=_viewModel;
 @end
 
+static BOOL BH_canOpenURL(NSURL *url) {
+    if ([[NSUserDefaults standardUserDefaults] boolForKey:@"openInBrowser"]) {
+        if ([[UIApplication sharedApplication] canOpenURL:url]) {
+            [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
+            return true;
+        }
+        return false;
+    }
+    return false;
+}
 static BOOL isDeviceLanguageRTL() {
   return ([NSLocale characterDirectionForLanguage:[[NSLocale preferredLanguages] objectAtIndex:0]] == NSLocaleLanguageDirectionRightToLeft);
 }
