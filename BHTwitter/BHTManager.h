@@ -44,6 +44,7 @@
 + (BOOL)autoHighestLoad;
 + (BOOL)DmModularSearch;
 + (BOOL)disableSensitiveTweetWarnings;
-+ (BOOL)alwaysOpenSafari;
++ (BOOL)TwitterCircle;
++ (BOOL)CopyProfileInfo;
 @end
 

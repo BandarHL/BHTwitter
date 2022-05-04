@@ -487,7 +487,6 @@
 		505C0EBC2801ECAB0028D1C9 /* BHDownloadInlineButton.h in Headers */ = {isa = PBXBuildFile; fileRef = 505C0EBB2801ECAB0028D1C9 /* BHDownloadInlineButton.h */; };
 		505C0EBE2801ED020028D1C9 /* BHDownloadInlineButton.m in Sources */ = {isa = PBXBuildFile; fileRef = 505C0EBD2801ED020028D1C9 /* BHDownloadInlineButton.m */; };
 		5061F3C02806133400F3D5D3 /* CustomTabBarViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5061F3BF2806133400F3D5D3 /* CustomTabBarViewController.swift */; };
-		50C15C982713930600E8B5E8 /* CydiaSubstrate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 50C15C972713930600E8B5E8 /* CydiaSubstrate.framework */; };
 		50C15C9D271401CB00E8B5E8 /* BHTwitter+NSURL.h in Headers */ = {isa = PBXBuildFile; fileRef = 50C15C9C271401CB00E8B5E8 /* BHTwitter+NSURL.h */; };
 		50C15CB927178C0D00E8B5E8 /* HBCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 50C15CA927178C0D00E8B5E8 /* HBCell.m */; };
 		50C15CBA27178C0D00E8B5E8 /* HBSection.h in Headers */ = {isa = PBXBuildFile; fileRef = 50C15CAA27178C0D00E8B5E8 /* HBSection.h */; };
@@ -510,10 +509,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		500B311724E86DEC007531B1 /* libsubstitute.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libsubstitute.dylib; path = ../../../../opt/MonkeyDev/MFrameworks/libsubstitute.dylib; sourceTree = "<group>"; };
-		500B311B24E872F0007531B1 /* libsubstrate.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libsubstrate.dylib; path = ../../../../opt/MonkeyDev/Frameworks/libsubstrate.dylib; sourceTree = "<group>"; };
-		500B314524E87351007531B1 /* CydiaSubstrate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CydiaSubstrate.framework; path = Library/Frameworks/CydiaSubstrate.framework; sourceTree = DEVELOPER_DIR; };
-		500B314924E87414007531B1 /* libsubstrate.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libsubstrate.dylib; path = ../../../../opt/libsubstrate.dylib; sourceTree = "<group>"; };
 		500DA69826FF930A00C020B2 /* SAMKeychainQuery.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SAMKeychainQuery.h; sourceTree = "<group>"; };
 		500DA69926FF930A00C020B2 /* SAMKeychainQuery.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SAMKeychainQuery.m; sourceTree = "<group>"; };
 		500DA69E26FF95B100C020B2 /* keychain.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = keychain.h; sourceTree = "<group>"; };
@@ -527,7 +522,6 @@
 		5020A87424E758E00080F292 /* BHTwitter.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = BHTwitter.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		5020A87724E758E00080F292 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		5020A87924E758E00080F292 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
-		5020A87B24E758E00080F292 /* CydiaSubstrate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CydiaSubstrate.framework; path = Library/Frameworks/CydiaSubstrate.framework; sourceTree = DEVELOPER_DIR; };
 		5020A88024E758E00080F292 /* control */ = {isa = PBXFileReference; lastKnownFileType = text; path = control; sourceTree = "<group>"; };
 		5020A88224E758E00080F292 /* BHTwitter-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "BHTwitter-Prefix.pch"; path = "../BHTwitter-Prefix.pch"; sourceTree = "<group>"; };
 		5020A88324E758E00080F292 /* BHTwitter.xm */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.objc; path = BHTwitter.xm; sourceTree = "<group>"; };
@@ -1007,12 +1001,8 @@
 		505C0EBD2801ED020028D1C9 /* BHDownloadInlineButton.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BHDownloadInlineButton.m; sourceTree = "<group>"; };
 		505C0ED028038B810028D1C9 /* BHTwitter-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "BHTwitter-Bridging-Header.h"; sourceTree = "<group>"; };
 		5061F3BF2806133400F3D5D3 /* CustomTabBarViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CustomTabBarViewController.swift; sourceTree = "<group>"; };
-		50C15C972713930600E8B5E8 /* CydiaSubstrate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CydiaSubstrate.framework; path = ../../../../../opt/theos/lib/CydiaSubstrate.framework; sourceTree = "<group>"; };
 		50C15C9B271400DA00E8B5E8 /* BHTwitter+UIImage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "BHTwitter+UIImage.h"; sourceTree = "<group>"; };
 		50C15C9C271401CB00E8B5E8 /* BHTwitter+NSURL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "BHTwitter+NSURL.h"; sourceTree = "<group>"; };
-		50C15C9E271786CB00E8B5E8 /* CepheiPrefs.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CepheiPrefs.framework; path = ../../../../../opt/theos/vendor/lib/CepheiPrefs.framework; sourceTree = "<group>"; };
-		50C15C9F271786CB00E8B5E8 /* CepheiUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CepheiUI.framework; path = ../../../../../opt/theos/vendor/lib/CepheiUI.framework; sourceTree = "<group>"; };
-		50C15CA0271786CB00E8B5E8 /* Cephei.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cephei.framework; path = ../../../../../opt/theos/vendor/lib/Cephei.framework; sourceTree = "<group>"; };
 		50C15CA927178C0D00E8B5E8 /* HBCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HBCell.m; sourceTree = "<group>"; };
 		50C15CAA27178C0D00E8B5E8 /* HBSection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HBSection.h; sourceTree = "<group>"; };
 		50C15CAD27178C0D00E8B5E8 /* HBTwitterCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HBTwitterCell.m; sourceTree = "<group>"; };
@@ -1049,7 +1039,6 @@
 				5020AA7524E7598D0080F292 /* CoreServices.framework in Frameworks */,
 				5020A87824E758E00080F292 /* UIKit.framework in Frameworks */,
 				5020AA7724E759910080F292 /* SystemConfiguration.framework in Frameworks */,
-				50C15C982713930600E8B5E8 /* CydiaSubstrate.framework in Frameworks */,
 				5020A87A24E758E00080F292 /* Foundation.framework in Frameworks */,
 				5020AA6D24E759790080F292 /* CoreImage.framework in Frameworks */,
 				5020AA6E24E759790080F292 /* CoreMedia.framework in Frameworks */,
@@ -1097,17 +1086,10 @@
 		5020A87624E758E00080F292 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				50C15CA0271786CB00E8B5E8 /* Cephei.framework */,
-				50C15C9E271786CB00E8B5E8 /* CepheiPrefs.framework */,
-				50C15C9F271786CB00E8B5E8 /* CepheiUI.framework */,
-				50C15C972713930600E8B5E8 /* CydiaSubstrate.framework */,
 				50D73503252CBFCB007838C7 /* libsqlite3.tbd */,
 				50D73501252CBFC6007838C7 /* SceneKit.framework */,
 				50D734FF252CBFBD007838C7 /* libz.tbd */,
 				50E7ABEE24F5A8F600A8619D /* WebKit.framework */,
-				500B311B24E872F0007531B1 /* libsubstrate.dylib */,
-				500B314924E87414007531B1 /* libsubstrate.dylib */,
-				500B311724E86DEC007531B1 /* libsubstitute.dylib */,
 				5020AA7C24E759A20080F292 /* QuartzCore.framework */,
 				5020AA7A24E7599B0080F292 /* Security.framework */,
 				5020AA7824E759960080F292 /* SafariServices.framework */,
@@ -1115,14 +1097,12 @@
 				5020AA7424E7598D0080F292 /* CoreServices.framework */,
 				5020AA7224E759860080F292 /* Photos.framework */,
 				5020AA7024E7597F0080F292 /* ImageIO.framework */,
-				500B314524E87351007531B1 /* CydiaSubstrate.framework */,
 				5020AA6C24E759790080F292 /* CoreGraphics.framework */,
 				5020AA6A24E759790080F292 /* CoreImage.framework */,
 				5020AA6B24E759790080F292 /* CoreMedia.framework */,
 				5020AA6824E759700080F292 /* Accelerate.framework */,
 				5020A87724E758E00080F292 /* UIKit.framework */,
 				5020A87924E758E00080F292 /* Foundation.framework */,
-				5020A87B24E758E00080F292 /* CydiaSubstrate.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";

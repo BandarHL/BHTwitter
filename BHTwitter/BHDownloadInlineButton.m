@@ -26,7 +26,6 @@
     if ([arg1 isKindOfClass:objc_getClass("T1URTTimelineStatusItemViewModel")]) {
         [self setTintColor:[UIColor colorFromHexString:@"6D6E70"]];
     }
-    return;
 }
 - (id)initWithOptions:(unsigned long long)arg1 overrideSize:(struct CGSize)arg2 account:(id)arg3 {
     self = [super initWithFrame:CGRectMake(0, 0, arg2.width, arg2.height)];

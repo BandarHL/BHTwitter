@@ -175,8 +175,11 @@
 + (BOOL)DmModularSearch {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"DmModularSearch"];
 }
-+ (BOOL)alwaysOpenSafari {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"openInBrowser"];
++ (BOOL)TwitterCircle {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"TrustedFriends"];
+}
++ (BOOL)CopyProfileInfo {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"CopyProfileInfo"];
 }
 + (UIViewController *)BHTSettings {
     HBPreferences *pref = [[HBPreferences alloc] initTableWithTableStyle:UITableViewStyleInsetGrouped title:@"BHTwitter" SeparatorStyle:UITableViewCellSeparatorStyleSingleLine];
@@ -355,11 +358,19 @@
         }
     }];
     
-    HBSwitchCell *alwaysOpenSafari = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Always open in Safari" DetailTitle:@"Force twitter to open URLs in Safari or your default browser (support apps URL scheme)" switchKey:@"openInBrowser" withBlock:^(UISwitch *weakSender) {
+    HBSwitchCell *trustedFriends = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Enable Twitter Circle feature" DetailTitle:nil switchKey:@"TrustedFriends" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
-            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"openInBrowser"];
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"TrustedFriends"];
         } else {
-            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"openInBrowser"];
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"TrustedFriends"];
+        }
+    }];
+    
+    HBSwitchCell *copyProfileInfo = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Enable Copying profile information feature" DetailTitle:@"Add new button in Twitter profile that let you copy whatever info you want" switchKey:@"CopyProfileInfo" withBlock:^(UISwitch *weakSender) {
+        if (weakSender.isOn) {
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"CopyProfileInfo"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"CopyProfileInfo"];
         }
     }];
     
@@ -424,7 +435,7 @@
     HBGithubCell *sourceCode = [[HBGithubCell alloc] initGithubCellWithTitle:@"BHTwitter" detailTitle:@"Code source of BHTwitter" GithubURL:@"https://github.com/BandarHL/BHTwitter/"];
     
     
-    [mainSection addCells:@[download, hide_ads, hide_topics, disable_VODCaptions, direct_save, voice, voice_in_replay, UndoTweet, ReaderMode, ReplyLater, VideoZoom, NoHistory, BioTranslate, like_confirm, tweet_confirm, follow_confirm, padlock, DmModularSearch, autoHighestLoad, disableSensitiveTweetWarnings, alwaysOpenSafari]];
+    [mainSection addCells:@[download, hide_ads, hide_topics, disable_VODCaptions, direct_save, voice, voice_in_replay, UndoTweet, ReaderMode, ReplyLater, VideoZoom, NoHistory, BioTranslate, like_confirm, tweet_confirm, follow_confirm, padlock, DmModularSearch, autoHighestLoad, disableSensitiveTweetWarnings, copyProfileInfo, trustedFriends]];
     
     [layoutSection addCells:@[oldTweetStyle, dwbLayout, font]];
     if ([BHTManager changeFont]) {

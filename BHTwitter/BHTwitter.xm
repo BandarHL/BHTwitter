@@ -3,6 +3,8 @@
 #import "Colours.h"
 #import "BHTManager.h"
 
+%config(generator=internal)
+
 // MARK: Clean cache and Padlock
 %hook T1AppDelegate
 - (_Bool)application:(UIApplication *)application didFinishLaunchingWithOptions:(id)arg2 {
@@ -82,55 +84,57 @@
 %hook T1ProfileHeaderViewController
 - (void)viewDidAppear:(_Bool)arg1 {
     %orig(arg1);
-    T1ProfileHeaderView *headerView = [self valueForKey:@"_headerView"];
-    UIView *innerContentView = [headerView.actionButtonsView valueForKey:@"_innerContentView"];
-    UIButton *copyButton = [UIButton buttonWithType:UIButtonTypeCustom];
-    [copyButton setImage:[UIImage systemImageNamed:@"doc.on.clipboard"] forState:UIControlStateNormal];
-    if (@available(iOS 14.0, *)) {
-        [copyButton setShowsMenuAsPrimaryAction:true];
-        [copyButton setMenu:[UIMenu menuWithTitle:@"" children:@[
-            [UIAction actionWithTitle:@"Copy bio" image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
-                UIPasteboard.generalPasteboard.string = self.viewModel.bio;
-            }],
-            [UIAction actionWithTitle:@"Copy Username" image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
-                UIPasteboard.generalPasteboard.string = self.viewModel.username;
-            }],
-            [UIAction actionWithTitle:@"Copy Full Username" image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
-                UIPasteboard.generalPasteboard.string = self.viewModel.fullName;
-            }],
-            [UIAction actionWithTitle:@"Copy URL in the bio" image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
-                UIPasteboard.generalPasteboard.string = self.viewModel.url;
-            }],
-        ]]];
-    } else {
-        [copyButton addTarget:self action:@selector(copyButtonHandler:) forControlEvents:UIControlEventTouchUpInside];
-    }
-    [copyButton setTintColor:UIColor.labelColor];
-    [copyButton.layer setCornerRadius:32/2];
-    [copyButton.layer setBorderWidth:1];
-    [copyButton.layer setBorderColor:[UIColor colorFromHexString:@"2F3336"].CGColor];
-    [copyButton setTranslatesAutoresizingMaskIntoConstraints:false];
-    [headerView.actionButtonsView addSubview:copyButton];
-    
-    [NSLayoutConstraint activateConstraints:@[
-        [copyButton.centerYAnchor constraintEqualToAnchor:headerView.actionButtonsView.centerYAnchor],
-        [copyButton.widthAnchor constraintEqualToConstant:32],
-        [copyButton.heightAnchor constraintEqualToConstant:32],
-    ]];
-    
-    if ([BHTManager DwbLayout]) {
-        [NSLayoutConstraint activateConstraints:@[
-            [copyButton.trailingAnchor constraintEqualToAnchor:innerContentView.leadingAnchor constant:-7],
-        ]];
-    } else {
-        if (isDeviceLanguageRTL()) {
-            [NSLayoutConstraint activateConstraints:@[
-                [copyButton.leadingAnchor constraintEqualToAnchor:innerContentView.trailingAnchor constant:7],
-            ]];
+    if ([BHTManager CopyProfileInfo]) {
+        T1ProfileHeaderView *headerView = [self valueForKey:@"_headerView"];
+        UIView *innerContentView = [headerView.actionButtonsView valueForKey:@"_innerContentView"];
+        UIButton *copyButton = [UIButton buttonWithType:UIButtonTypeCustom];
+        [copyButton setImage:[UIImage systemImageNamed:@"doc.on.clipboard"] forState:UIControlStateNormal];
+        if (@available(iOS 14.0, *)) {
+            [copyButton setShowsMenuAsPrimaryAction:true];
+            [copyButton setMenu:[UIMenu menuWithTitle:@"" children:@[
+                [UIAction actionWithTitle:@"Copy bio" image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
+                    UIPasteboard.generalPasteboard.string = self.viewModel.bio;
+                }],
+                [UIAction actionWithTitle:@"Copy Username" image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
+                    UIPasteboard.generalPasteboard.string = self.viewModel.username;
+                }],
+                [UIAction actionWithTitle:@"Copy Full Username" image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
+                    UIPasteboard.generalPasteboard.string = self.viewModel.fullName;
+                }],
+                [UIAction actionWithTitle:@"Copy URL in the bio" image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
+                    UIPasteboard.generalPasteboard.string = self.viewModel.url;
+                }],
+            ]]];
         } else {
+            [copyButton addTarget:self action:@selector(copyButtonHandler:) forControlEvents:UIControlEventTouchUpInside];
+        }
+        [copyButton setTintColor:UIColor.labelColor];
+        [copyButton.layer setCornerRadius:32/2];
+        [copyButton.layer setBorderWidth:1];
+        [copyButton.layer setBorderColor:[UIColor colorFromHexString:@"2F3336"].CGColor];
+        [copyButton setTranslatesAutoresizingMaskIntoConstraints:false];
+        [headerView.actionButtonsView addSubview:copyButton];
+        
+        [NSLayoutConstraint activateConstraints:@[
+            [copyButton.centerYAnchor constraintEqualToAnchor:headerView.actionButtonsView.centerYAnchor],
+            [copyButton.widthAnchor constraintEqualToConstant:32],
+            [copyButton.heightAnchor constraintEqualToConstant:32],
+        ]];
+        
+        if ([BHTManager DwbLayout]) {
             [NSLayoutConstraint activateConstraints:@[
                 [copyButton.trailingAnchor constraintEqualToAnchor:innerContentView.leadingAnchor constant:-7],
             ]];
+        } else {
+            if (isDeviceLanguageRTL()) {
+                [NSLayoutConstraint activateConstraints:@[
+                    [copyButton.leadingAnchor constraintEqualToAnchor:innerContentView.trailingAnchor constant:7],
+                ]];
+            } else {
+                [NSLayoutConstraint activateConstraints:@[
+                    [copyButton.trailingAnchor constraintEqualToAnchor:innerContentView.leadingAnchor constant:-7],
+                ]];
+            }
         }
     }
 }
@@ -316,7 +320,7 @@
     NSArray *_orig = %orig;
     NSMutableArray *newOrig = [_orig mutableCopy];
     
-    if ([BHTManager isVideoCell:arg1]) {
+    if ([BHTManager isVideoCell:arg1] && [BHTManager DownloadingVideos]) {
         [newOrig addObject:%c(BHDownloadInlineButton)];
     }
     
@@ -333,49 +337,13 @@
 }
 %end
 
-%hook UIViewController
-- (id)t1_openURLParserResult:(NSURL *)arg1 account:(id)arg2 scribeContext:(id)arg3 {
-    if (BH_canOpenURL(arg1)) { return nil;}
-    return %orig(arg1, arg2, arg3);
-}
-- (id)t1_openURL:(NSURL *)arg1 account:(id)arg2 scribeContext:(id)arg3 fromCardDataSource:(id)arg4 {
-    if (BH_canOpenURL(arg1)) { return nil;}
-    return %orig(arg1, arg2, arg3, arg4);
-}
-- (id)t1_openURL:(NSURL *)arg1 account:(id)arg2 scribeContext:(id)arg3 fromSourceDirectMessageEntry:(id)arg4 {
-    if (BH_canOpenURL(arg1)) { return nil;}
-    return %orig(arg1, arg2, arg3, arg4);
-}
-- (id)t1_openURL:(NSURL *)arg1 account:(id)arg2 scribeContext:(id)arg3 fromSourceUser:(id)arg4 {
-    if (BH_canOpenURL(arg1)) { return nil;}
-    return %orig(arg1, arg2, arg3, arg4);
-}
-- (id)t1_openURL:(NSURL *)arg1 account:(id)arg2 scribeContext:(id)arg3 fromSourceStatus:(id)arg4 applyAdURLTransforms:(_Bool)arg5 forceAuthenticateWebViewController:(_Bool)arg6 {
-    if (BH_canOpenURL(arg1)) { return nil;}
-    return %orig(arg1, arg2, arg3, arg4, arg5, arg6);
-}
-- (id)t1_openURL:(NSURL *)arg1 account:(id)arg2 scribeContext:(id)arg3 forceAuthenticateWebViewController:(_Bool)arg4 {
-    if (BH_canOpenURL(arg1)) { return nil;}
-    return %orig(arg1, arg2, arg3, arg4);
-}
-- (id)t1_openURL:(NSURL *)arg1 account:(id)arg2 scribeContext:(id)arg3 expandedURL:(id)arg4 {
-    if (BH_canOpenURL(arg1)) { return nil;}
-    return %orig(arg1, arg2, arg3, arg4);
-}
-- (id)t1_openURL:(NSURL *)arg1 account:(id)arg2 scribeContext:(id)arg3 {
-    if (BH_canOpenURL(arg1)) { return nil;}
-    return %orig(arg1, arg2, arg3);
-}
-%end
-
 // MARK: Bio Translate
 %hook TFNTwitterCanonicalUser
 - (_Bool)isProfileBioTranslatable {
     if ([BHTManager BioTranslate]) {
         return true;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 %end
 
@@ -406,9 +374,8 @@
 - (_Bool)photoUploadHighQualityImagesSettingIsVisible {
     if ([BHTManager autoHighestLoad]) {
         return true;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 %end
 
@@ -416,16 +383,14 @@
 - (_Bool)_t1_shouldDisplayLoadHighQualityImageItemForImageDisplayView:(id)arg1 highestQuality:(_Bool)arg2 {
     if ([BHTManager autoHighestLoad]) {
         return true;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 - (id)_t1_loadHighQualityActionItemWithTitle:(id)arg1 forImageDisplayView:(id)arg2 highestQuality:(_Bool)arg3 {
     if ([BHTManager autoHighestLoad]) {
         return %orig(arg1, arg2, true);
-    } else {
-        return %orig(arg1, arg2, arg3);
     }
+    return %orig(arg1, arg2, arg3);
 }
 %end
 
@@ -433,16 +398,14 @@
 - (_Bool)_tfn_shouldUseHighestQualityImage {
     if ([BHTManager autoHighestLoad]) {
         return true;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 - (_Bool)_tfn_shouldUseHighQualityImage {
     if ([BHTManager autoHighestLoad]) {
         return true;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 %end
 
@@ -450,9 +413,8 @@
 - (_Bool)shouldUploadHighQualityImages {
     if ([BHTManager autoHighestLoad]) {
         return true;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 %end
 
@@ -461,9 +423,8 @@
 - (BOOL)isReply {
     if ([BHTManager voice_in_replay]) {
         return false;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 %end
 
@@ -471,81 +432,87 @@
 - (_Bool)allowPromotedContent {
     if ([BHTManager HidePromoted]) {
         return false;
-    } else {
-        return %orig;
     }
+    return %orig;
+}
+%end
+
+%hook T1TrustedFriendsFeatureSwitches
++ (_Bool)isTrustedFriendsTweetCreationEnabled:(id)arg1 {
+    if ([BHTManager TwitterCircle]) {
+        return true;
+    }
+    return %orig;
 }
 %end
 
 %hook TFNTwitterAccount
+- (_Bool)isTrustedFriendsAPIEnabled {
+    if ([BHTManager TwitterCircle]) {
+        return true;
+    }
+    return %orig;
+}
 - (_Bool)isSensitiveTweetWarningsComposeEnabled {
     if ([BHTManager disableSensitiveTweetWarnings]) {
         return false;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 - (_Bool)isSensitiveTweetWarningsConsumeEnabled {
     if ([BHTManager disableSensitiveTweetWarnings]) {
         return false;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 - (_Bool)isDmModularSearchEnabled {
     if ([BHTManager DmModularSearch]) {
         return true;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 - (_Bool)isVideoDynamicAdEnabled {
     if ([BHTManager HidePromoted]) {
         return false;
     }
+    return %orig;
 }
 
 - (_Bool)isVODCaptionsEnabled {
     if ([BHTManager DisableVODCaptions]) {
         return false;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 - (_Bool)photoUploadHighQualityImagesSettingIsVisible {
     if ([BHTManager autoHighestLoad]) {
         return true;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 - (_Bool)loadingHighestQualityImageVariantPermitted {
     if ([BHTManager autoHighestLoad]) {
         return true;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 - (_Bool)isDoubleMaxZoomFor4KImagesEnabled {
     if ([BHTManager autoHighestLoad]) {
         return true;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 - (_Bool)isVideoZoomEnabled {
     if ([BHTManager VideoZoom]) {
         return true;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 - (_Bool)isReplyLaterEnabled {
     if ([BHTManager ReplyLater]) {
         return true;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 - (bool)isVODInlineAudioToggleEnabled {
     return true;
@@ -553,32 +520,28 @@
 - (_Bool)isConversationThreadingVoiceOverSupportEnabled {
     if ([BHTManager VoiceFeature]) {
         return true;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 - (_Bool)isDMVoiceRenderingEnabled {
     if ([BHTManager VoiceFeature]) {
         return true;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 - (_Bool)isDMVoiceCreationEnabled {
     if ([BHTManager VoiceFeature]) {
         return true;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 %end
 %hook TFNTwitterComposition
 - (BOOL)hasVoiceRecordingAttachment {
     if ([BHTManager VoiceFeature]) {
         return true;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 %end
 
@@ -586,9 +549,8 @@
 - (_Bool)voiceOverEnabled {
     if ([BHTManager VoiceFeature]) {
         return true;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 - (void)setVoiceOverEnabled:(_Bool)arg1 {
     if ([BHTManager VoiceFeature]) {
@@ -624,9 +586,8 @@
             });
             make.button(@"No").cancelStyle();
         } showFrom:self];
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 %end
 
@@ -641,9 +602,8 @@
             });
             make.button(@"No").cancelStyle();
         } showFrom:topMostController()];
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 %end
 
@@ -658,9 +618,8 @@
             });
             make.button(@"No").cancelStyle();
         } showFrom:topMostController()];
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 %end
 
@@ -675,9 +634,8 @@
             });
             make.button(@"No").cancelStyle();
         } showFrom:topMostController()];
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 %end
 
@@ -686,9 +644,8 @@
 - (BOOL)shouldShowShowUndoTweetSentToast {
     if ([BHTManager UndoTweet]) {
         return true;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 %end
 
@@ -697,9 +654,8 @@
 - (_Bool)isReaderModeEnabled {
     if ([BHTManager ReaderMode]) {
         return true;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 %end
 
@@ -708,23 +664,20 @@
 - (BOOL)isUnifiedCardEnabled {
     if ([BHTManager OldStyle]) {
         return false;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 - (BOOL)isModernStatusViewsQuoteTweetEnabled {
     if ([BHTManager OldStyle]) {
         return false;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 - (BOOL)isEdgeToEdgeContentEnabled {
     if ([BHTManager OldStyle]) {
         return false;
-    } else {
-        return %orig;
     }
+    return %orig;
 }
 %end
 
