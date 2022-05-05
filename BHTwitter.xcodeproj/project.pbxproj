@@ -2782,6 +2782,10 @@
 					"-Wno-deprecated-declarations",
 					"-Wno-strict-prototypes",
 					"-Wno-unsupported-availability-guard",
+					"-Wno-unused-function",
+					"-Wno-undeclared-selector",
+					"-Wno-objc-designated-initializers",
+					"-Wno-nullability-completeness",
 				);
 			};
 			name = Release;
@@ -2840,6 +2844,10 @@
 					"-Wno-deprecated-declarations",
 					"-Wno-strict-prototypes",
 					"-Wno-unsupported-availability-guard",
+					"-Wno-unused-function",
+					"-Wno-undeclared-selector",
+					"-Wno-objc-designated-initializers",
+					"-Wno-nullability-completeness",
 				);
 			};
 			name = Debug;

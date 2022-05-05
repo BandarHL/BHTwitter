@@ -586,8 +586,9 @@
             });
             make.button(@"No").cancelStyle();
         } showFrom:self];
+    } else {
+        return %orig;
     }
-    return %orig;
 }
 %end
 
@@ -602,8 +603,9 @@
             });
             make.button(@"No").cancelStyle();
         } showFrom:topMostController()];
+    } else {
+        return %orig;
     }
-    return %orig;
 }
 %end
 
@@ -618,8 +620,9 @@
             });
             make.button(@"No").cancelStyle();
         } showFrom:topMostController()];
+    } else {
+        return %orig;
     }
-    return %orig;
 }
 %end
 
@@ -634,8 +637,9 @@
             });
             make.button(@"No").cancelStyle();
         } showFrom:topMostController()];
+    } else {
+        return %orig;
     }
-    return %orig;
 }
 %end
 
