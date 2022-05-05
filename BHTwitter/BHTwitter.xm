@@ -141,7 +141,8 @@
 %new - (void)copyButtonHandler:(UIButton *)sender {
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"hi" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
     if (is_iPad()) {
-        alert.popoverPresentationController.sourceRect = CGRectMake(self.view.bounds.size.width / 2.0, self.view.bounds.size.height / 2.0, 1.0, 1.0);
+        alert.popoverPresentationController.sourceView = self.view;
+        alert.popoverPresentationController.sourceRect = sender.frame;
     }
     UIAlertAction *bio = [UIAlertAction actionWithTitle:@"Copy bio" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
         UIPasteboard.generalPasteboard.string = self.viewModel.bio;

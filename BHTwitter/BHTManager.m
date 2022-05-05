@@ -100,6 +100,10 @@
 }
 + (void)showSaveVC:(NSURL *)url {
     UIActivityViewController *acVC = [[UIActivityViewController alloc] initWithActivityItems:@[url] applicationActivities:nil];
+    if (is_iPad()) {
+        acVC.popoverPresentationController.sourceView = topMostController().view;
+        acVC.popoverPresentationController.sourceRect = CGRectMake(topMostController().view.bounds.size.width / 2.0, topMostController().view.bounds.size.height / 2.0, 1.0, 1.0);
+    }
     [topMostController() presentViewController:acVC animated:true completion:nil];
 }
 
