@@ -1,8 +1,0 @@
-//
-// Prefix header for all source files of the 'BHTwitter' target in the 'BHTwitter' project
-//
-
-#ifdef __OBJC__
-    #import <Foundation/Foundation.h>
-    #import "/opt/theos/Prefix.pch"  //path/to/theos/Prefix.pch
-#endif
