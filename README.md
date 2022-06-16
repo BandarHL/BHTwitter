@@ -15,4 +15,4 @@
 
 | | | |
 |:-------------------------:|:-------------------------:|:-------------------------:|
-|<img width="1604" alt="screen shot 2017-08-07 at 12 18 15 pm" src="ss1.png"> |  <img width="1604" alt="screen shot 2017-08-07 at 12 18 15 pm" src="ss2.png">|<img width="1604" alt="screen shot 2017-08-07 at 12 18 15 pm" src="ss3.png">|
+|<img width="1604" src="https://github.com/dayanch96/BHTwitterLocalized/blob/master/ss1.PNG"> |  <img width="1604" src="https://github.com/dayanch96/BHTwitterLocalized/blob/master/ss2.PNG">|<img width="1604" src="https://github.com/dayanch96/BHTwitterLocalized/blob/master/ss3.PNG">|
