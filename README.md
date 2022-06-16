@@ -15,5 +15,4 @@
 
 | | | |
 |:-------------------------:|:-------------------------:|:-------------------------:|
-|<img width="1604" alt="screen shot 2017-08-07 at 12 18 15 pm" src="1.png"> |  <img width="1604" alt="screen shot 2017-08-07 at 12 18 15 pm" src="2.png">|<img width="1604" alt="screen shot 2017-08-07 at 12 18 15 pm" src="3.png">|
-|<img width="1604" alt="screen shot 2017-08-07 at 12 18 15 pm" src="4.png">  |
+|<img width="1604" alt="screen shot 2017-08-07 at 12 18 15 pm" src="ss1.png"> |  <img width="1604" alt="screen shot 2017-08-07 at 12 18 15 pm" src="ss2.png">|<img width="1604" alt="screen shot 2017-08-07 at 12 18 15 pm" src="ss3.png">|
