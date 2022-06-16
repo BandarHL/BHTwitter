@@ -5,7 +5,7 @@
 • For sideloaded IPA
 1. Download BHRu.dylib and BHRu.bundle
 2. Open BHRu.bundle and add your localization project
-3. Inject BHRu.dylib and BHRu.bundle into IPA using https://github.com/Al4ise/Azule
+3. Inject BHRu.dylib and BHRu.bundle into IPA using ![Alt text](https://github.com/Al4ise/Azule "Azule") 
 
 • For Jailbroken devices
 1. Download .deb file and BHRu.bundle
