@@ -1,28 +1,17 @@
-# BHTwitter
+# BHTwitterLocalized
 - Awesome tweak for Twitter
 
-# Features
-- Download Videos (even if account private).
-- Replay later feature.
-- Custom Tab Bar
-- Video zoom feature.
-- No history feature.
-- Hide topics tweet feature.
-- Disable video layer caption.
-- Padlock.
-- Font changer.
-- Disable double tap to like.
-- Enable the new UI of DM search.
-- Auto load photos in highest quality feature.
-- Undo tweet feature.
-- Reader mode feature.
-- Disable new tweet style (A.K.A edge to edge tweet)
-- Enable voice tweet and voice message in DM.
-- Hide promoted tweet from the timeline.
-- Confirm alert when hit the tweet button.
-- Confirm alert when hit like button.
-- Confirm alert when hit follow button.
-- FLEX for debugging.
+# How to use
+• For sideloaded IPA
+1. Download BHRu.dylib and BHRu.bundle
+2. Open BHRu.bundle and add your localization project
+3. Inject BHRu.dylib and BHRu.bundle into IPA using https://github.com/Al4ise/Azule
+
+• For Jailbroken devices
+1. Download .deb file and BHRu.bundle
+2. Open BHRu.bundle and add your localization project
+3. Put your edited BHRu.bundle in deb file's \Library\Application Support\ directory
+
 
 | | | |
 |:-------------------------:|:-------------------------:|:-------------------------:|
