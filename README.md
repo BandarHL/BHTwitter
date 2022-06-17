@@ -10,7 +10,7 @@
 • For Jailbroken devices
 1. Download .deb file and BHRu.bundle
 2. Open BHRu.bundle and add your localization project
-3. Put your edited BHRu.bundle in deb file's**_ \Library\Application Support\ _**directory
+3. Put your edited BHRu.bundle in deb file's **_Library -> Application Support_** directory
 
 
 | | | |
