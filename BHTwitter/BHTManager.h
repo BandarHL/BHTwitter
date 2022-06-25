@@ -46,5 +46,6 @@
 + (BOOL)disableSensitiveTweetWarnings;
 + (BOOL)TwitterCircle;
 + (BOOL)CopyProfileInfo;
++ (BOOL)tweetToImage;
 @end
 

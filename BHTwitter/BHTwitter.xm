@@ -64,6 +64,9 @@
         [image setContentMode:UIViewContentModeCenter];
         [self.window addSubview:image];
     }
+    if ([BHTManager FLEX]) {
+        [[FLEXManager sharedManager] showExplorer];
+    }
 }
 %end
 
@@ -313,11 +316,42 @@
 }
 %end
 
+// MARK: Save tweet as image
+%hook T1StatusInlineShareButton
+- (void)didLongPressActionButton:(UILongPressGestureRecognizer *)gestureRecognizer {
+    if ([BHTManager tweetToImage]) {
+        if (gestureRecognizer.state == UIGestureRecognizerStateBegan) {
+            T1StatusInlineActionsView *actionsView = self.delegate;
+            UIView *tweetView;
+            
+            // it supposed the T1StatusInlineShareButton class only exist in Tweet view, but just to make sure we are working in tweet. :)
+            if ([actionsView.superview isKindOfClass:%c(T1StandardStatusView)]) { // normal tweet in the time line
+                tweetView = actionsView.superview;
+            } else if ([actionsView.superview isKindOfClass:%c(T1TweetDetailsFocalStatusView)]) { // Focus tweet
+                tweetView = actionsView.superview;
+            } else {
+                return;
+            }
+            
+            UIImage *tweetImage = imageFromView(tweetView);
+            UIActivityViewController *acVC = [[UIActivityViewController alloc] initWithActivityItems:@[tweetImage] applicationActivities:nil];
+            if (is_iPad()) {
+                acVC.popoverPresentationController.sourceView = self;
+                acVC.popoverPresentationController.sourceRect = self.frame;
+            }
+            [topMostController() presentViewController:acVC animated:true completion:nil];
+            return;
+        }
+    }
+    return %orig;
+}
+%end
+
 // MARK: Timeline download
 // THIS SOLUTION WAS TAKEN FROM Translomatic AFTER DISASSEMBLING THE DYLIB
 // SO THANKS: @foxfortmobile
 %hook T1StatusInlineActionsView
-+ (NSArray *)_t1_inlineActionViewClassesForViewModel:(id)arg1 options:(unsigned long long)arg2 displayType:(unsigned long long)arg3 account:(id)arg4 {
++ (NSArray *)_t1_inlineActionViewClassesForViewModel:(id)arg1 options:(NSUInteger)arg2 displayType:(NSUInteger)arg3 account:(id)arg4 {
     NSArray *_orig = %orig;
     NSMutableArray *newOrig = [_orig mutableCopy];
     
@@ -329,8 +363,6 @@
 }
 %end
 
-// MARK: always Open Safari
-// thanks: @CrazyMind90
 %hook TFSTwitterEntityURL
 - (NSString *)url {
     // https://github.com/haoict/twitter-no-ads/blob/master/Tweak.xm#L195
@@ -389,9 +421,9 @@
 }
 - (id)_t1_loadHighQualityActionItemWithTitle:(id)arg1 forImageDisplayView:(id)arg2 highestQuality:(_Bool)arg3 {
     if ([BHTManager autoHighestLoad]) {
-        return %orig(arg1, arg2, true);
+        arg3 = true;
     }
-    return %orig(arg1, arg2, arg3);
+    return %orig;
 }
 %end
 
@@ -420,15 +452,6 @@
 %end
 
 // MARK: Voice feature
-%hook TFNTwitterComposition
-- (BOOL)isReply {
-    if ([BHTManager voice_in_replay]) {
-        return false;
-    }
-    return %orig;
-}
-%end
-
 %hook TFSTwitterAPICommandAccountStateProvider
 - (_Bool)allowPromotedContent {
     if ([BHTManager HidePromoted]) {
@@ -538,9 +561,9 @@
 }
 %end
 %hook TFNTwitterComposition
-- (BOOL)hasVoiceRecordingAttachment {
-    if ([BHTManager VoiceFeature]) {
-        return true;
+- (BOOL)isReply {
+    if ([BHTManager voice_in_replay]) {
+        return false;
     }
     return %orig;
 }
@@ -578,6 +601,19 @@
 
 // MARK: Tweet confirm
 %hook T1TweetComposeViewController
+- (void)_t1_didTapSendButton:(UIButton *)tweetButton {
+    if ([BHTManager TweetConfirm]) {
+        [FLEXAlert makeAlert:^(FLEXAlert *make) {
+            make.message(@"Are you sure?");
+            make.button(@"Yes").handler(^(NSArray<NSString *> *strings) {
+                %orig;
+            });
+            make.button(@"No").cancelStyle();
+        } showFrom:self];
+    } else {
+        return %orig;
+    }
+}
 - (void)_t1_handleTweet {
     if ([BHTManager TweetConfirm]) {
         [FLEXAlert makeAlert:^(FLEXAlert *make) {
@@ -688,7 +724,7 @@
 
 // MARK: BHTwitter settings
 %hook TFNActionItem
-%new + (id)actionItemWithTitle:(NSString *)arg1 systemImageName:(NSString *)arg2 action:(void (^)(void))arg3 {
+%new + (instancetype)actionItemWithTitle:(NSString *)arg1 systemImageName:(NSString *)arg2 action:(void (^)(void))arg3 {
     TFNActionItem *_self = [%c(TFNActionItem) actionItemWithTitle:arg1 imageName:nil action:arg3];
      [_self setValue:[UIImage systemImageNamed:arg2] forKey:@"_image"];
     return _self;
@@ -696,7 +732,7 @@
 %end
 
 %hook TFNSettingsNavigationItem
-%new - (id)initWithTitle:(NSString *)arg1 detail:(NSString *)arg2 systemIconName:(NSString *)arg3 controllerFactory:(UIViewController* (^)(void))arg4 {
+%new - (instancetype)initWithTitle:(NSString *)arg1 detail:(NSString *)arg2 systemIconName:(NSString *)arg3 controllerFactory:(UIViewController* (^)(void))arg4 {
     TFNSettingsNavigationItem *_self = [[%c(TFNSettingsNavigationItem) alloc] initWithTitle:arg1 detail:arg2 iconName:arg3 controllerFactory:arg4];
     [_self setValue:[UIImage systemImageNamed:arg3] forKey:@"_icon"];
     return _self;

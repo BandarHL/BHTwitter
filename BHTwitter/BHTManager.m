@@ -185,6 +185,9 @@
 + (BOOL)CopyProfileInfo {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"CopyProfileInfo"];
 }
++ (BOOL)tweetToImage {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"TweetToImage"];
+}
 + (UIViewController *)BHTSettings {
     HBPreferences *pref = [[HBPreferences alloc] initTableWithTableStyle:UITableViewStyleInsetGrouped title:@"BHTwitter" SeparatorStyle:UITableViewCellSeparatorStyleSingleLine];
     HBSection *mainSection = [HBSection sectionWithTitle:@"BHTwitter Preferences" footer:nil];
@@ -378,6 +381,14 @@
         }
     }];
     
+    HBSwitchCell *tweetToImage = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Save tweet as image" DetailTitle:@"You can export tweets as image, by long pressing on the Tweet Share button" switchKey:@"TweetToImage" withBlock:^(UISwitch *weakSender) {
+        if (weakSender.isOn) {
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"TweetToImage"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"TweetToImage"];
+        }
+    }];
+    
     HBViewControllerCell *fontsPicker = [[HBViewControllerCell alloc] initCellWithTitle:@"Font" detail:[[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"] action:^UIViewController *{
         UIFontPickerViewControllerConfiguration *configuration = [[UIFontPickerViewControllerConfiguration alloc] init];
         [configuration setFilteredTraits:UIFontDescriptorClassMask];
@@ -439,7 +450,7 @@
     HBGithubCell *sourceCode = [[HBGithubCell alloc] initGithubCellWithTitle:@"BHTwitter" detailTitle:@"Code source of BHTwitter" GithubURL:@"https://github.com/BandarHL/BHTwitter/"];
     
     
-    [mainSection addCells:@[download, hide_ads, hide_topics, disable_VODCaptions, direct_save, voice, voice_in_replay, UndoTweet, ReaderMode, ReplyLater, VideoZoom, NoHistory, BioTranslate, like_confirm, tweet_confirm, follow_confirm, padlock, DmModularSearch, autoHighestLoad, disableSensitiveTweetWarnings, copyProfileInfo, trustedFriends]];
+    [mainSection addCells:@[download, hide_ads, hide_topics, disable_VODCaptions, direct_save, voice, voice_in_replay, UndoTweet, ReaderMode, ReplyLater, VideoZoom, NoHistory, BioTranslate, like_confirm, tweet_confirm, follow_confirm, padlock, DmModularSearch, autoHighestLoad, disableSensitiveTweetWarnings, copyProfileInfo, trustedFriends, tweetToImage]];
     
     [layoutSection addCells:@[oldTweetStyle, dwbLayout, font]];
     if ([BHTManager changeFont]) {

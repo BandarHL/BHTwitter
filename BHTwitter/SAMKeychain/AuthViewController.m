@@ -18,7 +18,7 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     LAContext *context = [[LAContext alloc] init];
-    if ([context canEvaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics error:nil]) {
+    if ([self canEvaluateBiometrics]) {
         [context evaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics localizedReason:@"Touch ID or Face ID is required to use Twitter" reply:^(BOOL success, NSError * _Nullable error) {
             if (success) {
                 [[keychain shared] saveDictionary:@{@"isAuthenticated": @YES}];
@@ -47,4 +47,8 @@
     }
 }
 
+- (BOOL)canEvaluateBiometrics {
+    NSMutableDictionary *infoPlistDict = [NSMutableDictionary dictionaryWithDictionary:[[NSBundle mainBundle] infoDictionary]];
+    return [infoPlistDict objectForKey:@"NSFaceIDUsageDescription"] != nil ? true : false;
+}
 @end

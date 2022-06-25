@@ -67,36 +67,38 @@
 @end
 
 @interface TAEStandardFontGroup : NSObject
-+ (id)sharedFontGroup;
++ (instancetype)sharedFontGroup;
 - (UIFont *)fixedLargeBoldFont;
 @end
 
 @interface TFNActionItem : NSObject
-+ (id)cancelActionItemWithAction:(void (^)(void))arg1;
-+ (id)cancelActionItemWithTitle:(NSString *)arg1;
-+ (id)actionItemWithTitle:(NSString *)arg1 action:(void (^)(void))arg2;
-+ (id)actionItemWithTitle:(NSString *)arg1 imageName:(NSString *)arg2 action:(void (^)(void))arg3;
-+ (id)actionItemWithTitle:(NSString *)arg1 subtitle:(NSString *)arg2 imageName:(NSString *)arg3 action:(void (^) (void))arg4;
-+ (id)actionItemWithTitle:(NSString *)arg1 systemImageName:(NSString *)arg2 action:(void (^)(void))arg3;
++ (instancetype)cancelActionItemWithAction:(void (^)(void))arg1;
++ (instancetype)cancelActionItemWithTitle:(NSString *)arg1;
++ (instancetype)actionItemWithTitle:(NSString *)arg1 action:(void (^)(void))arg2;
++ (instancetype)actionItemWithTitle:(NSString *)arg1 imageName:(NSString *)arg2 action:(void (^)(void))arg3;
++ (instancetype)actionItemWithTitle:(NSString *)arg1 subtitle:(NSString *)arg2 imageName:(NSString *)arg3 action:(void (^) (void))arg4;
++ (instancetype)actionItemWithTitle:(NSString *)arg1 systemImageName:(NSString *)arg2 action:(void (^)(void))arg3;
 @end
 
 @interface TFNMenuSheetCenteredIconItem : NSObject
-- (id)initWithIconImageName:(id)imageName height:(CGFloat)arg1 fillColor:(id)Color;
+- (instancetype)initWithIconImageName:(id)imageName height:(CGFloat)arg1 fillColor:(id)Color;
 @end
 
 @interface TFNAttributedTextModel : NSObject
-- (id)initWithAttributedString:(NSMutableAttributedString *)arg;
+- (instancetype)initWithAttributedString:(NSMutableAttributedString *)arg;
 @end
 
 @interface TFNActiveTextItem : NSObject
-- (id)initWithTextModel:(id)arg activeRanges:(id)arg1;
+- (instancetype)initWithTextModel:(id)arg activeRanges:(id)arg1;
 @end
 
 @interface TFNMenuSheetViewController : TFNItemsDataViewController
 @property(nonatomic, assign, readwrite) BOOL shouldPresentAsMenu;
-- (id)initWithTitle:(id)arg1 actionItems:(id)arg2;
-- (id)initWithMessage:(id)arg1 actionItems:(id)arg2;
-- (id)initWithActionItems:(id)arg1;
+@property(retain, nonatomic) UIView *sourceView;
+- (instancetype)initWithTitle:(NSString *)sheetTitle actionItems:(NSArray *)actionItems;
+- (instancetype)initWithMessage:(NSString *)sheetMessage actionItems:(NSArray *)actionItems;
+- (instancetype)initWithActionItems:(NSArray *)actionItems;
+- (instancetype)initWithTitle:(NSString *)sheetTitle titleStyle:(long long)sheetTitleStyle message:(NSString *)sheetMessage messageIconName:(id)sheetMessageIconName actionItemSections:(NSArray *)actionItemSections;
 - (void)tfnPresentedCustomPresentFromViewController:(id)arg1 animated:(BOOL)arg2 completion:(void (^) (void))arg3;
 @end
 
@@ -105,18 +107,10 @@
 @property (nonatomic, strong) NSArray *sections;
 @end
 
-@interface TFSTwitterEntityURL : NSObject
-@property(readonly, copy, nonatomic) NSString *expandedURL;
-@end
-
-@interface T1SafariViewController : UIViewController
-@property (readonly, nonatomic) NSURL *rootURL;
-@end
-
 @interface TFNSettingsNavigationItem : NSObject
-- (id)initWithTitle:(NSString *)arg1 detail:(NSString *)arg2 iconName:(NSString *)arg3 controllerFactory:(UIViewController* (^)(void))arg4;
-- (id)initWithTitle:(NSString *)arg1 detail:(NSString *)arg2 systemIconName:(NSString *)arg3 controllerFactory:(UIViewController* (^)(void))arg4;
-- (id)initWithTitle:(NSString *)arg1 detail:(NSString *)arg2 controllerFactory:(UIViewController* (^)(void))arg4;
+- (instancetype)initWithTitle:(NSString *)arg1 detail:(NSString *)arg2 iconName:(NSString *)arg3 controllerFactory:(UIViewController* (^)(void))arg4;
+- (instancetype)initWithTitle:(NSString *)arg1 detail:(NSString *)arg2 systemIconName:(NSString *)arg3 controllerFactory:(UIViewController* (^)(void))arg4;
+- (instancetype)initWithTitle:(NSString *)arg1 detail:(NSString *)arg2 controllerFactory:(UIViewController* (^)(void))arg4;
 @end
 
 @interface TFNTextCell: UITableViewCell
@@ -152,14 +146,11 @@
 @property(retain, nonatomic) T1ProfileUserViewModel *viewModel;
 @end
 
-@interface T1StatusInlineActionButton : UIView
-{
-    TFNAnimatableButton *_modernButton;
-    UIButton *_button;
-}
-@property (nonatomic, assign, readwrite) UIEdgeInsets touchInsets;
-@property(readonly, nonatomic) TFNLegacyButtonAnimator *animator;
-- (id)initWithOptions:(unsigned long long)arg1 overrideSize:(id)arg2 account:(id)arg3;
+@protocol T1StatusInlineActionButtonDelegate <NSObject>
+@end
+
+@interface T1StatusInlineShareButton : UIView
+@property(nonatomic) __weak id <T1StatusInlineActionButtonDelegate> delegate;
 @end
 
 @interface TFSTwitterEntityMediaVideoVariant : NSObject
@@ -185,15 +176,15 @@
 @property(nonatomic, readonly) TFSTwitterEntitySet *entities;
 @end
 
-@interface T1SlideshowStatusView: NSObject
-@end
-
-@interface T1StatusInlineActionsView : UIView
+@interface T1StatusInlineActionsView : UIView <T1StatusInlineActionButtonDelegate>
 @property(readonly, nonatomic) id <T1StatusViewModel> viewModel;
 @end
 
 @interface T1StandardStatusView : UIView
 @property(readonly, nonatomic) UIView *visibleInlineActionsView;
+@end
+
+@interface T1TweetDetailsFocalStatusView : UIView
 @end
 
 @interface TFNButtonBarView : UIView
@@ -252,7 +243,7 @@
 - (_Bool)accessibilityActivate;
 - (void)dealloc;
 - (void)layoutSubviews;
-- (id)initWithFrame:(struct CGRect)arg1;
+- (instancetype)initWithFrame:(struct CGRect)arg1;
 - (void)DownloadHandler;
 @end
 
@@ -280,20 +271,34 @@
 @property(readonly, nonatomic) NSString *mediaScribeContentID;
 @end
 
+@interface TFSTwitterEntityURL : NSObject
+@property(readonly, copy, nonatomic) NSString *expandedURL;
+@end
+
 @interface T1StatusBodyTextView : UIView
 @property(readonly, nonatomic) id viewModel; // @synthesize viewModel=_viewModel;
 @end
 
-static BOOL BH_canOpenURL(NSURL *url) {
-    if ([[NSUserDefaults standardUserDefaults] boolForKey:@"openInBrowser"]) {
-        if ([[UIApplication sharedApplication] canOpenURL:url]) {
-            [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
-            return true;
-        }
-        return false;
-    }
-    return false;
+@interface TAETwitterColorPaletteSettingInfo : NSObject
+@property(readonly, nonatomic) _Bool isDark;
+@end
+
+@interface TAEColorSettings : NSObject
+@property(retain, nonatomic) TAETwitterColorPaletteSettingInfo *currentColorPalette;
++ (instancetype)sharedSettings;
+@end
+
+static UIImage *imageFromView(UIView *view) {
+    TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];
+    bool opaque = [colorSettings.currentColorPalette isDark] ? true : false;
+    UIGraphicsBeginImageContextWithOptions(view.layer.frame.size, opaque, 0.0);
+    [view.layer renderInContext:UIGraphicsGetCurrentContext()];
+    UIImage *img = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    
+    return img;
 }
+
 static BOOL isDeviceLanguageRTL() {
   return ([NSLocale characterDirectionForLanguage:[[NSLocale preferredLanguages] objectAtIndex:0]] == NSLocaleLanguageDirectionRightToLeft);
 }
