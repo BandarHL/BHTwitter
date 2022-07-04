@@ -504,6 +504,7 @@
 		50D73502252CBFC6007838C7 /* SceneKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 50D73501252CBFC6007838C7 /* SceneKit.framework */; };
 		50D73504252CBFD0007838C7 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 50D73503252CBFCB007838C7 /* libsqlite3.tbd */; };
 		50E7ABEF24F5A8F700A8619D /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 50E7ABEE24F5A8F600A8619D /* WebKit.framework */; };
+		50EE4D4B286F7F70007DE117 /* BHColorThemeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50EE4D4A286F7F70007DE117 /* BHColorThemeViewController.swift */; };
 		50FCAB7E27268E1600265B5D /* HBlinkCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 50FCAB7C27268E1600265B5D /* HBlinkCell.h */; };
 		50FCAB7F27268E1600265B5D /* HBlinkCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 50FCAB7D27268E1600265B5D /* HBlinkCell.m */; };
 /* End PBXBuildFile section */
@@ -1019,6 +1020,7 @@
 		50D73501252CBFC6007838C7 /* SceneKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SceneKit.framework; path = System/Library/Frameworks/SceneKit.framework; sourceTree = SDKROOT; };
 		50D73503252CBFCB007838C7 /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 		50E7ABEE24F5A8F600A8619D /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
+		50EE4D4A286F7F70007DE117 /* BHColorThemeViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BHColorThemeViewController.swift; sourceTree = "<group>"; };
 		50FCAB7C27268E1600265B5D /* HBlinkCell.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HBlinkCell.h; sourceTree = "<group>"; };
 		50FCAB7D27268E1600265B5D /* HBlinkCell.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = HBlinkCell.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -1123,6 +1125,7 @@
 				505C0EBD2801ED020028D1C9 /* BHDownloadInlineButton.m */,
 				50C15C9B271400DA00E8B5E8 /* BHTwitter+UIImage.h */,
 				50C15C9C271401CB00E8B5E8 /* BHTwitter+NSURL.h */,
+				50EE4D49286F7F56007DE117 /* ThemeColor */,
 				5061F3BE2806132400F3D5D3 /* CustomTabBar */,
 				503FA66D2753F04A00BBB92A /* Classes */,
 				50C15CA827178C0D00E8B5E8 /* HBPreferences */,
@@ -2009,6 +2012,14 @@
 			path = HBPreferences;
 			sourceTree = "<group>";
 		};
+		50EE4D49286F7F56007DE117 /* ThemeColor */ = {
+			isa = PBXGroup;
+			children = (
+				50EE4D4A286F7F70007DE117 /* BHColorThemeViewController.swift */,
+			);
+			path = ThemeColor;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -2578,6 +2589,7 @@
 				503FA9252753F04C00BBB92A /* FLEXKeychain.m in Sources */,
 				503FA96C2753F04D00BBB92A /* FHSView.m in Sources */,
 				503FA9392753F04C00BBB92A /* FLEXAddressExplorerCoordinator.m in Sources */,
+				50EE4D4B286F7F70007DE117 /* BHColorThemeViewController.swift in Sources */,
 				503FA8412753F04B00BBB92A /* FLEXKeyValueTableViewCell.m in Sources */,
 				503FA97C2753F04D00BBB92A /* FLEXUtility.m in Sources */,
 				503FA8722753F04B00BBB92A /* FLEXShortcut.m in Sources */,

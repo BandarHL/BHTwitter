@@ -80,7 +80,6 @@ class CustomTabBarViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Custom Tab Bar"
         view.addSubview(tableView)
         NSLayoutConstraint.activate([
             tableView.topAnchor.constraint(equalTo: view.topAnchor),

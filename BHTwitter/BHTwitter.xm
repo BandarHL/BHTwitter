@@ -2,6 +2,7 @@
 #import "SAMKeychain/AuthViewController.h"
 #import "Colours.h"
 #import "BHTManager.h"
+#import "BHTwitter-Swift.h"
 
 %config(generator=internal)
 
@@ -269,14 +270,12 @@
 }
 %new - (void)DownloadHandler {
     NSAttributedString *AttString = [[NSAttributedString alloc] initWithString:@"\nSelect video quality you want to download" attributes:@{
-        NSFontAttributeName: [[%c(TAEStandardFontGroup) sharedFontGroup] fixedLargeBoldFont],
+        NSFontAttributeName: [[%c(TAEStandardFontGroup) sharedFontGroup] headline2BoldFont],
         NSForegroundColorAttributeName: UIColor.labelColor
     }];
     TFNActiveTextItem *title = [[%c(TFNActiveTextItem) alloc] initWithTextModel:[[%c(TFNAttributedTextModel) alloc] initWithAttributedString:AttString] activeRanges:nil];
-    TFNMenuSheetCenteredIconItem *icon = [[%c(TFNMenuSheetCenteredIconItem) alloc] initWithIconImageName:@"2728" height:55 fillColor:UIColor.clearColor];
     
     NSMutableArray *actions = [[NSMutableArray alloc] init];
-    [actions addObject:icon];
     [actions addObject:title];
     
     T1PlayerMediaEntitySessionProducible *session = self.inlineMediaView.viewModel.playerSessionProducer.sessionProducible;
@@ -316,24 +315,68 @@
 }
 %end
 
-// MARK: Save tweet as image
+// MARK: Color theme
+%hook TFNPagingViewController
+- (void)viewDidAppear:(_Bool)animated {
+    %orig(animated);
+    
+    static dispatch_once_t once;
+    dispatch_once(&once, ^ {
+        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+            BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
+        }
+    });
+}
+%end
+
+%hook T1AppSplitViewController
+- (void)viewDidAppear:(_Bool)animated {
+    %orig(animated);
+    
+    static dispatch_once_t once;
+    dispatch_once(&once, ^ {
+        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+            BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
+        }
+    });
+}
+%end
+
+%hook NSUserDefaults
+- (void)setObject:(id)value forKey:(NSString *)defaultName {
+    if ([defaultName isEqualToString:@"T1ColorSettingsPrimaryColorOptionKey"]) {
+        id selectedColor = [[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"];
+        if (selectedColor != nil) {
+            if ([value isEqual:selectedColor]) {
+                return %orig;
+            } else {
+                return;
+            }
+        }
+        return %orig;
+    }
+    return %orig;
+}
+%end
+
+// MARK: Save tweet as an image
 %hook T1StatusInlineShareButton
 - (void)didLongPressActionButton:(UILongPressGestureRecognizer *)gestureRecognizer {
     if ([BHTManager tweetToImage]) {
         if (gestureRecognizer.state == UIGestureRecognizerStateBegan) {
             T1StatusInlineActionsView *actionsView = self.delegate;
-            UIView *tweetView;
+            T1StatusCell *tweetView;
             
             // it supposed the T1StatusInlineShareButton class only exist in Tweet view, but just to make sure we are working in tweet. :)
             if ([actionsView.superview isKindOfClass:%c(T1StandardStatusView)]) { // normal tweet in the time line
-                tweetView = actionsView.superview;
+                tweetView = [(T1StandardStatusView *)actionsView.superview eventHandler];
             } else if ([actionsView.superview isKindOfClass:%c(T1TweetDetailsFocalStatusView)]) { // Focus tweet
-                tweetView = actionsView.superview;
+                tweetView = [(T1TweetDetailsFocalStatusView *)actionsView.superview eventHandler];
             } else {
-                return;
+                return %orig;
             }
             
-            UIImage *tweetImage = imageFromView(tweetView);
+            UIImage *tweetImage = BH_imageFromView(tweetView);
             UIActivityViewController *acVC = [[UIActivityViewController alloc] initWithActivityItems:@[tweetImage] applicationActivities:nil];
             if (is_iPad()) {
                 acVC.popoverPresentationController.sourceView = self;
@@ -370,6 +413,22 @@
 }
 %end
 
+// MARK: Disable RTL
+%hook NSParagraphStyle
++ (NSWritingDirection)defaultWritingDirectionForLanguage:(id)lang {
+    if ([BHTManager disableRTL]) {
+        return NSWritingDirectionLeftToRight;
+    }
+    return %orig;
+}
++ (NSWritingDirection)_defaultWritingDirection {
+    if ([BHTManager disableRTL]) {
+        return NSWritingDirectionLeftToRight;
+    }
+    return %orig;
+}
+%end
+
 // MARK: Bio Translate
 %hook TFNTwitterCanonicalUser
 - (_Bool)isProfileBioTranslatable {
@@ -403,6 +462,27 @@
 }
 %end
 
+// MARK: Voice, TwitterCircle, SensitiveTweetWarnings, autoHighestLoad, VideoZoom, ReplyLater, VODCaptions, disableSpacesBar feature
+%hook TPSTwitterFeatureSwitches
+// Twitter save all the features and keys in side JSON file in bundle of application fs_embedded_defaults_production.json, and use it in TFNTwitterAccount class but with DM voice maybe developers forget to add boolean variable in the class, so i had to change it from the file.
+// also, you can find every key for every feature i used in this tweak, i can remove all the codes below and find every key for it but I'm lazy to do that, :)
+- (BOOL)boolForKey:(NSString *)key {
+    if ([BHTManager VoiceFeature] && [key isEqualToString:@"dm_voice_creation_enabled"]) {
+        return true;
+    }
+    return %orig;
+}
+%end
+
+%hook T1HomeTimelineItemsViewController
+- (void)_t1_initializeFleets {
+    if ([BHTManager hideSpacesBar]) {
+        return;
+    }
+    return %orig;
+}
+%end
+
 %hook TFNTwitterMediaUploadConfiguration
 - (_Bool)photoUploadHighQualityImagesSettingIsVisible {
     if ([BHTManager autoHighestLoad]) {
@@ -423,7 +503,7 @@
     if ([BHTManager autoHighestLoad]) {
         arg3 = true;
     }
-    return %orig;
+    return %orig(arg1, arg2, arg3);
 }
 %end
 
@@ -451,7 +531,6 @@
 }
 %end
 
-// MARK: Voice feature
 %hook TFSTwitterAPICommandAccountStateProvider
 - (_Bool)allowPromotedContent {
     if ([BHTManager HidePromoted]) {
@@ -538,15 +617,6 @@
     }
     return %orig;
 }
-- (bool)isVODInlineAudioToggleEnabled {
-    return true;
-}
-- (_Bool)isConversationThreadingVoiceOverSupportEnabled {
-    if ([BHTManager VoiceFeature]) {
-        return true;
-    }
-    return %orig;
-}
 - (_Bool)isDMVoiceRenderingEnabled {
     if ([BHTManager VoiceFeature]) {
         return true;
@@ -566,21 +636,6 @@
         return false;
     }
     return %orig;
-}
-%end
-
-%hook T1MediaAutoplaySettings
-- (_Bool)voiceOverEnabled {
-    if ([BHTManager VoiceFeature]) {
-        return true;
-    }
-    return %orig;
-}
-- (void)setVoiceOverEnabled:(_Bool)arg1 {
-    if ([BHTManager VoiceFeature]) {
-        arg1 = true;
-    }
-    return %orig(arg1);
 }
 %end
 
@@ -745,7 +800,7 @@
     if ([self.sections count] == 1) {
         TFNItemsDataViewControllerBackingStore *DataViewControllerBackingStore = self.backingStore;
         TFNSettingsNavigationItem *bhtwitter = [[%c(TFNSettingsNavigationItem) alloc] initWithTitle:@"Settings" detail:@"BHTwitter preferences" systemIconName:@"gear" controllerFactory:^UIViewController *{
-            return [BHTManager BHTSettings];
+            return [BHTManager BHTSettingsWithAccount:self.account];
         }];
         [DataViewControllerBackingStore insertSection:0 atIndex:0];
         [DataViewControllerBackingStore insertItem:bhtwitter atIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
@@ -786,7 +841,7 @@
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     if ([indexPath section]== 0 && [indexPath row]== 1) {
-        [self.navigationController pushViewController:[BHTManager BHTSettings] animated:true];
+        [self.navigationController pushViewController:[BHTManager BHTSettingsWithAccount:self.account] animated:true];
     } else {
         return %orig;
     }
@@ -800,916 +855,388 @@
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Custom fonts" style:UIBarButtonItemStylePlain target:self action:@selector(customFontsHandler)];
 }
 %new - (void)customFontsHandler {
-    NSAttributedString *AttString = [[NSAttributedString alloc] initWithString:@"\nSelect your custom font" attributes:@{
-        NSFontAttributeName: [[%c(TAEStandardFontGroup) sharedFontGroup] fixedLargeBoldFont],
-        NSForegroundColorAttributeName: UIColor.labelColor
-    }];
-    TFNActiveTextItem *title = [[%c(TFNActiveTextItem) alloc] initWithTextModel:[[%c(TFNAttributedTextModel) alloc] initWithAttributedString:AttString] activeRanges:nil];
-    TFNMenuSheetCenteredIconItem *icon = [[%c(TFNMenuSheetCenteredIconItem) alloc] initWithIconImageName:@"2728" height:55 fillColor:UIColor.clearColor];
-    
-    NSMutableArray *actions = [[NSMutableArray alloc] init];
-    [actions addObject:icon];
-    [actions addObject:title];
-    
-    NSPropertyListFormat plistFormat;
-    NSMutableDictionary *plistDictionary = [NSPropertyListSerialization propertyListWithData:[NSData dataWithContentsOfURL:[NSURL fileURLWithPath:@"/var/mobile/Library/Fonts/AddedFontCache.plist"]] options:NSPropertyListImmutable format:&plistFormat error:nil];
-    [plistDictionary enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
-        @try {
-            NSString *fontName = ((NSMutableArray *)[[plistDictionary valueForKey:key] valueForKey:@"psNames"]).firstObject;
-            TFNActionItem *fontAction = [%c(TFNActionItem) actionItemWithTitle:fontName action:^{
-                if (self.configuration.includeFaces) {
-                    [self setSelectedFontDescriptor:[UIFontDescriptor fontDescriptorWithFontAttributes:@{
-                        UIFontDescriptorNameAttribute: fontName
-                    }]];
-                } else {
-                    [self setSelectedFontDescriptor:[UIFontDescriptor fontDescriptorWithFontAttributes:@{
-                        UIFontDescriptorFamilyAttribute: fontName
-                    }]];
-                }
-                [self.delegate fontPickerViewControllerDidPickFont:self];
-            }];
-            [actions addObject:fontAction];
-        } @catch (NSException *exception) {
-            NSLog(@"Unable to find installed fonts /n reason: %@", exception.reason);
-        }
-    }];
-    
-    TFNMenuSheetViewController *alert = [[%c(TFNMenuSheetViewController) alloc] initWithActionItems:[NSArray arrayWithArray:actions]];
-    [alert tfnPresentedCustomPresentFromViewController:self animated:YES completion:nil];
+    if ([[NSFileManager defaultManager] fileExistsAtPath:@"/var/mobile/Library/Fonts/AddedFontCache.plist"]) {
+        NSAttributedString *AttString = [[NSAttributedString alloc] initWithString:@"\nSelect your custom font" attributes:@{
+            NSFontAttributeName: [[%c(TAEStandardFontGroup) sharedFontGroup] headline2BoldFont],
+            NSForegroundColorAttributeName: UIColor.labelColor
+        }];
+        TFNActiveTextItem *title = [[%c(TFNActiveTextItem) alloc] initWithTextModel:[[%c(TFNAttributedTextModel) alloc] initWithAttributedString:AttString] activeRanges:nil];
+        
+        NSMutableArray *actions = [[NSMutableArray alloc] init];
+        [actions addObject:title];
+        
+        NSPropertyListFormat plistFormat;
+        NSMutableDictionary *plistDictionary = [NSPropertyListSerialization propertyListWithData:[NSData dataWithContentsOfURL:[NSURL fileURLWithPath:@"/var/mobile/Library/Fonts/AddedFontCache.plist"]] options:NSPropertyListImmutable format:&plistFormat error:nil];
+        [plistDictionary enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
+            @try {
+                NSString *fontName = ((NSMutableArray *)[[plistDictionary valueForKey:key] valueForKey:@"psNames"]).firstObject;
+                TFNActionItem *fontAction = [%c(TFNActionItem) actionItemWithTitle:fontName action:^{
+                    if (self.configuration.includeFaces) {
+                        [self setSelectedFontDescriptor:[UIFontDescriptor fontDescriptorWithFontAttributes:@{
+                            UIFontDescriptorNameAttribute: fontName
+                        }]];
+                    } else {
+                        [self setSelectedFontDescriptor:[UIFontDescriptor fontDescriptorWithFontAttributes:@{
+                            UIFontDescriptorFamilyAttribute: fontName
+                        }]];
+                    }
+                    [self.delegate fontPickerViewControllerDidPickFont:self];
+                }];
+                [actions addObject:fontAction];
+            } @catch (NSException *exception) {
+                NSLog(@"Unable to find installed fonts /n reason: %@", exception.reason);
+            }
+        }];
+        
+        TFNMenuSheetViewController *alert = [[%c(TFNMenuSheetViewController) alloc] initWithActionItems:[NSArray arrayWithArray:actions]];
+        [alert tfnPresentedCustomPresentFromViewController:self animated:YES completion:nil];
+    } else {
+        UIAlertController *errAlert = [UIAlertController alertControllerWithTitle:@"BHTwitter" message:@"Cannot find any custom/installed font on this device. \nHow can I install custom fonts? \nGo to the AppStore and install the iFont application, from iFont you can search or import fonts to install, after that you should find your custom font here." preferredStyle:UIAlertControllerStyleAlert];
+        
+        [errAlert addAction:[UIAlertAction actionWithTitle:@"iFont application" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"https://apps.apple.com/sa/app/ifont-find-install-any-font/id1173222289"] options:@{} completionHandler:nil];
+        }]];
+        [errAlert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleCancel handler:nil]];
+        [self presentViewController:errAlert animated:true completion:nil];
+    }
 }
 %end
 
 %hook TAEStandardFontGroup
 - (UIFont *)profilesFollowingCountFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)profilesFollowingFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)userCellFollowsYouFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)dashFollowingCountFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)dashFollowingFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)carouselUsernameFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)carouselDisplayNameFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)profilesFullNameFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)profilesUsernameFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)readerModeSmallFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)readerModeSmallBoldFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)readerModeMediumFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)readerModeMediumBoldFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)readerModeLargeFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)readerModeLargeBoldFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)treeTopicsDescriptionFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)treeTopicsCategoryNameFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)treeTopicsNameFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)treeTopicsCategoryNameLargeFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)topicsPillNameFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)topicsDescriptionFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)topicsNameFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)composerTextEditorFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)statusCellEdgeToEdgeBodyBoldFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)statusCellEdgeToEdgeBodyFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)statusCellBodyFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)statusCellBodyBoldFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)cardAttributionFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)cardTitleBoldFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)cardTitleFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)tweetDetailBoldFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)tweetDetailFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)directMessageBubbleBodyFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)directMessageComposePersistentBarFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)fixedJumboBoldFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)fixedXLargeBoldFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)fixedLargeBoldFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)fixedNormalBoldFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)fixedSmallBoldFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)fixedJumboFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)fixedXLargeFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)fixedLargeFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)fixedNormalFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)fixedSmallFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)jumboBoldFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)xLargeBoldFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)largeBoldFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)normalBoldFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)smallBoldFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)xSmallBoldFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)jumboFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)xLargeFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)largeFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)normalFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)smallFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)xSmallFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)buttonXLargeFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)buttonLargeFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)buttonMediumFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)buttonMedium_CondensedFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)buttonMedium_CondensedLighterFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)buttonSmallFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)buttonSmallLighterFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)buttonSmall_CondensedFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)buttonSmall_CondensedLighterFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)buttonNavigationBarFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 - (UIFont *)buttonHeavyNavigationBarFont {
-    if ([BHTManager changeFont]) {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"]) {
-            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"];
-            UIFont *ffont = %orig;
-            return [UIFont fontWithName:fontName size:ffont.pointSize];
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
+    UIFont *origFont = %orig;
+    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
+    return newFont != nil ? newFont : origFont;
 }
 %end
 

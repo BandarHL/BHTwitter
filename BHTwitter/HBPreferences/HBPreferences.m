@@ -109,13 +109,13 @@
     if (viewController.configuration.includeFaces) {
         [[NSUserDefaults standardUserDefaults] setObject:fontName forKey:@"bhtwitter_font_2"];
         [viewController dismissViewControllerAnimated:true completion:^{
-            HBCell *cell = [self.sections[1] cells][4];
+            HBCell *cell = [self.sections[2] cells][4];
             [cell.detailTextLabel setText:fontName];
         }];
     } else {
         [[NSUserDefaults standardUserDefaults] setObject:fontFamily forKey:@"bhtwitter_font_1"];
         [viewController dismissViewControllerAnimated:true completion:^{
-            HBCell *cell = [self.sections[1] cells][3];
+            HBCell *cell = [self.sections[2] cells][3];
             [cell.detailTextLabel setText:fontFamily];
         }];
     }

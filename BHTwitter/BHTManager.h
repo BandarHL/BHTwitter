@@ -15,7 +15,7 @@
 + (BOOL)isVideoCell:(id <T1StatusViewModel>)model;
 + (bool)isDMVideoCell:(T1InlineMediaView *)view;
 + (BOOL)doesContainDigitsOnly:(NSString *)string;
-+ (UIViewController *)BHTSettings;
++ (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount;
 + (void)showSaveVC:(NSURL *)url;
 + (void)save:(NSURL *)url;
 + (float)TwitterVersion;
@@ -47,5 +47,7 @@
 + (BOOL)TwitterCircle;
 + (BOOL)CopyProfileInfo;
 + (BOOL)tweetToImage;
++ (BOOL)hideSpacesBar;
++ (BOOL)disableRTL;
 @end
 

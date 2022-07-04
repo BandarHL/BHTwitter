@@ -17,7 +17,9 @@
     if ([fileManager fileExistsAtPath:@"/Library/Application Support/BHT/Ressources.bundle"]) {
         return [NSURL fileURLWithPath:[NSString stringWithFormat:@"/Library/Application Support/BHT/Ressources.bundle/%@", path]];
     } else {
-        return [NSURL fileURLWithPath:[NSString stringWithFormat:@"Ressources.bundle/%@", path]];
+        NSURL *ressourcesBundle = [[NSBundle mainBundle] URLForResource:@"Ressources" withExtension:@"bundle"];
+//        return [NSURL fileURLWithPath:[NSString stringWithFormat:@"Ressources.bundle/%@", path]];
+        return [ressourcesBundle URLByAppendingPathComponent:path];
     }
 }
 @end

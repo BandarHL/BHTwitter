@@ -6,6 +6,8 @@
 //
 
 #import "BHTManager.h"
+#import "BHTwitter-Swift.h"
+#import "BHTwitter+NSURL.h"
 
 @implementation BHTManager
 + (float)TwitterVersion {
@@ -188,13 +190,22 @@
 + (BOOL)tweetToImage {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"TweetToImage"];
 }
-+ (UIViewController *)BHTSettings {
++ (BOOL)hideSpacesBar {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_spaces"];
+}
++ (BOOL)disableRTL {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"dis_rtl"];
+}
++ (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount {
     HBPreferences *pref = [[HBPreferences alloc] initTableWithTableStyle:UITableViewStyleInsetGrouped title:@"BHTwitter" SeparatorStyle:UITableViewCellSeparatorStyleSingleLine];
+    [pref.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:@"BHTwitter" subtitle:twAccount.displayUsername]];
+    
     HBSection *mainSection = [HBSection sectionWithTitle:@"BHTwitter Preferences" footer:nil];
+    HBSection *twitterBlueSection = [HBSection sectionWithTitle:@"Twitter blue features" footer:@"You may need to restart Twitter app to apply changes"];
     HBSection *layoutSection = [HBSection sectionWithTitle:@"Layout customization" footer:@"Restart Twitter app to apply changes"];
-    HBSection *tabBarLayoutSection = [HBSection sectionWithTitle:@"Tab bar customization" footer:@"Restart Twitter app to apply changes"];
     HBSection *debug = [HBSection sectionWithTitle:@"Debugging" footer:nil];
-    HBSection *developer = [HBSection sectionWithTitle:@"Developer" footer:nil];
+    HBSection *legalSection = [HBSection sectionWithTitle:@"Legal notices" footer:nil];
+    HBSection *developer = [HBSection sectionWithTitle:@"Developer" footer:@"BHTwitter v2.9.7"];
     
     HBSwitchCell *download = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Downloading videos" DetailTitle:@"Downloading videos. By adding button in tweet and inside video tab bar." switchKey:@"dw_v" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
@@ -381,11 +392,27 @@
         }
     }];
     
-    HBSwitchCell *tweetToImage = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Save tweet as image" DetailTitle:@"You can export tweets as image, by long pressing on the Tweet Share button" switchKey:@"TweetToImage" withBlock:^(UISwitch *weakSender) {
+    HBSwitchCell *tweetToImage = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Save tweet as an image" DetailTitle:@"You can export tweets as image, by long pressing on the Tweet Share button" switchKey:@"TweetToImage" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"TweetToImage"];
         } else {
             [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"TweetToImage"];
+        }
+    }];
+    
+    HBSwitchCell *hideSpace = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Hide spaces bar" DetailTitle:nil switchKey:@"hide_spaces" withBlock:^(UISwitch *weakSender) {
+        if (weakSender.isOn) {
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"hide_spaces"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"hide_spaces"];
+        }
+    }];
+    
+    HBSwitchCell *disableRTL = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Disable RTL" DetailTitle:@"Force Twitter use LTL with RTL language.\nRestart Twitter app to apply changes" switchKey:@"dis_rtl" withBlock:^(UISwitch *weakSender) {
+        if (weakSender.isOn) {
+            [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"dis_rtl"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"dis_rtl"];
         }
     }];
     
@@ -410,20 +437,31 @@
     }];
     
     HBViewControllerCell *CustomTabBarVC = [[HBViewControllerCell alloc] initCellWithTitle:@"Custom Tab Bar" detail:nil action:^UIViewController *{
-        return [[CustomTabBarViewController alloc] init];
+        CustomTabBarViewController *customTabBArVC = [[CustomTabBarViewController alloc] init];
+        [customTabBArVC.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:@"Custom Tab Bar" subtitle:twAccount.displayUsername]];
+        return customTabBArVC;
+    }];
+    
+    HBViewControllerCell *appTheme = [[HBViewControllerCell alloc] initCellWithTitle:@"Theme" detail:@"Choose a theme color for you Twitter experience that can only be seen by you." action:^UIViewController *{
+//        I create my own Color Theme ViewController for two main reasons:
+//        1- Twitter use swift to build their view controller, so I can't hook anything on it.
+//        2- Twitter knows you do not actually subscribe with Twitter Blue, so it keeps resting the changes and resting 'T1ColorSettingsPrimaryColorOptionKey' key, so I had to create another key to track the original one and keep sure no changes, but it still not enough to keep the new theme after relaunching app, so i had to force the changes again with new lunch.
+        BHColorThemeViewController *themeVC = [[BHColorThemeViewController alloc] init];
+        [themeVC.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:@"Theme" subtitle:twAccount.displayUsername]];
+        return themeVC;
     }];
     
     HBSwitchCell *font = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Enable changing font" DetailTitle:@"Option to allow changing Twitter font and show font picker." switchKey:@"en_font" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"en_font"];
             [layoutSection addCells:@[fontsPicker, BoldfontsPicker]];
-            [pref.tableView insertRowsAtIndexPaths:@[[NSIndexPath indexPathForRow:3 inSection:1], [NSIndexPath indexPathForRow:4 inSection:1]] withRowAnimation:UITableViewRowAnimationAutomatic];
+            [pref.tableView insertRowsAtIndexPaths:@[[NSIndexPath indexPathForRow:3 inSection:2], [NSIndexPath indexPathForRow:4 inSection:2]] withRowAnimation:UITableViewRowAnimationAutomatic];
         } else {
             [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"en_font"];
             [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"bhtwitter_font_1"];
             [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"bhtwitter_font_2"];
             [layoutSection removeCells:@[fontsPicker, BoldfontsPicker]];
-            [pref.tableView deleteRowsAtIndexPaths:@[[NSIndexPath indexPathForRow:3 inSection:1], [NSIndexPath indexPathForRow:4 inSection:1]] withRowAnimation:UITableViewRowAnimationAutomatic];
+            [pref.tableView deleteRowsAtIndexPaths:@[[NSIndexPath indexPathForRow:3 inSection:2], [NSIndexPath indexPathForRow:4 inSection:2]] withRowAnimation:UITableViewRowAnimationAutomatic];
         }
     }];
     
@@ -445,22 +483,30 @@
         }
     }];
     
+    HBViewControllerCell *acknowledgements = [[HBViewControllerCell alloc] initCellWithTitle:@"Acknowledgements" detail:nil action:^UIViewController *{
+        T1RichTextFormatViewController *acknowledgementsVC = [[objc_getClass("T1RichTextFormatViewController") alloc] initWithRichTextFormatDocumentPath:[NSURL bhtwitter_fileURLWithPath:@"Acknowledgements.rtf"].path];
+        [acknowledgementsVC.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:@"Acknowledgements" subtitle:twAccount.displayUsername]];
+        return acknowledgementsVC;
+    }];
+    
     HBTwitterCell *bandarhl = [[HBTwitterCell alloc] initTwitterCellWithTitle:@"BandarHelal" detail:@"@BandarHL" AccountLink:@"https://twitter.com/BandarHL"];
     HBlinkCell *tipJar = [[HBlinkCell alloc] initLinkCellWithTitle:@"Tip Jar" detailTitle:@"Donate" link:@"https://www.paypal.me/BandarHL"];
     HBGithubCell *sourceCode = [[HBGithubCell alloc] initGithubCellWithTitle:@"BHTwitter" detailTitle:@"Code source of BHTwitter" GithubURL:@"https://github.com/BandarHL/BHTwitter/"];
     
     
-    [mainSection addCells:@[download, hide_ads, hide_topics, disable_VODCaptions, direct_save, voice, voice_in_replay, UndoTweet, ReaderMode, ReplyLater, VideoZoom, NoHistory, BioTranslate, like_confirm, tweet_confirm, follow_confirm, padlock, DmModularSearch, autoHighestLoad, disableSensitiveTweetWarnings, copyProfileInfo, trustedFriends, tweetToImage]];
+    [mainSection addCells:@[download, hide_ads, hide_topics, disable_VODCaptions, direct_save, voice, voice_in_replay, ReplyLater, VideoZoom, NoHistory, BioTranslate, like_confirm, tweet_confirm, follow_confirm, padlock, DmModularSearch, autoHighestLoad, disableSensitiveTweetWarnings, copyProfileInfo, tweetToImage, hideSpace, disableRTL]];
     
+    [twitterBlueSection addCells:@[UndoTweet, ReaderMode, trustedFriends, appTheme, CustomTabBarVC]];
     [layoutSection addCells:@[oldTweetStyle, dwbLayout, font]];
     if ([BHTManager changeFont]) {
         [layoutSection addCells:@[fontsPicker, BoldfontsPicker]];
     }
-    [tabBarLayoutSection addCell:CustomTabBarVC];
+    
     [debug addCell:flex];
+    [legalSection addCell:acknowledgements];
     [developer addCells:@[bandarhl, sourceCode, tipJar]];
 
-    [pref addSections:@[mainSection, layoutSection, tabBarLayoutSection, debug, developer]];
+    [pref addSections:@[mainSection, twitterBlueSection, layoutSection, debug, legalSection, developer]];
     return pref;
 }
 

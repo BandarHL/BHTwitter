@@ -44,14 +44,12 @@
 }
 - (void)DownloadHandler:(UIButton *)sender {
     NSAttributedString *AttString = [[NSAttributedString alloc] initWithString:@"\nSelect video quality you want to download" attributes:@{
-        NSFontAttributeName: [[objc_getClass("TAEStandardFontGroup") sharedFontGroup] fixedLargeBoldFont],
+        NSFontAttributeName: [[objc_getClass("TAEStandardFontGroup") sharedFontGroup] headline2BoldFont],
         NSForegroundColorAttributeName: UIColor.labelColor
     }];
     TFNActiveTextItem *title = [[objc_getClass("TFNActiveTextItem") alloc] initWithTextModel:[[objc_getClass("TFNAttributedTextModel") alloc] initWithAttributedString:AttString] activeRanges:nil];
-    TFNMenuSheetCenteredIconItem *icon = [[objc_getClass("TFNMenuSheetCenteredIconItem") alloc] initWithIconImageName:@"2728" height:55 fillColor:UIColor.clearColor];
     
     NSMutableArray *actions = [[NSMutableArray alloc] init];
-    [actions addObject:icon];
     [actions addObject:title];
     
     for (TFSTwitterEntityMedia *i in self.delegate.viewModel.entities.media) {

@@ -9,7 +9,6 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import <Photos/Photos.h>
-#import "BHTwitter-Swift.h"
 #import "./Classes/Utility/FLEXAlert.h"
 #import "./Classes/FLEX.h"
 #import "BHDownload.h"
@@ -25,6 +24,18 @@
 
 @interface T1AppDelegate : UIResponder <UIApplicationDelegate>
 @property(retain, nonatomic) UIWindow *window;
+@end
+
+@interface NSParagraphStyle ()
++ (NSWritingDirection)_defaultWritingDirection;
+@end
+
+@interface TFNTwitterAccount : NSObject
+@property (nonatomic, strong) NSString *displayFullName;
+@property (nonatomic, strong) NSString *username;
+@property (nonatomic, strong) NSString *displayUsername;
+@property (nonatomic, strong) NSString *fullName;
+@property (nonatomic, strong) id scribe;
 @end
 
 @interface TFNTableView: UITableView
@@ -57,6 +68,7 @@
 @interface T1GenericSettingsViewController: UIViewController
 @property (nonatomic, strong) TFNItemsDataViewControllerBackingStore *backingStore;
 @property (nonatomic, strong) NSArray *sections;
+@property (nonatomic, strong) TFNTwitterAccount *account;
 @end
 
 @interface TTSSearchTypeaheadViewController : TFNItemsDataViewController
@@ -66,9 +78,14 @@
 - (void)clearActionControlWantsClear:(id)arg1;
 @end
 
+@interface T1ColorThemeSettingsViewController : TFNItemsDataViewController
+- (instancetype)initWithAccount:(TFNTwitterAccount *)acoount scribeContext:(id)context;
+@end
+
 @interface TAEStandardFontGroup : NSObject
 + (instancetype)sharedFontGroup;
 - (UIFont *)fixedLargeBoldFont;
+- (UIFont *)headline2BoldFont;
 @end
 
 @interface TFNActionItem : NSObject
@@ -105,6 +122,7 @@
 @interface T1SettingsViewController : UIViewController
 @property (nonatomic, strong) TFNItemsDataViewControllerBackingStore *backingStore;
 @property (nonatomic, strong) NSArray *sections;
+@property (nonatomic, strong) TFNTwitterAccount *account;
 @end
 
 @interface TFNSettingsNavigationItem : NSObject
@@ -153,6 +171,15 @@
 @property(nonatomic) __weak id <T1StatusInlineActionButtonDelegate> delegate;
 @end
 
+@protocol TTACoreStatusViewEventHandler <NSObject>
+@end
+
+@interface T1StatusCell : UITableViewCell <TTACoreStatusViewEventHandler>
+@end
+
+@interface T1TweetDetailsFocalStatusViewTableViewCell : T1StatusCell
+@end
+
 @interface TFSTwitterEntityMediaVideoVariant : NSObject
 @property(readonly, copy, nonatomic) NSString *contentType;
 @property(readonly, copy, nonatomic) NSString *url;
@@ -181,10 +208,12 @@
 @end
 
 @interface T1StandardStatusView : UIView
+@property(nonatomic) __weak id <TTACoreStatusViewEventHandler> eventHandler;
 @property(readonly, nonatomic) UIView *visibleInlineActionsView;
 @end
 
 @interface T1TweetDetailsFocalStatusView : UIView
+@property(nonatomic) __weak id <TTACoreStatusViewEventHandler> eventHandler;
 @end
 
 @interface TFNButtonBarView : UIView
@@ -279,24 +308,52 @@
 @property(readonly, nonatomic) id viewModel; // @synthesize viewModel=_viewModel;
 @end
 
+@interface T1RichTextFormatViewController : UIViewController
+- (instancetype)initWithRichTextFormatDocumentPath:(NSString *)documentPath;
+@end
+
+@interface TFNTitleView: UIView
++ (instancetype)titleViewWithTitle:(NSString *)title subtitle:(NSString *)subTitle;
+@end
+
 @interface TAETwitterColorPaletteSettingInfo : NSObject
 @property(readonly, nonatomic) _Bool isDark;
 @end
 
 @interface TAEColorSettings : NSObject
 @property(retain, nonatomic) TAETwitterColorPaletteSettingInfo *currentColorPalette;
+- (void)setPrimaryColorOption:(NSInteger)colorOption;
 + (instancetype)sharedSettings;
 @end
 
-static UIImage *imageFromView(UIView *view) {
+static void BH_changeTwitterColor(NSInteger colorID) {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];
+    
+    [defaults setObject:@(colorID) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    [colorSettings setPrimaryColorOption:colorID];
+}
+static UIImage *BH_imageFromView(UIView *view) {
     TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];
     bool opaque = [colorSettings.currentColorPalette isDark] ? true : false;
-    UIGraphicsBeginImageContextWithOptions(view.layer.frame.size, opaque, 0.0);
-    [view.layer renderInContext:UIGraphicsGetCurrentContext()];
+    UIGraphicsBeginImageContextWithOptions(view.frame.size, opaque, 0.0);
+//    [view.layer renderInContext:UIGraphicsGetCurrentContext()];
+    [view drawViewHierarchyInRect:view.bounds afterScreenUpdates:false];
     UIImage *img = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
     
     return img;
+}
+
+static  UIFont * _Nullable BH_getDefaultFont(bool isBold, CGFloat pointSize) {
+    if ([[NSUserDefaults standardUserDefaults] boolForKey:@"en_font"]) {
+        if ([[NSUserDefaults standardUserDefaults] objectForKey:isBold ? @"bhtwitter_font_2" : @"bhtwitter_font_1"]) {
+            NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:isBold ? @"bhtwitter_font_2" : @"bhtwitter_font_1"];
+            return [UIFont fontWithName:fontName size:pointSize];
+        }
+        return nil;
+    }
+    return nil;
 }
 
 static BOOL isDeviceLanguageRTL() {
