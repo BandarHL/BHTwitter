@@ -3,7 +3,7 @@
 
 # Features
 - Download Videos (even if account private).
-- Replay later feature.
+- Reply later feature.
 - Custom Tab Bar
 - Video zoom feature.
 - No history feature.
