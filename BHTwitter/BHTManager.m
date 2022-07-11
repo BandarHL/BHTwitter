@@ -279,7 +279,7 @@
         }
     }];
     
-    HBSwitchCell *ReplyLater = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Reply later feature" DetailTitle:@"Enable you to mark DM conversations as replay later." switchKey:@"reply_layer" withBlock:^(UISwitch *weakSender) {
+    HBSwitchCell *ReplyLater = [[HBSwitchCell alloc] initSwitchCellWithImage:nil Title:@"Reply later feature" DetailTitle:@"Enable you to mark DM conversations as reply later." switchKey:@"reply_layer" withBlock:^(UISwitch *weakSender) {
         if (weakSender.isOn) {
             [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"reply_layer"];
         } else {
