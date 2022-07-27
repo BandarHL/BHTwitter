@@ -23,10 +23,8 @@
 + (BOOL)DownloadingVideos;
 + (BOOL)DirectSave;
 + (BOOL)VoiceFeature;
-+ (BOOL)voice_in_replay;
 + (BOOL)UndoTweet;
 + (BOOL)ReaderMode;
-+ (BOOL)ReplyLater;
 + (BOOL)VideoZoom;
 + (BOOL)NoHistory;
 + (BOOL)BioTranslate;
@@ -49,5 +47,6 @@
 + (BOOL)tweetToImage;
 + (BOOL)hideSpacesBar;
 + (BOOL)disableRTL;
++ (BOOL)alwaysOpenSafari;
 @end
 

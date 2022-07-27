@@ -108,6 +108,9 @@
                 [UIAction actionWithTitle:@"Copy URL in the bio" image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
                     UIPasteboard.generalPasteboard.string = self.viewModel.url;
                 }],
+                [UIAction actionWithTitle:@"Copy Location in the bio" image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
+                    UIPasteboard.generalPasteboard.string = self.viewModel.location;
+                }],
             ]]];
         } else {
             [copyButton addTarget:self action:@selector(copyButtonHandler:) forControlEvents:UIControlEventTouchUpInside];
@@ -160,10 +163,14 @@
     UIAlertAction *url = [UIAlertAction actionWithTitle:@"Copy URL in the bio" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
         UIPasteboard.generalPasteboard.string = self.viewModel.url;
     }];
+    UIAlertAction *location = [UIAlertAction actionWithTitle:@"Copy Location in the bio" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        UIPasteboard.generalPasteboard.string = self.viewModel.location;
+    }];
     [alert addAction:bio];
     [alert addAction:username];
     [alert addAction:fullusername];
     [alert addAction:url];
+    [alert addAction:location];
     [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
     [self presentViewController:alert animated:true completion:nil];
 }
@@ -406,6 +413,29 @@
 }
 %end
 
+// MARK: Always open in Safrai
+// Thanks nyuszika7h https://github.com/nyuszika7h/noinappsafari/
+%hook SFSafariViewController
+- (void)viewWillAppear:(BOOL)animated {
+    if (![BHTManager alwaysOpenSafari]) {
+        return %orig;
+    }
+    NSURL *url = [self initialURL];
+
+    [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
+    [self dismissViewControllerAnimated:NO completion:nil];
+}
+%end
+
+%hook SFInteractiveDismissController
+- (void)animateTransition:(id<UIViewControllerContextTransitioning>)transitionContext {
+    if (![BHTManager alwaysOpenSafari]) {
+        return %orig;
+    }
+    [transitionContext completeTransition:NO];
+}
+%end
+
 %hook TFSTwitterEntityURL
 - (NSString *)url {
     // https://github.com/haoict/twitter-no-ads/blob/master/Tweak.xm#L195
@@ -462,7 +492,7 @@
 }
 %end
 
-// MARK: Voice, TwitterCircle, SensitiveTweetWarnings, autoHighestLoad, VideoZoom, ReplyLater, VODCaptions, disableSpacesBar feature
+// MARK: Voice, TwitterCircle, SensitiveTweetWarnings, autoHighestLoad, VideoZoom, VODCaptions, disableSpacesBar feature
 %hook TPSTwitterFeatureSwitches
 // Twitter save all the features and keys in side JSON file in bundle of application fs_embedded_defaults_production.json, and use it in TFNTwitterAccount class but with DM voice maybe developers forget to add boolean variable in the class, so i had to change it from the file.
 // also, you can find every key for every feature i used in this tweak, i can remove all the codes below and find every key for it but I'm lazy to do that, :)
@@ -611,12 +641,6 @@
     }
     return %orig;
 }
-- (_Bool)isReplyLaterEnabled {
-    if ([BHTManager ReplyLater]) {
-        return true;
-    }
-    return %orig;
-}
 - (_Bool)isDMVoiceRenderingEnabled {
     if ([BHTManager VoiceFeature]) {
         return true;
@@ -626,14 +650,6 @@
 - (_Bool)isDMVoiceCreationEnabled {
     if ([BHTManager VoiceFeature]) {
         return true;
-    }
-    return %orig;
-}
-%end
-%hook TFNTwitterComposition
-- (BOOL)isReply {
-    if ([BHTManager voice_in_replay]) {
-        return false;
     }
     return %orig;
 }
@@ -681,6 +697,14 @@
     } else {
         return %orig;
     }
+}
+
+// CoTweet
+- (BOOL)isTweetCollaborationEnabled {
+    return true;
+}
+- (BOOL)_t1_canEnableCollaboration {
+    return true;
 }
 %end
 
@@ -746,6 +770,17 @@
 %end
 
 // MARK: Reader mode
+%hook TUCLayoutContext
+- (BOOL)isReaderModeEnabled {
+    return true;
+}
+%end
+
+%hook T1ConversationContainerViewController
+- (id)initWithAccount:(id)arg1 viewModel:(id)arg2 statusNavigationContext:(id)arg3 scribeContext:(id)arg4 sourceNavigationMetadata:(id)arg5 overrideNavigationMetadata:(id)arg6 shouldIncludeReferrerParams:(_Bool)arg7 ruxContext:(id)arg8 readerModeEnabled:(_Bool)arg9 {
+    return %orig(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, [BHTManager ReaderMode]);
+}
+%end
 %hook T1ReaderModeConfig
 - (_Bool)isReaderModeEnabled {
     if ([BHTManager ReaderMode]) {
@@ -798,12 +833,21 @@
 - (void)viewWillAppear:(BOOL)arg1 {
     %orig;
     if ([self.sections count] == 1) {
-        TFNItemsDataViewControllerBackingStore *DataViewControllerBackingStore = self.backingStore;
+        TFNItemsDataViewControllerBackingStore *backingStore = self.backingStore;
         TFNSettingsNavigationItem *bhtwitter = [[%c(TFNSettingsNavigationItem) alloc] initWithTitle:@"Settings" detail:@"BHTwitter preferences" systemIconName:@"gear" controllerFactory:^UIViewController *{
             return [BHTManager BHTSettingsWithAccount:self.account];
         }];
-        [DataViewControllerBackingStore insertSection:0 atIndex:0];
-        [DataViewControllerBackingStore insertItem:bhtwitter atIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
+        
+        if ([backingStore respondsToSelector:@selector(insertSection:atIndex:)]) {
+            [backingStore insertSection:0 atIndex:0];
+        } else {
+            [backingStore _tfn_insertSection:0 atIndex:0];
+        }
+        if ([backingStore respondsToSelector:@selector(insertItem:atIndexPath:)]) {
+            [backingStore insertItem:bhtwitter atIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
+        } else {
+            [backingStore _tfn_insertItem:bhtwitter atIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
+        }
     }
 }
 %end
@@ -1240,6 +1284,11 @@
 }
 %end
 
+%hook HBForceCepheiPrefs
++ (BOOL)forceCepheiPrefsWhichIReallyNeedToAccessAndIKnowWhatImDoingISwear {
+    return YES;
+}
+%end
 // Fix login keychain in non-JB (IPA).
 //%hook TFSKeychain
 //- (NSString *)providerDefaultAccessGroup {

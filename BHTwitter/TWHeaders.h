@@ -9,18 +9,16 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import <Photos/Photos.h>
+#import <SafariServices/SafariServices.h>
 #import "./Classes/Utility/FLEXAlert.h"
 #import "./Classes/FLEX.h"
 #import "BHDownload.h"
 #import "JGProgressHUD/include/JGProgressHUD.h"
 #import "SAMKeychain/keychain.h"
-#import "HBPreferences/HBPreferences.h"
-#import "HBPreferences/HBSection.h"
-#import "HBPreferences/HBTwitterCell.h"
-#import "HBPreferences/HBSwitchCell.h"
-#import "HBPreferences/HBGithubCell.h"
-#import "HBPreferences/HBlinkCell.h"
-#import "HBPreferences/HBViewControllerCell.h"
+#import <Preferences/PSListController.h>
+#import <Preferences/PSSpecifier.h>
+#import <Preferences/PSEditableTableCell.h>
+#import <Preferences/PSSwitchTableCell.h>
 
 @interface T1AppDelegate : UIResponder <UIApplicationDelegate>
 @property(retain, nonatomic) UIWindow *window;
@@ -28,6 +26,10 @@
 
 @interface NSParagraphStyle ()
 + (NSWritingDirection)_defaultWritingDirection;
+@end
+
+@interface SFSafariViewController ()
+- (NSURL *)initialURL;
 @end
 
 @interface TFNTwitterAccount : NSObject
@@ -50,9 +52,11 @@
 - (id)itemAtIndexPath:(id)arg1;
 @end
 
-@interface TFNItemsDataViewControllerBackingStore
-- (void)insertSection:(id)arg1 atIndex:(long long)arg2;
-- (void)insertItem:(id)arg1 atIndexPath:(id)arg2;
+@interface TFNItemsDataViewControllerBackingStore: NSObject
+- (void)insertSection:(id)section atIndex:(NSUInteger)index;
+- (void)insertItem:(id)item atIndexPath:(NSIndexPath *)indexPath;
+- (void)_tfn_insertSection:(id)section atIndex:(NSUInteger)index;
+- (void)_tfn_insertItem:(id)item atIndexPath:(NSIndexPath *)indexPath;
 @end
 
 @interface T1TabView : UIView
@@ -153,6 +157,7 @@
 @end
 
 @interface T1ProfileUserViewModel : NSObject
+@property(readonly, copy, nonatomic) NSString *location;
 @property(readonly, copy, nonatomic) NSString *fullName;
 @property(readonly, copy, nonatomic) NSString *username;
 @property(readonly, copy, nonatomic) NSString *bio;
@@ -316,7 +321,12 @@
 + (instancetype)titleViewWithTitle:(NSString *)title subtitle:(NSString *)subTitle;
 @end
 
+@protocol TAEColorPalette
+- (UIColor *)primaryColorForOption:(NSUInteger)colorOption;
+@end
+
 @interface TAETwitterColorPaletteSettingInfo : NSObject
+@property(readonly, nonatomic) id <TAEColorPalette> colorPalette;
 @property(readonly, nonatomic) _Bool isDark;
 @end
 

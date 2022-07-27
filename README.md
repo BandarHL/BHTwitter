@@ -3,7 +3,6 @@
 
 # Features
 - Download Videos (even if account private).
-- Reply later feature.
 - Custom Tab Bar
 - Video zoom feature.
 - No history feature.
@@ -11,10 +10,17 @@
 - Disable video layer caption.
 - Padlock.
 - Font changer.
-- Disable double tap to like.
 - Enable the new UI of DM search.
 - Auto load photos in highest quality feature.
 - Undo tweet feature.
+- Theme (like Twitter Bule).
+- Twitter Circle feature.
+- Copying profile information feature.
+- Save tweet as an image.
+- Hide spaces bar.
+- Disable RTL.
+- Always open in Safari.
+- Translate bio.
 - Reader mode feature.
 - Disable new tweet style (A.K.A edge to edge tweet)
 - Enable voice tweet and voice message in DM.
