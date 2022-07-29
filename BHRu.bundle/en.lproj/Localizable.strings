@@ -78,7 +78,7 @@
 "DEVELOPER" = "DEVELOPER";
 "GITHUB_DESC" = "Code source of BHTwitter";
 "DONATE" = "Tip Jar";
-"DONATE_DESC" = "Donate";
+"DONATE_DESC" = "Donate via PayPal";
 "COPY_BIO" = "Copy Bio";
 "COPY_USERNAME" = "Copy Username";
 "COPY_FULL_USERNAME" = "Copy Full Username";
@@ -87,7 +87,9 @@
 "SAVE_AS_IMAGE_DESC" = "You can export tweets as image, by long pressing on the Tweet Share button";
 "HIDE_SPACES" = "Hide spaces bar";
 "DISABLE_RTL" = "Disable RTL";
-"DISABLE_RTL_DESC" = "Force Twitter use LTL with RTL language.\nRestart Twitter app to apply changes";
+"DISABLE_RTL_DESC" = "Force Twitter use LTR with RTL language.\nRestart Twitter app to apply changes";
+"OPEN_SAFARI" = "Always open in Safari";
+"OPEN_SAFARI_DESC" = "Force Twitter to open URLs in Safari or your default browser.";
 "TWITTER_BLUE" = "TWITTER BLUE FEATURES";
 "THEME" = "Theme";
 "THEME_DESC" = "Choose a theme color for you Twitter experience that can only be seen by you.";
@@ -101,4 +103,4 @@
 "PURPLE" = "Purple";
 "ORANGE" = "Orange";
 "GREEN" = "Green";
-"VERSION" = "BHTwitter v2.9.7";
+"VERSION" = "BHTwitter v2.9.8";
