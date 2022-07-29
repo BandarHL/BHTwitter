@@ -5,7 +5,7 @@
 "DOWNLOADING_VIDEOS" = "Downloading videos";
 "DOWNLOADING_VIDEOS_DESC" = "Downloading videos. By adding button in tweet and inside video tab bar.";
 "HIDE_ADS" = "Hide ads";
-"HIDE_ADS_DESC" = "Removes all promoted tweets.";
+"HIDE_ADS_DESC" = "Removes all ads.";
 "HIDE_TOPICS" = "Hide topics tweets";
 "HIDE_TOPICS_DESC" = "Remove all topics tweets from the timeline.";
 "DISABLE_CAPTIONS" = "Disable video layer captions";
@@ -83,6 +83,7 @@
 "COPY_USERNAME" = "Copy Username";
 "COPY_FULL_USERNAME" = "Copy Full Username";
 "COPY_URL" = "Copy URL from the Bio";
+"COPY_LOCATION" = "Copy Location in the Bio";
 "SAVE_AS_IMAGE" = "Save tweet as image";
 "SAVE_AS_IMAGE_DESC" = "You can export tweets as image, by long pressing on the Tweet Share button";
 "HIDE_SPACES" = "Hide spaces bar";
