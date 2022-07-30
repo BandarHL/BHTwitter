@@ -420,7 +420,15 @@
     if (![BHTManager alwaysOpenSafari]) {
         return %orig;
     }
+
     NSURL *url = [self initialURL];
+    NSString *urlStr = [url absoluteString];
+
+    // In-app browser is used for two-factor authentication with security key,
+    // login will not complete successfully if it's redirected to Safari
+    if ([urlStr hasPrefix:@"https://twitter.com/account/"]) {
+        return %orig;
+    }
 
     [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
     [self dismissViewControllerAnimated:NO completion:nil];
