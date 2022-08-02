@@ -210,6 +210,7 @@
 
 @interface T1StatusInlineActionsView : UIView <T1StatusInlineActionButtonDelegate>
 @property(readonly, nonatomic) id <T1StatusViewModel> viewModel;
+@property(nonatomic) id delegate;
 @end
 
 @interface T1StandardStatusView : UIView

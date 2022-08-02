@@ -1,4 +1,3 @@
-#import "BHDownloadInlineButton.h"
 #import "SAMKeychain/AuthViewController.h"
 #import "Colours.h"
 #import "BHTManager.h"
@@ -16,10 +15,7 @@
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"hide_promoted"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"voice"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"undo_tweet"];
-        [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"like_con"];
-        [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"tweet_con"];
-        [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"direct_save"];
-        [[NSUserDefaults standardUserDefaults] synchronize];
+        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"TrustedFriends"];
     }
     [BHTManager cleanCache];
     if ([BHTManager FLEX]) {
@@ -707,7 +703,11 @@
     }
 }
 
-// CoTweet
+// MARK: Status tweet
+- (BOOL)_t1_isVibeCompositionEnabled {
+    return true;
+}
+// MARK: CoTweet
 - (BOOL)isTweetCollaborationEnabled {
     return true;
 }
@@ -778,17 +778,6 @@
 %end
 
 // MARK: Reader mode
-%hook TUCLayoutContext
-- (BOOL)isReaderModeEnabled {
-    return true;
-}
-%end
-
-%hook T1ConversationContainerViewController
-- (id)initWithAccount:(id)arg1 viewModel:(id)arg2 statusNavigationContext:(id)arg3 scribeContext:(id)arg4 sourceNavigationMetadata:(id)arg5 overrideNavigationMetadata:(id)arg6 shouldIncludeReferrerParams:(_Bool)arg7 ruxContext:(id)arg8 readerModeEnabled:(_Bool)arg9 {
-    return %orig(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, [BHTManager ReaderMode]);
-}
-%end
 %hook T1ReaderModeConfig
 - (_Bool)isReaderModeEnabled {
     if ([BHTManager ReaderMode]) {

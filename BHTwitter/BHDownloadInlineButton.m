@@ -7,7 +7,6 @@
 
 #import "BHDownloadInlineButton.h"
 #import "Colours.h"
-#import "BHTManager.h"
 
 @interface BHDownloadInlineButton () <BHDownloadDelegate>
 @property (nonatomic, strong) JGProgressHUD *hud;
@@ -20,20 +19,18 @@
 
 
 - (void)statusDidUpdate:(id)arg1 options:(unsigned long long)arg2 displayTextOptions:(unsigned long long)arg3 animated:(_Bool)arg4 {
-    if ([arg1 isKindOfClass:objc_getClass("TFNTwitterStatus")]) {
+    if ([self.delegate.delegate isKindOfClass:objc_getClass("T1SlideshowStatusView")]) {
         [self setTintColor:UIColor.whiteColor];
-    }
-    if ([arg1 isKindOfClass:objc_getClass("T1URTTimelineStatusItemViewModel")]) {
+    } else {
         [self setTintColor:[UIColor colorFromHexString:@"6D6E70"]];
     }
 }
 - (id)initWithOptions:(unsigned long long)arg1 overrideSize:(struct CGSize)arg2 account:(id)arg3 {
     self = [super initWithFrame:CGRectMake(0, 0, arg2.width, arg2.height)];
     if (self != nil) {
-        [self setDisplayType:1];
         [self setInlineActionType:80];
         [self setTintColor:[UIColor colorFromHexString:@"6D6E70"]];
-        [self setImageEdgeInsets:UIEdgeInsetsMake(0, -11, 0, -11)];
+//        [self setImageEdgeInsets:UIEdgeInsetsMake(0, -11, 0, -11)];
         [self setImage:[UIImage systemImageNamed:@"arrow.down"] forState:UIControlStateNormal];
         [self addTarget:self action:@selector(DownloadHandler:) forControlEvents:UIControlEventTouchUpInside];
     }

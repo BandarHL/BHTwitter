@@ -6,7 +6,7 @@
 //
 
 #import <UIKit/UIKit.h>
-#import "TWHeaders.h"
+#import "BHTManager.h"
 
 @interface BHDownloadInlineButton : UIButton
 {

@@ -28,19 +28,35 @@
     if (self) {
         self.twAccount = account;
         [self setupAppearance];
+        [[NSUserDefaults standardUserDefaults] addObserver:self forKeyPath:@"bh_color_theme_selectedColor" options:NSKeyValueObservingOptionNew context:nil];
+        [[NSUserDefaults standardUserDefaults] addObserver:self forKeyPath:@"T1ColorSettingsPrimaryColorOptionKey" options:NSKeyValueObservingOptionNew context:nil];
     }
     return self;
 }
 
 - (void)setupAppearance {
-    NSUInteger colorOption = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
     TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];
-    UIColor *primaryColor = [[[colorSettings currentColorPalette] colorPalette] primaryColorForOption:colorOption];
+    UIColor *primaryColor;
+    
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        primaryColor = [[[colorSettings currentColorPalette] colorPalette] primaryColorForOption:[[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]];
+    } else if ([[NSUserDefaults standardUserDefaults] objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
+        primaryColor = [[[colorSettings currentColorPalette] colorPalette] primaryColorForOption:[[NSUserDefaults standardUserDefaults] integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"]];
+    } else {
+        primaryColor = nil;
+    }
     
     HBAppearanceSettings *appearanceSettings = [[HBAppearanceSettings alloc] init];
     appearanceSettings.tintColor = primaryColor;
     self.hb_appearanceSettings = appearanceSettings;
 }
+
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
+    if ([keyPath isEqualToString:@"bh_color_theme_selectedColor"] || [keyPath isEqualToString:@"T1ColorSettingsPrimaryColorOptionKey"]) {
+        [self setupAppearance];
+    }
+}
+
 - (UITableViewStyle)tableViewStyle {
     return UITableViewStyleInsetGrouped;
 }
@@ -52,7 +68,7 @@
     }
     return section;
 }
-- (PSSpecifier *)newSwitchCellWithTitle:(NSString *)titleText detailTitle:(NSString *)detailText key:(NSString *)keyText defaultValue:(BOOL)defValue {
+- (PSSpecifier *)newSwitchCellWithTitle:(NSString *)titleText detailTitle:(NSString *)detailText key:(NSString *)keyText defaultValue:(BOOL)defValue changeAction:(SEL)changeAction {
     PSSpecifier *switchCell = [PSSpecifier preferenceSpecifierNamed:titleText target:self set:@selector(setPreferenceValue:specifier:) get:@selector(readPreferenceValue:) detail:nil cell:PSSwitchCell edit:nil];
     
     [switchCell setProperty:keyText forKey:@"key"];
@@ -61,7 +77,8 @@
     [switchCell setProperty:BHSwitchTableCell.class forKey:@"cellClass"];
     [switchCell setProperty:NSBundle.mainBundle.bundleIdentifier forKey:@"defaults"];
     [switchCell setProperty:@(defValue) forKey:@"default"];
-    if (detailText != nil ){
+    [switchCell setProperty:NSStringFromSelector(changeAction) forKey:@"switchAction"];
+    if (detailText != nil) {
         [switchCell setProperty:detailText forKey:@"subtitle"];
     }
     return switchCell;
@@ -111,72 +128,72 @@
         PSSpecifier *layoutSection = [self newSectionWithTitle:@"Layout customization" footer:@"Restart Twitter app to apply changes"];
         PSSpecifier *debug = [self newSectionWithTitle:@"Debugging" footer:nil];
         PSSpecifier *legalSection = [self newSectionWithTitle:@"Legal notices" footer:nil];
-        PSSpecifier *developer = [self newSectionWithTitle:@"Developer" footer:@"BHTwitter v2.9.8"];
+        PSSpecifier *developer = [self newSectionWithTitle:@"Developer" footer:@"BHTwitter v2.9.9"];
         
-        PSSpecifier *download = [self newSwitchCellWithTitle:@"Downloading videos" detailTitle:@"Downloading videos. By adding button in tweet and inside video tab bar." key:@"dw_v" defaultValue:true];
+        PSSpecifier *download = [self newSwitchCellWithTitle:@"Downloading videos" detailTitle:@"Downloading videos. By adding button in tweet and inside video tab bar." key:@"dw_v" defaultValue:true changeAction:nil];
         
-        PSSpecifier *directSave = [self newSwitchCellWithTitle:@"Direct save" detailTitle:@"Save video directly after downloading." key:@"direct_save" defaultValue:false];
+        PSSpecifier *directSave = [self newSwitchCellWithTitle:@"Direct save" detailTitle:@"Save video directly after downloading." key:@"direct_save" defaultValue:false changeAction:nil];
         
-        PSSpecifier *hideAds = [self newSwitchCellWithTitle:@"Hide Ads" detailTitle:@"Remove all Ads in Twitter." key:@"hide_promoted" defaultValue:true];
+        PSSpecifier *hideAds = [self newSwitchCellWithTitle:@"Hide Ads" detailTitle:@"Remove all Ads in Twitter." key:@"hide_promoted" defaultValue:true changeAction:nil];
         
-        PSSpecifier *hideTopics = [self newSwitchCellWithTitle:@"Hide topics tweets" detailTitle:@"Remove all topics tweets from the timeline." key:@"hide_topics" defaultValue:false];
+        PSSpecifier *hideTopics = [self newSwitchCellWithTitle:@"Hide topics tweets" detailTitle:@"Remove all topics tweets from the timeline." key:@"hide_topics" defaultValue:false changeAction:nil];
         
-        PSSpecifier *videoLayerCaption = [self newSwitchCellWithTitle:@"Disable video layer captions" detailTitle:nil key:@"dis_VODCaptions" defaultValue:false];
+        PSSpecifier *videoLayerCaption = [self newSwitchCellWithTitle:@"Disable video layer captions" detailTitle:nil key:@"dis_VODCaptions" defaultValue:false changeAction:nil];
         
-        PSSpecifier *voice = [self newSwitchCellWithTitle:@"Voice feature" detailTitle:@"Enable voice in tweet and DM." key:@"voice" defaultValue:true];
+        PSSpecifier *voice = [self newSwitchCellWithTitle:@"Voice feature" detailTitle:@"Enable voice in tweet and DM." key:@"voice" defaultValue:true changeAction:nil];
         
-        PSSpecifier *videoZoom = [self newSwitchCellWithTitle:@"Video zoom feature" detailTitle:@"You can zoom the video by double clicking in the center of the video." key:@"video_zoom" defaultValue:false];
+        PSSpecifier *videoZoom = [self newSwitchCellWithTitle:@"Video zoom feature" detailTitle:@"You can zoom the video by double clicking in the center of the video." key:@"video_zoom" defaultValue:false changeAction:nil];
         
-        PSSpecifier *noHistory = [self newSwitchCellWithTitle:@"No search history" detailTitle:@"Force Twitter to stop recording search history." key:@"no_his" defaultValue:false];
+        PSSpecifier *noHistory = [self newSwitchCellWithTitle:@"No search history" detailTitle:@"Force Twitter to stop recording search history." key:@"no_his" defaultValue:false changeAction:nil];
         
-        PSSpecifier *bioTranslate = [self newSwitchCellWithTitle:@"Translate bio" detailTitle:@"show you a button in user bio to translate it." key:@"bio_translate" defaultValue:false];
+        PSSpecifier *bioTranslate = [self newSwitchCellWithTitle:@"Translate bio" detailTitle:@"show you a button in user bio to translate it." key:@"bio_translate" defaultValue:false changeAction:nil];
         
-        PSSpecifier *likeConfrim = [self newSwitchCellWithTitle:@"Like confirm" detailTitle:@"Show a confirm alert when you press like button." key:@"like_con" defaultValue:false];
+        PSSpecifier *likeConfrim = [self newSwitchCellWithTitle:@"Like confirm" detailTitle:@"Show a confirm alert when you press like button." key:@"like_con" defaultValue:false changeAction:nil];
         
-        PSSpecifier *tweetConfirm = [self newSwitchCellWithTitle:@"Tweet confirm" detailTitle:@"Show a confirm alert when you press tweet button." key:@"tweet_con" defaultValue:false];
+        PSSpecifier *tweetConfirm = [self newSwitchCellWithTitle:@"Tweet confirm" detailTitle:@"Show a confirm alert when you press tweet button." key:@"tweet_con" defaultValue:false changeAction:nil];
         
-        PSSpecifier *followConfirm = [self newSwitchCellWithTitle:@"User follow confirm" detailTitle:@"Show a confirm alert when you press follow button." key:@"follow_con" defaultValue:false];
+        PSSpecifier *followConfirm = [self newSwitchCellWithTitle:@"User follow confirm" detailTitle:@"Show a confirm alert when you press follow button." key:@"follow_con" defaultValue:false changeAction:nil];
         
-        PSSpecifier *padLock = [self newSwitchCellWithTitle:@"Padlock" detailTitle:@"Lock Twitter with passcode." key:@"padlock" defaultValue:false];
+        PSSpecifier *padLock = [self newSwitchCellWithTitle:@"Padlock" detailTitle:@"Lock Twitter with passcode." key:@"padlock" defaultValue:false changeAction:nil];
         
-        PSSpecifier *DmModularSearch = [self newSwitchCellWithTitle:@"Enable DM Modular Search" detailTitle:@"Enable the new UI of DM search." key:@"DmModularSearch" defaultValue:false];
+        PSSpecifier *DmModularSearch = [self newSwitchCellWithTitle:@"Enable DM Modular Search" detailTitle:@"Enable the new UI of DM search." key:@"DmModularSearch" defaultValue:false changeAction:nil];
         
-        PSSpecifier *autoHighestLoad = [self newSwitchCellWithTitle:@"Auto load photos in highest quality" detailTitle:@"This option let you upload photos and load it in highest quality possible." key:@"autoHighestLoad" defaultValue:true];
+        PSSpecifier *autoHighestLoad = [self newSwitchCellWithTitle:@"Auto load photos in highest quality" detailTitle:@"This option let you upload photos and load it in highest quality possible." key:@"autoHighestLoad" defaultValue:true changeAction:nil];
         
-        PSSpecifier *disableSensitiveTweetWarnings = [self newSwitchCellWithTitle:@"Disable sensitive tweet warning view" detailTitle:nil key:@"disableSensitiveTweetWarnings" defaultValue:true];
+        PSSpecifier *disableSensitiveTweetWarnings = [self newSwitchCellWithTitle:@"Disable sensitive tweet warning view" detailTitle:nil key:@"disableSensitiveTweetWarnings" defaultValue:true changeAction:nil];
         
-        PSSpecifier *trustedFriends = [self newSwitchCellWithTitle:@"Enable Twitter Circle feature" detailTitle:nil key:@"TrustedFriends" defaultValue:false];
+        PSSpecifier *trustedFriends = [self newSwitchCellWithTitle:@"Enable Twitter Circle feature" detailTitle:nil key:@"TrustedFriends" defaultValue:true changeAction:nil];
         
-        PSSpecifier *copyProfileInfo = [self newSwitchCellWithTitle:@"Enable Copying profile information feature" detailTitle:@"Add new button in Twitter profile that let you copy whatever info you want." key:@"CopyProfileInfo" defaultValue:false];
+        PSSpecifier *copyProfileInfo = [self newSwitchCellWithTitle:@"Enable Copying profile information feature" detailTitle:@"Add new button in Twitter profile that let you copy whatever info you want." key:@"CopyProfileInfo" defaultValue:false changeAction:nil];
         
-        PSSpecifier *tweetToImage = [self newSwitchCellWithTitle:@"Save tweet as an image" detailTitle:@"You can export tweets as image, by long pressing on the Tweet Share button." key:@"TweetToImage" defaultValue:false];
+        PSSpecifier *tweetToImage = [self newSwitchCellWithTitle:@"Save tweet as an image" detailTitle:@"You can export tweets as image, by long pressing on the Tweet Share button." key:@"TweetToImage" defaultValue:false changeAction:nil];
         
-        PSSpecifier *hideSpace = [self newSwitchCellWithTitle:@"Hide spaces bar" detailTitle:nil key:@"hide_spaces" defaultValue:false];
+        PSSpecifier *hideSpace = [self newSwitchCellWithTitle:@"Hide spaces bar" detailTitle:nil key:@"hide_spaces" defaultValue:false changeAction:nil];
         
-        PSSpecifier *disableRTL = [self newSwitchCellWithTitle:@"Disable RTL" detailTitle:@"Force Twitter use LTR with RTL language.\nRestart Twitter app to apply changes." key:@"dis_rtl" defaultValue:false];
+        PSSpecifier *disableRTL = [self newSwitchCellWithTitle:@"Disable RTL" detailTitle:@"Force Twitter use LTR with RTL language.\nRestart Twitter app to apply changes." key:@"dis_rtl" defaultValue:false changeAction:nil];
         
-        PSSpecifier *alwaysOpenSafari = [self newSwitchCellWithTitle:@"Always open in Safari" detailTitle:@"Force twitter to open URLs in Safari or your default browser." key:@"openInBrowser" defaultValue:false];
+        PSSpecifier *alwaysOpenSafari = [self newSwitchCellWithTitle:@"Always open in Safari" detailTitle:@"Force twitter to open URLs in Safari or your default browser." key:@"openInBrowser" defaultValue:false changeAction:nil];
         
         // Twitter bule section
-        PSSpecifier *undoTweet = [self newSwitchCellWithTitle:@"Undo tweets feature" detailTitle:@"Undo tweets after tweeting." key:@"undo_tweet" defaultValue:false];
+        PSSpecifier *undoTweet = [self newSwitchCellWithTitle:@"Undo tweets feature" detailTitle:@"Undo tweets after tweeting." key:@"undo_tweet" defaultValue:false changeAction:nil];
         
-        PSSpecifier *readerMode = [self newSwitchCellWithTitle:@"Reader mode feature" detailTitle:@"Enable reader mode in threads." key:@"reader_mode" defaultValue:false];
+        PSSpecifier *readerMode = [self newSwitchCellWithTitle:@"Reader mode feature" detailTitle:@"Enable reader mode in threads." key:@"reader_mode" defaultValue:false changeAction:nil];
         
         PSSpecifier *appTheme = [self newButtonCellWithTitle:@"Theme" detailTitle:@"Choose a theme color for you Twitter experience that can only be seen by you." dynamicRule:nil action:@selector(showThemeViewController:)];
         
         PSSpecifier *customTabBarVC = [self newButtonCellWithTitle:@"Custom Tab Bar" detailTitle:nil dynamicRule:nil action:@selector(showCustomTabBarVC:)];
         
         // Layout customization section
-        PSSpecifier *origTweetStyle = [self newSwitchCellWithTitle:@"Disable edge to edge tweet style" detailTitle:@"Force Twitter to use the original tweet style." key:@"old_style" defaultValue:true];
+        PSSpecifier *origTweetStyle = [self newSwitchCellWithTitle:@"Disable edge to edge tweet style" detailTitle:@"Force Twitter to use the original tweet style." key:@"old_style" defaultValue:true changeAction:nil];
         
-        PSSpecifier *font = [self newSwitchCellWithTitle:@"Enable changing font" detailTitle:@"Option to allow changing Twitter font and show font picker." key:@"en_font" defaultValue:false];
+        PSSpecifier *font = [self newSwitchCellWithTitle:@"Enable changing font" detailTitle:@"Option to allow changing Twitter font and show font picker." key:@"en_font" defaultValue:false changeAction:nil];
         
         PSSpecifier *regularFontsPicker = [self newButtonCellWithTitle:@"Font" detailTitle:[[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"] dynamicRule:@"en_font, ==, 0" action:@selector(showRegularFontPicker:)];
         
         PSSpecifier *boldFontsPicker = [self newButtonCellWithTitle:@"Bold Font" detailTitle:[[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"] dynamicRule:@"en_font, ==, 0" action:@selector(showBoldFontPicker:)];
         
         // dubug section
-        PSSpecifier *flex = [self newSwitchCellWithTitle:@"Enable FLEX" detailTitle:@"Show FLEX on twitter app." key:@"flex_twitter" defaultValue:false];
+        PSSpecifier *flex = [self newSwitchCellWithTitle:@"Enable FLEX" detailTitle:@"Show FLEX on twitter app." key:@"flex_twitter" defaultValue:false changeAction:@selector(FLEXAction:)];
         
         // legal section
         PSSpecifier *acknowledgements = [self newButtonCellWithTitle:@"Acknowledgements" detailTitle:nil dynamicRule:nil action:@selector(showAcknowledgements:)];
@@ -437,6 +454,13 @@
     }
     [self.navigationController pushViewController:themeVC animated:true];
 }
+- (void)FLEXAction:(UISwitch *)sender {
+    if (sender.isOn) {
+        [[FLEXManager sharedManager] showExplorer];
+    } else {
+        [[FLEXManager sharedManager] hideExplorer];
+    }
+}
 @end
 
 @implementation BHButtonTableViewCell
@@ -463,6 +487,12 @@
         self.detailTextLabel.text = subTitle;
         self.detailTextLabel.numberOfLines = isBig ? 0 : 1;
         self.detailTextLabel.textColor = [UIColor secondaryLabelColor];
+        
+        if (specifier.properties[@"switchAction"]) {
+            UISwitch *targetSwitch = ((UISwitch *)[self control]);
+            NSString *strAction = [specifier.properties[@"switchAction"] copy];
+            [targetSwitch addTarget:[self cellTarget] action:NSSelectorFromString(strAction) forControlEvents:UIControlEventValueChanged];
+        }
     }
     return self;
 }
