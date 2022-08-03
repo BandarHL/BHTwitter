@@ -422,7 +422,7 @@
 
     // In-app browser is used for two-factor authentication with security key,
     // login will not complete successfully if it's redirected to Safari
-    if ([urlStr hasPrefix:@"https://twitter.com/account/"]) {
+    if ([urlStr containsString:@"twitter.com/account/"] || [urlStr containsString:@"twitter.com/i/flow/"]) {
         return %orig;
     }
 
