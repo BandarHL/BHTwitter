@@ -6,7 +6,7 @@
 //
 
 #import "SettingsViewController.h"
-#import "BHTwitter+NSURL.h"
+#import "BHTBundle.h"
 #import "BHTwitter-Swift.h"
 
 @interface SettingsViewController () <UIFontPickerViewControllerDelegate>
@@ -28,10 +28,15 @@
     if (self) {
         self.twAccount = account;
         [self setupAppearance];
+        [self.navigationController.navigationBar setPrefersLargeTitles:false];
         [[NSUserDefaults standardUserDefaults] addObserver:self forKeyPath:@"bh_color_theme_selectedColor" options:NSKeyValueObservingOptionNew context:nil];
         [[NSUserDefaults standardUserDefaults] addObserver:self forKeyPath:@"T1ColorSettingsPrimaryColorOptionKey" options:NSKeyValueObservingOptionNew context:nil];
     }
     return self;
+}
+- (void)dealloc {
+    [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:@"bh_color_theme_selectedColor"];
+    [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:@"T1ColorSettingsPrimaryColorOptionKey"];
 }
 
 - (void)setupAppearance {
@@ -48,6 +53,7 @@
     
     HBAppearanceSettings *appearanceSettings = [[HBAppearanceSettings alloc] init];
     appearanceSettings.tintColor = primaryColor;
+    appearanceSettings.largeTitleStyle = HBAppearanceSettingsLargeTitleStyleNever;
     self.hb_appearanceSettings = appearanceSettings;
 }
 
@@ -109,7 +115,7 @@
     }
     return HBLinkCell;
 }
-- (PSSpecifier *)newHBTwitterCellWithTitle:(NSString *)titleText twitterUsername:(NSString *)user {
+- (PSSpecifier *)newHBTwitterCellWithTitle:(NSString *)titleText twitterUsername:(NSString *)user customAvatarURL:(NSString *)avatarURL {
     PSSpecifier *TwitterCell = [PSSpecifier preferenceSpecifierNamed:titleText target:self set:@selector(setPreferenceValue:specifier:) get:@selector(readPreferenceValue:) detail:nil cell:1 edit:nil];
     
     [TwitterCell setButtonAction:@selector(hb_openURL:)];
@@ -117,89 +123,93 @@
     [TwitterCell setProperty:user forKey:@"user"];
     [TwitterCell setProperty:@YES forKey:@"big"];
     [TwitterCell setProperty:@56 forKey:@"height"];
-    
+    [TwitterCell setProperty:avatarURL forKey:@"iconURL"];
     return TwitterCell;
 }
 - (NSArray *)specifiers {
     if (!_specifiers) {
         
-        PSSpecifier *mainSection = [self newSectionWithTitle:@"BHTwitter Preferences" footer:nil];
-        PSSpecifier *twitterBlueSection = [self newSectionWithTitle:@"Twitter blue features" footer:@"You may need to restart Twitter app to apply changes"];
-        PSSpecifier *layoutSection = [self newSectionWithTitle:@"Layout customization" footer:@"Restart Twitter app to apply changes"];
-        PSSpecifier *debug = [self newSectionWithTitle:@"Debugging" footer:nil];
-        PSSpecifier *legalSection = [self newSectionWithTitle:@"Legal notices" footer:nil];
-        PSSpecifier *developer = [self newSectionWithTitle:@"Developer" footer:@"BHTwitter v2.9.9"];
+        PSSpecifier *mainSection = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"MAIN_SECTION_HEADER_TITLE"] footer:nil];
+        PSSpecifier *twitterBlueSection = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TWITTER_BLUE_SECTION_HEADER_TITLE"] footer:[[BHTBundle sharedBundle] localizedStringForKey:@"TWITTER_BLUE_SECTION_FOOTER_TITLE"]];
+        PSSpecifier *layoutSection = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"LAYOUT_CUS_SECTION_HEADER_TITLE"] footer:[[BHTBundle sharedBundle] localizedStringForKey:@"LAYOUT_CUS_SECTION_FOOTER_TITLE"]];
+        PSSpecifier *debug = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DEBUG_SECTION_HEADER_TITLE"] footer:nil];
+        PSSpecifier *legalSection = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"LEGAL_SECTION_HEADER_TITLE"] footer:nil];
+        PSSpecifier *developer = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DEVELOPER_SECTION_HEADER_TITLE"] footer:[NSString stringWithFormat:@"BHTwitter v%@", [[BHTBundle sharedBundle] BHTwitterVersion]]];
         
-        PSSpecifier *download = [self newSwitchCellWithTitle:@"Downloading videos" detailTitle:@"Downloading videos. By adding button in tweet and inside video tab bar." key:@"dw_v" defaultValue:true changeAction:nil];
+        PSSpecifier *download = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DOWNLOAD_VIDEOS_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DOWNLOAD_VIDEOS_OPTION_DETAIL_TITLE"] key:@"dw_v" defaultValue:true changeAction:nil];
         
-        PSSpecifier *directSave = [self newSwitchCellWithTitle:@"Direct save" detailTitle:@"Save video directly after downloading." key:@"direct_save" defaultValue:false changeAction:nil];
+        PSSpecifier *directSave = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DIRECT_SAVE_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DIRECT_SAVE_OPTION_DETAIL_TITLE"] key:@"direct_save" defaultValue:false changeAction:nil];
         
-        PSSpecifier *hideAds = [self newSwitchCellWithTitle:@"Hide Ads" detailTitle:@"Remove all Ads in Twitter." key:@"hide_promoted" defaultValue:true changeAction:nil];
+        PSSpecifier *hideAds = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_ADS_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_ADS_OPTION_DETAIL_TITLE"] key:@"hide_promoted" defaultValue:true changeAction:nil];
         
-        PSSpecifier *hideTopics = [self newSwitchCellWithTitle:@"Hide topics tweets" detailTitle:@"Remove all topics tweets from the timeline." key:@"hide_topics" defaultValue:false changeAction:nil];
+        PSSpecifier *hideTopics = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_TOPICS_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_TOPICS_OPTION_DETAIL_TITLE"] key:@"hide_topics" defaultValue:false changeAction:nil];
         
-        PSSpecifier *videoLayerCaption = [self newSwitchCellWithTitle:@"Disable video layer captions" detailTitle:nil key:@"dis_VODCaptions" defaultValue:false changeAction:nil];
+        PSSpecifier *hideWhoToFollow = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_WHO_FOLLOW_OPTION"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE"] key:@"hide_who_to_follow" defaultValue:false changeAction:nil];
         
-        PSSpecifier *voice = [self newSwitchCellWithTitle:@"Voice feature" detailTitle:@"Enable voice in tweet and DM." key:@"voice" defaultValue:true changeAction:nil];
+        PSSpecifier *hideTopicsToFollow = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_TOPICS_TO_FOLLOW_OPTION"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE"] key:@"hide_topics_to_follow" defaultValue:false changeAction:nil];
         
-        PSSpecifier *videoZoom = [self newSwitchCellWithTitle:@"Video zoom feature" detailTitle:@"You can zoom the video by double clicking in the center of the video." key:@"video_zoom" defaultValue:false changeAction:nil];
+        PSSpecifier *videoLayerCaption = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE"] detailTitle:nil key:@"dis_VODCaptions" defaultValue:false changeAction:nil];
         
-        PSSpecifier *noHistory = [self newSwitchCellWithTitle:@"No search history" detailTitle:@"Force Twitter to stop recording search history." key:@"no_his" defaultValue:false changeAction:nil];
+        PSSpecifier *voice = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"VOICE_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"VOICE_OPTION_DETAIL_TITLE"] key:@"voice" defaultValue:true changeAction:nil];
         
-        PSSpecifier *bioTranslate = [self newSwitchCellWithTitle:@"Translate bio" detailTitle:@"show you a button in user bio to translate it." key:@"bio_translate" defaultValue:false changeAction:nil];
+        PSSpecifier *videoZoom = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"VIDEO_ZOOM_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"VIDEO_ZOOM_OPTION_DETAIL_TITLE"] key:@"video_zoom" defaultValue:false changeAction:nil];
         
-        PSSpecifier *likeConfrim = [self newSwitchCellWithTitle:@"Like confirm" detailTitle:@"Show a confirm alert when you press like button." key:@"like_con" defaultValue:false changeAction:nil];
+        PSSpecifier *noHistory = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"NO_HISTORY_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"NO_HISTORY_OPTION_DETAIL_TITLE"] key:@"no_his" defaultValue:false changeAction:nil];
         
-        PSSpecifier *tweetConfirm = [self newSwitchCellWithTitle:@"Tweet confirm" detailTitle:@"Show a confirm alert when you press tweet button." key:@"tweet_con" defaultValue:false changeAction:nil];
+        PSSpecifier *bioTranslate = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BIO_TRANSALTE_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BIO_TRANSALTE_OPTION_DETAIL_TITLE"] key:@"bio_translate" defaultValue:false changeAction:nil];
         
-        PSSpecifier *followConfirm = [self newSwitchCellWithTitle:@"User follow confirm" detailTitle:@"Show a confirm alert when you press follow button." key:@"follow_con" defaultValue:false changeAction:nil];
+        PSSpecifier *likeConfrim = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"LIKE_CONFIRM_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"LIKE_CONFIRM_OPTION_DETAIL_TITLE"] key:@"like_con" defaultValue:false changeAction:nil];
         
-        PSSpecifier *padLock = [self newSwitchCellWithTitle:@"Padlock" detailTitle:@"Lock Twitter with passcode." key:@"padlock" defaultValue:false changeAction:nil];
+        PSSpecifier *tweetConfirm = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TWEET_CONFIRM_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TWEET_CONFIRM_OPTION_DETAIL_TITLE"] key:@"tweet_con" defaultValue:false changeAction:nil];
         
-        PSSpecifier *DmModularSearch = [self newSwitchCellWithTitle:@"Enable DM Modular Search" detailTitle:@"Enable the new UI of DM search." key:@"DmModularSearch" defaultValue:false changeAction:nil];
+        PSSpecifier *followConfirm = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FOLLOW_CONFIRM_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FOLLOW_CONFIRM_OPTION_DETAIL_TITLE"] key:@"follow_con" defaultValue:false changeAction:nil];
         
-        PSSpecifier *autoHighestLoad = [self newSwitchCellWithTitle:@"Auto load photos in highest quality" detailTitle:@"This option let you upload photos and load it in highest quality possible." key:@"autoHighestLoad" defaultValue:true changeAction:nil];
+        PSSpecifier *padLock = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"PADLOCK_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"PADLOCK_OPTION_DETAIL_TITLE"] key:@"padlock" defaultValue:false changeAction:nil];
         
-        PSSpecifier *disableSensitiveTweetWarnings = [self newSwitchCellWithTitle:@"Disable sensitive tweet warning view" detailTitle:nil key:@"disableSensitiveTweetWarnings" defaultValue:true changeAction:nil];
+        PSSpecifier *DmModularSearch = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DN_MODULAR_SEARCH_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DN_MODULAR_SEARCH_OPTION_DETAIL_TITLE"] key:@"DmModularSearch" defaultValue:false changeAction:nil];
         
-        PSSpecifier *trustedFriends = [self newSwitchCellWithTitle:@"Enable Twitter Circle feature" detailTitle:nil key:@"TrustedFriends" defaultValue:true changeAction:nil];
+        PSSpecifier *autoHighestLoad = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"AUTO_HIGHEST_LOAD_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE"] key:@"autoHighestLoad" defaultValue:true changeAction:nil];
         
-        PSSpecifier *copyProfileInfo = [self newSwitchCellWithTitle:@"Enable Copying profile information feature" detailTitle:@"Add new button in Twitter profile that let you copy whatever info you want." key:@"CopyProfileInfo" defaultValue:false changeAction:nil];
+        PSSpecifier *disableSensitiveTweetWarnings = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE"] detailTitle:nil key:@"disableSensitiveTweetWarnings" defaultValue:true changeAction:nil];
         
-        PSSpecifier *tweetToImage = [self newSwitchCellWithTitle:@"Save tweet as an image" detailTitle:@"You can export tweets as image, by long pressing on the Tweet Share button." key:@"TweetToImage" defaultValue:false changeAction:nil];
+        PSSpecifier *trustedFriends = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TRUSTED_FRIENSS_OPTION_TITLE"] detailTitle:nil key:@"TrustedFriends" defaultValue:true changeAction:nil];
         
-        PSSpecifier *hideSpace = [self newSwitchCellWithTitle:@"Hide spaces bar" detailTitle:nil key:@"hide_spaces" defaultValue:false changeAction:nil];
+        PSSpecifier *copyProfileInfo = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_OPTION_DETAIL_TITLE"] key:@"CopyProfileInfo" defaultValue:false changeAction:nil];
         
-        PSSpecifier *disableRTL = [self newSwitchCellWithTitle:@"Disable RTL" detailTitle:@"Force Twitter use LTR with RTL language.\nRestart Twitter app to apply changes." key:@"dis_rtl" defaultValue:false changeAction:nil];
+        PSSpecifier *tweetToImage = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TWEET_TO_IMAGE_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TWEET_TO_IMAGE_OPTION_DETAIL_TITLE"] key:@"TweetToImage" defaultValue:false changeAction:nil];
         
-        PSSpecifier *alwaysOpenSafari = [self newSwitchCellWithTitle:@"Always open in Safari" detailTitle:@"Force twitter to open URLs in Safari or your default browser." key:@"openInBrowser" defaultValue:false changeAction:nil];
+        PSSpecifier *hideSpace = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_SPACE_OPTION_TITLE"] detailTitle:nil key:@"hide_spaces" defaultValue:false changeAction:nil];
+        
+        PSSpecifier *disableRTL = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_RTL_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_RTL_OPTION_DETAIL_TITLE"] key:@"dis_rtl" defaultValue:false changeAction:nil];
+        
+        PSSpecifier *alwaysOpenSafari = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ALWAYS_OPEN_SAFARI_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE"] key:@"openInBrowser" defaultValue:false changeAction:nil];
         
         // Twitter bule section
-        PSSpecifier *undoTweet = [self newSwitchCellWithTitle:@"Undo tweets feature" detailTitle:@"Undo tweets after tweeting." key:@"undo_tweet" defaultValue:false changeAction:nil];
+        PSSpecifier *undoTweet = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"UNDO_TWEET_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"UNDO_TWEET_OPTION_DETAIL_TITLE"] key:@"undo_tweet" defaultValue:false changeAction:nil];
         
-        PSSpecifier *readerMode = [self newSwitchCellWithTitle:@"Reader mode feature" detailTitle:@"Enable reader mode in threads." key:@"reader_mode" defaultValue:false changeAction:nil];
+        PSSpecifier *readerMode = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"READER_MODE_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"READER_MODE_OPTION_DETAIL_TITLE"] key:@"reader_mode" defaultValue:false changeAction:nil];
         
-        PSSpecifier *appTheme = [self newButtonCellWithTitle:@"Theme" detailTitle:@"Choose a theme color for you Twitter experience that can only be seen by you." dynamicRule:nil action:@selector(showThemeViewController:)];
+        PSSpecifier *appTheme = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"THEME_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"THEME_OPTION_DETAIL_TITLE"] dynamicRule:nil action:@selector(showThemeViewController:)];
         
-        PSSpecifier *customTabBarVC = [self newButtonCellWithTitle:@"Custom Tab Bar" detailTitle:nil dynamicRule:nil action:@selector(showCustomTabBarVC:)];
+        PSSpecifier *customTabBarVC = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_OPTION_TITLE"] detailTitle:nil dynamicRule:nil action:@selector(showCustomTabBarVC:)];
         
         // Layout customization section
-        PSSpecifier *origTweetStyle = [self newSwitchCellWithTitle:@"Disable edge to edge tweet style" detailTitle:@"Force Twitter to use the original tweet style." key:@"old_style" defaultValue:true changeAction:nil];
+        PSSpecifier *origTweetStyle = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ORIG_TWEET_STYLE_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE"] key:@"old_style" defaultValue:true changeAction:nil];
         
-        PSSpecifier *font = [self newSwitchCellWithTitle:@"Enable changing font" detailTitle:@"Option to allow changing Twitter font and show font picker." key:@"en_font" defaultValue:false changeAction:nil];
+        PSSpecifier *font = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FONT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FONT_OPTION_DETAIL_TITLE"] key:@"en_font" defaultValue:false changeAction:nil];
         
-        PSSpecifier *regularFontsPicker = [self newButtonCellWithTitle:@"Font" detailTitle:[[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"] dynamicRule:@"en_font, ==, 0" action:@selector(showRegularFontPicker:)];
+        PSSpecifier *regularFontsPicker = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"REQULAR_FONTS_PICKER_OPTION_TITLE"] detailTitle:[[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"] dynamicRule:@"en_font, ==, 0" action:@selector(showRegularFontPicker:)];
         
-        PSSpecifier *boldFontsPicker = [self newButtonCellWithTitle:@"Bold Font" detailTitle:[[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"] dynamicRule:@"en_font, ==, 0" action:@selector(showBoldFontPicker:)];
+        PSSpecifier *boldFontsPicker = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BOLD_FONTS_PICKER_OPTION_TITLE"] detailTitle:[[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"] dynamicRule:@"en_font, ==, 0" action:@selector(showBoldFontPicker:)];
         
         // dubug section
-        PSSpecifier *flex = [self newSwitchCellWithTitle:@"Enable FLEX" detailTitle:@"Show FLEX on twitter app." key:@"flex_twitter" defaultValue:false changeAction:@selector(FLEXAction:)];
+        PSSpecifier *flex = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_DETAIL_TITLE"] key:@"flex_twitter" defaultValue:false changeAction:@selector(FLEXAction:)];
         
         // legal section
-        PSSpecifier *acknowledgements = [self newButtonCellWithTitle:@"Acknowledgements" detailTitle:nil dynamicRule:nil action:@selector(showAcknowledgements:)];
+        PSSpecifier *acknowledgements = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"LEGAL_BUTTON_TITLE"] detailTitle:nil dynamicRule:nil action:@selector(showAcknowledgements:)];
         
         // dvelopers section
-        PSSpecifier *bandarHL = [self newHBTwitterCellWithTitle:@"BandarHelal" twitterUsername:@"BandarHL"];
+        PSSpecifier *bandarHL = [self newHBTwitterCellWithTitle:@"BandarHelal" twitterUsername:@"BandarHL" customAvatarURL:@"https://unavatar.io/twitter/BandarHL"];
         PSSpecifier *tipJar = [self newHBLinkCellWithTitle:@"Tip Jar" detailTitle:@"Donate Via Paypal" url:@"https://www.paypal.me/BandarHL"];
         PSSpecifier *sourceCode = [self newHBLinkCellWithTitle:@"BHTwitter" detailTitle:@"Code source of BHTwitter" url:@"https://github.com/BandarHL/BHTwitter/"];
         
@@ -209,6 +219,8 @@
             download,
             hideAds,
             hideTopics,
+            hideWhoToFollow,
+            hideTopicsToFollow,
             videoLayerCaption,
             directSave,
             voice,
@@ -431,16 +443,16 @@
     [self.navigationController pushViewController:fontPicker animated:true];
 }
 - (void)showAcknowledgements:(PSSpecifier *)specifier {
-    T1RichTextFormatViewController *acknowledgementsVC = [[objc_getClass("T1RichTextFormatViewController") alloc] initWithRichTextFormatDocumentPath:[NSURL bhtwitter_fileURLWithPath:@"Acknowledgements.rtf"].path];
+    T1RichTextFormatViewController *acknowledgementsVC = [[objc_getClass("T1RichTextFormatViewController") alloc] initWithRichTextFormatDocumentPath:[[BHTBundle sharedBundle] pathForFile:@"Acknowledgements.rtf"].path];
     if (self.twAccount != nil) {
-        [acknowledgementsVC.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:@"Acknowledgements" subtitle:self.twAccount.displayUsername]];
+        [acknowledgementsVC.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ACKNOWLEDGEMENTS_SETTINGS_NAVIGATION_TITLE"] subtitle:self.twAccount.displayUsername]];
     }
     [self.navigationController pushViewController:acknowledgementsVC animated:true];
 }
 - (void)showCustomTabBarVC:(PSSpecifier *)specifier {
     CustomTabBarViewController *customTabBarVC = [[CustomTabBarViewController alloc] init];
     if (self.twAccount != nil) {
-        [customTabBarVC.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:@"Custom Tab Bar" subtitle:self.twAccount.displayUsername]];
+        [customTabBarVC.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE"] subtitle:self.twAccount.displayUsername]];
     }
     [self.navigationController pushViewController:customTabBarVC animated:true];
 }
@@ -450,7 +462,7 @@
     // 2- Twitter knows you do not actually subscribe with Twitter Blue, so it keeps resting the changes and resting 'T1ColorSettingsPrimaryColorOptionKey' key, so I had to create another key to track the original one and keep sure no changes, but it still not enough to keep the new theme after relaunching app, so i had to force the changes again with new lunch.
     BHColorThemeViewController *themeVC = [[BHColorThemeViewController alloc] init];
     if (self.twAccount != nil) {
-        [themeVC.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:@"Theme" subtitle:self.twAccount.displayUsername]];
+        [themeVC.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"THEME_SETTINGS_NAVIGATION_TITLE"] subtitle:self.twAccount.displayUsername]];
     }
     [self.navigationController pushViewController:themeVC animated:true];
 }
@@ -464,7 +476,6 @@
 @end
 
 @implementation BHButtonTableViewCell
-
 - (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier specifier:(PSSpecifier *)specifier {
     self = [super initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:reuseIdentifier specifier:specifier];
     if (self) {

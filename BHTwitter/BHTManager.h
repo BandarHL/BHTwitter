@@ -18,7 +18,6 @@
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount;
 + (void)showSaveVC:(NSURL *)url;
 + (void)save:(NSURL *)url;
-+ (float)TwitterVersion;
 
 + (BOOL)DownloadingVideos;
 + (BOOL)DirectSave;
@@ -36,7 +35,6 @@
 + (BOOL)DisableVODCaptions;
 + (BOOL)Padlock;
 + (BOOL)OldStyle;
-+ (BOOL)DwbLayout;
 + (BOOL)changeFont;
 + (BOOL)FLEX;
 + (BOOL)autoHighestLoad;
@@ -48,5 +46,7 @@
 + (BOOL)hideSpacesBar;
 + (BOOL)disableRTL;
 + (BOOL)alwaysOpenSafari;
++ (BOOL)hideWhoToFollow;
++ (BOOL)hideTopicsToFollow;
 @end
 

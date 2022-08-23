@@ -45,6 +45,7 @@
 
 @interface TFNDataViewController : UIViewController
 @property(readonly, nonatomic) TFNTableView *tableView;
+@property(readonly, nonatomic) NSString *adDisplayLocation;
 @end
 
 @interface TFNItemsDataViewController : TFNDataViewController
@@ -368,7 +369,7 @@ static  UIFont * _Nullable BH_getDefaultFont(bool isBold, CGFloat pointSize) {
 }
 
 static BOOL isDeviceLanguageRTL() {
-  return ([NSLocale characterDirectionForLanguage:[[NSLocale preferredLanguages] objectAtIndex:0]] == NSLocaleLanguageDirectionRightToLeft);
+    return [NSParagraphStyle _defaultWritingDirection] == NSWritingDirectionRightToLeft;
 }
 static BOOL is_iPad() {
     if ([(NSString *)[UIDevice currentDevice].model hasPrefix:@"iPad"]) {

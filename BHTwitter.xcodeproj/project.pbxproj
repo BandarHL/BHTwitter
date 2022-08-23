@@ -476,12 +476,13 @@
 		505C0EBC2801ECAB0028D1C9 /* BHDownloadInlineButton.h in Headers */ = {isa = PBXBuildFile; fileRef = 505C0EBB2801ECAB0028D1C9 /* BHDownloadInlineButton.h */; };
 		505C0EBE2801ED020028D1C9 /* BHDownloadInlineButton.m in Sources */ = {isa = PBXBuildFile; fileRef = 505C0EBD2801ED020028D1C9 /* BHDownloadInlineButton.m */; };
 		5061F3C02806133400F3D5D3 /* CustomTabBarViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5061F3BF2806133400F3D5D3 /* CustomTabBarViewController.swift */; };
-		50C15C9D271401CB00E8B5E8 /* BHTwitter+NSURL.h in Headers */ = {isa = PBXBuildFile; fileRef = 50C15C9C271401CB00E8B5E8 /* BHTwitter+NSURL.h */; };
 		50D73500252CBFC1007838C7 /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 50D734FF252CBFBD007838C7 /* libz.tbd */; };
 		50D73502252CBFC6007838C7 /* SceneKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 50D73501252CBFC6007838C7 /* SceneKit.framework */; };
 		50D73504252CBFD0007838C7 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 50D73503252CBFCB007838C7 /* libsqlite3.tbd */; };
 		50E7ABEF24F5A8F700A8619D /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 50E7ABEE24F5A8F600A8619D /* WebKit.framework */; };
 		50EE4D4B286F7F70007DE117 /* BHColorThemeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50EE4D4A286F7F70007DE117 /* BHColorThemeViewController.swift */; };
+		50F7929028A0EA22000A2269 /* BHTBundle.m in Sources */ = {isa = PBXBuildFile; fileRef = 50F7928E28A0EA22000A2269 /* BHTBundle.m */; };
+		50F7929128A0EA22000A2269 /* BHTBundle.h in Headers */ = {isa = PBXBuildFile; fileRef = 50F7928F28A0EA22000A2269 /* BHTBundle.h */; };
 		50FAE057288545DB00CDCEB2 /* CepheiPrefs.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 50FAE054288545DB00CDCEB2 /* CepheiPrefs.framework */; };
 		50FAE059288545DB00CDCEB2 /* Cephei.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 50FAE055288545DB00CDCEB2 /* Cephei.framework */; };
 		50FAE05B288545DC00CDCEB2 /* CepheiUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 50FAE056288545DB00CDCEB2 /* CepheiUI.framework */; };
@@ -971,13 +972,13 @@
 		505C0EBD2801ED020028D1C9 /* BHDownloadInlineButton.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BHDownloadInlineButton.m; sourceTree = "<group>"; };
 		505C0ED028038B810028D1C9 /* BHTwitter-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "BHTwitter-Bridging-Header.h"; sourceTree = "<group>"; };
 		5061F3BF2806133400F3D5D3 /* CustomTabBarViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CustomTabBarViewController.swift; sourceTree = "<group>"; };
-		50C15C9B271400DA00E8B5E8 /* BHTwitter+UIImage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "BHTwitter+UIImage.h"; sourceTree = "<group>"; };
-		50C15C9C271401CB00E8B5E8 /* BHTwitter+NSURL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "BHTwitter+NSURL.h"; sourceTree = "<group>"; };
 		50D734FF252CBFBD007838C7 /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
 		50D73501252CBFC6007838C7 /* SceneKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SceneKit.framework; path = System/Library/Frameworks/SceneKit.framework; sourceTree = SDKROOT; };
 		50D73503252CBFCB007838C7 /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 		50E7ABEE24F5A8F600A8619D /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
 		50EE4D4A286F7F70007DE117 /* BHColorThemeViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BHColorThemeViewController.swift; sourceTree = "<group>"; };
+		50F7928E28A0EA22000A2269 /* BHTBundle.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BHTBundle.m; sourceTree = "<group>"; };
+		50F7928F28A0EA22000A2269 /* BHTBundle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BHTBundle.h; sourceTree = "<group>"; };
 		50FAE054288545DB00CDCEB2 /* CepheiPrefs.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CepheiPrefs.framework; path = ../../../../../opt/theos/vendor/lib/CepheiPrefs.framework; sourceTree = "<group>"; };
 		50FAE055288545DB00CDCEB2 /* Cephei.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cephei.framework; path = ../../../../../opt/theos/vendor/lib/Cephei.framework; sourceTree = "<group>"; };
 		50FAE056288545DB00CDCEB2 /* CepheiUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CepheiUI.framework; path = ../../../../../opt/theos/vendor/lib/CepheiUI.framework; sourceTree = "<group>"; };
@@ -1087,12 +1088,12 @@
 				50198011250E053900207745 /* BHDownload.m */,
 				5020A8D624E759190080F292 /* BHTManager.h */,
 				5020A8D724E759190080F292 /* BHTManager.m */,
+				50F7928F28A0EA22000A2269 /* BHTBundle.h */,
+				50F7928E28A0EA22000A2269 /* BHTBundle.m */,
 				5020AA5E24E759590080F292 /* Colours.h */,
 				5020AA6024E759590080F292 /* Colours.m */,
 				505C0EBB2801ECAB0028D1C9 /* BHDownloadInlineButton.h */,
 				505C0EBD2801ED020028D1C9 /* BHDownloadInlineButton.m */,
-				50C15C9B271400DA00E8B5E8 /* BHTwitter+UIImage.h */,
-				50C15C9C271401CB00E8B5E8 /* BHTwitter+NSURL.h */,
 				50FAE05E288545F600CDCEB2 /* SettingsViewController.h */,
 				50FAE05F288545F600CDCEB2 /* SettingsViewController.m */,
 				50EE4D49286F7F56007DE117 /* ThemeColor */,
@@ -2122,6 +2123,7 @@
 				5020AA4A24E759390080F292 /* JGProgressHUDShadow.h in Headers */,
 				503FA84A2753F04B00BBB92A /* FLEXTableView.h in Headers */,
 				503FA87A2753F04B00BBB92A /* FLEXObjectExplorerFactory.h in Headers */,
+				50F7929128A0EA22000A2269 /* BHTBundle.h in Headers */,
 				5020AA6424E759590080F292 /* Colours.h in Headers */,
 				503FA9632753F04D00BBB92A /* FLEXRuntimeKeyPath.h in Headers */,
 				503FA9592753F04D00BBB92A /* FLEXKeyboardToolbar.h in Headers */,
@@ -2185,7 +2187,6 @@
 				503FA97D2753F04D00BBB92A /* FLEXMacros.h in Headers */,
 				503FA8F92753F04C00BBB92A /* FLEXManager+Extensibility.h in Headers */,
 				503FA8C42753F04C00BBB92A /* FLEXExplorerToolbarItem.h in Headers */,
-				50C15C9D271401CB00E8B5E8 /* BHTwitter+NSURL.h in Headers */,
 				500DA69C26FF930A00C020B2 /* SAMKeychainQuery.h in Headers */,
 				503FA9982753F04D00BBB92A /* FLEXPropertyAttributes.h in Headers */,
 				503FA94C2753F04D00BBB92A /* FLEXTableColumnHeader.h in Headers */,
@@ -2519,6 +2520,7 @@
 				503FA9292753F04C00BBB92A /* FLEXFileBrowserSearchOperation.m in Sources */,
 				503FA88D2753F04B00BBB92A /* FLEXNetworkObserver.m in Sources */,
 				503FA9482753F04D00BBB92A /* FLEXDBQueryRowCell.m in Sources */,
+				50F7929028A0EA22000A2269 /* BHTBundle.m in Sources */,
 				5020AA5B24E759390080F292 /* JGProgressHUDShadow.m in Sources */,
 				503FA9172753F04C00BBB92A /* FLEXGlobalsViewController.m in Sources */,
 				503FA9762753F04D00BBB92A /* FLEXHierarchyTableViewCell.m in Sources */,

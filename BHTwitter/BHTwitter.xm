@@ -2,6 +2,7 @@
 #import "Colours.h"
 #import "BHTManager.h"
 #import "BHTwitter-Swift.h"
+#import "BHTBundle.h"
 
 %config(generator=internal)
 
@@ -92,19 +93,19 @@
         if (@available(iOS 14.0, *)) {
             [copyButton setShowsMenuAsPrimaryAction:true];
             [copyButton setMenu:[UIMenu menuWithTitle:@"" children:@[
-                [UIAction actionWithTitle:@"Copy bio" image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
+                [UIAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_1"] image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
                     UIPasteboard.generalPasteboard.string = self.viewModel.bio;
                 }],
-                [UIAction actionWithTitle:@"Copy Username" image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
+                [UIAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_2"] image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
                     UIPasteboard.generalPasteboard.string = self.viewModel.username;
                 }],
-                [UIAction actionWithTitle:@"Copy Full Username" image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
+                [UIAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_3"] image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
                     UIPasteboard.generalPasteboard.string = self.viewModel.fullName;
                 }],
-                [UIAction actionWithTitle:@"Copy URL in the bio" image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
+                [UIAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_4"] image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
                     UIPasteboard.generalPasteboard.string = self.viewModel.url;
                 }],
-                [UIAction actionWithTitle:@"Copy Location in the bio" image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
+                [UIAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_5"] image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
                     UIPasteboard.generalPasteboard.string = self.viewModel.location;
                 }],
             ]]];
@@ -124,20 +125,14 @@
             [copyButton.heightAnchor constraintEqualToConstant:32],
         ]];
         
-        if ([BHTManager DwbLayout]) {
+        if (isDeviceLanguageRTL()) {
+            [NSLayoutConstraint activateConstraints:@[
+                [copyButton.leadingAnchor constraintEqualToAnchor:innerContentView.trailingAnchor constant:7],
+            ]];
+        } else {
             [NSLayoutConstraint activateConstraints:@[
                 [copyButton.trailingAnchor constraintEqualToAnchor:innerContentView.leadingAnchor constant:-7],
             ]];
-        } else {
-            if (isDeviceLanguageRTL()) {
-                [NSLayoutConstraint activateConstraints:@[
-                    [copyButton.leadingAnchor constraintEqualToAnchor:innerContentView.trailingAnchor constant:7],
-                ]];
-            } else {
-                [NSLayoutConstraint activateConstraints:@[
-                    [copyButton.trailingAnchor constraintEqualToAnchor:innerContentView.leadingAnchor constant:-7],
-                ]];
-            }
         }
     }
 }
@@ -147,19 +142,19 @@
         alert.popoverPresentationController.sourceView = self.view;
         alert.popoverPresentationController.sourceRect = sender.frame;
     }
-    UIAlertAction *bio = [UIAlertAction actionWithTitle:@"Copy bio" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+    UIAlertAction *bio = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_1"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
         UIPasteboard.generalPasteboard.string = self.viewModel.bio;
     }];
-    UIAlertAction *username = [UIAlertAction actionWithTitle:@"Copy Username" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+    UIAlertAction *username = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_2"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
         UIPasteboard.generalPasteboard.string = self.viewModel.username;
     }];
-    UIAlertAction *fullusername = [UIAlertAction actionWithTitle:@"Copy Full Username" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+    UIAlertAction *fullusername = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_3"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
         UIPasteboard.generalPasteboard.string = self.viewModel.fullName;
     }];
-    UIAlertAction *url = [UIAlertAction actionWithTitle:@"Copy URL in the bio" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+    UIAlertAction *url = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_4"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
         UIPasteboard.generalPasteboard.string = self.viewModel.url;
     }];
-    UIAlertAction *location = [UIAlertAction actionWithTitle:@"Copy Location in the bio" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+    UIAlertAction *location = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_5"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
         UIPasteboard.generalPasteboard.string = self.viewModel.location;
     }];
     [alert addAction:bio];
@@ -167,7 +162,7 @@
     [alert addAction:fullusername];
     [alert addAction:url];
     [alert addAction:location];
-    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"] style:UIAlertActionStyleCancel handler:nil]];
     [self presentViewController:alert animated:true completion:nil];
 }
 %end
@@ -179,6 +174,21 @@
 - (id)tableViewCellForItem:(id)arg1 atIndexPath:(id)arg2 {
     UITableViewCell *_orig = %orig;
     id tweet = [self itemAtIndexPath:arg2];
+    
+    if ([self.adDisplayLocation isEqualToString:@"PROFILE_TWEETS"]) {
+        NSString *class_name = NSStringFromClass([tweet classForCoder]);
+        if ([BHTManager hideWhoToFollow]) {
+            if ([class_name isEqualToString:@"T1URTTimelineUserItemViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"]) {
+                [_orig setHidden:true];
+            }
+        }
+        
+        if ([BHTManager hideTopicsToFollow]) {
+            if ([class_name isEqualToString:@"T1TwitterSwift.URTTimelineTopicCollectionViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"] || [class_name isEqualToString:@"T1Twitter.URTTimelineCarouselViewModel"]) {
+                [_orig setHidden:true];
+            }
+        }
+    }
     
     if ([tweet isKindOfClass:%c(TFNTwitterStatus)]) {
         TFNTwitterStatus *fullTweet = tweet;
@@ -219,6 +229,20 @@
         TFNTwitterStatus *fullTweet = tweet;
         if ([BHTManager HidePromoted]) {
             if (fullTweet.isPromoted) {
+                return 0;
+            }
+        }
+    }
+    
+    if ([self.adDisplayLocation isEqualToString:@"PROFILE_TWEETS"]) {
+        NSString *class_name = NSStringFromClass([tweet classForCoder]);
+        if ([BHTManager hideWhoToFollow]) {
+            if ([class_name isEqualToString:@"T1URTTimelineUserItemViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"]) {
+                return 0;
+            }
+        }
+        if ([BHTManager hideTopicsToFollow]) {
+            if ([class_name isEqualToString:@"T1TwitterSwift.URTTimelineTopicCollectionViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"] || [class_name isEqualToString:@"T1Twitter.URTTimelineCarouselViewModel"]) {
                 return 0;
             }
         }
@@ -272,7 +296,7 @@
     }];
 }
 %new - (void)DownloadHandler {
-    NSAttributedString *AttString = [[NSAttributedString alloc] initWithString:@"\nSelect video quality you want to download" attributes:@{
+    NSAttributedString *AttString = [[NSAttributedString alloc] initWithString:[[BHTBundle sharedBundle] localizedStringForKey:@"DOWNLOAD_MENU_TITLE"] attributes:@{
         NSFontAttributeName: [[%c(TAEStandardFontGroup) sharedFontGroup] headline2BoldFont],
         NSForegroundColorAttributeName: UIColor.labelColor
     }];
@@ -287,7 +311,7 @@
             TFNActionItem *download = [%c(TFNActionItem) actionItemWithTitle:[BHTManager getVideoQuality:i.url] imageName:@"arrow_down_circle_stroke" action:^{
                 BHDownload *DownloadManager = [[BHDownload alloc] init];
                 self.hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
-                self.hud.textLabel.text = @"Downloading";
+                self.hud.textLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"PROGRESS_DOWNLOADING_STATUS_TITLE"];
                 [DownloadManager downloadFileWithURL:[NSURL URLWithString:i.url]];
                 [DownloadManager setDelegate:self];
                 [self.hud showInView:topMostController().view];
@@ -359,6 +383,13 @@
         return %orig;
     }
     return %orig;
+}
+%end
+
+%hook TFNNavigationBar
+- (void)setPrefersLargeTitles:(BOOL)largeTitles {
+    largeTitles = false;
+    return %orig(largeTitles);
 }
 %end
 
@@ -450,26 +481,17 @@
 // MARK: Disable RTL
 %hook NSParagraphStyle
 + (NSWritingDirection)defaultWritingDirectionForLanguage:(id)lang {
-    if ([BHTManager disableRTL]) {
-        return NSWritingDirectionLeftToRight;
-    }
-    return %orig;
+    return [BHTManager disableRTL] ? NSWritingDirectionLeftToRight : %orig;
 }
 + (NSWritingDirection)_defaultWritingDirection {
-    if ([BHTManager disableRTL]) {
-        return NSWritingDirectionLeftToRight;
-    }
-    return %orig;
+    return [BHTManager disableRTL] ? NSWritingDirectionLeftToRight : %orig;
 }
 %end
 
 // MARK: Bio Translate
 %hook TFNTwitterCanonicalUser
 - (_Bool)isProfileBioTranslatable {
-    if ([BHTManager BioTranslate]) {
-        return true;
-    }
-    return %orig;
+    return [BHTManager BioTranslate] ? true : %orig;
 }
 %end
 
@@ -519,19 +541,13 @@
 
 %hook TFNTwitterMediaUploadConfiguration
 - (_Bool)photoUploadHighQualityImagesSettingIsVisible {
-    if ([BHTManager autoHighestLoad]) {
-        return true;
-    }
-    return %orig;
+    return [BHTManager autoHighestLoad] ? true : %orig;
 }
 %end
 
 %hook T1SlideshowViewController
 - (_Bool)_t1_shouldDisplayLoadHighQualityImageItemForImageDisplayView:(id)arg1 highestQuality:(_Bool)arg2 {
-    if ([BHTManager autoHighestLoad]) {
-        return true;
-    }
-    return %orig;
+    return [BHTManager autoHighestLoad] ? true : %orig;
 }
 - (id)_t1_loadHighQualityActionItemWithTitle:(id)arg1 forImageDisplayView:(id)arg2 highestQuality:(_Bool)arg3 {
     if ([BHTManager autoHighestLoad]) {
@@ -543,119 +559,68 @@
 
 %hook T1ImageDisplayView
 - (_Bool)_tfn_shouldUseHighestQualityImage {
-    if ([BHTManager autoHighestLoad]) {
-        return true;
-    }
-    return %orig;
+    return [BHTManager autoHighestLoad] ? true : %orig;
 }
 - (_Bool)_tfn_shouldUseHighQualityImage {
-    if ([BHTManager autoHighestLoad]) {
-        return true;
-    }
-    return %orig;
+    return [BHTManager autoHighestLoad] ? true : %orig;
 }
 %end
 
 %hook T1HighQualityImagesUploadSettings
 - (_Bool)shouldUploadHighQualityImages {
-    if ([BHTManager autoHighestLoad]) {
-        return true;
-    }
-    return %orig;
+    return [BHTManager autoHighestLoad] ? true : %orig;
 }
 %end
 
 %hook TFSTwitterAPICommandAccountStateProvider
 - (_Bool)allowPromotedContent {
-    if ([BHTManager HidePromoted]) {
-        return false;
-    }
-    return %orig;
+    return [BHTManager HidePromoted] ? true : %orig;
 }
 %end
 
 %hook T1TrustedFriendsFeatureSwitches
 + (_Bool)isTrustedFriendsTweetCreationEnabled:(id)arg1 {
-    if ([BHTManager TwitterCircle]) {
-        return true;
-    }
-    return %orig;
+    return [BHTManager TwitterCircle] ? true : %orig;
 }
 %end
 
 %hook TFNTwitterAccount
 - (_Bool)isTrustedFriendsAPIEnabled {
-    if ([BHTManager TwitterCircle]) {
-        return true;
-    }
-    return %orig;
+    return [BHTManager TwitterCircle] ? true : %orig;
 }
 - (_Bool)isSensitiveTweetWarningsComposeEnabled {
-    if ([BHTManager disableSensitiveTweetWarnings]) {
-        return false;
-    }
-    return %orig;
+    return [BHTManager disableSensitiveTweetWarnings] ? false : %orig;
 }
 - (_Bool)isSensitiveTweetWarningsConsumeEnabled {
-    if ([BHTManager disableSensitiveTweetWarnings]) {
-        return false;
-    }
-    return %orig;
+    return [BHTManager disableSensitiveTweetWarnings] ? false : %orig;
 }
 - (_Bool)isDmModularSearchEnabled {
-    if ([BHTManager DmModularSearch]) {
-        return true;
-    }
-    return %orig;
+    return [BHTManager DmModularSearch] ? true : %orig;
 }
 - (_Bool)isVideoDynamicAdEnabled {
-    if ([BHTManager HidePromoted]) {
-        return false;
-    }
-    return %orig;
+    return [BHTManager HidePromoted] ? false : %orig;
 }
 
 - (_Bool)isVODCaptionsEnabled {
-    if ([BHTManager DisableVODCaptions]) {
-        return false;
-    }
-    return %orig;
+    return [BHTManager DisableVODCaptions] ? false : %orig;
 }
 - (_Bool)photoUploadHighQualityImagesSettingIsVisible {
-    if ([BHTManager autoHighestLoad]) {
-        return true;
-    }
-    return %orig;
+    return [BHTManager autoHighestLoad] ? true : %orig;
 }
 - (_Bool)loadingHighestQualityImageVariantPermitted {
-    if ([BHTManager autoHighestLoad]) {
-        return true;
-    }
-    return %orig;
+    return [BHTManager autoHighestLoad] ? true : %orig;
 }
 - (_Bool)isDoubleMaxZoomFor4KImagesEnabled {
-    if ([BHTManager autoHighestLoad]) {
-        return true;
-    }
-    return %orig;
+    return [BHTManager autoHighestLoad] ? true : %orig;
 }
 - (_Bool)isVideoZoomEnabled {
-    if ([BHTManager VideoZoom]) {
-        return true;
-    }
-    return %orig;
+    return [BHTManager VideoZoom] ? true : %orig;
 }
 - (_Bool)isDMVoiceRenderingEnabled {
-    if ([BHTManager VoiceFeature]) {
-        return true;
-    }
-    return %orig;
+    return [BHTManager VoiceFeature] ? true : %orig;
 }
 - (_Bool)isDMVoiceCreationEnabled {
-    if ([BHTManager VoiceFeature]) {
-        return true;
-    }
-    return %orig;
+    return [BHTManager VoiceFeature] ? true : %orig;
 }
 %end
 
@@ -667,10 +632,7 @@
     return %orig(arg1);
 }
 - (BOOL)isVoiceButtonHidden {
-    if ([BHTManager VoiceFeature]) {
-        return false;
-    }
-    return %orig;
+    return [BHTManager VoiceFeature] ? false : %orig;
 }
 %end
 
@@ -679,12 +641,12 @@
 - (void)_t1_didTapSendButton:(UIButton *)tweetButton {
     if ([BHTManager TweetConfirm]) {
         [FLEXAlert makeAlert:^(FLEXAlert *make) {
-            make.message(@"Are you sure?");
-            make.button(@"Yes").handler(^(NSArray<NSString *> *strings) {
+            make.message([[BHTBundle sharedBundle] localizedStringForKey:@"CONFIRM_ALERT_MESSAGE"]);
+            make.button([[BHTBundle sharedBundle] localizedStringForKey:@"YES_BUTTON_TITLE"]).handler(^(NSArray<NSString *> *strings) {
                 %orig;
             });
-            make.button(@"No").cancelStyle();
-        } showFrom:self];
+            make.button([[BHTBundle sharedBundle] localizedStringForKey:@"NO_BUTTON_TITLE"]).cancelStyle();
+        } showFrom:topMostController()];
     } else {
         return %orig;
     }
@@ -692,12 +654,12 @@
 - (void)_t1_handleTweet {
     if ([BHTManager TweetConfirm]) {
         [FLEXAlert makeAlert:^(FLEXAlert *make) {
-            make.message(@"Are you sure?");
-            make.button(@"Yes").handler(^(NSArray<NSString *> *strings) {
+            make.message([[BHTBundle sharedBundle] localizedStringForKey:@"CONFIRM_ALERT_MESSAGE"]);
+            make.button([[BHTBundle sharedBundle] localizedStringForKey:@"YES_BUTTON_TITLE"]).handler(^(NSArray<NSString *> *strings) {
                 %orig;
             });
-            make.button(@"No").cancelStyle();
-        } showFrom:self];
+            make.button([[BHTBundle sharedBundle] localizedStringForKey:@"NO_BUTTON_TITLE"]).cancelStyle();
+        } showFrom:topMostController()];
     } else {
         return %orig;
     }
@@ -721,11 +683,11 @@
 - (void)_followUser:(id)arg1 event:(id)arg2 {
     if ([BHTManager FollowConfirm]) {
         [FLEXAlert makeAlert:^(FLEXAlert *make) {
-            make.message(@"Are you sure?");
-            make.button(@"Yes").handler(^(NSArray<NSString *> *strings) {
+            make.message([[BHTBundle sharedBundle] localizedStringForKey:@"CONFIRM_ALERT_MESSAGE"]);
+            make.button([[BHTBundle sharedBundle] localizedStringForKey:@"YES_BUTTON_TITLE"]).handler(^(NSArray<NSString *> *strings) {
                 %orig;
             });
-            make.button(@"No").cancelStyle();
+            make.button([[BHTBundle sharedBundle] localizedStringForKey:@"NO_BUTTON_TITLE"]).cancelStyle();
         } showFrom:topMostController()];
     } else {
         return %orig;
@@ -738,11 +700,11 @@
 - (void)didTap {
     if ([BHTManager LikeConfirm]) {
         [FLEXAlert makeAlert:^(FLEXAlert *make) {
-            make.message(@"Are you sure?");
-            make.button(@"Yes").handler(^(NSArray<NSString *> *strings) {
+            make.message([[BHTBundle sharedBundle] localizedStringForKey:@"CONFIRM_ALERT_MESSAGE"]);
+            make.button([[BHTBundle sharedBundle] localizedStringForKey:@"YES_BUTTON_TITLE"]).handler(^(NSArray<NSString *> *strings) {
                 %orig;
             });
-            make.button(@"No").cancelStyle();
+            make.button([[BHTBundle sharedBundle] localizedStringForKey:@"NO_BUTTON_TITLE"]).cancelStyle();
         } showFrom:topMostController()];
     } else {
         return %orig;
@@ -755,11 +717,11 @@
 - (void)_t1_toggleFavoriteOnCurrentStatus {
     if ([BHTManager LikeConfirm]) {
         [FLEXAlert makeAlert:^(FLEXAlert *make) {
-            make.message(@"Are you sure?");
-            make.button(@"Yes").handler(^(NSArray<NSString *> *strings) {
+            make.message([[BHTBundle sharedBundle] localizedStringForKey:@"CONFIRM_ALERT_MESSAGE"]);
+            make.button([[BHTBundle sharedBundle] localizedStringForKey:@"YES_BUTTON_TITLE"]).handler(^(NSArray<NSString *> *strings) {
                 %orig;
             });
-            make.button(@"No").cancelStyle();
+            make.button([[BHTBundle sharedBundle] localizedStringForKey:@"NO_BUTTON_TITLE"]).cancelStyle();
         } showFrom:topMostController()];
     } else {
         return %orig;
@@ -770,42 +732,27 @@
 // MARK: Undo tweet
 %hook TFNTwitterToastNudgeExperimentModel
 - (BOOL)shouldShowShowUndoTweetSentToast {
-    if ([BHTManager UndoTweet]) {
-        return true;
-    }
-    return %orig;
+    return [BHTManager UndoTweet] ? true : %orig;
 }
 %end
 
 // MARK: Reader mode
 %hook T1ReaderModeConfig
 - (_Bool)isReaderModeEnabled {
-    if ([BHTManager ReaderMode]) {
-        return true;
-    }
-    return %orig;
+    return [BHTManager ReaderMode] ? true : %orig;
 }
 %end
 
 // MARK: Old tweet style
 %hook TTACoreAnatomyFeatures
 - (BOOL)isUnifiedCardEnabled {
-    if ([BHTManager OldStyle]) {
-        return false;
-    }
-    return %orig;
+    return [BHTManager OldStyle] ? false : %orig;
 }
 - (BOOL)isModernStatusViewsQuoteTweetEnabled {
-    if ([BHTManager OldStyle]) {
-        return false;
-    }
-    return %orig;
+    return [BHTManager OldStyle] ? false : %orig;
 }
 - (BOOL)isEdgeToEdgeContentEnabled {
-    if ([BHTManager OldStyle]) {
-        return false;
-    }
-    return %orig;
+    return [BHTManager OldStyle] ? false : %orig;
 }
 %end
 
@@ -831,7 +778,7 @@
     %orig;
     if ([self.sections count] == 1) {
         TFNItemsDataViewControllerBackingStore *backingStore = self.backingStore;
-        TFNSettingsNavigationItem *bhtwitter = [[%c(TFNSettingsNavigationItem) alloc] initWithTitle:@"Settings" detail:@"BHTwitter preferences" systemIconName:@"gear" controllerFactory:^UIViewController *{
+        TFNSettingsNavigationItem *bhtwitter = [[%c(TFNSettingsNavigationItem) alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"] detail:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_DETAIL"] systemIconName:@"gear" controllerFactory:^UIViewController *{
             return [BHTManager BHTSettingsWithAccount:self.account];
         }];
         
@@ -865,14 +812,14 @@
         
         TFNTextCell *Tweakcell = [[%c(TFNTextCell) alloc] init];
         [Tweakcell setAccessoryType:UITableViewCellAccessoryDisclosureIndicator];
-        [Tweakcell.textLabel setText:@"BHTwitter"];
+        [Tweakcell.textLabel setText:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_DETAIL"]];
         return Tweakcell;
     } else if (indexPath.section == 0 && indexPath.row ==0 ) {
         
         TFNTextCell *Settingscell = [[%c(TFNTextCell) alloc] init];
         [Settingscell setBackgroundColor:[UIColor clearColor]];
         Settingscell.textLabel.textColor = [UIColor colorWithRed:0.40 green:0.47 blue:0.53 alpha:1.0];
-        [Settingscell.textLabel setText:@"Settings"];
+        [Settingscell.textLabel setText:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"]];
         return Settingscell;
     }
     
@@ -893,11 +840,11 @@
 %hook UIFontPickerViewController
 - (void)viewWillAppear:(BOOL)arg1 {
     %orig(arg1);
-    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Custom fonts" style:UIBarButtonItemStylePlain target:self action:@selector(customFontsHandler)];
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_FONTS_NAVIGATION_BUTTON_TITLE"] style:UIBarButtonItemStylePlain target:self action:@selector(customFontsHandler)];
 }
 %new - (void)customFontsHandler {
     if ([[NSFileManager defaultManager] fileExistsAtPath:@"/var/mobile/Library/Fonts/AddedFontCache.plist"]) {
-        NSAttributedString *AttString = [[NSAttributedString alloc] initWithString:@"\nSelect your custom font" attributes:@{
+        NSAttributedString *AttString = [[NSAttributedString alloc] initWithString:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_FONTS_MENU_TITLE"] attributes:@{
             NSFontAttributeName: [[%c(TAEStandardFontGroup) sharedFontGroup] headline2BoldFont],
             NSForegroundColorAttributeName: UIColor.labelColor
         }];
@@ -932,12 +879,12 @@
         TFNMenuSheetViewController *alert = [[%c(TFNMenuSheetViewController) alloc] initWithActionItems:[NSArray arrayWithArray:actions]];
         [alert tfnPresentedCustomPresentFromViewController:self animated:YES completion:nil];
     } else {
-        UIAlertController *errAlert = [UIAlertController alertControllerWithTitle:@"BHTwitter" message:@"Cannot find any custom/installed font on this device. \nHow can I install custom fonts? \nGo to the AppStore and install the iFont application, from iFont you can search or import fonts to install, after that you should find your custom font here." preferredStyle:UIAlertControllerStyleAlert];
+        UIAlertController *errAlert = [UIAlertController alertControllerWithTitle:@"BHTwitter" message:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_FONTS_TUT_ALERT_MESSAGE"] preferredStyle:UIAlertControllerStyleAlert];
         
         [errAlert addAction:[UIAlertAction actionWithTitle:@"iFont application" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
             [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"https://apps.apple.com/sa/app/ifont-find-install-any-font/id1173222289"] options:@{} completionHandler:nil];
         }]];
-        [errAlert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleCancel handler:nil]];
+        [errAlert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"OK_BUTTON_TITLE"] style:UIAlertActionStyleCancel handler:nil]];
         [self presentViewController:errAlert animated:true completion:nil];
     }
 }
@@ -1286,7 +1233,8 @@
     return YES;
 }
 %end
-// Fix login keychain in non-JB (IPA).
+
+// MARK: Fix login keychain in non-JB (IPA).
 //%hook TFSKeychain
 //- (NSString *)providerDefaultAccessGroup {
 //    return accessGroupID();

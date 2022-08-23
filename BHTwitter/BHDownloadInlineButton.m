@@ -7,6 +7,7 @@
 
 #import "BHDownloadInlineButton.h"
 #import "Colours.h"
+#import "BHTBundle.h"
 
 @interface BHDownloadInlineButton () <BHDownloadDelegate>
 @property (nonatomic, strong) JGProgressHUD *hud;
@@ -30,7 +31,6 @@
     if (self != nil) {
         [self setInlineActionType:80];
         [self setTintColor:[UIColor colorFromHexString:@"6D6E70"]];
-//        [self setImageEdgeInsets:UIEdgeInsetsMake(0, -11, 0, -11)];
         [self setImage:[UIImage systemImageNamed:@"arrow.down"] forState:UIControlStateNormal];
         [self addTarget:self action:@selector(DownloadHandler:) forControlEvents:UIControlEventTouchUpInside];
     }
@@ -40,7 +40,7 @@
     return nil;
 }
 - (void)DownloadHandler:(UIButton *)sender {
-    NSAttributedString *AttString = [[NSAttributedString alloc] initWithString:@"\nSelect video quality you want to download" attributes:@{
+    NSAttributedString *AttString = [[NSAttributedString alloc] initWithString:[[BHTBundle sharedBundle] localizedStringForKey:@"DOWNLOAD_MENU_TITLE"] attributes:@{
         NSFontAttributeName: [[objc_getClass("TAEStandardFontGroup") sharedFontGroup] headline2BoldFont],
         NSForegroundColorAttributeName: UIColor.labelColor
     }];
@@ -58,7 +58,7 @@
                     [DownloadManager setDelegate:self];
                     if (!([BHTManager DirectSave])) {
                         self.hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
-                        self.hud.textLabel.text = @"Downloading";
+                        self.hud.textLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"PROGRESS_DOWNLOADING_STATUS_TITLE"];
                         [self.hud showInView:topMostController().view];
                     }
                 }];

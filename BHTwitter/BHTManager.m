@@ -9,10 +9,6 @@
 #import "SettingsViewController.h"
 
 @implementation BHTManager
-+ (float)TwitterVersion {
-    NSString *ver = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"];
-    return [ver floatValue];
-}
 + (bool)isDMVideoCell:(T1InlineMediaView *)view {
     if (view.playerIconViewType == 4) {
         return true;
@@ -156,9 +152,6 @@
 + (BOOL)OldStyle {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"old_style"];
 }
-+ (BOOL)DwbLayout {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"dwb_layout"];
-}
 + (BOOL)changeFont {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"en_font"];
 }
@@ -192,6 +185,13 @@
 + (BOOL)alwaysOpenSafari {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"openInBrowser"];
 }
++ (BOOL)hideWhoToFollow {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_who_to_follow"];
+}
++ (BOOL)hideTopicsToFollow {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_topics_to_follow"];
+}
+
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount {
     SettingsViewController *pref = [[SettingsViewController alloc] initWithTwitterAccount:twAccount];
     [pref.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:@"BHTwitter" subtitle:twAccount.displayUsername]];

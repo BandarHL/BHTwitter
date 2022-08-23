@@ -8,7 +8,7 @@
 
 #import "SAMKeychainQuery.h"
 #import "SAMKeychain.h"
-#import "../BHTwitter+NSURL.h"
+#import "../BHTBundle.h"
 
 @implementation SAMKeychainQuery
 
@@ -252,8 +252,7 @@
 	static dispatch_once_t onceToken;
 	static NSBundle *resourcesBundle = nil;
 	dispatch_once(&onceToken, ^{
-//		NSURL *url = [[NSBundle bundleForClass:[SAMKeychainQuery class]] URLForResource:@"SAMKeychain" withExtension:@"bundle"];
-        NSURL *url = [NSURL bhtwitter_fileURLWithPath:@"SAMKeychain.bundle"];
+        NSURL *url = [[BHTBundle sharedBundle] pathForFile:@"SAMKeychain.bundle"];
 		resourcesBundle = [NSBundle bundleWithURL:url];
 	});
 	
