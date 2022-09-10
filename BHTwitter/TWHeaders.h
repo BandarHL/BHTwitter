@@ -49,6 +49,7 @@
 @end
 
 @interface TFNItemsDataViewController : TFNDataViewController
+@property(copy, nonatomic) NSArray *sections;
 - (void)updateSections:(id)arg1 withRowAnimation:(long long)arg2;
 - (id)itemAtIndexPath:(id)arg1;
 @end
@@ -321,6 +322,14 @@
 
 @interface TFNTitleView: UIView
 + (instancetype)titleViewWithTitle:(NSString *)title subtitle:(NSString *)subTitle;
+@end
+
+@interface _TtC10TwitterURT32URTTimelineEventSummaryViewModel : NSObject
+@property(nonatomic, readonly) NSDictionary *scribeItem;
+@end
+
+@interface _TtC10TwitterURT25URTTimelineTrendViewModel : NSObject
+@property(nonatomic, readonly) NSDictionary *scribeItem;
 @end
 
 @protocol TAEColorPalette

@@ -6,9 +6,9 @@
 "BHTWITTER_SETTINGS_TITLE" = "الإعدادات";
 "BHTWITTER_SETTINGS_DETAIL" = "BHTwitter إعدادات";
 
-"DOWNLOAD_MENU_TITLE" = "\nقم بإختيار جودة الفيديو المراد تنزيله";
-"CUSTOM_FONTS_MENU_TITLE" = "\nقم بإختيار الخط الذي تريده";
-"CUSTOM_FONTS_TUT_ALERT_MESSAGE" = "لم يتم العثور على خط مثبت على الجهاز . \nكيف أقوم بتثبيت الخطوط؟ \nاذهب الى الآب ستور ثم قم بتثبيت تطبيق iFont ومن ثم قم بالبحث او استيراد الخطوط التي تريدها وتثبيتها ، بعد ذلك يفترض ان تجد الخط المثبت هنا";
+"DOWNLOAD_MENU_TITLE" = "\nقم باختيار جودة تحميل الفيديو";
+"CUSTOM_FONTS_MENU_TITLE" = "\nقم بإختيار الخط ";
+"CUSTOM_FONTS_TUT_ALERT_MESSAGE" = "لم يتم العثور على خط مثبت على الجهاز . \nكيف أقوم بتثبيت الخطوط؟ \nاذهب الى AppStore ثم قم بتثبيت تطبيق iFont ومن ثم قم بالبحث أو استيراد الخطوط التي تريدها وتثبيتها ، بعد ذلك يفترض أن تجد الخط المثبت هنا";
 
 "OK_BUTTON_TITLE" = "حسنا";
 "YES_BUTTON_TITLE" = "نعم";
@@ -41,10 +41,10 @@
 "HIDE_ADS_OPTION_DETAIL_TITLE" = "إزالة جميع الإعلانات المزعجة في تويتر";
 
 "HIDE_TOPICS_OPTION_TITLE" = "إخفاء التغريدات الموضوعية";
-"HIDE_TOPICS_OPTION_DETAIL_TITLE" = "إزالة جميع التغريدات الموضوعية من التايم لاين ";
+"HIDE_TOPICS_OPTION_DETAIL_TITLE" = "إزالة جميع التغريدات الموضوعية من الخط الزمني ";
 
-"HIDE_WHO_FOLLOW_OPTION" = "إخفاء افتراحات المتابعة";
-"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE" = "إخفاء افتراحات المتابعة في الملفات الشخصية";
+"HIDE_WHO_FOLLOW_OPTION" = "إخفاء اقتراحات المتابعة";
+"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE" = "إخفاء اقتراحات المتابعة في الملفات الشخصية";
 
 "HIDE_TOPICS_TO_FOLLOW_OPTION" = "إخفاء مواضيع للمتابعة";
 "HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "إخفاء مواضيع للمتابعة في الملفات الشخصية";
@@ -52,7 +52,7 @@
 "DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "تعطيل وصف الفيديو";
 
 "VOICE_OPTION_TITLE" = "الملاحظة الصوتية";
-"VOICE_OPTION_DETAIL_TITLE" = "تفعيل الملاحظة الصوتية في التغريدة والخاص";
+"VOICE_OPTION_DETAIL_TITLE" = "تفعيل الملاحظة الصوتية في التغريدة والرسائل الخاصة";
 
 "VIDEO_ZOOM_OPTION_TITLE" = "تكبير الفيديو";
 "VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "يمكنك تكبير الفيديو عبر الضغط مرتين في وسط الفيديو .";
@@ -75,25 +75,25 @@
 "PADLOCK_OPTION_TITLE" = "قفل التطبيق";
 "PADLOCK_OPTION_DETAIL_TITLE" = "قفل التطبيق بكلمة مرور .";
 
-"DN_MODULAR_SEARCH_OPTION_TITLE" = "تفعيل نمط البحث بالخاص";
-"DN_MODULAR_SEARCH_OPTION_DETAIL_TITLE" = "تفعيل النمط الجديد للبحث في الخاص .";
+"DN_MODULAR_SEARCH_OPTION_TITLE" = "تفعيل نمط البحث في الرسائل الخاصة";
+"DN_MODULAR_SEARCH_OPTION_DETAIL_TITLE" = "تفعيل النمط الجديد للبحث في الرسائل الخاصة .";
 
-"AUTO_HIGHEST_LOAD_OPTION_TITLE" = "تحميل الصور بأعلى جودة نلقائيا";
+"AUTO_HIGHEST_LOAD_OPTION_TITLE" = "تحميل الصور بأعلى جودة تلقائيا";
 "AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE" = "هذا الخيار يقوم بتحميل ومعالجة الصورة بأعلى جودة ممكنة .";
 
 "DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE" = "تعطيل تنبيه المحتوى الحساس";
 "TRUSTED_FRIENSS_OPTION_TITLE" = "تفعيل ميزة Twitter Circle ";
 
-"COPY_PROFILE_INFO_OPTION_TITLE" = "تفعيل نسخ المعلومات في الصفحة الشخصية";
-"COPY_PROFILE_INFO_OPTION_DETAIL_TITLE" = "إضافة زر في الصفحة الشخصية يسمح لك بنسخ أيا ما تريد .";
+"COPY_PROFILE_INFO_OPTION_TITLE" = "تفعيل نسخ المعلومات الموجودة في الصفحة الشخصية";
+"COPY_PROFILE_INFO_OPTION_DETAIL_TITLE" = "إضافة زر في الصفحة الشخصية يسمح لك بنسخ ما تريد .";
 
 "TWEET_TO_IMAGE_OPTION_TITLE" = "حفظ التغريدة كصورة ";
 "TWEET_TO_IMAGE_OPTION_DETAIL_TITLE" = "يمكنك حفظ التغريدة كصورة عبر الضغط المطوّل على زر مشاركة التغريدة .";
 
 "HIDE_SPACE_OPTION_TITLE" = "إخفاء المساحات من الشريط العلوي";
 
-"DISABLE_RTL_OPTION_TITLE" = "تعطيل RTL";
-"DISABLE_RTL_OPTION_DETAIL_TITLE" = "إجبار التطبيق على البقاء في LTR\nقم بإغلاق التطبيق لحفظ التغييرات";
+"DISABLE_RTL_OPTION_TITLE" = "ضبط الاتجاه من اليمين إلى اليسار";
+"DISABLE_RTL_OPTION_DETAIL_TITLE" = "تغيير اتجاه النصوص والقوائم من اليمين إلى اليسار (يجب إغلاق التطبيق)";
 
 "ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "فتح الروابط في المتصفح";
 "ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "إجبار التطبيق على فتح الروابط في المتصفح الإفتراضي .";
