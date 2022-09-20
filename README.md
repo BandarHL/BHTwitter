@@ -51,9 +51,9 @@
 - Press Run button of the project or command+b from you're keyboard
 - Wait until the build finished
 - You should find the BHTwitter.dylib in LatestBuild dir of the project
-- To inject the tweak with IPA corrctlly, you need:
+- To inject the tweak with IPA correctly, you need:
     - BHTwitter.dylib
-    - [libcephei SDK](https://1drv.ms/u/s!AkvDoVwju6c4gTJwsyNeQuM8VuXB?e=dEqlru)
+    - [libcephei SDK](https://1drv.ms/u/s!AkvDoVwju6c4gTL7_d-H3nmegFop?e=OqFpok)
     - BHTwitter.bundle (You can find it in BHTwitter project 'BHTwitter/Package/Library/Application Support/BHT/BHTwitter.bundle'
     - Twitter.ipa
     - Use [Azule](https://github.com/Al4ise/Azule) to inject all these.
