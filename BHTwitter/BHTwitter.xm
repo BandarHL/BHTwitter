@@ -393,6 +393,19 @@
 }
 %end
 
+%hook TFNNavigationController
+- (void)viewDidAppear:(_Bool)animated {
+    %orig(animated);
+    
+    static dispatch_once_t once;
+    dispatch_once(&once, ^ {
+        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+            BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
+        }
+    });
+}
+%end
+
 %hook T1AppSplitViewController
 - (void)viewDidAppear:(_Bool)animated {
     %orig(animated);
@@ -431,6 +444,37 @@
 %end
 
 // MARK: Save tweet as an image
+// Twitter 9.31 and higher
+%hook TTAStatusInlineShareButton
+- (void)didLongPressActionButton:(UILongPressGestureRecognizer *)gestureRecognizer {
+    if ([BHTManager tweetToImage]) {
+        if (gestureRecognizer.state == UIGestureRecognizerStateBegan) {
+            T1StatusInlineActionsView *actionsView = self.delegate;
+            T1StatusCell *tweetView;
+            
+            if ([actionsView.superview isKindOfClass:%c(T1StandardStatusView)]) { // normal tweet in the time line
+                tweetView = [(T1StandardStatusView *)actionsView.superview eventHandler];
+            } else if ([actionsView.superview isKindOfClass:%c(T1TweetDetailsFocalStatusView)]) { // Focus tweet
+                tweetView = [(T1TweetDetailsFocalStatusView *)actionsView.superview eventHandler];
+            } else {
+                return %orig;
+            }
+            
+            UIImage *tweetImage = BH_imageFromView(tweetView);
+            UIActivityViewController *acVC = [[UIActivityViewController alloc] initWithActivityItems:@[tweetImage] applicationActivities:nil];
+            if (is_iPad()) {
+                acVC.popoverPresentationController.sourceView = self;
+                acVC.popoverPresentationController.sourceRect = self.frame;
+            }
+            [topMostController() presentViewController:acVC animated:true completion:nil];
+            return;
+        }
+    }
+    return %orig;
+}
+%end
+
+// Twitter 9.30 and lower
 %hook T1StatusInlineShareButton
 - (void)didLongPressActionButton:(UILongPressGestureRecognizer *)gestureRecognizer {
     if ([BHTManager tweetToImage]) {
@@ -438,7 +482,6 @@
             T1StatusInlineActionsView *actionsView = self.delegate;
             T1StatusCell *tweetView;
             
-            // it supposed the T1StatusInlineShareButton class only exist in Tweet view, but just to make sure we are working in tweet. :)
             if ([actionsView.superview isKindOfClass:%c(T1StandardStatusView)]) { // normal tweet in the time line
                 tweetView = [(T1StandardStatusView *)actionsView.superview eventHandler];
             } else if ([actionsView.superview isKindOfClass:%c(T1TweetDetailsFocalStatusView)]) { // Focus tweet
@@ -464,6 +507,21 @@
 // MARK: Timeline download
 // THIS SOLUTION WAS TAKEN FROM Translomatic AFTER DISASSEMBLING THE DYLIB
 // SO THANKS: @foxfortmobile
+// Twitter 9.31 and higher
+%hook TTAStatusInlineActionsView
++ (NSArray *)_t1_inlineActionViewClassesForViewModel:(id)arg1 options:(NSUInteger)arg2 displayType:(NSUInteger)arg3 account:(id)arg4 {
+    NSArray *_orig = %orig;
+    NSMutableArray *newOrig = [_orig mutableCopy];
+    
+    if ([BHTManager isVideoCell:arg1] && [BHTManager DownloadingVideos]) {
+        [newOrig addObject:%c(BHDownloadInlineButton)];
+    }
+    
+    return [newOrig copy];
+}
+%end
+
+// Twitter 9.30 and lower
 %hook T1StatusInlineActionsView
 + (NSArray *)_t1_inlineActionViewClassesForViewModel:(id)arg1 options:(NSUInteger)arg2 displayType:(NSUInteger)arg3 account:(id)arg4 {
     NSArray *_orig = %orig;
@@ -563,11 +621,28 @@
     if ([BHTManager VoiceFeature] && [key isEqualToString:@"dm_voice_creation_enabled"]) {
         return true;
     }
+    
+    if ([key isEqualToString:@"edit_tweet_enabled"] || [key isEqualToString:@"edit_tweet_ga_composition_enabled"] || [key isEqualToString:@"edit_tweet_pdp_dialog_enabled"] || [key isEqualToString:@"edit_tweet_upsell_enabled"]) {
+        return true;
+    }
+    
+    if ([key isEqualToString:@"conversational_replies_ios_pinned_replies_consumption_enabled"] || [key isEqualToString:@"conversational_replies_ios_pinned_replies_creation_enabled"]) {
+        return true;
+    }
     return %orig;
 }
 %end
 
 %hook T1HomeTimelineItemsViewController
+- (void)_t1_initializeFleets {
+    if ([BHTManager hideSpacesBar]) {
+        return;
+    }
+    return %orig;
+}
+%end
+
+%hook THFHomeTimelineItemsViewController
 - (void)_t1_initializeFleets {
     if ([BHTManager hideSpacesBar]) {
         return;
@@ -622,6 +697,12 @@
 %end
 
 %hook TFNTwitterAccount
+- (_Bool)isEditProfileUsernameEnabled {
+    return true;
+}
+- (_Bool)isEditTweetConsumptionEnabled {
+    return true;
+}
 - (_Bool)isTrustedFriendsAPIEnabled {
     return [BHTManager TwitterCircle] ? true : %orig;
 }
@@ -733,6 +814,22 @@
 %end
 
 // MARK: Like confirm
+%hook TTAStatusInlineFavoriteButton
+- (void)didTap {
+    if ([BHTManager LikeConfirm]) {
+        [FLEXAlert makeAlert:^(FLEXAlert *make) {
+            make.message([[BHTBundle sharedBundle] localizedStringForKey:@"CONFIRM_ALERT_MESSAGE"]);
+            make.button([[BHTBundle sharedBundle] localizedStringForKey:@"YES_BUTTON_TITLE"]).handler(^(NSArray<NSString *> *strings) {
+                %orig;
+            });
+            make.button([[BHTBundle sharedBundle] localizedStringForKey:@"NO_BUTTON_TITLE"]).cancelStyle();
+        } showFrom:topMostController()];
+    } else {
+        return %orig;
+    }
+}
+%end
+
 %hook T1StatusInlineFavoriteButton
 - (void)didTap {
     if ([BHTManager LikeConfirm]) {
@@ -749,6 +846,21 @@
 }
 %end
 
+%hook T1ImmersiveExploreCardView
+- (void)handleDoubleTap:(id)arg1 {
+    if ([BHTManager LikeConfirm]) {
+        [FLEXAlert makeAlert:^(FLEXAlert *make) {
+            make.message([[BHTBundle sharedBundle] localizedStringForKey:@"CONFIRM_ALERT_MESSAGE"]);
+            make.button([[BHTBundle sharedBundle] localizedStringForKey:@"YES_BUTTON_TITLE"]).handler(^(NSArray<NSString *> *strings) {
+                %orig;
+            });
+            make.button([[BHTBundle sharedBundle] localizedStringForKey:@"NO_BUTTON_TITLE"]).cancelStyle();
+        } showFrom:topMostController()];
+    } else {
+        return %orig;
+    }
+}
+%end
 
 %hook T1TweetDetailsViewController
 - (void)_t1_toggleFavoriteOnCurrentStatus {

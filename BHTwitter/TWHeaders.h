@@ -77,6 +77,9 @@
 @property (nonatomic, strong) TFNTwitterAccount *account;
 @end
 
+@interface TFNNavigationController : UINavigationController
+@end
+
 @interface TTSSearchTypeaheadViewController : TFNItemsDataViewController
 - (void)clearActionControlWantsClear:(id)arg1;
 @end
@@ -173,8 +176,14 @@
 
 @protocol T1StatusInlineActionButtonDelegate <NSObject>
 @end
+@protocol TTAStatusInlineActionButtonDelegate <NSObject>
+@end
 
 @interface T1StatusInlineShareButton : UIView
+@property(nonatomic) __weak id <T1StatusInlineActionButtonDelegate> delegate;
+@end
+
+@interface TTAStatusInlineShareButton : UIView
 @property(nonatomic) __weak id <T1StatusInlineActionButtonDelegate> delegate;
 @end
 
@@ -211,6 +220,11 @@
 @end
 
 @interface T1StatusInlineActionsView : UIView <T1StatusInlineActionButtonDelegate>
+@property(readonly, nonatomic) id <T1StatusViewModel> viewModel;
+@property(nonatomic) id delegate;
+@end
+
+@interface TTAStatusInlineActionsView : UIView <TTAStatusInlineActionButtonDelegate>
 @property(readonly, nonatomic) id <T1StatusViewModel> viewModel;
 @property(nonatomic) id delegate;
 @end

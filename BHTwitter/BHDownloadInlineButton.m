@@ -22,6 +22,8 @@
 - (void)statusDidUpdate:(id)arg1 options:(unsigned long long)arg2 displayTextOptions:(unsigned long long)arg3 animated:(_Bool)arg4 {
     if ([self.delegate.delegate isKindOfClass:objc_getClass("T1SlideshowStatusView")]) {
         [self setTintColor:UIColor.whiteColor];
+    } else if ([self.delegate.delegate isKindOfClass:objc_getClass("T1ImmersiveExploreCardView")]) {
+        [self setTintColor:UIColor.whiteColor];
     } else {
         [self setTintColor:[UIColor colorFromHexString:@"6D6E70"]];
     }
