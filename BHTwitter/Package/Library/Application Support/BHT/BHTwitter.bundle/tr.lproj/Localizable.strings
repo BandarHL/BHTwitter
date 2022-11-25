@@ -1,0 +1,132 @@
+/* 
+  tr
+  BHTwitter
+*/
+
+"BHTWITTER_SETTINGS_TITLE" = "Ayarlar";
+"BHTWITTER_SETTINGS_DETAIL" = "BHTwitter tercihleri";
+
+"DOWNLOAD_MENU_TITLE" = "\nİndirmek istediğiniz video kalitesini seçin";
+"CUSTOM_FONTS_MENU_TITLE" = "\nÖzel yazı tipinizi seçin";
+"CUSTOM_FONTS_TUT_ALERT_MESSAGE" = "Bu cihazda herhangi bir özel/yüklü yazı tipi bulunamadı. \nÖzel yazı tiplerini nasıl yükleyebilirim? \nAppStore'a gidin ve iFont uygulamasını yükleyin, iFont'tan yüklemek için yazı tiplerini arayabilir veya içe aktarabilirsiniz, bundan sonra özel yazı tipinizi burada bulabilirsiniz.";
+
+"OK_BUTTON_TITLE" = "TAMAM";
+"YES_BUTTON_TITLE" = "EVET";
+"NO_BUTTON_TITLE" = "HAYIR";
+"CONFIRM_ALERT_MESSAGE" = "Emin misiniz?";
+"CANCEL_BUTTON_TITLE" = "İptal";
+
+"PROGRESS_DOWNLOADING_STATUS_TITLE" = "İndiriliyor";
+
+"CUSTOM_FONTS_NAVIGATION_BUTTON_TITLE" = "Özel yazı tipleri";
+"CUSTOM_FONTS_NAVIGATION_TITLE" = "Yazı tipi seç";
+"THEME_SETTINGS_NAVIGATION_TITLE" = "Tema";
+"CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE" = "Özel Sekme Çubuğu";
+"ACKNOWLEDGEMENTS_SETTINGS_NAVIGATION_TITLE" = "Teşekkürler";
+
+"COPY_PROFILE_INFO_MENU_OPTION_1" = "Biyografiyi kopyala";
+"COPY_PROFILE_INFO_MENU_OPTION_2" = "Kullanıcı adını kopyala";
+"COPY_PROFILE_INFO_MENU_OPTION_3" = "Tam Kullanıcı Adını Kopyala";
+"COPY_PROFILE_INFO_MENU_OPTION_4" = "URL'yi biyografiye kopyala";
+"COPY_PROFILE_INFO_MENU_OPTION_5" = "Bio'daki Konumu Kopyala";
+
+"MAIN_SECTION_HEADER_TITLE" = "BHTwitter Tercihleri";
+"DOWNLOAD_VIDEOS_OPTION_TITLE" = "Videoları indirme";
+"DOWNLOAD_VIDEOS_OPTION_DETAIL_TITLE" = "Videolar Tweet'e ve video sekme çubuğunun içine eklenen düğmeyle indirilebilir.";
+
+"DIRECT_SAVE_OPTION_TITLE" = "Doğrudan kaydetme";
+"DIRECT_SAVE_OPTION_DETAIL_TITLE" = "İndirdikten sonra videoyu doğrudan kaydedin.";
+
+"HIDE_ADS_OPTION_TITLE" = "Reklamları Gizle";
+"HIDE_ADS_OPTION_DETAIL_TITLE" = "Twitter'daki tüm Reklamları kaldırır.";
+
+"HIDE_TOPICS_OPTION_TITLE" = "Konu tweetlerini gizle";
+"HIDE_TOPICS_OPTION_DETAIL_TITLE" = "Tüm konu tweetlerini zaman çizelgesinden kaldırın.";
+
+"HIDE_WHO_FOLLOW_OPTION" = "Kimi takip etmeli bölümünü gizle";
+"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE" = "Profillerden Kimi takip etmeli bölümünü gizler";
+
+"HIDE_TOPICS_TO_FOLLOW_OPTION" = "Takip edilesi konular bölümü gizle";
+"HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "Profillerdeki Takip edilesi konular bölümü gizler";
+
+"DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "Video katmanı altyazılarını devre dışı bırak";
+
+"VOICE_OPTION_TITLE" = "Ses özelliği";
+"VOICE_OPTION_DETAIL_TITLE" = "Tweet ve DM'de sesi etkinleştirin.";
+
+"VIDEO_ZOOM_OPTION_TITLE" = "Video yakınlaştırma özelliği";
+"VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "Videonun ortasına çift tıklayarak videoyu yakınlaştırabilirsiniz.";
+
+"NO_HISTORY_OPTION_TITLE" = "Arama geçmişini kapat";
+"NO_HISTORY_OPTION_DETAIL_TITLE" = "Twitter'ı arama geçmişini kaydetmeyi durdurmaya zorlar.";
+
+"BIO_TRANSALTE_OPTION_TITLE" = "Biyografiyi Çevir";
+"BIO_TRANSALTE_OPTION_DETAIL_TITLE" = "Çevirmek için kullanıcı biyografisinde bir düğme gösterir.";
+
+"LIKE_CONFIRM_OPTION_TITLE" = "Beğeniyi onayla";
+"LIKE_CONFIRM_OPTION_DETAIL_TITLE" = "Beğen düğmesine bastığınızda bir onay uyarısı gösterir.";
+
+"TWEET_CONFIRM_OPTION_TITLE" = "Tweetlerken onayla";
+"TWEET_CONFIRM_OPTION_DETAIL_TITLE" = "Tweet düğmesine bastığınızda bir onay uyarısı gösterir.";
+
+"FOLLOW_CONFIRM_OPTION_TITLE" = "Kullanıcı takibini onayla";
+"FOLLOW_CONFIRM_OPTION_DETAIL_TITLE" = "Takip düğmesine bastığınızda bir onay uyarısı gösterir.";
+
+"PADLOCK_OPTION_TITLE" = "Giriş Kilidi";
+"PADLOCK_OPTION_DETAIL_TITLE" = "Twitter'ı şifre ile kilitler.";
+
+"DN_MODULAR_SEARCH_OPTION_TITLE" = "DM Modüler Aramayı Etkinleştir";
+"DN_MODULAR_SEARCH_OPTION_DETAIL_TITLE" = "DM aramasının yeni kullanıcı arayüzünü etkinleştirir.";
+
+"AUTO_HIGHEST_LOAD_OPTION_TITLE" = "Fotoğrafları otomatik olarak en yüksek kalitede yükle";
+"AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE" = "Bu seçenek, fotoğrafları mümkün olan en yüksek kalitede karşı tarafa yüklemenize ve görüntülemenize olanak tanır.";
+
+"DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE" = "Hassas tweet uyarısını devre dışı bırak";
+"TRUSTED_FRIENSS_OPTION_TITLE" = "Twitter Çevresi özelliğini etkinleştir";
+
+"COPY_PROFILE_INFO_OPTION_TITLE" = "Profil bilgilerini kopyalama özelliğini etkinleştir";
+"COPY_PROFILE_INFO_OPTION_DETAIL_TITLE" = "Twitter profiline, istediğiniz bilgiyi kopyalamanıza izin veren yeni bir düğme ekler.";
+
+"TWEET_TO_IMAGE_OPTION_TITLE" = "Tweet'i resim olarak kaydet";
+"TWEET_TO_IMAGE_OPTION_DETAIL_TITLE" = "Tweet Paylaş düğmesine uzun basarak tweet'leri resim olarak dışa aktarabilirsiniz.";
+
+"HIDE_SPACE_OPTION_TITLE" = "Sohbet Odaları(Spaces) çubuğunu gizle";
+
+"DISABLE_RTL_OPTION_TITLE" = "Sağdan Sola'yı(RTL) Devre Dışı Bırak";
+"DISABLE_RTL_OPTION_DETAIL_TITLE" = "Twitter'ı Sağdan Sola olan bir dille kullanılırken Soldan Sağa kullanıma zorlar.\nDeğişiklikleri uygulamak için Twitter uygulamasını yeniden başlatın.";
+
+"ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "Her zaman Safari'de aç";
+"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "Twitter'ı, URL'leri Safari'de veya varsayılan tarayıcınızda açmaya zorlar.";
+
+"TWITTER_BLUE_SECTION_HEADER_TITLE" = "Twitter Blue özellikleri";
+"UNDO_TWEET_OPTION_TITLE" = "Tweetleri geri al özelliği";
+"UNDO_TWEET_OPTION_DETAIL_TITLE" = "Tweet'i attıktan sonra tweetleri geri alabilme.";
+
+"READER_MODE_OPTION_TITLE" = "Okuyucu modu özelliği";
+"READER_MODE_OPTION_DETAIL_TITLE" = "Konularda okuyucu modunu etkinleştirir.";
+
+"THEME_OPTION_TITLE" = "Tema";
+"THEME_OPTION_DETAIL_TITLE" = "Twitter deneyiminiz için yalnızca sizin görebileceğiniz bir tema rengi seçin.";
+
+"CUSTOM_TAB_BAR_OPTION_TITLE" = "Özel Sekme Çubuğu";
+"TWITTER_BLUE_SECTION_FOOTER_TITLE" = "Değişiklikleri uygulamak için Twitter uygulamasını yeniden başlatmanız gerekebilir.";
+
+"LAYOUT_CUS_SECTION_HEADER_TITLE" = "Düzen özelleştirme";
+"ORIG_TWEET_STYLE_OPTION_TITLE" = "Uçtan uca tweet stilini devre dışı bırak";
+"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "Twitter'ı orijinal tweet stilini kullanmaya zorlar.";
+
+"FONT_OPTION_TITLE" = "Yazı tipini değiştirmeyi etkinleştir";
+"FONT_OPTION_DETAIL_TITLE" = "Twitter yazı tipini değiştirmeye izin verme ve yazı tipi seçiciyi gösterme seçeneği.";
+
+"REQULAR_FONTS_PICKER_OPTION_TITLE" = "Yazı tipi";
+"BOLD_FONTS_PICKER_OPTION_TITLE" = "Kalın Yazı Tipi";
+"LAYOUT_CUS_SECTION_FOOTER_TITLE" = "Değişiklikleri uygulamak için Twitter uygulamasını yeniden başlatın.";
+
+"DEBUG_SECTION_HEADER_TITLE" = "Hata ayıklama";
+"FLEX_OPTION_TITLE" = "FLEX'i etkinleştir";
+"FLEX_OPTION_DETAIL_TITLE" = "Twitter uygulamasında FLEX'i göster.";
+
+"LEGAL_SECTION_HEADER_TITLE" = "Yasal uyarılar";
+"LEGAL_BUTTON_TITLE" = "Teşekkürler";
+
+"DEVELOPER_SECTION_HEADER_TITLE" = "Geliştirici";

@@ -50,21 +50,83 @@
     
     NSMutableArray *actions = [[NSMutableArray alloc] init];
     [actions addObject:title];
+    NSMutableArray *innerActions = [[NSMutableArray alloc] init];
+    [innerActions addObject:title];
+
     
-    for (TFSTwitterEntityMedia *i in self.delegate.viewModel.entities.media) {
-        for (TFSTwitterEntityMediaVideoVariant *k in i.videoInfo.variants) {
-            if ([k.contentType isEqualToString:@"video/mp4"]) {
-                TFNActionItem *download = [objc_getClass("TFNActionItem") actionItemWithTitle:[BHTManager getVideoQuality:k.url] imageName:@"arrow_down_circle_stroke" action:^{
-                    BHDownload *DownloadManager = [[BHDownload alloc] init];
-                    [DownloadManager downloadFileWithURL:[NSURL URLWithString:k.url]];
-                    [DownloadManager setDelegate:self];
-                    if (!([BHTManager DirectSave])) {
+    if ([self.delegate.delegate isKindOfClass:objc_getClass("T1SlideshowStatusView")]) {
+        T1SlideshowStatusView *selectedMedia = self.delegate.delegate;
+        
+        for (TFSTwitterEntityMediaVideoVariant *video in selectedMedia.media.videoInfo.variants) {
+            if ([video.contentType isEqualToString:@"video/mp4"]) {
+                
+                TFNActionItem *option = [objc_getClass("TFNActionItem") actionItemWithTitle:[BHTManager getVideoQuality:video.url] imageName:@"arrow_down_circle_stroke" action:^{
+                    BHDownload *dwManager = [[BHDownload alloc] init];
+                    [dwManager downloadFileWithURL:[NSURL URLWithString:video.url]];
+                    [dwManager setDelegate:self];
+
+                    if (![BHTManager DirectSave]) {
                         self.hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
                         self.hud.textLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"PROGRESS_DOWNLOADING_STATUS_TITLE"];
                         [self.hud showInView:topMostController().view];
                     }
                 }];
-                [actions addObject:download];
+
+                [actions addObject:option];
+            }
+        }
+    } else {
+        if (self.delegate.viewModel.representedMediaEntities.count > 1) {
+            [self.delegate.viewModel.representedMediaEntities enumerateObjectsUsingBlock:^(TFSTwitterEntityMedia * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+                
+                if (obj.mediaType == 2 || obj.mediaType == 3) {
+                    TFNActionItem *option = [objc_getClass("TFNActionItem") actionItemWithTitle:[NSString stringWithFormat:@"Video %lu", (unsigned long)idx+1] imageName:@"arrow_down_circle_stroke" action:^{
+                        
+                        for (TFSTwitterEntityMediaVideoVariant *video in obj.videoInfo.variants) {
+                            if ([video.contentType isEqualToString:@"video/mp4"]) {
+                                TFNActionItem *innerOption = [objc_getClass("TFNActionItem") actionItemWithTitle:[BHTManager getVideoQuality:video.url] imageName:@"arrow_down_circle_stroke" action:^{
+                                    
+                                    BHDownload *dwManager = [[BHDownload alloc] init];
+                                    [dwManager downloadFileWithURL:[NSURL URLWithString:video.url]];
+                                    [dwManager setDelegate:self];
+                                    
+                                    if (![BHTManager DirectSave]) {
+                                        self.hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
+                                        self.hud.textLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"PROGRESS_DOWNLOADING_STATUS_TITLE"];
+                                        [self.hud showInView:topMostController().view];
+                                    }
+                                    
+                                }];
+                                
+                                [innerActions addObject:innerOption];
+                            }
+                        }
+                        
+                        TFNMenuSheetViewController *innerAlert = [[objc_getClass("TFNMenuSheetViewController") alloc] initWithActionItems:[NSArray arrayWithArray:innerActions]];
+                        [innerAlert tfnPresentedCustomPresentFromViewController:topMostController() animated:YES completion:nil];
+                    }];
+
+                    [actions addObject:option];
+                }
+            }];
+        } else {
+            for (TFSTwitterEntityMediaVideoVariant *video in self.delegate.viewModel.representedMediaEntities.firstObject.videoInfo.variants) {
+                if ([video.contentType isEqualToString:@"video/mp4"]) {
+                    
+                    TFNActionItem *option = [objc_getClass("TFNActionItem") actionItemWithTitle:[BHTManager getVideoQuality:video.url] imageName:@"arrow_down_circle_stroke" action:^{
+                        BHDownload *dwManager = [[BHDownload alloc] init];
+                        [dwManager downloadFileWithURL:[NSURL URLWithString:video.url]];
+                        [dwManager setDelegate:self];
+
+                        if (![BHTManager DirectSave]) {
+                            self.hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
+                            self.hud.textLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"PROGRESS_DOWNLOADING_STATUS_TITLE"];
+                            [self.hud showInView:topMostController().view];
+                        }
+                    }];
+
+                    [actions addObject:option];
+                }
             }
         }
     }

@@ -101,15 +101,15 @@ class CustomTabBarViewController: UIViewController {
         self.navigationItem.rightBarButtonItem = restButton
     }
     @objc func restSettingsBarButtonHandler(_ sender: UIBarButtonItem) {
-        let alert = UIAlertController(title: "Hi", message: "Are sure you want to rest the settings to default?", preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "Yes", style: .default, handler: { _ in
+        let alert = UIAlertController(title: "BHTwitter", message: BHTBundle.shared().localizedString(forKey: "CUSTOM_TAB_BAR_REST_MESSAGE"), preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: BHTBundle.shared().localizedString(forKey: "YES_BUTTON_TITLE"), style: .default, handler: { _ in
             UserDefaults.standard.removeObject(forKey: "allowed")
             UserDefaults.standard.removeObject(forKey: "hidden")
             self.getData()
             self.tableView.reloadData()
         }))
         
-        alert.addAction(UIAlertAction(title: "No", style: .cancel))
+        alert.addAction(UIAlertAction(title: BHTBundle.shared().localizedString(forKey: "NO_BUTTON_TITLE"), style: .cancel))
         self.present(alert, animated: true)
     }
     private func getItems(for key: String) -> [item]? {
@@ -122,20 +122,20 @@ class CustomTabBarViewController: UIViewController {
     private func getData() {
         if let savedAllowedArr = getItems(for: "allowed"), let savedHiddenArr = getItems(for: "hidden") {
             data = [
-                section(title: "Active tab bar", items: savedAllowedArr),
-                section(title: "Hidden tab bar", items: savedHiddenArr)
+                section(title: BHTBundle.shared().localizedString(forKey: "CUSTOM_TAB_BAR_SECTION_1_TITLE"), items: savedAllowedArr),
+                section(title: BHTBundle.shared().localizedString(forKey: "CUSTOM_TAB_BAR_SECTION_2_TITLE"), items: savedHiddenArr)
             ]
         } else {
             data = [
-                section(title: "Active tab bar", items: [
-                    item(title: "Home", pageID: "home"),
-                    item(title: "Explore", pageID: "guide"),
-                    item(title: "Spaces", pageID: "audiospace"),
-                    item(title: "Communities", pageID: "communities"),
-                    item(title: "Notifications", pageID: "ntab"),
-                    item(title: "Messages", pageID: "messages")
+                section(title: BHTBundle.shared().localizedString(forKey: "CUSTOM_TAB_BAR_SECTION_1_TITLE"), items: [
+                    item(title: BHTBundle.shared().localizedString(forKey: "CUSTOM_TAB_BAR_OPTION_1"), pageID: "home"),
+                    item(title: BHTBundle.shared().localizedString(forKey: "CUSTOM_TAB_BAR_OPTION_2"), pageID: "guide"),
+                    item(title: BHTBundle.shared().localizedString(forKey: "CUSTOM_TAB_BAR_OPTION_3"), pageID: "audiospace"),
+                    item(title: BHTBundle.shared().localizedString(forKey: "CUSTOM_TAB_BAR_OPTION_4"), pageID: "communities"),
+                    item(title: BHTBundle.shared().localizedString(forKey: "CUSTOM_TAB_BAR_OPTION_5"), pageID: "ntab"),
+                    item(title: BHTBundle.shared().localizedString(forKey: "CUSTOM_TAB_BAR_OPTION_6"), pageID: "messages")
                 ]),
-                section(title: "Hidden tab bar", items: [])
+                section(title: BHTBundle.shared().localizedString(forKey: "CUSTOM_TAB_BAR_SECTION_2_TITLE"), items: [])
             ]
         }
     }

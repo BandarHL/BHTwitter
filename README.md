@@ -13,7 +13,7 @@
 - Enable the new UI of DM search.
 - Auto load photos in highest quality feature.
 - Undo tweet feature.
-- Theme (like Twitter Bule).
+- Theme (like Twitter Blue).
 - Twitter Circle feature.
 - Copying profile information feature.
 - Save tweet as an image.
@@ -40,14 +40,14 @@
 - install [MonkeyDev](https://github.com/AloneMonkey/MonkeyDev)
 - Open BHTwitter.xcodeproj
 - Make sure you're selecting (Any iOS Device)
- > If you get Code sign error, add an developer account to xcode and then Go to Build settings and select "All" tab then search for "Sign", you should find "Code Signing Identity" chnage it to iOS developer and chnage "Developer Team" to match you're developer account
+ > If you get Code sign error, add an developer account to Xcode and then Go to Build settings and select "All" tab then search for "Sign", you should find "Code Signing Identity" change it to iOS developer and change "Developer Team" to match you're developer account
 ### for jailbreak devices
 - Just press Run button of the project or command+b from you're keyboard
 - Wait until the build finished
 - You should find deb file in Packages folder of the project
 ### for non-jailbreak devices
 - Go to the Build settings and scroll down to 'user-Defined' section and change "MonkeyDevInstallOnAnyBuild" value to NO
-- Select BHTwitter.xm and scoll down to 1237 line or 'Fix login keychain in non-JB (IPA).' section and enable the code below it
+- Select BHTwitter.xm and scroll down to 1237 line or 'Fix login keychain in non-JB (IPA).' section and enable the code below it
 - Press Run button of the project or command+b from you're keyboard
 - Wait until the build finished
 - You should find the BHTwitter.dylib in LatestBuild dir of the project

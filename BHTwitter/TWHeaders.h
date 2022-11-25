@@ -10,10 +10,9 @@
 #import <UIKit/UIKit.h>
 #import <Photos/Photos.h>
 #import <SafariServices/SafariServices.h>
-#import "./Classes/Utility/FLEXAlert.h"
-#import "./Classes/FLEX.h"
+#import <FLEX.h>
 #import "BHDownload.h"
-#import "JGProgressHUD/include/JGProgressHUD.h"
+#import <JGProgressHUD.h>
 #import "SAMKeychain/keychain.h"
 #import <Preferences/PSListController.h>
 #import <Preferences/PSSpecifier.h>
@@ -209,6 +208,7 @@
 @interface TFSTwitterEntityMedia : NSObject
 @property(readonly, nonatomic) TFSTwitterEntityMediaVideoInfo *videoInfo;
 @property(readonly, copy, nonatomic) NSString *mediaURL;
+@property(nonatomic, assign, readonly) NSInteger mediaType; // 1 = photo, 2 = GIF, 3 = video
 @end
 
 @interface TFSTwitterEntitySet : NSObject
@@ -217,6 +217,9 @@
 
 @protocol T1StatusViewModel <NSObject>
 @property(nonatomic, readonly) TFSTwitterEntitySet *entities;
+@property(nonatomic, assign, readonly) NSArray <TFSTwitterEntityMedia *> *representedMediaEntities;
+@property (nonatomic, assign, readonly) BOOL isMediaEntityVideo;
+@property (nonatomic, assign, readonly) BOOL isGIF;
 @end
 
 @interface T1StatusInlineActionsView : UIView <T1StatusInlineActionButtonDelegate>
@@ -227,6 +230,10 @@
 @interface TTAStatusInlineActionsView : UIView <TTAStatusInlineActionButtonDelegate>
 @property(readonly, nonatomic) id <T1StatusViewModel> viewModel;
 @property(nonatomic) id delegate;
+@end
+
+@interface T1SlideshowStatusView : UIView
+@property (nonatomic, strong, readwrite) TFSTwitterEntityMedia *media;
 @end
 
 @interface T1StandardStatusView : UIView

@@ -758,7 +758,7 @@
 %hook T1TweetComposeViewController
 - (void)_t1_didTapSendButton:(UIButton *)tweetButton {
     if ([BHTManager TweetConfirm]) {
-        [FLEXAlert makeAlert:^(FLEXAlert *make) {
+        [%c(FLEXAlert) makeAlert:^(FLEXAlert *make) {
             make.message([[BHTBundle sharedBundle] localizedStringForKey:@"CONFIRM_ALERT_MESSAGE"]);
             make.button([[BHTBundle sharedBundle] localizedStringForKey:@"YES_BUTTON_TITLE"]).handler(^(NSArray<NSString *> *strings) {
                 %orig;
@@ -771,7 +771,7 @@
 }
 - (void)_t1_handleTweet {
     if ([BHTManager TweetConfirm]) {
-        [FLEXAlert makeAlert:^(FLEXAlert *make) {
+        [%c(FLEXAlert) makeAlert:^(FLEXAlert *make) {
             make.message([[BHTBundle sharedBundle] localizedStringForKey:@"CONFIRM_ALERT_MESSAGE"]);
             make.button([[BHTBundle sharedBundle] localizedStringForKey:@"YES_BUTTON_TITLE"]).handler(^(NSArray<NSString *> *strings) {
                 %orig;
@@ -800,7 +800,7 @@
 %hook TUIFollowControl
 - (void)_followUser:(id)arg1 event:(id)arg2 {
     if ([BHTManager FollowConfirm]) {
-        [FLEXAlert makeAlert:^(FLEXAlert *make) {
+        [%c(FLEXAlert) makeAlert:^(FLEXAlert *make) {
             make.message([[BHTBundle sharedBundle] localizedStringForKey:@"CONFIRM_ALERT_MESSAGE"]);
             make.button([[BHTBundle sharedBundle] localizedStringForKey:@"YES_BUTTON_TITLE"]).handler(^(NSArray<NSString *> *strings) {
                 %orig;
@@ -817,7 +817,7 @@
 %hook TTAStatusInlineFavoriteButton
 - (void)didTap {
     if ([BHTManager LikeConfirm]) {
-        [FLEXAlert makeAlert:^(FLEXAlert *make) {
+        [%c(FLEXAlert) makeAlert:^(FLEXAlert *make) {
             make.message([[BHTBundle sharedBundle] localizedStringForKey:@"CONFIRM_ALERT_MESSAGE"]);
             make.button([[BHTBundle sharedBundle] localizedStringForKey:@"YES_BUTTON_TITLE"]).handler(^(NSArray<NSString *> *strings) {
                 %orig;
@@ -833,7 +833,7 @@
 %hook T1StatusInlineFavoriteButton
 - (void)didTap {
     if ([BHTManager LikeConfirm]) {
-        [FLEXAlert makeAlert:^(FLEXAlert *make) {
+        [%c(FLEXAlert) makeAlert:^(FLEXAlert *make) {
             make.message([[BHTBundle sharedBundle] localizedStringForKey:@"CONFIRM_ALERT_MESSAGE"]);
             make.button([[BHTBundle sharedBundle] localizedStringForKey:@"YES_BUTTON_TITLE"]).handler(^(NSArray<NSString *> *strings) {
                 %orig;
@@ -849,7 +849,7 @@
 %hook T1ImmersiveExploreCardView
 - (void)handleDoubleTap:(id)arg1 {
     if ([BHTManager LikeConfirm]) {
-        [FLEXAlert makeAlert:^(FLEXAlert *make) {
+        [%c(FLEXAlert) makeAlert:^(FLEXAlert *make) {
             make.message([[BHTBundle sharedBundle] localizedStringForKey:@"CONFIRM_ALERT_MESSAGE"]);
             make.button([[BHTBundle sharedBundle] localizedStringForKey:@"YES_BUTTON_TITLE"]).handler(^(NSArray<NSString *> *strings) {
                 %orig;
@@ -865,7 +865,7 @@
 %hook T1TweetDetailsViewController
 - (void)_t1_toggleFavoriteOnCurrentStatus {
     if ([BHTManager LikeConfirm]) {
-        [FLEXAlert makeAlert:^(FLEXAlert *make) {
+        [%c(FLEXAlert) makeAlert:^(FLEXAlert *make) {
             make.message([[BHTBundle sharedBundle] localizedStringForKey:@"CONFIRM_ALERT_MESSAGE"]);
             make.button([[BHTBundle sharedBundle] localizedStringForKey:@"YES_BUTTON_TITLE"]).handler(^(NSArray<NSString *> *strings) {
                 %orig;

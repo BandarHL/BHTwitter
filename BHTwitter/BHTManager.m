@@ -83,12 +83,7 @@
     return [NSString stringWithFormat:@"%@x%@", q.firstObject, q.lastObject];
 }
 + (BOOL)isVideoCell:(id <T1StatusViewModel>)model {
-    TFSTwitterEntityMedia *i = model.entities.media.firstObject;
-    if (i.videoInfo == nil) {
-        return false;
-    } else {
-        return true;
-    }
+    return model.isMediaEntityVideo || model.isGIF;
 }
 + (void)save:(NSURL *)url {
     [[PHPhotoLibrary sharedPhotoLibrary] performChangesAndWait:^{

@@ -63,12 +63,12 @@ struct ColorThemeItem {
 class BHColorThemeViewController: UIViewController {
     
     var colors = [
-        ColorThemeItem(colorID: 1, name: "Blue", color: UIColor(argbHexString: "#1D9BF0")!),
-        ColorThemeItem(colorID: 2, name: "Yellow", color: UIColor(argbHexString: "#FFD400")!),
-        ColorThemeItem(colorID: 3, name: "Red", color: UIColor(argbHexString: "#F91880")!),
-        ColorThemeItem(colorID: 4, name: "Purple", color: UIColor(argbHexString: "#7856FF")!),
-        ColorThemeItem(colorID: 5, name: "Orange", color: UIColor(argbHexString: "#FF7A00")!),
-        ColorThemeItem(colorID: 6, name: "Green", color: UIColor(argbHexString: "#00BA7C")!),
+        ColorThemeItem(colorID: 1, name: BHTBundle.shared().localizedString(forKey: "THEME_OPTION_1"), color: UIColor(argbHexString: "#1D9BF0")!),
+        ColorThemeItem(colorID: 2, name: BHTBundle.shared().localizedString(forKey: "THEME_OPTION_2"), color: UIColor(argbHexString: "#FFD400")!),
+        ColorThemeItem(colorID: 3, name: BHTBundle.shared().localizedString(forKey: "THEME_OPTION_3"), color: UIColor(argbHexString: "#F91880")!),
+        ColorThemeItem(colorID: 4, name: BHTBundle.shared().localizedString(forKey: "THEME_OPTION_4"), color: UIColor(argbHexString: "#7856FF")!),
+        ColorThemeItem(colorID: 5, name: BHTBundle.shared().localizedString(forKey: "THEME_OPTION_5"), color: UIColor(argbHexString: "#FF7A00")!),
+        ColorThemeItem(colorID: 6, name: BHTBundle.shared().localizedString(forKey: "THEME_OPTION_6"), color: UIColor(argbHexString: "#00BA7C")!),
     ] {
         didSet {
             colorCollectionView.reloadData()
@@ -86,7 +86,7 @@ class BHColorThemeViewController: UIViewController {
     
     var headerLabel: UILabel = {
         let label = UILabel()
-        label.text = "Choose a theme color for your Twitter experience that can be seen by you."
+        label.text = BHTBundle.shared().localizedString(forKey: "THEME_OPTION_DETAIL_TITLE")
         label.textColor = .secondaryLabel
         label.numberOfLines = 0
         label.font = .systemFont(ofSize: 15)
