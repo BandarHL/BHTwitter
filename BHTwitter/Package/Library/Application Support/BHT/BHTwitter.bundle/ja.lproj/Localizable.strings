@@ -1,4 +1,4 @@
-/* 
+/*
   ja
   BHTwitter
 */
@@ -22,17 +22,17 @@
 "CUSTOM_FONTS_NAVIGATION_TITLE" = "フォントを選択";
 "THEME_SETTINGS_NAVIGATION_TITLE" = "テーマ";
 "CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE" = "カスタム タブバー";
-"ACKNOWLEDGEMENTS_SETTINGS_NAVIGATION_TITLE" = "Acknowledgements";
+"ACKNOWLEDGEMENTS_SETTINGS_NAVIGATION_TITLE" = "謝辞";
 
 "COPY_PROFILE_INFO_MENU_OPTION_1" = "プロフィールをコピー";
 "COPY_PROFILE_INFO_MENU_OPTION_2" = "ユーザー名をコピー(@)";
 "COPY_PROFILE_INFO_MENU_OPTION_3" = "名前をコピー";
 "COPY_PROFILE_INFO_MENU_OPTION_4" = "プロフィールのURLをコピー";
-"COPY_PROFILE_INFO_MENU_OPTION_5" = "現在位置をコピー";
+"COPY_PROFILE_INFO_MENU_OPTION_5" = "場所をコピー";
 
 "MAIN_SECTION_HEADER_TITLE" = "BHTwitter 環境設定";
 "DOWNLOAD_VIDEOS_OPTION_TITLE" = "動画のダウンロード";
-"DOWNLOAD_VIDEOS_OPTION_DETAIL_TITLE" = "動画をダウンロードできます。ダウンロードボタンがツイートに追加されます。";
+"DOWNLOAD_VIDEOS_OPTION_DETAIL_TITLE" = "動画をダウンロードできます。\nダウンロードボタンがツイートに追加されます。";
 
 "DIRECT_SAVE_OPTION_TITLE" = "ダイレクトセーブ";
 "DIRECT_SAVE_OPTION_DETAIL_TITLE" = "ダウンロードした後、動画を直接保存します。";
@@ -49,7 +49,7 @@
 "HIDE_TOPICS_TO_FOLLOW_OPTION" = "トピックをフォローするセクションを消す";
 "HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "プロフィールのトピックをフォローするセクションを削除します。";
 
-"DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "ビデオレイヤーのキャプションを無効化する";
+"DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "ビデオレイヤーのキャプションを無効化";
 
 "VOICE_OPTION_TITLE" = "音声機能の有効化";
 "VOICE_OPTION_DETAIL_TITLE" = "音声ツイートを有効にします。";
@@ -64,25 +64,25 @@
 "BIO_TRANSALTE_OPTION_DETAIL_TITLE" = "プロフィールを翻訳するボタンを追加します。";
 
 "LIKE_CONFIRM_OPTION_TITLE" = "いいねの確認";
-"LIKE_CONFIRM_OPTION_DETAIL_TITLE" = "いいねボタンを押した時、確認のアラートが表示されます。";
+"LIKE_CONFIRM_OPTION_DETAIL_TITLE" = "いいねボタンを押した時、確認の通知が表示されます。";
 
 "TWEET_CONFIRM_OPTION_TITLE" = "ツイートの確認";
-"TWEET_CONFIRM_OPTION_DETAIL_TITLE" = "ツイートボタンを押した時、確認のアラートが表示されます。";
+"TWEET_CONFIRM_OPTION_DETAIL_TITLE" = "ツイートボタンを押した時、確認の通知が表示されます。";
 
 "FOLLOW_CONFIRM_OPTION_TITLE" = "フォローの確認";
-"FOLLOW_CONFIRM_OPTION_DETAIL_TITLE" = "フォローボタンを押した時、確認のアラートが表示されます。";
+"FOLLOW_CONFIRM_OPTION_DETAIL_TITLE" = "フォローボタンを押した時、確認の通知が表示されます。";
 
 "PADLOCK_OPTION_TITLE" = "起動時パスワード";
 "PADLOCK_OPTION_DETAIL_TITLE" = "Twitterをパスワードでロックします。";
 
-"DN_MODULAR_SEARCH_OPTION_TITLE" = "Enable DMモジュラー検索";
+"DN_MODULAR_SEARCH_OPTION_TITLE" = "DMモジュラー検索を有効にします";
 "DN_MODULAR_SEARCH_OPTION_DETAIL_TITLE" = "DM検索の新しいUIを有効にします。";
 
 "AUTO_HIGHEST_LOAD_OPTION_TITLE" = "自動で画像を最高画質で読み込む";
 "AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE" = "投稿または読み込みの時、可能な限り良い画質にします。";
 
 "DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE" = "センシティブな画像の警告を無効化";
-"TRUSTED_FRIENSS_OPTION_TITLE" = "Twitterサークルの有効化";
+"TRUSTED_FRIENSS_OPTION_TITLE" = "Twitterサークルを有効化";
 
 "COPY_PROFILE_INFO_OPTION_TITLE" = "プロフィールコピーの有効化";
 "COPY_PROFILE_INFO_OPTION_DETAIL_TITLE" = "プロフィールをコピーするボタンの追加";
@@ -107,8 +107,24 @@
 
 "THEME_OPTION_TITLE" = "テーマ";
 "THEME_OPTION_DETAIL_TITLE" = "Twitterのテーマカラーを変更できます。";
+"THEME_OPTION_1" = "ブルー";
+"THEME_OPTION_2" = "イエロー";
+"THEME_OPTION_3" = "レッド";
+"THEME_OPTION_4" = "パープル";
+"THEME_OPTION_5" = "オレンジ";
+"THEME_OPTION_6" = "グリーン";
 
 "CUSTOM_TAB_BAR_OPTION_TITLE" = "カスタムタブバー";
+"CUSTOM_TAB_BAR_REST_MESSAGE" = "本当に初期設定に戻しますか？";
+"CUSTOM_TAB_BAR_SECTION_1_TITLE" = "表示されているタブバー";
+"CUSTOM_TAB_BAR_SECTION_2_TITLE" = "非表示のタブバー";
+"CUSTOM_TAB_BAR_OPTION_1" = "ホーム";
+"CUSTOM_TAB_BAR_OPTION_2" = "話題を検索";
+"CUSTOM_TAB_BAR_OPTION_3" = "スペース";
+"CUSTOM_TAB_BAR_OPTION_4" = "コミュニティ";
+"CUSTOM_TAB_BAR_OPTION_5" = "通知";
+"CUSTOM_TAB_BAR_OPTION_6" = "メッセージ";
+
 "TWITTER_BLUE_SECTION_FOOTER_TITLE" = "変更を適応させるにはTwitterを再起動する必要があります。";
 
 "LAYOUT_CUS_SECTION_HEADER_TITLE" = "レイアウトのカスタム";
@@ -127,6 +143,6 @@
 "FLEX_OPTION_DETAIL_TITLE" = "TwitterアプリでFLEXを表示";
 
 "LEGAL_SECTION_HEADER_TITLE" = "法的通知";
-"LEGAL_BUTTON_TITLE" = "Acknowledgements";
+"LEGAL_BUTTON_TITLE" = "謝辞";
 
 "DEVELOPER_SECTION_HEADER_TITLE" = "開発者";

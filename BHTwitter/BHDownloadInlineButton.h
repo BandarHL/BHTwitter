@@ -30,7 +30,8 @@
 - (unsigned long long)visibility;
 - (NSString *)actionSheetTitle;
 - (_Bool)enabled;
-- (void)statusDidUpdate:(id)arg1 options:(unsigned long long)arg2 displayTextOptions:(unsigned long long)arg3 animated:(_Bool)arg4;
+- (void)statusDidUpdate:(id)arg1 options:(NSUInteger)arg2 displayTextOptions:(NSUInteger)arg3 animated:(BOOL)arg4;
+- (void)statusDidUpdate:(id)arg1 options:(NSUInteger)arg2 displayTextOptions:(NSUInteger)arg3 animated:(BOOL)arg4 featureSwitches:(id)arg5;
 - (id)initWithOptions:(unsigned long long)arg1 overrideSize:(struct CGSize)arg2 account:(id)arg3;
 
 @end

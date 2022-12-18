@@ -107,9 +107,24 @@
 
 "THEME_OPTION_TITLE" = "主題";
 "THEME_OPTION_DETAIL_TITLE" = "為您的 Twitter 選擇一種主題顏色\n（只有您自己才看的到）";
+"THEME_OPTION_1" = "藍色";
+"THEME_OPTION_2" = "黃色";
+"THEME_OPTION_3" = "紅色";
+"THEME_OPTION_4" = "紫色";
+"THEME_OPTION_5" = "橘色";
+"THEME_OPTION_6" = "綠色";
 
 "CUSTOM_TAB_BAR_OPTION_TITLE" = "自訂功能標籤";
 "TWITTER_BLUE_SECTION_FOOTER_TITLE" = "必須重啟 Twitter 才能套用變更";
+"CUSTOM_TAB_BAR_REST_MESSAGE" = "確定要將設定恢復為預設值嗎?";
+"CUSTOM_TAB_BAR_SECTION_1_TITLE" = "使用中";
+"CUSTOM_TAB_BAR_SECTION_2_TITLE" = "隱藏";
+"CUSTOM_TAB_BAR_OPTION_1" = "首頁";
+"CUSTOM_TAB_BAR_OPTION_2" = "搜尋";
+"CUSTOM_TAB_BAR_OPTION_3" = "音訊空間";
+"CUSTOM_TAB_BAR_OPTION_4" = "社群";
+"CUSTOM_TAB_BAR_OPTION_5" = "通知";
+"CUSTOM_TAB_BAR_OPTION_6" = "私人訊息";
 
 "LAYOUT_CUS_SECTION_HEADER_TITLE" = "佈局設定";
 "ORIG_TWEET_STYLE_OPTION_TITLE" = "關閉邊到邊的推文樣示";

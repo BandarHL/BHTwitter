@@ -17,6 +17,7 @@
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"voice"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"undo_tweet"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"TrustedFriends"];
+        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"disableSensitiveTweetWarnings"];
     }
     [BHTManager cleanCache];
     if ([BHTManager FLEX]) {

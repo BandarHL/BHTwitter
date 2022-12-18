@@ -18,8 +18,11 @@
     return CGSizeZero;
 }
 
+- (void)statusDidUpdate:(id)arg1 options:(NSUInteger)arg2 displayTextOptions:(NSUInteger)arg3 animated:(BOOL)arg4 featureSwitches:(id)arg5 {
+    [self statusDidUpdate:arg1 options:arg2 displayTextOptions:arg3 animated:arg4];
+}
 
-- (void)statusDidUpdate:(id)arg1 options:(unsigned long long)arg2 displayTextOptions:(unsigned long long)arg3 animated:(_Bool)arg4 {
+- (void)statusDidUpdate:(id)arg1 options:(NSUInteger)arg2 displayTextOptions:(NSUInteger)arg3 animated:(BOOL)arg4 {
     if ([self.delegate.delegate isKindOfClass:objc_getClass("T1SlideshowStatusView")]) {
         [self setTintColor:UIColor.whiteColor];
     } else if ([self.delegate.delegate isKindOfClass:objc_getClass("T1ImmersiveExploreCardView")]) {
