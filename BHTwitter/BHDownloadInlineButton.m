@@ -14,7 +14,9 @@
 @end
 
 @implementation BHDownloadInlineButton
-+ (CGSize)buttonImageSizeUsingViewModel:(id)arg1 options:(unsigned long long)arg2 overrideButtonSize:(CGSize)arg3 account:(id)arg4 {
+static const NSString *KEY_HIT_TEST_EDGE_INSETS = @"HitTestEdgeInsets";
+
++ (CGSize)buttonImageSizeUsingViewModel:(id)arg1 options:(NSUInteger)arg2 overrideButtonSize:(CGSize)arg3 account:(id)arg4 {
     return CGSizeZero;
 }
 
@@ -31,7 +33,7 @@
         [self setTintColor:[UIColor colorFromHexString:@"6D6E70"]];
     }
 }
-- (id)initWithOptions:(unsigned long long)arg1 overrideSize:(struct CGSize)arg2 account:(id)arg3 {
+- (instancetype)initWithOptions:(NSUInteger)arg1 overrideSize:(CGSize)arg2 account:(id)arg3 {
     self = [super initWithFrame:CGRectMake(0, 0, arg2.width, arg2.height)];
     if (self != nil) {
         [self setInlineActionType:80];
@@ -41,7 +43,7 @@
     }
     return self;
 }
-- (id)_t1_imageNamed:(id)arg1 fitSize:(struct CGSize)arg2 fillColor:(id)arg3 {
+- (id)_t1_imageNamed:(id)arg1 fitSize:(CGSize)arg2 fillColor:(id)arg3 {
     return nil;
 }
 - (void)DownloadHandler:(UIButton *)sender {
@@ -137,44 +139,86 @@
     TFNMenuSheetViewController *alert = [[objc_getClass("TFNMenuSheetViewController") alloc] initWithActionItems:[NSArray arrayWithArray:actions]];
     [alert tfnPresentedCustomPresentFromViewController:topMostController() animated:YES completion:nil];
 }
-- (void)setTouchInsets:(struct UIEdgeInsets)arg1 {
-    return;
+
+- (void)setTouchInsets:(UIEdgeInsets)arg1 {
+    if ([self.delegate.delegate isKindOfClass:objc_getClass("T1StandardStatusInlineActionsViewAdapter")]) {
+        [self setImageEdgeInsets:arg1];
+        [self setHitTestEdgeInsets:arg1];
+    }
 }
+
+// https://stackoverflow.com/a/13067285
+- (void)setHitTestEdgeInsets:(UIEdgeInsets)hitTestEdgeInsets {
+    NSValue *value = [NSValue value:&hitTestEdgeInsets withObjCType:@encode(UIEdgeInsets)];
+    objc_setAssociatedObject(self, &KEY_HIT_TEST_EDGE_INSETS, value, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+- (UIEdgeInsets)hitTestEdgeInsets {
+    NSValue *value = objc_getAssociatedObject(self, &KEY_HIT_TEST_EDGE_INSETS);
+    if (value) {
+        UIEdgeInsets edgeInsets; [value getValue:&edgeInsets]; return edgeInsets;
+    } else {
+        return UIEdgeInsetsZero;
+    }
+}
+
 - (bool)enabled {
     return true;
 }
+
 - (NSString *)actionSheetTitle {
     return @"BHDownload";
 }
-- (unsigned long long)visibility {
+
+- (NSUInteger)visibility {
     return 1;
 }
-- (unsigned long long)alternateInlineActionType {
+
+- (NSUInteger)alternateInlineActionType {
     return 6;
 }
-- (unsigned long long)touchInsetPriority {
+
+- (NSUInteger)touchInsetPriority {
     return 2;
 }
+
 - (double)extraWidth {
-    return 48;
+    return 40;
 }
+
 - (bool)shouldShowCount {
     return false;
 }
-- (unsigned long long)displayType {
+
+- (NSUInteger)displayType {
     return self->_displayType;
 }
-- (unsigned long long)inlineActionType {
+
+- (NSUInteger)inlineActionType {
     return self->_inlineActionType;
 }
+
 - (T1StatusInlineActionsView *)delegate {
     return self->_delegate;
 }
+
 - (id)buttonAnimator {
     return self->_buttonAnimator;
 }
+
 - (void)downloadProgress:(float)progress {
     self.hud.detailTextLabel.text = [BHTManager getDownloadingPersent:progress];
+}
+
+- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event {
+    if (UIEdgeInsetsEqualToEdgeInsets(self.hitTestEdgeInsets, UIEdgeInsetsZero) || !self.enabled || self.hidden) {
+        return [super pointInside:point withEvent:event];
+    }
+
+    CGRect relativeFrame = self.bounds;
+    CGRect hitFrame = UIEdgeInsetsInsetRect(relativeFrame, self.hitTestEdgeInsets);
+
+    return CGRectContainsPoint(hitFrame, point);
 }
 
 - (void)downloadDidFinish:(NSURL *)filePath Filename:(NSString *)fileName {

@@ -48,5 +48,6 @@
 + (BOOL)alwaysOpenSafari;
 + (BOOL)hideWhoToFollow;
 + (BOOL)hideTopicsToFollow;
++ (BOOL)hideViewCount;
 @end
 

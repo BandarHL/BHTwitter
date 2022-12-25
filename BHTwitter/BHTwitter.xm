@@ -457,6 +457,8 @@
                 tweetView = [(T1StandardStatusView *)actionsView.superview eventHandler];
             } else if ([actionsView.superview isKindOfClass:%c(T1TweetDetailsFocalStatusView)]) { // Focus tweet
                 tweetView = [(T1TweetDetailsFocalStatusView *)actionsView.superview eventHandler];
+            } else if ([actionsView.superview isKindOfClass:%c(T1ConversationFocalStatusView)]) { // Focus tweet
+                tweetView = [(T1ConversationFocalStatusView *)actionsView.superview eventHandler];
             } else {
                 return %orig;
             }
@@ -487,6 +489,8 @@
                 tweetView = [(T1StandardStatusView *)actionsView.superview eventHandler];
             } else if ([actionsView.superview isKindOfClass:%c(T1TweetDetailsFocalStatusView)]) { // Focus tweet
                 tweetView = [(T1TweetDetailsFocalStatusView *)actionsView.superview eventHandler];
+            } else if ([actionsView.superview isKindOfClass:%c(T1ConversationFocalStatusView)]) { // Focus tweet
+                tweetView = [(T1ConversationFocalStatusView *)actionsView.superview eventHandler];
             } else {
                 return %orig;
             }
@@ -516,6 +520,10 @@
     
     if ([BHTManager isVideoCell:arg1] && [BHTManager DownloadingVideos]) {
         [newOrig addObject:%c(BHDownloadInlineButton)];
+    }
+    
+    if ([newOrig containsObject:%c(TTAStatusInlineAnalyticsButton)] && [BHTManager hideViewCount]) {
+        [newOrig removeObject:%c(TTAStatusInlineAnalyticsButton)];
     }
     
     return [newOrig copy];

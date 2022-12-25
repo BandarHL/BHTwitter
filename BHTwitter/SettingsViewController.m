@@ -196,6 +196,8 @@
         // Layout customization section
         PSSpecifier *origTweetStyle = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ORIG_TWEET_STYLE_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE"] key:@"old_style" defaultValue:true changeAction:nil];
         
+        PSSpecifier *hideViewCount = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE"] key:@"hide_view_count" defaultValue:false changeAction:nil];
+        
         PSSpecifier *font = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FONT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FONT_OPTION_DETAIL_TITLE"] key:@"en_font" defaultValue:false changeAction:nil];
         
         PSSpecifier *regularFontsPicker = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"REQULAR_FONTS_PICKER_OPTION_TITLE"] detailTitle:[[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"] dynamicRule:@"en_font, ==, 0" action:@selector(showRegularFontPicker:)];
@@ -249,6 +251,7 @@
             
             layoutSection, // 2
             origTweetStyle,
+            hideViewCount,
             font,
             regularFontsPicker,
             boldFontsPicker,

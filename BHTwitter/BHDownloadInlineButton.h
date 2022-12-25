@@ -10,29 +10,28 @@
 
 @interface BHDownloadInlineButton : UIButton
 {
-    unsigned long long _displayType;
-    unsigned long long _inlineActionType;
+    NSUInteger _displayType;
+    NSUInteger _inlineActionType;
     T1StatusInlineActionsView *_delegate;
     id _buttonAnimator;
 }
 
-+ (CGSize)buttonImageSizeUsingViewModel:(id)arg1 options:(unsigned long long)arg2 overrideButtonSize:(CGSize)arg3 account:(id)arg4;
++ (CGSize)buttonImageSizeUsingViewModel:(id)arg1 options:(NSUInteger)arg2 overrideButtonSize:(CGSize)arg3 account:(id)arg4;
 @property(retain, nonatomic) id buttonAnimator;
 @property(retain, nonatomic) T1StatusInlineActionsView *delegate;
-@property(nonatomic) unsigned long long inlineActionType;
-@property(nonatomic) unsigned long long displayType;
-- (id)_t1_imageNamed:(id)arg1 fitSize:(struct CGSize)arg2 fillColor:(id)arg3;
-- (void)setTouchInsets:(struct UIEdgeInsets)arg1;
+@property(nonatomic, assign) UIEdgeInsets hitTestEdgeInsets;
+@property(nonatomic) NSUInteger inlineActionType;
+@property(nonatomic) NSUInteger displayType;
+- (void)setTouchInsets:(UIEdgeInsets)arg1;
+- (id)_t1_imageNamed:(id)arg1 fitSize:(CGSize)arg2 fillColor:(id)arg3;
 - (_Bool)shouldShowCount;
 - (double)extraWidth;
-- (unsigned long long)touchInsetPriority;
-- (unsigned long long)alternateInlineActionType;
-- (unsigned long long)visibility;
+- (NSUInteger)touchInsetPriority;
+- (NSUInteger)alternateInlineActionType;
+- (NSUInteger)visibility;
 - (NSString *)actionSheetTitle;
 - (_Bool)enabled;
 - (void)statusDidUpdate:(id)arg1 options:(NSUInteger)arg2 displayTextOptions:(NSUInteger)arg3 animated:(BOOL)arg4;
 - (void)statusDidUpdate:(id)arg1 options:(NSUInteger)arg2 displayTextOptions:(NSUInteger)arg3 animated:(BOOL)arg4 featureSwitches:(id)arg5;
-- (id)initWithOptions:(unsigned long long)arg1 overrideSize:(struct CGSize)arg2 account:(id)arg3;
-
+- (instancetype)initWithOptions:(NSUInteger)arg1 overrideSize:(CGSize)arg2 account:(id)arg3;
 @end
-

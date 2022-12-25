@@ -245,6 +245,10 @@
 @property(nonatomic) __weak id <TTACoreStatusViewEventHandler> eventHandler;
 @end
 
+@interface T1ConversationFocalStatusView : UIView
+@property(nonatomic) __weak id <TTACoreStatusViewEventHandler> eventHandler;
+@end
+
 @interface TFNButtonBarView : UIView
 @property(nonatomic) double trailingViewsSpacing;
 @property(nonatomic) double leadingViewsSpacing;

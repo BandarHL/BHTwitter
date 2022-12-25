@@ -131,6 +131,9 @@
 "ORIG_TWEET_STYLE_OPTION_TITLE" = "Disable edge to edge tweet style";
 "ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "Force Twitter to use the original tweet style.";
 
+"HIDE_VIEW_COUNT_OPTION_TITLE" = "Hide view count";
+"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE" = "Remove view count from tweet";
+
 "FONT_OPTION_TITLE" = "Enable changing font";
 "FONT_OPTION_DETAIL_TITLE" = "Option to allow changing Twitter font and show font picker.";
 

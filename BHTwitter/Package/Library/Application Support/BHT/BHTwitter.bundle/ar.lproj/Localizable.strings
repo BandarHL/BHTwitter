@@ -131,6 +131,9 @@
 "ORIG_TWEET_STYLE_OPTION_TITLE" = "تعطيل النمط الجديد للتغريدة";
 "ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "إجبار التطبيق على استخدام النمط الأساسي";
 
+"HIDE_VIEW_COUNT_OPTION_TITLE" = "إخفاء عدد مُشاهدة التغريدة";
+"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE" = "إزالة عدد المُشاهدات من التغريدة";
+
 "FONT_OPTION_TITLE" = "تفعيل تغيير خط التطبيق";
 "FONT_OPTION_DETAIL_TITLE" = "خيار لتفعيل تغيير خط تويتر";
 

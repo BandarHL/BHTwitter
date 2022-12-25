@@ -186,6 +186,9 @@
 + (BOOL)hideTopicsToFollow {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_topics_to_follow"];
 }
++ (BOOL)hideViewCount {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_view_count"];
+}
 
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount {
     SettingsViewController *pref = [[SettingsViewController alloc] initWithTwitterAccount:twAccount];
