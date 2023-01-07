@@ -49,5 +49,6 @@
 + (BOOL)hideWhoToFollow;
 + (BOOL)hideTopicsToFollow;
 + (BOOL)hideViewCount;
++ (BOOL)showTweetSource;
 @end
 

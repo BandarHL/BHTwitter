@@ -93,23 +93,30 @@
         [copyButton setImage:[UIImage systemImageNamed:@"doc.on.clipboard"] forState:UIControlStateNormal];
         if (@available(iOS 14.0, *)) {
             [copyButton setShowsMenuAsPrimaryAction:true];
+            
             [copyButton setMenu:[UIMenu menuWithTitle:@"" children:@[
                 [UIAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_1"] image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
-                    UIPasteboard.generalPasteboard.string = self.viewModel.bio;
+                    if (self.viewModel.bio != nil)
+                        UIPasteboard.generalPasteboard.string = self.viewModel.bio;
                 }],
                 [UIAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_2"] image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
-                    UIPasteboard.generalPasteboard.string = self.viewModel.username;
+                    if (self.viewModel.username != nil)
+                        UIPasteboard.generalPasteboard.string = self.viewModel.username;
                 }],
                 [UIAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_3"] image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
-                    UIPasteboard.generalPasteboard.string = self.viewModel.fullName;
+                    if (self.viewModel.fullName != nil)
+                        UIPasteboard.generalPasteboard.string = self.viewModel.fullName;
                 }],
                 [UIAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_4"] image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
-                    UIPasteboard.generalPasteboard.string = self.viewModel.url;
+                    if (self.viewModel.url != nil)
+                        UIPasteboard.generalPasteboard.string = self.viewModel.url;
                 }],
                 [UIAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_5"] image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
-                    UIPasteboard.generalPasteboard.string = self.viewModel.location;
+                    if (self.viewModel.location != nil)
+                        UIPasteboard.generalPasteboard.string = self.viewModel.location;
                 }],
             ]]];
+            
         } else {
             [copyButton addTarget:self action:@selector(copyButtonHandler:) forControlEvents:UIControlEventTouchUpInside];
         }
@@ -144,19 +151,24 @@
         alert.popoverPresentationController.sourceRect = sender.frame;
     }
     UIAlertAction *bio = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_1"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-        UIPasteboard.generalPasteboard.string = self.viewModel.bio;
+        if (self.viewModel.bio != nil)
+            UIPasteboard.generalPasteboard.string = self.viewModel.bio;
     }];
     UIAlertAction *username = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_2"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-        UIPasteboard.generalPasteboard.string = self.viewModel.username;
+        if (self.viewModel.username != nil)
+            UIPasteboard.generalPasteboard.string = self.viewModel.username;
     }];
     UIAlertAction *fullusername = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_3"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-        UIPasteboard.generalPasteboard.string = self.viewModel.fullName;
+        if (self.viewModel.fullName != nil)
+            UIPasteboard.generalPasteboard.string = self.viewModel.fullName;
     }];
     UIAlertAction *url = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_4"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-        UIPasteboard.generalPasteboard.string = self.viewModel.url;
+        if (self.viewModel.url != nil)
+            UIPasteboard.generalPasteboard.string = self.viewModel.url;
     }];
     UIAlertAction *location = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_5"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-        UIPasteboard.generalPasteboard.string = self.viewModel.location;
+        if (self.viewModel.location != nil)
+            UIPasteboard.generalPasteboard.string = self.viewModel.location;
     }];
     [alert addAction:bio];
     [alert addAction:username];
@@ -638,6 +650,11 @@
     if ([key isEqualToString:@"conversational_replies_ios_pinned_replies_consumption_enabled"] || [key isEqualToString:@"conversational_replies_ios_pinned_replies_creation_enabled"]) {
         return true;
     }
+    
+    if ([BHTManager showTweetSource] && [key isEqualToString:@"show_tweet_source_disabled"]) {
+        return false;
+    }
+    
     return %orig;
 }
 %end

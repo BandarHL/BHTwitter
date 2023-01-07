@@ -189,6 +189,9 @@
 + (BOOL)hideViewCount {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_view_count"];
 }
++ (BOOL)showTweetSource {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"show_tweet_source"];
+}
 
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount {
     SettingsViewController *pref = [[SettingsViewController alloc] initWithTwitterAccount:twAccount];

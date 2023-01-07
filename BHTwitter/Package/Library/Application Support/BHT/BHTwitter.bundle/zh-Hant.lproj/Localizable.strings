@@ -115,7 +115,6 @@
 "THEME_OPTION_6" = "綠色";
 
 "CUSTOM_TAB_BAR_OPTION_TITLE" = "自訂功能標籤";
-"TWITTER_BLUE_SECTION_FOOTER_TITLE" = "必須重啟 Twitter 才能套用變更";
 "CUSTOM_TAB_BAR_REST_MESSAGE" = "確定要將設定恢復為預設值嗎?";
 "CUSTOM_TAB_BAR_SECTION_1_TITLE" = "使用中";
 "CUSTOM_TAB_BAR_SECTION_2_TITLE" = "隱藏";
@@ -126,9 +125,14 @@
 "CUSTOM_TAB_BAR_OPTION_5" = "通知";
 "CUSTOM_TAB_BAR_OPTION_6" = "私人訊息";
 
+"TWITTER_BLUE_SECTION_FOOTER_TITLE" = "必須重啟 Twitter 才能套用變更";
+
 "LAYOUT_CUS_SECTION_HEADER_TITLE" = "佈局設定";
 "ORIG_TWEET_STYLE_OPTION_TITLE" = "關閉邊到邊的推文樣示";
 "ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "強制 Twitter 使用舊版推文樣式";
+
+"HIDE_VIEW_COUNT_OPTION_TITLE" = "隱藏查看次數";
+"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE" = "在推文中隱藏查看次數";
 
 "FONT_OPTION_TITLE" = "更換字體";
 "FONT_OPTION_DETAIL_TITLE" = "啟用此選項，可以更換 Twitter 字體";

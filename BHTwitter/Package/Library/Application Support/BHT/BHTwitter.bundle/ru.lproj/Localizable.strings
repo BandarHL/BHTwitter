@@ -107,8 +107,24 @@
 
 "THEME_OPTION_TITLE" = "Тема";
 "THEME_OPTION_DETAIL_TITLE" = "Позволяет сменить цветовую схему. Данную расцветку видите только вы";
+"THEME_OPTION_1" = "Голубая";
+"THEME_OPTION_2" = "Желтая";
+"THEME_OPTION_3" = "Розовая";
+"THEME_OPTION_4" = "Фиолетовая";
+"THEME_OPTION_5" = "Оранжевая";
+"THEME_OPTION_6" = "Зеленая";
 
 "CUSTOM_TAB_BAR_OPTION_TITLE" = "Конфигурация вкладок";
+"CUSTOM_TAB_BAR_REST_MESSAGE" = "Are sure you want to rest the settings to default?";
+"CUSTOM_TAB_BAR_SECTION_1_TITLE" = "Активные вкладки";
+"CUSTOM_TAB_BAR_SECTION_2_TITLE" = "Скрытые вкладки";
+"CUSTOM_TAB_BAR_OPTION_1" = "Главная";
+"CUSTOM_TAB_BAR_OPTION_2" = "Поиск";
+"CUSTOM_TAB_BAR_OPTION_3" = "Аудиокомнаты";
+"CUSTOM_TAB_BAR_OPTION_4" = "Сообщества";
+"CUSTOM_TAB_BAR_OPTION_5" = "Уведомления";
+"CUSTOM_TAB_BAR_OPTION_6" = "Сообщения";
+
 "TWITTER_BLUE_SECTION_FOOTER_TITLE" = "Для вступления настроек в силу может потребоваться перезапуск приложения.";
 
 "LAYOUT_CUS_SECTION_HEADER_TITLE" = "Декоративные настройки";
@@ -117,6 +133,9 @@
 
 "FONT_OPTION_TITLE" = "Сменить шрифт";
 "FONT_OPTION_DETAIL_TITLE" = "Позволяет установить кастомный шрифт";
+
+"HIDE_VIEW_COUNT_OPTION_TITLE" = "Скрыть количество просмотров";
+"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE" = "Скрывает количество просмотров твита";
 
 "REQULAR_FONTS_PICKER_OPTION_TITLE" = "Обычный шрифт";
 "BOLD_FONTS_PICKER_OPTION_TITLE" = "Жирный шрифт";
@@ -130,25 +149,3 @@
 "LEGAL_BUTTON_TITLE" = "Лицензии используемых утилит";
 
 "DEVELOPER_SECTION_HEADER_TITLE" = "Разработчик";
-
-// Missing strings
-"THEME_LABEL" = "Выберите цветовую схему:"; //Description inside theme option
-"BLUE" = "Синяя";
-"YELLOW" = "Желтая";
-"RED" = "Розовая";
-"PURPLE" = "Фиолетовая";
-"ORANGE" = "Оранжевая";
-"GREEN" = "Зеленая";
-"ACTIVE_TABS" = "Активные вкладки"; //Inside custom tab bars option
-"HIDDEN_TABS" = "Скрытые вкладки";
-"HOME" = "Главная";
-"EXPLORE" = "Поиск";
-"SPACES" = "Аудиокомнаты";
-"COMMUNITIES" = "Сообщества";
-"NOTIFICATIONS" = "Уведомления";
-"MESSAGES" = "Сообщения";
-"HI" = "Ку-ку";
-"ARE_YOU_SURE" = "Уверены, что хотите сбросить настройки вкладок?";
-"YES" = "Да";
-"NO" = "Нет";
-"ARE_YOU_SURE_LABEL" = "Подтвердить действие?";
