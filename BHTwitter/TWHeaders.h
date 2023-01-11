@@ -391,17 +391,29 @@ static UIImage *BH_imageFromView(UIView *view) {
     return img;
 }
 
-static  UIFont * _Nullable BH_getDefaultFont(bool isBold, CGFloat pointSize) {
+static  UIFont * _Nullable BH_getDefaultFont(UIFont *font) {
     if ([[NSUserDefaults standardUserDefaults] boolForKey:@"en_font"]) {
+		// https://stackoverflow.com/a/20515367/16619237
+		UIFontDescriptorSymbolicTraits fontDescriptorSymbolicTraits = font.fontDescriptor.symbolicTraits;
+		BOOL isBold = (fontDescriptorSymbolicTraits & UIFontDescriptorTraitBold) != 0;
+
         if ([[NSUserDefaults standardUserDefaults] objectForKey:isBold ? @"bhtwitter_font_2" : @"bhtwitter_font_1"]) {
             NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:isBold ? @"bhtwitter_font_2" : @"bhtwitter_font_1"];
-            return [UIFont fontWithName:fontName size:pointSize];
+            return [UIFont fontWithName:fontName size:font.pointSize];
         }
         return nil;
     }
     return nil;
 }
 
+static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, IMP new){
+    for(NSString *sel in origSelectors){
+		SEL origSel = NSSelectorFromString(sel);
+        Method origMethod = class_getInstanceMethod(cls, origSel);
+        BH_BaseImp oldImp = (BH_BaseImp)class_replaceMethod(cls, origSel, new, method_getTypeEncoding(origMethod));
+		[originalFontsIMP setObject:[NSValue valueWithPointer:oldImp] forKey:sel];
+    }
+}
 static BOOL isDeviceLanguageRTL() {
     return [NSParagraphStyle _defaultWritingDirection] == NSWritingDirectionRightToLeft;
 }
