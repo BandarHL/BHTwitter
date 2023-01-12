@@ -98,6 +98,8 @@
 "ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "Always open in Safari";
 "ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "Force twitter to open URLs in Safari or your default browser.";
 
+"STRIP_URL_TRACKING_PARAMETERS_TITLE" = "Strip tracking parameters from URL's";
+
 "TWITTER_BLUE_SECTION_HEADER_TITLE" = "Twitter blue features";
 "UNDO_TWEET_OPTION_TITLE" = "Undo tweets feature";
 "UNDO_TWEET_OPTION_DETAIL_TITLE" = "Undo tweets after tweeting.";

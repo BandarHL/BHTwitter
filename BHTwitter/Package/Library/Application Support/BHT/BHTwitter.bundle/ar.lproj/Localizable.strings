@@ -98,6 +98,8 @@
 "ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "فتح الروابط في المتصفح";
 "ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "إجبار التطبيق على فتح الروابط في المتصفح الإفتراضي .";
 
+"STRIP_URL_TRACKING_PARAMETERS_TITLE" = "حذف التتبع من الروابط";
+
 "TWITTER_BLUE_SECTION_HEADER_TITLE" = "Twitter blue مزايا";
 "UNDO_TWEET_OPTION_TITLE" = "التراجع عن التغريد";
 "UNDO_TWEET_OPTION_DETAIL_TITLE" = "التراجع عن التغريد بعد إرسالها .";
