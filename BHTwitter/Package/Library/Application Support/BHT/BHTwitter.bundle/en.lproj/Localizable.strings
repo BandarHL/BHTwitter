@@ -136,6 +136,9 @@
 
 "SHOW_TWEET_SOURCE_TITLE" = "Show tweet source";
 
+"FORCE_TWEET_FULL_FRAME_TITLE" = "Force Twitter to use full frame for images";
+"FORCE_TWEET_FULL_FRAME_DETAIL_TITLE" = "It might not work correctly";
+
 "FONT_OPTION_TITLE" = "Enable changing font";
 "FONT_OPTION_DETAIL_TITLE" = "Option to allow changing Twitter font and show font picker.";
 

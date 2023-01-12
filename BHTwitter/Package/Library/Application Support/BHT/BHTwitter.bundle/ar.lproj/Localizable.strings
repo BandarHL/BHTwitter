@@ -136,6 +136,9 @@
 
 "SHOW_TWEET_SOURCE_TITLE" = "إظهار مصدر التغريدة ";
 
+"FORCE_TWEET_FULL_FRAME_TITLE" = "Force Twitter to use full frame for images";
+"FORCE_TWEET_FULL_FRAME_DETAIL_TITLE" = "It might not work correctly";
+
 "FONT_OPTION_TITLE" = "تفعيل تغيير خط التطبيق";
 "FONT_OPTION_DETAIL_TITLE" = "خيار لتفعيل تغيير خط تويتر";
 
