@@ -186,6 +186,10 @@ static const NSString *KEY_HIT_TEST_EDGE_INSETS = @"HitTestEdgeInsets";
     return 40;
 }
 
+- (CGFloat)trailingEdgeInset {
+    return 6;
+}
+
 - (bool)shouldShowCount {
     return false;
 }

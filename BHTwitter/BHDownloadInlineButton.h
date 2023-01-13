@@ -26,6 +26,7 @@
 - (id)_t1_imageNamed:(id)arg1 fitSize:(CGSize)arg2 fillColor:(id)arg3;
 - (_Bool)shouldShowCount;
 - (double)extraWidth;
+- (CGFloat)trailingEdgeInset;
 - (NSUInteger)touchInsetPriority;
 - (NSUInteger)alternateInlineActionType;
 - (NSUInteger)visibility;
