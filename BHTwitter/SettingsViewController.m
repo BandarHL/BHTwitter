@@ -184,7 +184,7 @@
         
         PSSpecifier *alwaysOpenSafari = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ALWAYS_OPEN_SAFARI_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE"] key:@"openInBrowser" defaultValue:false changeAction:nil];
         
-        PSSpecifier *stripTrackingParams = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"STRIP_URL_TRACKING_PARAMETERS_TITLE"] detailTitle:nil key:@"strip_tracking_params" defaultValue:false changeAction:nil];
+        PSSpecifier *stripTrackingParams = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"STRIP_URL_TRACKING_PARAMETERS_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE"] key:@"strip_tracking_params" defaultValue:false changeAction:nil];
 
         // Twitter bule section
         PSSpecifier *undoTweet = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"UNDO_TWEET_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"UNDO_TWEET_OPTION_DETAIL_TITLE"] key:@"undo_tweet" defaultValue:false changeAction:nil];
@@ -202,7 +202,7 @@
         
         PSSpecifier *tweetSource = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SHOW_TWEET_SOURCE_TITLE"] detailTitle:nil key:@"show_tweet_source" defaultValue:false changeAction:nil];
 
-        PSSpecifier *forceFullFrame = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FORCE_TWEET_FULL_FRAME_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FORCE_TWEET_FULL_FRAME_DETAIL_TITLE"] key:@"force_tweet_full_frame" defaultValue:false changeAction:nil];
+        PSSpecifier *forceFullFrame = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FORCE_TWEET_FULL_FRAME_TITLE"] detailTitle:nil key:@"force_tweet_full_frame" defaultValue:false changeAction:nil];
         
         PSSpecifier *font = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FONT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FONT_OPTION_DETAIL_TITLE"] key:@"en_font" defaultValue:false changeAction:nil];
         

@@ -19,7 +19,6 @@
 		50198013250E053900207745 /* BHDownload.m in Sources */ = {isa = PBXBuildFile; fileRef = 50198011250E053900207745 /* BHDownload.m */; };
 		5020A87824E758E00080F292 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5020A87724E758E00080F292 /* UIKit.framework */; };
 		5020A87A24E758E00080F292 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5020A87924E758E00080F292 /* Foundation.framework */; };
-		5020A88524E758E00080F292 /* BHTwitter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5020A88424E758E00080F292 /* BHTwitter.mm */; };
 		5020A8D824E759190080F292 /* TWHeaders.h in Headers */ = {isa = PBXBuildFile; fileRef = 5020A8D524E759190080F292 /* TWHeaders.h */; };
 		5020A8D924E759190080F292 /* BHTManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 5020A8D624E759190080F292 /* BHTManager.h */; };
 		5020A8DA24E759190080F292 /* BHTManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 5020A8D724E759190080F292 /* BHTManager.m */; };
@@ -53,6 +52,7 @@
 		50FAE061288545F600CDCEB2 /* SettingsViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 50FAE05F288545F600CDCEB2 /* SettingsViewController.m */; };
 		91086148293001530011609E /* FLEX in Frameworks */ = {isa = PBXBuildFile; productRef = 91086147293001530011609E /* FLEX */; };
 		9108614B293005750011609E /* JGProgressHUD in Frameworks */ = {isa = PBXBuildFile; productRef = 9108614A293005750011609E /* JGProgressHUD */; };
+		916CFDE12971A4CF00325345 /* BHTwitter.m in Sources */ = {isa = PBXBuildFile; fileRef = 916CFDE02971A4CF00325345 /* BHTwitter.m */; };
 		916F1E1B2912F16D00865DD2 /* Preferences.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 916F1E1A2912F16D00865DD2 /* Preferences.framework */; };
 /* End PBXBuildFile section */
 
@@ -72,8 +72,7 @@
 		5020A87924E758E00080F292 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		5020A88024E758E00080F292 /* control */ = {isa = PBXFileReference; lastKnownFileType = text; path = control; sourceTree = "<group>"; };
 		5020A88224E758E00080F292 /* BHTwitter-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "BHTwitter-Prefix.pch"; path = "../BHTwitter-Prefix.pch"; sourceTree = "<group>"; };
-		5020A88324E758E00080F292 /* BHTwitter.xm */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.objc; path = BHTwitter.xm; sourceTree = "<group>"; };
-		5020A88424E758E00080F292 /* BHTwitter.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = BHTwitter.mm; sourceTree = "<group>"; };
+		5020A88324E758E00080F292 /* BHTwitter.x */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.objc; path = BHTwitter.x; sourceTree = "<group>"; };
 		5020A88924E758E00080F292 /* BHTwitter.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = BHTwitter.plist; sourceTree = "<group>"; };
 		5020A8D524E759190080F292 /* TWHeaders.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TWHeaders.h; sourceTree = "<group>"; };
 		5020A8D624E759190080F292 /* BHTManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BHTManager.h; sourceTree = "<group>"; };
@@ -108,6 +107,7 @@
 		50FAE056288545DB00CDCEB2 /* CepheiUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CepheiUI.framework; path = ../../../../../opt/theos/vendor/lib/CepheiUI.framework; sourceTree = "<group>"; };
 		50FAE05E288545F600CDCEB2 /* SettingsViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SettingsViewController.h; sourceTree = "<group>"; };
 		50FAE05F288545F600CDCEB2 /* SettingsViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SettingsViewController.m; sourceTree = "<group>"; };
+		916CFDE02971A4CF00325345 /* BHTwitter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BHTwitter.m; sourceTree = "<group>"; };
 		916F1E1A2912F16D00865DD2 /* Preferences.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Preferences.framework; path = ../../../../../opt/theos/sdks/iPhoneOS16.0.sdk/System/Library/PrivateFrameworks/Preferences.framework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -209,8 +209,8 @@
 		5020A87D24E758E00080F292 /* BHTwitter */ = {
 			isa = PBXGroup;
 			children = (
-				5020A88324E758E00080F292 /* BHTwitter.xm */,
-				5020A88424E758E00080F292 /* BHTwitter.mm */,
+				5020A88324E758E00080F292 /* BHTwitter.x */,
+				916CFDE02971A4CF00325345 /* BHTwitter.m */,
 				5020A8D524E759190080F292 /* TWHeaders.h */,
 				50198010250E053900207745 /* BHDownload.h */,
 				50198011250E053900207745 /* BHDownload.m */,
@@ -431,12 +431,12 @@
 				500DA69D26FF930A00C020B2 /* SAMKeychainQuery.m in Sources */,
 				50198013250E053900207745 /* BHDownload.m in Sources */,
 				500DA6A426FF9CFE00C020B2 /* SAMKeychain.m in Sources */,
-				5020A88524E758E00080F292 /* BHTwitter.mm in Sources */,
 				500DA6A926FF9D5100C020B2 /* AuthViewController.m in Sources */,
 				5061F3C02806133400F3D5D3 /* CustomTabBarViewController.swift in Sources */,
 				50EE4D4B286F7F70007DE117 /* BHColorThemeViewController.swift in Sources */,
 				50F7929028A0EA22000A2269 /* BHTBundle.m in Sources */,
 				500DA6A126FF95B100C020B2 /* keychain.m in Sources */,
+				916CFDE12971A4CF00325345 /* BHTwitter.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -572,6 +572,7 @@
 				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "BHTwitter/BHTwitter-Prefix.pch";
+				GCC_TREAT_INCOMPATIBLE_POINTER_TYPE_WARNINGS_AS_ERRORS = NO;
 				INFOPLIST_FILE = "";
 				INSTALL_PATH = /Library/MobileSubstrate/DynamicLibraries;
 				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
@@ -609,6 +610,7 @@
 					"-Wno-undeclared-selector",
 					"-Wno-objc-designated-initializers",
 					"-Wno-nullability-completeness",
+					"-Wno-error",
 				);
 			};
 			name = Release;
@@ -634,6 +636,7 @@
 				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "BHTwitter/BHTwitter-Prefix.pch";
+				GCC_TREAT_INCOMPATIBLE_POINTER_TYPE_WARNINGS_AS_ERRORS = NO;
 				INFOPLIST_FILE = "";
 				INSTALL_PATH = /Library/MobileSubstrate/DynamicLibraries;
 				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
@@ -672,6 +675,7 @@
 					"-Wno-undeclared-selector",
 					"-Wno-objc-designated-initializers",
 					"-Wno-nullability-completeness",
+					"-Wno-error",
 				);
 			};
 			name = Debug;

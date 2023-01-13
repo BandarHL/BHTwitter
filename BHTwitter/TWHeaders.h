@@ -19,6 +19,13 @@
 #import <Preferences/PSEditableTableCell.h>
 #import <Preferences/PSSwitchTableCell.h>
 
+
+typedef UIFont *(*BH_BaseImp)(id,SEL);
+static NSMutableDictionary<NSString*, NSValue*>* originalFontsIMP;
+static id _PasteboardChangeObserver;
+static NSDictionary<NSString*, NSArray<NSString*>*> *trackingParams;
+static NSString *_lastCopiedURL;
+
 @interface T1AppDelegate : UIResponder <UIApplicationDelegate>
 @property(retain, nonatomic) UIWindow *window;
 @end
@@ -383,7 +390,6 @@ static UIImage *BH_imageFromView(UIView *view) {
     TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];
     bool opaque = [colorSettings.currentColorPalette isDark] ? true : false;
     UIGraphicsBeginImageContextWithOptions(view.frame.size, opaque, 0.0);
-//    [view.layer renderInContext:UIGraphicsGetCurrentContext()];
     [view drawViewHierarchyInRect:view.bounds afterScreenUpdates:false];
     UIImage *img = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
@@ -391,17 +397,20 @@ static UIImage *BH_imageFromView(UIView *view) {
     return img;
 }
 
-static  UIFont * _Nullable BH_getDefaultFont(bool isBold, CGFloat pointSize) {
+static  UIFont * _Nullable BH_getDefaultFont(UIFont *font) {
     if ([[NSUserDefaults standardUserDefaults] boolForKey:@"en_font"]) {
+        // https://stackoverflow.com/a/20515367/16619237
+        UIFontDescriptorSymbolicTraits fontDescriptorSymbolicTraits = font.fontDescriptor.symbolicTraits;
+        BOOL isBold = (fontDescriptorSymbolicTraits & UIFontDescriptorTraitBold) != 0;
+
         if ([[NSUserDefaults standardUserDefaults] objectForKey:isBold ? @"bhtwitter_font_2" : @"bhtwitter_font_1"]) {
             NSString *fontName = [[NSUserDefaults standardUserDefaults] objectForKey:isBold ? @"bhtwitter_font_2" : @"bhtwitter_font_1"];
-            return [UIFont fontWithName:fontName size:pointSize];
+            return [UIFont fontWithName:fontName size:font.pointSize];
         }
         return nil;
     }
     return nil;
 }
-
 static BOOL isDeviceLanguageRTL() {
     return [NSParagraphStyle _defaultWritingDirection] == NSWritingDirectionRightToLeft;
 }

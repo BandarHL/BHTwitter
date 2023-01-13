@@ -134,6 +134,8 @@
 "HIDE_VIEW_COUNT_OPTION_TITLE" = "隱藏查看次數";
 "HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE" = "在推文中隱藏查看次數";
 
+"SHOW_TWEET_SOURCE_TITLE" = "顯示推文來源";
+
 "FONT_OPTION_TITLE" = "更換字體";
 "FONT_OPTION_DETAIL_TITLE" = "啟用此選項，可以更換 Twitter 字體";
 

@@ -6,6 +6,25 @@
 
 %config(generator=internal)
 
+static UIFont * _Nullable TAEStandardFontGroupReplacement(UIFont *self, SEL _cmd) {
+    BH_BaseImp orig  = originalFontsIMP[NSStringFromSelector(_cmd)].pointerValue;
+    UIFont *origFont = orig(self, _cmd);
+    UIFont *newFont  = BH_getDefaultFont(origFont);
+    return newFont != nil ? newFont : origFont;
+}
+static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, IMP newIMP){
+    for (NSString *sel in origSelectors) {
+        SEL origSel = NSSelectorFromString(sel);
+        Method origMethod = class_getInstanceMethod(cls, origSel);
+        if (origMethod != NULL) {
+            BH_BaseImp oldImp = (BH_BaseImp)class_replaceMethod(cls, origSel, newIMP, method_getTypeEncoding(origMethod));
+            [originalFontsIMP setObject:[NSValue valueWithPointer:oldImp] forKey:sel];
+        } else {
+            NSLog(@"[BHTwitter] Can't find method (%@) in Class (%@)", sel, NSStringFromClass(cls));
+        }
+    }
+}
+
 // MARK: Clean cache and Padlock
 %hook T1AppDelegate
 - (_Bool)application:(UIApplication *)application didFinishLaunchingWithOptions:(id)arg2 {
@@ -96,25 +115,25 @@
             
             [copyButton setMenu:[UIMenu menuWithTitle:@"" children:@[
                 [UIAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_1"] image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
-                    if (self.viewModel.bio != nil)
-                        UIPasteboard.generalPasteboard.string = self.viewModel.bio;
-                }],
+                if (self.viewModel.bio != nil)
+                    UIPasteboard.generalPasteboard.string = self.viewModel.bio;
+            }],
                 [UIAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_2"] image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
-                    if (self.viewModel.username != nil)
-                        UIPasteboard.generalPasteboard.string = self.viewModel.username;
-                }],
+                if (self.viewModel.username != nil)
+                    UIPasteboard.generalPasteboard.string = self.viewModel.username;
+            }],
                 [UIAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_3"] image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
-                    if (self.viewModel.fullName != nil)
-                        UIPasteboard.generalPasteboard.string = self.viewModel.fullName;
-                }],
+                if (self.viewModel.fullName != nil)
+                    UIPasteboard.generalPasteboard.string = self.viewModel.fullName;
+            }],
                 [UIAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_4"] image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
-                    if (self.viewModel.url != nil)
-                        UIPasteboard.generalPasteboard.string = self.viewModel.url;
-                }],
+                if (self.viewModel.url != nil)
+                    UIPasteboard.generalPasteboard.string = self.viewModel.url;
+            }],
                 [UIAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_5"] image:[UIImage systemImageNamed:@"doc.on.clipboard"] identifier:nil handler:^(__kindof UIAction * _Nonnull action) {
-                    if (self.viewModel.location != nil)
-                        UIPasteboard.generalPasteboard.string = self.viewModel.location;
-                }],
+                if (self.viewModel.location != nil)
+                    UIPasteboard.generalPasteboard.string = self.viewModel.location;
+            }],
             ]]];
             
         } else {
@@ -563,16 +582,16 @@
     if (![BHTManager alwaysOpenSafari]) {
         return %orig;
     }
-
+    
     NSURL *url = [self initialURL];
     NSString *urlStr = [url absoluteString];
-
+    
     // In-app browser is used for two-factor authentication with security key,
     // login will not complete successfully if it's redirected to Safari
     if ([urlStr containsString:@"twitter.com/account/"] || [urlStr containsString:@"twitter.com/i/flow/"]) {
         return %orig;
     }
-
+    
     [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
     [self dismissViewControllerAnimated:NO completion:nil];
 }
@@ -942,7 +961,7 @@
 %hook TFNActionItem
 %new + (instancetype)actionItemWithTitle:(NSString *)arg1 systemImageName:(NSString *)arg2 action:(void (^)(void))arg3 {
     TFNActionItem *_self = [%c(TFNActionItem) actionItemWithTitle:arg1 imageName:nil action:arg3];
-     [_self setValue:[UIImage systemImageNamed:arg2] forKey:@"_image"];
+    [_self setValue:[UIImage systemImageNamed:arg2] forKey:@"_image"];
     return _self;
 }
 %end
@@ -1073,340 +1092,32 @@
 %end
 
 %hook TAEStandardFontGroup
-- (UIFont *)profilesFollowingCountFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)profilesFollowingFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)userCellFollowsYouFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)dashFollowingCountFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)dashFollowingFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)carouselUsernameFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)carouselDisplayNameFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)profilesFullNameFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)profilesUsernameFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)readerModeSmallFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)readerModeSmallBoldFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)readerModeMediumFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)readerModeMediumBoldFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)readerModeLargeFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)readerModeLargeBoldFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)treeTopicsDescriptionFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)treeTopicsCategoryNameFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)treeTopicsNameFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)treeTopicsCategoryNameLargeFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)topicsPillNameFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)topicsDescriptionFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)topicsNameFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)composerTextEditorFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)statusCellEdgeToEdgeBodyBoldFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)statusCellEdgeToEdgeBodyFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)statusCellBodyFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)statusCellBodyBoldFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)cardAttributionFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)cardTitleBoldFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)cardTitleFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)tweetDetailBoldFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)tweetDetailFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)directMessageBubbleBodyFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)directMessageComposePersistentBarFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)fixedJumboBoldFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)fixedXLargeBoldFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)fixedLargeBoldFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)fixedNormalBoldFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)fixedSmallBoldFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)fixedJumboFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)fixedXLargeFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)fixedLargeFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)fixedNormalFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)fixedSmallFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)jumboBoldFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)xLargeBoldFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)largeBoldFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)normalBoldFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)smallBoldFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)xSmallBoldFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(true, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)jumboFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)xLargeFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)largeFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)normalFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)smallFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)xSmallFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)buttonXLargeFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)buttonLargeFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)buttonMediumFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)buttonMedium_CondensedFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)buttonMedium_CondensedLighterFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)buttonSmallFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)buttonSmallLighterFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)buttonSmall_CondensedFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)buttonSmall_CondensedLighterFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)buttonNavigationBarFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
-}
-- (UIFont *)buttonHeavyNavigationBarFont {
-    UIFont *origFont = %orig;
-    UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
-    return newFont != nil ? newFont : origFont;
++ (TAEStandardFontGroup*)sharedFontGroup {
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        NSArray *fontsMethods = @[
+            @"profilesFollowingCountFont", @"profilesFollowingFont", @"userCellFollowsYouFont", @"dashFollowingCountFont",
+            @"dashFollowingFont", @"carouselUsernameFont", @"carouselDisplayNameFont", @"profilesFullNameFont",
+            @"profilesUsernameFont", @"readerModeSmallFont", @"readerModeSmallBoldFont", @"readerModeMediumFont",
+            @"readerModeMediumBoldFont", @"readerModeLargeFont", @"readerModeLargeBoldFont", @"treeTopicsDescriptionFont",
+            @"treeTopicsCategoryNameFont", @"treeTopicsNameFont", @"treeTopicsCategoryNameLargeFont", @"topicsPillNameFont",
+            @"topicsDescriptionFont", @"topicsNameFont", @"composerTextEditorFont", @"statusCellEdgeToEdgeBodyBoldFont",
+            @"statusCellEdgeToEdgeBodyFont", @"statusCellBodyFont", @"statusCellBodyBoldFont", @"cardAttributionFont",
+            @"cardTitleBoldFont", @"cardTitleFont", @"tweetDetailBoldFont", @"tweetDetailFont",
+            @"directMessageBubbleBodyFont", @"directMessageComposePersistentBarFont", @"fixedJumboBoldFont", @"fixedXLargeBoldFont",
+            @"fixedLargeBoldFont", @"fixedNormalBoldFont", @"fixedSmallBoldFont", @"fixedJumboFont",
+            @"fixedXLargeFont", @"fixedLargeFont", @"fixedNormalFont", @"fixedSmallFont",
+            @"jumboBoldFont", @"xLargeBoldFont", @"largeBoldFont", @"normalBoldFont",
+            @"smallBoldFont", @"jumboFont", @"xLargeFont", @"largeFont",
+            @"normalFont", @"smallFont", @"buttonXLargeFont", @"buttonLargeFont",
+            @"buttonMediumFont", @"buttonMedium_CondensedFont", @"buttonMedium_CondensedLighterFont", @"buttonSmallFont",
+            @"buttonSmallLighterFont", @"buttonSmall_CondensedFont", @"buttonSmall_CondensedLighterFont", @"buttonNavigationBarFont",
+            @"buttonHeavyNavigationBarFont"
+        ];
+        originalFontsIMP = [NSMutableDictionary new];
+        batchSwizzlingOnClass([self class], fontsMethods, (IMP)TAEStandardFontGroupReplacement);
+    });
+    return %orig;
 }
 %end
 
@@ -1436,16 +1147,19 @@
 //%end
 
 // MARK: Clean tracking from copied links: https://github.com/BandarHL/BHTwitter/issues/75
-static id _PasteboardChangeObserver;
-// format = {"host": ["parm1", "parm2"...]} // https://developer.apple.com/documentation/foundation/nsurl/1413640-host
-static NSDictionary<NSString*, NSArray<NSString*>*> *trackingParams = @{@"twitter.com" : @[@"s", @"t"]};
-static NSString *_lastCopiedURL;
-
 %ctor {
     NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
     NSOperationQueue *mainQueue = [NSOperationQueue mainQueue];
     // Someone needs to hold reference the to Notification
     _PasteboardChangeObserver = [center addObserverForName:UIPasteboardChangedNotification object:nil queue:mainQueue usingBlock:^(NSNotification * _Nonnull note){
+        
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
+            trackingParams = @{
+                @"twitter.com" : @[@"s", @"t"]
+            };
+        });
+        
         if ([BHTManager stripTrackingParams]) {
             if (UIPasteboard.generalPasteboard.hasURLs) {
                 NSURL *pasteboardURL = UIPasteboard.generalPasteboard.URL;
