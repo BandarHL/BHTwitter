@@ -192,6 +192,9 @@
 + (BOOL)showTweetSource {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"show_tweet_source"];
 }
++ (BOOL)forceTweetFullFrame {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"force_tweet_full_frame"];
+}
 
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount {
     SettingsViewController *pref = [[SettingsViewController alloc] initWithTwitterAccount:twAccount];

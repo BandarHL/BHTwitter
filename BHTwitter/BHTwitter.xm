@@ -659,6 +659,13 @@
 }
 %end
 
+// MARK: Force Tweets to show images as Full frame: https://github.com/BandarHL/BHTwitter/issues/101
+%hook T1StandardStatusAttachmentViewAdapter
+- (NSUInteger)displayType {
+    return [BHTManager forceTweetFullFrame] ? 1 : %orig;
+}
+%end
+
 %hook T1HomeTimelineItemsViewController
 - (void)_t1_initializeFleets {
     if ([BHTManager hideSpacesBar]) {
@@ -1400,16 +1407,6 @@
     UIFont *origFont = %orig;
     UIFont *newFont = BH_getDefaultFont(false, origFont.pointSize);
     return newFont != nil ? newFont : origFont;
-}
-%end
-
-// MARK: Force Tweets to show images as Full frame: https://github.com/BandarHL/BHTwitter/issues/101
-%hook T1StandardStatusAttachmentViewAdapter
-- (NSUInteger)displayType{
-    if ([[NSUserDefaults standardUserDefaults] boolForKey:@"force_tweet_full_frame"]){
-        return 1;
-    }
-    return %orig;
 }
 %end
 

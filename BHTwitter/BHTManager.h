@@ -50,5 +50,6 @@
 + (BOOL)hideTopicsToFollow;
 + (BOOL)hideViewCount;
 + (BOOL)showTweetSource;
++ (BOOL)forceTweetFullFrame;
 @end
 
