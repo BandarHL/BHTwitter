@@ -1403,51 +1403,6 @@
 }
 %end
 
-// MARK: Clean tracking from copied links: https://github.com/BandarHL/BHTwitter/issues/75
-static id _PasteboardChangeObserver;
-// format = {"host": ["parm1", "parm2"...]} // https://developer.apple.com/documentation/foundation/nsurl/1413640-host
-static NSDictionary<NSString*, NSArray<NSString*>*> *trackingParams;
-static NSString *_lastCopiedURL;
-
-%ctor {
-	NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
-	NSOperationQueue *mainQueue = [NSOperationQueue mainQueue];
-	// Someone needs to hold reference the to Notification
-	_PasteboardChangeObserver = [center addObserverForName:UIPasteboardChangedNotification
-		object:nil
-		queue:mainQueue
-		usingBlock:^(NSNotification * _Nonnull note){
-            if ([[NSUserDefaults standardUserDefaults] boolForKey:@"strip_tracking_params"]){
-                static dispatch_once_t onceToken;
-                dispatch_once(&onceToken, ^{
-                    trackingParams = @{
-                        @"twitter.com" : @[@"s", @"t"]
-                    };
-                });
-                if(UIPasteboard.generalPasteboard.hasURLs){
-                    NSURL *pasteboardURL = UIPasteboard.generalPasteboard.URL;
-                    NSArray<NSString*>* params = trackingParams[pasteboardURL.host];
-
-                    if([pasteboardURL.absoluteString isEqualToString:_lastCopiedURL] == NO && params != nil && pasteboardURL.query != nil){
-                        // to prevent endless copy loop
-                        _lastCopiedURL = pasteboardURL.absoluteString;
-                        NSURLComponents *cleanedURL = [NSURLComponents componentsWithURL:pasteboardURL resolvingAgainstBaseURL:NO];
-                        NSMutableArray<NSURLQueryItem*> *safeParams = [NSMutableArray arrayWithCapacity:0];
-                        
-                        for (NSURLQueryItem *item in cleanedURL.queryItems){
-                            if([params containsObject:item.name] == NO){
-                                [safeParams addObject:item];
-                            }
-                        }
-                        cleanedURL.queryItems = safeParams;
-                        UIPasteboard.generalPasteboard.URL = cleanedURL.URL;
-                    }
-                }
-            }
-		}];
-	%init;
-}
-
 %hook HBForceCepheiPrefs
 + (BOOL)forceCepheiPrefsWhichIReallyNeedToAccessAndIKnowWhatImDoingISwear {
     return YES;
@@ -1472,3 +1427,42 @@ static NSString *_lastCopiedURL;
 //    return accessGroupID();
 //}
 //%end
+
+// MARK: Clean tracking from copied links: https://github.com/BandarHL/BHTwitter/issues/75
+static id _PasteboardChangeObserver;
+// format = {"host": ["parm1", "parm2"...]} // https://developer.apple.com/documentation/foundation/nsurl/1413640-host
+static NSDictionary<NSString*, NSArray<NSString*>*> *trackingParams = @{@"twitter.com" : @[@"s", @"t"]};
+static NSString *_lastCopiedURL;
+
+%ctor {
+	NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+	NSOperationQueue *mainQueue = [NSOperationQueue mainQueue];
+	// Someone needs to hold reference the to Notification
+	_PasteboardChangeObserver = [center addObserverForName:UIPasteboardChangedNotification
+		object:nil
+		queue:mainQueue
+		usingBlock:^(NSNotification * _Nonnull note){
+            if ([[NSUserDefaults standardUserDefaults] boolForKey:@"strip_tracking_params"]){
+                if(UIPasteboard.generalPasteboard.hasURLs){
+                    NSURL *pasteboardURL = UIPasteboard.generalPasteboard.URL;
+                    NSArray<NSString*>* params = trackingParams[pasteboardURL.host];
+
+                    if([pasteboardURL.absoluteString isEqualToString:_lastCopiedURL] == NO && params != nil && pasteboardURL.query != nil){
+                        // to prevent endless copy loop
+                        _lastCopiedURL = pasteboardURL.absoluteString;
+                        NSURLComponents *cleanedURL = [NSURLComponents componentsWithURL:pasteboardURL resolvingAgainstBaseURL:NO];
+                        NSMutableArray<NSURLQueryItem*> *safeParams = [NSMutableArray arrayWithCapacity:0];
+                        
+                        for (NSURLQueryItem *item in cleanedURL.queryItems){
+                            if([params containsObject:item.name] == NO){
+                                [safeParams addObject:item];
+                            }
+                        }
+                        cleanedURL.queryItems = safeParams;
+                        UIPasteboard.generalPasteboard.URL = cleanedURL.URL;
+                    }
+                }
+            }
+		}];
+	%init;
+}
