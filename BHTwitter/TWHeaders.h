@@ -417,6 +417,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         	BH_BaseImp oldImp = (BH_BaseImp)class_replaceMethod(cls, origSel, new, method_getTypeEncoding(origMethod));
 		[originalFontsIMP setObject:[NSValue valueWithPointer:oldImp] forKey:sel];
 	}
+	else {
+		NSLog(@"[BHTwitter] Can't find method (%@) in Class (%@)", sel, NSStringFromClass(cls));
+	}
     }
 }
 static BOOL isDeviceLanguageRTL() {
