@@ -411,10 +411,12 @@ static  UIFont * _Nullable BH_getDefaultFont(UIFont *font) {
 
 static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, IMP new){
     for(NSString *sel in origSelectors){
-		SEL origSel = NSSelectorFromString(sel);
+	SEL origSel = NSSelectorFromString(sel);
         Method origMethod = class_getInstanceMethod(cls, origSel);
-        BH_BaseImp oldImp = (BH_BaseImp)class_replaceMethod(cls, origSel, new, method_getTypeEncoding(origMethod));
+	if (origMethod != NULL){
+        	BH_BaseImp oldImp = (BH_BaseImp)class_replaceMethod(cls, origSel, new, method_getTypeEncoding(origMethod));
 		[originalFontsIMP setObject:[NSValue valueWithPointer:oldImp] forKey:sel];
+	}
     }
 }
 static BOOL isDeviceLanguageRTL() {
