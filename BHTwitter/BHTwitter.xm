@@ -1403,6 +1403,16 @@
 }
 %end
 
+// MARK: Force Tweets to show images as Full frame: https://github.com/BandarHL/BHTwitter/issues/101
+%hook T1StandardStatusAttachmentViewAdapter
+- (NSUInteger)displayType{
+    if ([[NSUserDefaults standardUserDefaults] boolForKey:@"force_tweet_full_frame"]){
+        return 1;
+    }
+    return %orig;
+}
+%end
+
 %hook HBForceCepheiPrefs
 + (BOOL)forceCepheiPrefsWhichIReallyNeedToAccessAndIKnowWhatImDoingISwear {
     return YES;
