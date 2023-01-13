@@ -414,8 +414,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 	SEL origSel = NSSelectorFromString(sel);
         Method origMethod = class_getInstanceMethod(cls, origSel);
 	if (origMethod != NULL){
-        	BH_BaseImp oldImp = (BH_BaseImp)class_replaceMethod(cls, origSel, new, method_getTypeEncoding(origMethod));
-		[originalFontsIMP setObject:[NSValue valueWithPointer:oldImp] forKey:sel];
+		BH_BaseImp oldImp = (BH_BaseImp)class_getMethodImplementation(cls, origSel);
+        	class_replaceMethod(cls, origSel, new, method_getTypeEncoding(origMethod));
+		[originalFontsIMP setObject:[NSValue valueWithPointer:(void*)oldImp] forKey:sel];
 	}
 	else {
 		NSLog(@"[BHTwitter] Can't find method (%@) in Class (%@)", sel, NSStringFromClass(cls));
