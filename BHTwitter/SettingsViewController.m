@@ -257,8 +257,8 @@
             origTweetStyle,
             hideViewCount,
             tweetSource,
-            font,
             forceFullFrame,
+            font,
             regularFontsPicker,
             boldFontsPicker,
             
