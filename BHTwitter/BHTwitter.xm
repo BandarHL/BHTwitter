@@ -1065,7 +1065,7 @@
 }
 %end
 
-static UIFont *TAEStandardFontGroupReplacement(UIFont *self, SEL _cmd){
+static UIFont *TAEStandardFontGroupReplacement(id self, SEL _cmd){
 	BH_BaseImp orig  = originalFontsIMP[NSStringFromSelector(_cmd)].pointerValue;
 	UIFont *origFont = orig(self, _cmd);
 	UIFont *newFont  = BH_getDefaultFont(origFont);
