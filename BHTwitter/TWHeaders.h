@@ -391,6 +391,9 @@ static UIImage *BH_imageFromView(UIView *view) {
     return img;
 }
 
+typedef UIFont *(*BH_BaseImp)(id,SEL);
+static NSMutableDictionary<NSString*, NSValue*>* originalFontsIMP;
+
 static  UIFont * _Nullable BH_getDefaultFont(UIFont *font) {
     if ([[NSUserDefaults standardUserDefaults] boolForKey:@"en_font"]) {
 		// https://stackoverflow.com/a/20515367/16619237
