@@ -1445,6 +1445,7 @@ static NSString *_lastCopiedURL;
                 }
             }
 		}];
+	%init;
 }
 
 %hook HBForceCepheiPrefs
