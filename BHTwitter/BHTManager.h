@@ -51,5 +51,6 @@
 + (BOOL)hideViewCount;
 + (BOOL)showTweetSource;
 + (BOOL)forceTweetFullFrame;
++ (BOOL)stripTrackingParams;
 @end
 

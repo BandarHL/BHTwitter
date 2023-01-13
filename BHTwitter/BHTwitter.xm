@@ -1442,34 +1442,31 @@ static NSDictionary<NSString*, NSArray<NSString*>*> *trackingParams = @{@"twitte
 static NSString *_lastCopiedURL;
 
 %ctor {
-	NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
-	NSOperationQueue *mainQueue = [NSOperationQueue mainQueue];
-	// Someone needs to hold reference the to Notification
-	_PasteboardChangeObserver = [center addObserverForName:UIPasteboardChangedNotification
-		object:nil
-		queue:mainQueue
-		usingBlock:^(NSNotification * _Nonnull note){
-            if ([[NSUserDefaults standardUserDefaults] boolForKey:@"strip_tracking_params"]){
-                if(UIPasteboard.generalPasteboard.hasURLs){
-                    NSURL *pasteboardURL = UIPasteboard.generalPasteboard.URL;
-                    NSArray<NSString*>* params = trackingParams[pasteboardURL.host];
-
-                    if([pasteboardURL.absoluteString isEqualToString:_lastCopiedURL] == NO && params != nil && pasteboardURL.query != nil){
-                        // to prevent endless copy loop
-                        _lastCopiedURL = pasteboardURL.absoluteString;
-                        NSURLComponents *cleanedURL = [NSURLComponents componentsWithURL:pasteboardURL resolvingAgainstBaseURL:NO];
-                        NSMutableArray<NSURLQueryItem*> *safeParams = [NSMutableArray arrayWithCapacity:0];
-                        
-                        for (NSURLQueryItem *item in cleanedURL.queryItems){
-                            if([params containsObject:item.name] == NO){
-                                [safeParams addObject:item];
-                            }
+    NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+    NSOperationQueue *mainQueue = [NSOperationQueue mainQueue];
+    // Someone needs to hold reference the to Notification
+    _PasteboardChangeObserver = [center addObserverForName:UIPasteboardChangedNotification object:nil queue:mainQueue usingBlock:^(NSNotification * _Nonnull note){
+        if ([BHTManager stripTrackingParams]) {
+            if (UIPasteboard.generalPasteboard.hasURLs) {
+                NSURL *pasteboardURL = UIPasteboard.generalPasteboard.URL;
+                NSArray<NSString*>* params = trackingParams[pasteboardURL.host];
+                
+                if ([pasteboardURL.absoluteString isEqualToString:_lastCopiedURL] == NO && params != nil && pasteboardURL.query != nil) {
+                    // to prevent endless copy loop
+                    _lastCopiedURL = pasteboardURL.absoluteString;
+                    NSURLComponents *cleanedURL = [NSURLComponents componentsWithURL:pasteboardURL resolvingAgainstBaseURL:NO];
+                    NSMutableArray<NSURLQueryItem*> *safeParams = [NSMutableArray arrayWithCapacity:0];
+                    
+                    for (NSURLQueryItem *item in cleanedURL.queryItems) {
+                        if ([params containsObject:item.name] == NO) {
+                            [safeParams addObject:item];
                         }
-                        cleanedURL.queryItems = safeParams;
-                        UIPasteboard.generalPasteboard.URL = cleanedURL.URL;
                     }
+                    cleanedURL.queryItems = safeParams;
+                    UIPasteboard.generalPasteboard.URL = cleanedURL.URL;
                 }
             }
-		}];
-	%init;
+        }
+    }];
+    %init;
 }

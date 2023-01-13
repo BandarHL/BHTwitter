@@ -195,6 +195,9 @@
 + (BOOL)forceTweetFullFrame {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"force_tweet_full_frame"];
 }
++ (BOOL)stripTrackingParams {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"strip_tracking_params"];
+}
 
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount {
     SettingsViewController *pref = [[SettingsViewController alloc] initWithTwitterAccount:twAccount];
