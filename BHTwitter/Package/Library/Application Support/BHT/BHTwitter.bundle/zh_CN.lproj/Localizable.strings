@@ -98,6 +98,9 @@
 "ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "始终在 Safari 中打开";
 "ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "强制 twitter 在 Safari 或您的默认浏览器中打开 URL。";
 
+"STRIP_URL_TRACKING_PARAMETERS_TITLE" = "从 URL 中删除跟踪";
+"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE" = "复制时从推文 URL 中删除跟踪参数";
+
 "TWITTER_BLUE_SECTION_HEADER_TITLE" = "Twitter blue 功能";
 "UNDO_TWEET_OPTION_TITLE" = "撤回推文功能";
 "UNDO_TWEET_OPTION_DETAIL_TITLE" = "发布推文后，在限定的時間內可以撤回";
@@ -107,13 +110,36 @@
 
 "THEME_OPTION_TITLE" = "主题";
 "THEME_OPTION_DETAIL_TITLE" = "为您的 Twitter 选择一种主题颜色\n（只有您自己才看的到）";
+"THEME_OPTION_1" = "蓝色";
+"THEME_OPTION_2" = "黄色";
+"THEME_OPTION_3" = "红色";
+"THEME_OPTION_4" = "紫色";
+"THEME_OPTION_5" = "橙色";
+"THEME_OPTION_6" = "绿色";
+
 
 "CUSTOM_TAB_BAR_OPTION_TITLE" = "自定义标签栏";
+"CUSTOM_TAB_BAR_REST_MESSAGE" = "确定要将设置恢复为默认设置吗？";
+"CUSTOM_TAB_BAR_SECTION_1_TITLE" = "活动标签栏";
+"CUSTOM_TAB_BAR_SECTION_2_TITLE" = "隐藏标签栏";
+"CUSTOM_TAB_BAR_OPTION_1" = "主页";
+"CUSTOM_TAB_BAR_OPTION_2" = "探索";
+"CUSTOM_TAB_BAR_OPTION_3" = "空间";
+"CUSTOM_TAB_BAR_OPTION_4" = "社区";
+"CUSTOM_TAB_BAR_OPTION_5" = "通知";
+"CUSTOM_TAB_BAR_OPTION_6" = "信息";
 "TWITTER_BLUE_SECTION_FOOTER_TITLE" = "必须重启 Twitter 方可生效";
 
 "LAYOUT_CUS_SECTION_HEADER_TITLE" = "布局设置";
 "ORIG_TWEET_STYLE_OPTION_TITLE" = "禁用边对边推文样式";
 "ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "强制 Twitter 使用原始推文样式。";
+
+"HIDE_VIEW_COUNT_OPTION_TITLE" = "隐藏观看次数";
+"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE" = "从推文中删除观看次数";
+
+"SHOW_TWEET_SOURCE_TITLE" = "显示推文来源";
+
+"FORCE_TWEET_FULL_FRAME_TITLE" = "强制 Twitter 对图像使用全帧";
 
 "FONT_OPTION_TITLE" = "启用更改字体";
 "FONT_OPTION_DETAIL_TITLE" = "启动此选项，可以更换 Twitter 字体";
