@@ -197,6 +197,7 @@ static NSString *_lastCopiedURL;
 @end
 
 @interface T1StatusCell : UITableViewCell <TTACoreStatusViewEventHandler>
+@property (strong, nonatomic) UIView *statusView; // Mostly will be T1StandardStatusView
 @end
 
 @interface T1TweetDetailsFocalStatusViewTableViewCell : T1StatusCell
@@ -246,6 +247,7 @@ static NSString *_lastCopiedURL;
 @interface T1StandardStatusView : UIView
 @property(nonatomic) __weak id <TTACoreStatusViewEventHandler> eventHandler;
 @property(readonly, nonatomic) UIView *visibleInlineActionsView;
+@property (strong, nonatomic) UIView *visibleAuthorView; // Mostly TTAStatusAuthorView
 @end
 
 @interface T1TweetDetailsFocalStatusView : UIView
@@ -332,6 +334,7 @@ static NSString *_lastCopiedURL;
 @property(nonatomic, readonly) NSString *text;
 @property(nonatomic, readonly) _Bool isPromoted;
 @property(nonatomic, retain) id <TFNTwitterStatusBanner> banner;
+@property (strong, nonatomic) id representedFromUser; // it is TFNTwitterUser but to be safe
 @end
 
 @interface TFNTwitterStatus : NSObject
@@ -377,6 +380,15 @@ static NSString *_lastCopiedURL;
 @property(retain, nonatomic) TAETwitterColorPaletteSettingInfo *currentColorPalette;
 - (void)setPrimaryColorOption:(NSInteger)colorOption;
 + (instancetype)sharedSettings;
+@end
+
+@interface TFNTwitterUser : NSObject
+@property (nonatomic) BOOL verified;
+@property (strong, nonatomic) NSNumber *isBlueVerified;
+@end
+
+@interface TTAStatusAuthorView : UIView
+@property (strong, nonatomic) UIImageView *authorBadgeView;
 @end
 
 static void BH_changeTwitterColor(NSInteger colorID) {

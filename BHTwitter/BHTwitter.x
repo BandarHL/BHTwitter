@@ -701,6 +701,34 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     }
     return %orig;
 }
+- (__kindof UITableViewCell*)tableViewCellForItem:(id)viewModel atIndexPath:(NSIndexPath*)indexPath{
+    if (![BHTManager twitterBlueChangeBadge]) {
+        return %orig;
+    }
+
+	UITableViewCell *cell = %orig;
+	if ([cell isMemberOfClass:%c(T1StatusCell)]){
+		if ([viewModel isMemberOfClass:%c(T1URTTimelineStatusItemViewModel)]){
+			T1StatusCell *castedCell = (T1StatusCell*)cell;
+			T1URTTimelineStatusItemViewModel *castedModel = (T1URTTimelineStatusItemViewModel*)viewModel;
+			TFNTwitterUser *userObject = castedModel.representedFromUser;
+			if([userObject.isBlueVerified boolValue]){
+				if ([castedCell.statusView isMemberOfClass:%c(T1StandardStatusView)]){
+					T1StandardStatusView *statusView = (T1StandardStatusView*)castedCell.statusView;
+					if ([statusView.visibleAuthorView isMemberOfClass:%c(TTAStatusAuthorView)]){
+						TTAStatusAuthorView *authorView = (TTAStatusAuthorView*)statusView.visibleAuthorView;
+						authorView.authorBadgeView.image = [authorView.authorBadgeView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+						authorView.authorBadgeView.tintColor = UIColor.systemGreenColor;
+					}
+				}
+			}
+			return cell;
+		}
+		NSLog(@"[BHTwitter] ViewModel (%@) is from a different class (%@)", NSStringFromSelector(_cmd), viewModel);
+	}
+
+	return cell;
+}
 %end
 
 %hook TFNTwitterMediaUploadConfiguration

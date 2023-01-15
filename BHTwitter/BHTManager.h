@@ -52,5 +52,6 @@
 + (BOOL)showTweetSource;
 + (BOOL)forceTweetFullFrame;
 + (BOOL)stripTrackingParams;
++ (BOOL)twitterBlueChangeBadge;
 @end
 

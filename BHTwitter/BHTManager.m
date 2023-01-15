@@ -198,6 +198,9 @@
 + (BOOL)stripTrackingParams {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"strip_tracking_params"];
 }
++ (BOOL)twitterBlueChangeBadge{
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"twitter_blue_change_badge"];
+}
 
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount {
     SettingsViewController *pref = [[SettingsViewController alloc] initWithTwitterAccount:twAccount];
