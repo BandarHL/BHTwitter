@@ -197,7 +197,7 @@ static NSString *_lastCopiedURL;
 @end
 
 @interface T1StatusCell : UITableViewCell <TTACoreStatusViewEventHandler>
-@property (strong, nonatomic) UIView *statusView; // Mostly will be T1StandardStatusView
+@property (strong, nonatomic) T1StandardStatusView *statusView;
 @end
 
 @interface T1TweetDetailsFocalStatusViewTableViewCell : T1StatusCell
@@ -247,7 +247,8 @@ static NSString *_lastCopiedURL;
 @interface T1StandardStatusView : UIView
 @property(nonatomic) __weak id <TTACoreStatusViewEventHandler> eventHandler;
 @property(readonly, nonatomic) UIView *visibleInlineActionsView;
-@property (strong, nonatomic) UIView *visibleAuthorView; // Mostly TTAStatusAuthorView
+@property (strong, nonatomic) TTAStatusAuthorView *visibleAuthorView;
+@property (strong, nonatomic) T1URTTimelineStatusItemViewModel *viewModel;
 @end
 
 @interface T1TweetDetailsFocalStatusView : UIView
@@ -334,7 +335,7 @@ static NSString *_lastCopiedURL;
 @property(nonatomic, readonly) NSString *text;
 @property(nonatomic, readonly) _Bool isPromoted;
 @property(nonatomic, retain) id <TFNTwitterStatusBanner> banner;
-@property (strong, nonatomic) id representedFromUser; // it is TFNTwitterUser but to be safe
+@property (strong, nonatomic) TFNTwitterUser *representedFromUser;
 @end
 
 @interface TFNTwitterStatus : NSObject
