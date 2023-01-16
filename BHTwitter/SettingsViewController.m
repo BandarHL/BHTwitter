@@ -203,6 +203,8 @@
         PSSpecifier *tweetSource = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SHOW_TWEET_SOURCE_TITLE"] detailTitle:nil key:@"show_tweet_source" defaultValue:false changeAction:nil];
 
         PSSpecifier *forceFullFrame = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FORCE_TWEET_FULL_FRAME_TITLE"] detailTitle:nil key:@"force_tweet_full_frame" defaultValue:false changeAction:nil];
+
+        PSSpecifier *twitterBlueBadgeColor = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CHANGE_TWITTER_BLUE_BADGE_COLOR_TITLE"] detailTitle:nil key:@"twitter_blue_change_badge" defaultValue:false changeAction:nil];
         
         PSSpecifier *font = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FONT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FONT_OPTION_DETAIL_TITLE"] key:@"en_font" defaultValue:false changeAction:nil];
         
@@ -261,6 +263,7 @@
             hideViewCount,
             tweetSource,
             forceFullFrame,
+            twitterBlueBadgeColor,
             font,
             regularFontsPicker,
             boldFontsPicker,

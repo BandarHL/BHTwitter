@@ -1091,6 +1091,24 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
+// MARK: Diffrentiate Old and Twitter Blue Verification
+%hook TFNTableView
+- (__kindof UITableViewCell*)cellForItemAtIndexPath:(NSIndexPath*)indexPath{
+	__kindof UITableViewCell* cell = %orig;
+	if ([cell isKindOfClass:%c(T1StatusCell)]){
+		T1StatusCell *castedCell = (T1StatusCell*)cell;
+		if ([castedCell.statusView.viewModel.representedFromUser.isBlueVerified boolValue]){
+			UIImageView *badge = castedCell.statusView.visibleAuthorView.authorBadgeView;
+			badge.image = [badge.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+			badge.tintColor = UIColor.systemGreenColor;
+			return castedCell;
+		}
+	}
+
+	return cell;
+}
+%end
+
 %hook TAEStandardFontGroup
 + (TAEStandardFontGroup *)sharedFontGroup {
     static dispatch_once_t onceToken;
