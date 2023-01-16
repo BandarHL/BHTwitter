@@ -1092,30 +1092,23 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %end
 
 %hook TAEStandardFontGroup
-+ (TAEStandardFontGroup*)sharedFontGroup {
++ (TAEStandardFontGroup *)sharedFontGroup {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        NSArray *fontsMethods = @[
-            @"profilesFollowingCountFont", @"profilesFollowingFont", @"userCellFollowsYouFont", @"dashFollowingCountFont",
-            @"dashFollowingFont", @"carouselUsernameFont", @"carouselDisplayNameFont", @"profilesFullNameFont",
-            @"profilesUsernameFont", @"readerModeSmallFont", @"readerModeSmallBoldFont", @"readerModeMediumFont",
-            @"readerModeMediumBoldFont", @"readerModeLargeFont", @"readerModeLargeBoldFont", @"treeTopicsDescriptionFont",
-            @"treeTopicsCategoryNameFont", @"treeTopicsNameFont", @"treeTopicsCategoryNameLargeFont", @"topicsPillNameFont",
-            @"topicsDescriptionFont", @"topicsNameFont", @"composerTextEditorFont", @"statusCellEdgeToEdgeBodyBoldFont",
-            @"statusCellEdgeToEdgeBodyFont", @"statusCellBodyFont", @"statusCellBodyBoldFont", @"cardAttributionFont",
-            @"cardTitleBoldFont", @"cardTitleFont", @"tweetDetailBoldFont", @"tweetDetailFont",
-            @"directMessageBubbleBodyFont", @"directMessageComposePersistentBarFont", @"fixedJumboBoldFont", @"fixedXLargeBoldFont",
-            @"fixedLargeBoldFont", @"fixedNormalBoldFont", @"fixedSmallBoldFont", @"fixedJumboFont",
-            @"fixedXLargeFont", @"fixedLargeFont", @"fixedNormalFont", @"fixedSmallFont",
-            @"jumboBoldFont", @"xLargeBoldFont", @"largeBoldFont", @"normalBoldFont",
-            @"smallBoldFont", @"jumboFont", @"xLargeFont", @"largeFont",
-            @"normalFont", @"smallFont", @"buttonXLargeFont", @"buttonLargeFont",
-            @"buttonMediumFont", @"buttonMedium_CondensedFont", @"buttonMedium_CondensedLighterFont", @"buttonSmallFont",
-            @"buttonSmallLighterFont", @"buttonSmall_CondensedFont", @"buttonSmall_CondensedLighterFont", @"buttonNavigationBarFont",
-            @"buttonHeavyNavigationBarFont"
-        ];
+        NSMutableArray *fontsMethods = [NSMutableArray arrayWithArray:@[]];
+        
+        unsigned int methodCount = 0;
+        Method *methods = class_copyMethodList([self class], &methodCount);
+        for (unsigned int i = 0; i < methodCount; ++i) {
+            Method method = methods[i];
+            const char *name = sel_getName(method_getName(method));
+            NSString *selector = [NSString stringWithUTF8String:name];
+            [fontsMethods addObject:selector];
+        }
+        free(methods);
+        
         originalFontsIMP = [NSMutableDictionary new];
-        batchSwizzlingOnClass([self class], fontsMethods, (IMP)TAEStandardFontGroupReplacement);
+        batchSwizzlingOnClass([self class], [fontsMethods copy], (IMP)TAEStandardFontGroupReplacement);
     });
     return %orig;
 }
