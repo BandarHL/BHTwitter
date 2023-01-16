@@ -218,8 +218,8 @@
         
         // dvelopers section
         PSSpecifier *bandarHL = [self newHBTwitterCellWithTitle:@"BandarHelal" twitterUsername:@"BandarHL" customAvatarURL:@"https://unavatar.io/twitter/BandarHL"];
-        PSSpecifier *tipJar = [self newHBLinkCellWithTitle:@"Tip Jar" detailTitle:@"Donate Via Paypal" url:@"https://www.paypal.me/BandarHL"];
-        PSSpecifier *sourceCode = [self newHBLinkCellWithTitle:@"BHTwitter" detailTitle:@"Code source of BHTwitter" url:@"https://github.com/BandarHL/BHTwitter/"];
+        PSSpecifier *tipJar = [self newHBLinkCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TIP_JAR"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DONATE_VIA_PAYPAL"] url:@"https://www.paypal.me/BandarHL"];
+        PSSpecifier *sourceCode = [self newHBLinkCellWithTitle:@"BHTwitter" detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:[[BHTBundle sharedBundle] localizedStringForKey:@"SOURCE_CODE"] url:@"https://github.com/BandarHL/BHTwitter/"];
         
         _specifiers = [NSMutableArray arrayWithArray:@[
             
