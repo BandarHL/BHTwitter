@@ -118,15 +118,15 @@
 "THEME_OPTION_6" = "Green";
 
 "CUSTOM_TAB_BAR_OPTION_TITLE" = "Custom Tab Bar";
-"CUSTOM_TAB_BAR_REST_MESSAGE" = "Are sure you want to rest the settings to default?";
+"CUSTOM_TAB_BAR_REST_MESSAGE" = "Are sure you want to reset the settings to default?";
 "CUSTOM_TAB_BAR_SECTION_1_TITLE" = "Active tab bar";
 "CUSTOM_TAB_BAR_SECTION_2_TITLE" = "Hidden tab bar";
-"CUSTOM_TAB_BAR_OPTION_1" = "Home";
-"CUSTOM_TAB_BAR_OPTION_2" = "Explore";
-"CUSTOM_TAB_BAR_OPTION_3" = "Spaces";
-"CUSTOM_TAB_BAR_OPTION_4" = "Communities";
-"CUSTOM_TAB_BAR_OPTION_5" = "Notifications";
-"CUSTOM_TAB_BAR_OPTION_6" = "Messages";
+"CUSTOM_TAB_BAR_OPTION_1" = "Home";  // these strings can't see localized text, please take a look
+"CUSTOM_TAB_BAR_OPTION_2" = "Explore";  // these strings can't see localized text, please take a look
+"CUSTOM_TAB_BAR_OPTION_3" = "Spaces";  // these strings can't see localized text, please take a look
+"CUSTOM_TAB_BAR_OPTION_4" = "Communities";  // these strings can't see localized text, please take a look
+"CUSTOM_TAB_BAR_OPTION_5" = "Notifications";  // these strings can't see localized text, please take a look
+"CUSTOM_TAB_BAR_OPTION_6" = "Messages";  // these strings can't see localized text, please take a look
 
 "TWITTER_BLUE_SECTION_FOOTER_TITLE" = "You may need to restart Twitter app to apply changes.";
 
@@ -156,3 +156,6 @@
 "LEGAL_BUTTON_TITLE" = "Acknowledgements";
 
 "DEVELOPER_SECTION_HEADER_TITLE" = "Developer";
+"TIP_JAR" = "Tip Jar";
+"DONATE_VIA_PAYPAL" = "Donate Via PayPal";
+"SOURCE_CODE" = "Source code of BHTwitter";
