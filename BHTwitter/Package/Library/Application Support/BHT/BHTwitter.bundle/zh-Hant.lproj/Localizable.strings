@@ -98,6 +98,9 @@
 "ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "總是使用 Safari 打開";
 "ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "使用 Safari 或 預設的瀏覽器開啟網址";
 
+"STRIP_URL_TRACKING_PARAMETERS_TITLE" = "網址移除追蹤";
+"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE" = "複製推文網址時移除追蹤參數";
+
 "TWITTER_BLUE_SECTION_HEADER_TITLE" = "Twitter blue 功能";
 "UNDO_TWEET_OPTION_TITLE" = "限時收回推文";
 "UNDO_TWEET_OPTION_DETAIL_TITLE" = "發佈推文後，在限定的時間內可以收回";
@@ -135,6 +138,8 @@
 "HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE" = "在推文中隱藏查看次數";
 
 "SHOW_TWEET_SOURCE_TITLE" = "顯示推文來源";
+
+"FORCE_TWEET_FULL_FRAME_TITLE" = "推文圖片顯示完整預覽";
 
 "FONT_OPTION_TITLE" = "更換字體";
 "FONT_OPTION_DETAIL_TITLE" = "啟用此選項，可以更換 Twitter 字體";

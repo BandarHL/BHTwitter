@@ -137,9 +137,10 @@
 "HIDE_VIEW_COUNT_OPTION_TITLE" = "إخفاء عدد مُشاهدة التغريدة";
 "HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE" = "إزالة عدد المُشاهدات من التغريدة";
 
-"SHOW_TWEET_SOURCE_TITLE" = "إظهار مصدر التغريدة ";
-
 "FORCE_TWEET_FULL_FRAME_TITLE" = "إجبار تويتر على إستخدام الإطار الكامل للصور";
+
+"DISABLE_IMMERSIVE_PLAYER_TITLE" = "تعطيل مشغل Immersive";
+"DISABLE_IMMERSIVE_PLAYER_DETAIL_TITLE" = "تعطيل مشغل الفيديو الجديد لتويتر (Immersive Player)";
 
 "FONT_OPTION_TITLE" = "تفعيل تغيير خط التطبيق";
 "FONT_OPTION_DETAIL_TITLE" = "خيار لتفعيل تغيير خط تويتر";

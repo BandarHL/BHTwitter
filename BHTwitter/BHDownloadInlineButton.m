@@ -33,10 +33,20 @@ static const NSString *KEY_HIT_TEST_EDGE_INSETS = @"HitTestEdgeInsets";
         [self setTintColor:[UIColor colorFromHexString:@"6D6E70"]];
     }
 }
-- (instancetype)initWithOptions:(NSUInteger)arg1 overrideSize:(CGSize)arg2 account:(id)arg3 {
-    self = [super initWithFrame:CGRectMake(0, 0, arg2.width, arg2.height)];
+- (instancetype)initWithOptions:(NSUInteger)arg1 overrideSize:(id)arg2 account:(id)arg3 {
+    self = [super initWithFrame:CGRectZero];
     if (self != nil) {
-        [self setInlineActionType:80];
+        [self setInlineActionType:131];
+        [self setTintColor:[UIColor colorFromHexString:@"6D6E70"]];
+        [self setImage:[UIImage systemImageNamed:@"arrow.down"] forState:UIControlStateNormal];
+        [self addTarget:self action:@selector(DownloadHandler:) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return self;
+}
+- (instancetype)initWithInlineActionType:(NSUInteger)arg1 options:(NSUInteger)arg2 overrideSize:(id)arg3 account:(id)arg4 {
+    self = [super initWithFrame:CGRectZero];
+    if (self != nil) {
+        [self setInlineActionType:arg1];
         [self setTintColor:[UIColor colorFromHexString:@"6D6E70"]];
         [self setImage:[UIImage systemImageNamed:@"arrow.down"] forState:UIControlStateNormal];
         [self addTarget:self action:@selector(DownloadHandler:) forControlEvents:UIControlEventTouchUpInside];
@@ -208,6 +218,10 @@ static const NSString *KEY_HIT_TEST_EDGE_INSETS = @"HitTestEdgeInsets";
 
 - (id)buttonAnimator {
     return self->_buttonAnimator;
+}
+
+- (id)viewModel {
+    return self->_viewModel;
 }
 
 - (void)downloadProgress:(float)progress {

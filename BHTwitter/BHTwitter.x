@@ -37,6 +37,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"undo_tweet"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"TrustedFriends"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"disableSensitiveTweetWarnings"];
+        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"disable_immersive_player"];
     }
     [BHTManager cleanCache];
     if ([BHTManager FLEX]) {
@@ -481,7 +482,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)didLongPressActionButton:(UILongPressGestureRecognizer *)gestureRecognizer {
     if ([BHTManager tweetToImage]) {
         if (gestureRecognizer.state == UIGestureRecognizerStateBegan) {
-            T1StatusInlineActionsView *actionsView = self.delegate;
+            T1StatusInlineActionsView *actionsView = (T1StatusInlineActionsView *)self.delegate;
             T1StatusCell *tweetView;
             
             if ([actionsView.superview isKindOfClass:%c(T1StandardStatusView)]) { // normal tweet in the time line
@@ -670,7 +671,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         return true;
     }
     
-    if ([BHTManager showTweetSource] && [key isEqualToString:@"show_tweet_source_disabled"]) {
+    if ([BHTManager disableImmersive] && [key isEqualToString:@"explore_relaunch_enable_immersive_player_across_twitter"]) {
         return false;
     }
     

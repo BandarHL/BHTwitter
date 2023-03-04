@@ -420,7 +420,7 @@ static BOOL is_iPad() {
     }
     return NO;
 }
-static NSString *accessGroupID() {
+static NSString * _Nonnull accessGroupID() {
     NSDictionary *query = [NSDictionary dictionaryWithObjectsAndKeys:
                            (__bridge NSString *)kSecClassGenericPassword, (__bridge NSString *)kSecClass,
                            @"bundleSeedID", kSecAttrAccount,
@@ -439,7 +439,7 @@ static NSString *accessGroupID() {
 }
 
 // https://github.com/julioverne/MImport/blob/0275405812ff41ed2ca56e98f495fd05c38f41f2/mimporthook/MImport.xm#L59
-static UIViewController *_topMostController(UIViewController *cont) {
+static UIViewController * _Nullable _topMostController(UIViewController * _Nonnull cont) {
     UIViewController *topController = cont;
     while (topController.presentedViewController) {
         topController = topController.presentedViewController;
@@ -452,7 +452,7 @@ static UIViewController *_topMostController(UIViewController *cont) {
     }
     return (topController != cont ? topController : nil);
 }
-static UIViewController *topMostController() {
+static UIViewController * _Nonnull topMostController() {
     UIViewController *topController = [UIApplication sharedApplication].keyWindow.rootViewController;
     UIViewController *next = nil;
     while ((next = _topMostController(topController)) != nil) {

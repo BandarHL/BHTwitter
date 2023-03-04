@@ -199,10 +199,10 @@
         PSSpecifier *origTweetStyle = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ORIG_TWEET_STYLE_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE"] key:@"old_style" defaultValue:true changeAction:nil];
         
         PSSpecifier *hideViewCount = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE"] key:@"hide_view_count" defaultValue:false changeAction:nil];
-        
-        PSSpecifier *tweetSource = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SHOW_TWEET_SOURCE_TITLE"] detailTitle:nil key:@"show_tweet_source" defaultValue:false changeAction:nil];
 
         PSSpecifier *forceFullFrame = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FORCE_TWEET_FULL_FRAME_TITLE"] detailTitle:nil key:@"force_tweet_full_frame" defaultValue:false changeAction:nil];
+        
+        PSSpecifier *disableImmersive = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_IMMERSIVE_PLAYER_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_IMMERSIVE_PLAYER_DETAIL_TITLE"] key:@"disable_immersive_player" defaultValue:true changeAction:nil];
         
         PSSpecifier *font = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FONT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FONT_OPTION_DETAIL_TITLE"] key:@"en_font" defaultValue:false changeAction:nil];
         
@@ -219,6 +219,7 @@
         // dvelopers section
         PSSpecifier *bandarHL = [self newHBTwitterCellWithTitle:@"BandarHelal" twitterUsername:@"BandarHL" customAvatarURL:@"https://unavatar.io/twitter/BandarHL"];
         PSSpecifier *tipJar = [self newHBLinkCellWithTitle:@"Tip Jar" detailTitle:@"Donate Via Paypal" url:@"https://www.paypal.me/BandarHL"];
+        PSSpecifier *buymecoffee = [self newHBLinkCellWithTitle:@"Bue Me A Coffee" detailTitle:nil url:@"https://www.buymeacoffee.com/bandarHL"];
         PSSpecifier *sourceCode = [self newHBLinkCellWithTitle:@"BHTwitter" detailTitle:@"Code source of BHTwitter" url:@"https://github.com/BandarHL/BHTwitter/"];
         
         _specifiers = [NSMutableArray arrayWithArray:@[
@@ -259,8 +260,8 @@
             layoutSection, // 2
             origTweetStyle,
             hideViewCount,
-            tweetSource,
             forceFullFrame,
+            disableImmersive,
             font,
             regularFontsPicker,
             boldFontsPicker,
@@ -274,6 +275,7 @@
             developer, // 5
             bandarHL,
             tipJar,
+            buymecoffee,
             sourceCode
         ]];
         

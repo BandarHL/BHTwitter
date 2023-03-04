@@ -75,7 +75,7 @@
 "PADLOCK_OPTION_TITLE" = "Блокировка паролем";
 "PADLOCK_OPTION_DETAIL_TITLE" = "Защищает вход в Twitter паролем";
 
-"DN_MODULAR_SEARCH_OPTION_TITLE" = "Новый интерфейс поиска сообщений";
+"DN_MODULAR_SEARCH_OPTION_TITLE" = "Новый поиск сообщений";
 "DN_MODULAR_SEARCH_OPTION_DETAIL_TITLE" = "Активирует новый интерфейс поиска сообщений";
 
 "AUTO_HIGHEST_LOAD_OPTION_TITLE" = "Загружать в высоком качестве";
@@ -96,7 +96,10 @@
 "DISABLE_RTL_OPTION_DETAIL_TITLE" = "Принудительно отображать все посты слева направо во всех языках. Потребуется перезапуск приложения";
 
 "ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "Открывать ссылки в Safari";
-"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "Принудительно открывать ссылки в Safari, либо в другом браузере по умолчанию";
+"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "Принудительно открывает ссылки в Safari, либо в другом браузере по умолчанию";
+
+"STRIP_URL_TRACKING_PARAMETERS_TITLE" = "Подчищать ссылки от трекинга";
+"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE" = "Удаляет лишнюю информацию со скопированных ссылок на твиты";
 
 "TWITTER_BLUE_SECTION_HEADER_TITLE" = "Настройки Twitter Blue";
 "UNDO_TWEET_OPTION_TITLE" = "Отмена публикации";
@@ -115,7 +118,7 @@
 "THEME_OPTION_6" = "Зеленая";
 
 "CUSTOM_TAB_BAR_OPTION_TITLE" = "Конфигурация вкладок";
-"CUSTOM_TAB_BAR_REST_MESSAGE" = "Are sure you want to rest the settings to default?";
+"CUSTOM_TAB_BAR_REST_MESSAGE" = "Уверены, что хотите сбросить настройки вкладок?";
 "CUSTOM_TAB_BAR_SECTION_1_TITLE" = "Активные вкладки";
 "CUSTOM_TAB_BAR_SECTION_2_TITLE" = "Скрытые вкладки";
 "CUSTOM_TAB_BAR_OPTION_1" = "Главная";
@@ -130,6 +133,10 @@
 "LAYOUT_CUS_SECTION_HEADER_TITLE" = "Декоративные настройки";
 "ORIG_TWEET_STYLE_OPTION_TITLE" = "Старый дизайн";
 "ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "Принудительно возвращает старый дизайн";
+
+"SHOW_TWEET_SOURCE_TITLE" = "Отображать источник твита";
+
+"FORCE_TWEET_FULL_FRAME_TITLE" = "Полноразмерные изображения";
 
 "FONT_OPTION_TITLE" = "Сменить шрифт";
 "FONT_OPTION_DETAIL_TITLE" = "Позволяет установить кастомный шрифт";
@@ -149,3 +156,6 @@
 "LEGAL_BUTTON_TITLE" = "Лицензии используемых утилит";
 
 "DEVELOPER_SECTION_HEADER_TITLE" = "Разработчик";
+"TIP_JAR" = "Угостить чашечкой кофе";
+"DONATE_VIA_PAYPAL" = "Задонатить на PayPal";
+"SOURCE_CODE" = "Исходный код BHTwitter";

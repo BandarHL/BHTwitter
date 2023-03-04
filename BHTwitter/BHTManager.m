@@ -189,16 +189,15 @@
 + (BOOL)hideViewCount {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_view_count"];
 }
-+ (BOOL)showTweetSource {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"show_tweet_source"];
-}
 + (BOOL)forceTweetFullFrame {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"force_tweet_full_frame"];
 }
 + (BOOL)stripTrackingParams {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"strip_tracking_params"];
 }
-
++ (BOOL)disableImmersive {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"disable_immersive_player"];
+}
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount {
     SettingsViewController *pref = [[SettingsViewController alloc] initWithTwitterAccount:twAccount];
     [pref.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:@"BHTwitter" subtitle:twAccount.displayUsername]];

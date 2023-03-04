@@ -49,8 +49,8 @@
 + (BOOL)hideWhoToFollow;
 + (BOOL)hideTopicsToFollow;
 + (BOOL)hideViewCount;
-+ (BOOL)showTweetSource;
 + (BOOL)forceTweetFullFrame;
 + (BOOL)stripTrackingParams;
++ (BOOL)disableImmersive;
 @end
 
