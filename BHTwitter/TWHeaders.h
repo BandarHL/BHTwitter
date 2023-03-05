@@ -46,7 +46,8 @@ static NSString *_lastCopiedURL;
 @property (nonatomic, strong) id scribe;
 @end
 
-@interface TFNTableView: UITableView
+@interface TFNTableView : UITableView
+- (void)setShowsVerticalScrollIndicator:(BOOL)arg1;
 @end
 
 @interface TFNDataViewController : UIViewController

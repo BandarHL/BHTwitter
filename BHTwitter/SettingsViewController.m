@@ -173,6 +173,8 @@
         PSSpecifier *disableSensitiveTweetWarnings = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE"] detailTitle:nil key:@"disableSensitiveTweetWarnings" defaultValue:true changeAction:nil];
         
         PSSpecifier *trustedFriends = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TRUSTED_FRIENSS_OPTION_TITLE"] detailTitle:nil key:@"TrustedFriends" defaultValue:true changeAction:nil];
+
+        PSSpecifier *showScrollIndicator = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SHOW_SCOLL_INDICATOR_OPTION_TITLE"] detailTitle:nil key:@"showScollIndicator" defaultValue:true changeAction:nil];
         
         PSSpecifier *copyProfileInfo = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_OPTION_DETAIL_TITLE"] key:@"CopyProfileInfo" defaultValue:false changeAction:nil];
         
@@ -250,6 +252,7 @@
             alwaysOpenSafari,
             stripTrackingParams,
             trustedFriends,
+            showScrollIndicator,
             
             twitterBlueSection, // 1
             undoTweet,
