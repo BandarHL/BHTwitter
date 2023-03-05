@@ -1104,7 +1104,11 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             Method method = methods[i];
             const char *name = sel_getName(method_getName(method));
             NSString *selector = [NSString stringWithUTF8String:name];
-            [fontsMethods addObject:selector];
+
+            // Don't add methods with arguments
+            if (![selector containsString:@":"]) {
+                [fontsMethods addObject:selector];
+            }
         }
         free(methods);
         
