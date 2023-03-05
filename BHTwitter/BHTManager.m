@@ -165,6 +165,9 @@
 + (BOOL)TwitterCircle {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"TrustedFriends"];
 }
++ (BOOL)showScrollIndicator {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"showScollIndicator"];
+}
 + (BOOL)CopyProfileInfo {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"CopyProfileInfo"];
 }

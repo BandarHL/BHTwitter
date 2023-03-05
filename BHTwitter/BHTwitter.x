@@ -1121,24 +1121,33 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
+// MARK: Show Scroll Bar
+%hook TFNTableView
+- (void)setShowsVerticalScrollIndicator:(BOOL)arg1 {
+    %orig([BHTManager showScrollIndicator]);
+}
+%end
+
 // MARK: Fix login keychain in non-JB (IPA).
-//%hook TFSKeychain
-//- (NSString *)providerDefaultAccessGroup {
-//    return accessGroupID();
-//}
-//- (NSString *)providerSharedAccessGroup {
-//    return accessGroupID();
-//}
-//%end
-//
-//%hook TFSKeychainDefaultTwitterConfiguration
-//- (NSString *)defaultAccessGroup {
-//    return accessGroupID();
-//}
-//- (NSString *)sharedAccessGroup {
-//    return accessGroupID();
-//}
-//%end
+#if 0
+%hook TFSKeychain
+- (NSString *)providerDefaultAccessGroup {
+    return accessGroupID();
+}
+- (NSString *)providerSharedAccessGroup {
+    return accessGroupID();
+}
+%end
+
+%hook TFSKeychainDefaultTwitterConfiguration
+- (NSString *)defaultAccessGroup {
+    return accessGroupID();
+}
+- (NSString *)sharedAccessGroup {
+    return accessGroupID();
+}
+%end
+#endif
 
 // MARK: Clean tracking from copied links: https://github.com/BandarHL/BHTwitter/issues/75
 %ctor {

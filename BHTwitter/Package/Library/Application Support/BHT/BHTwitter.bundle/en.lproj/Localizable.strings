@@ -84,6 +84,8 @@
 "DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE" = "Disable sensitive tweet warning view";
 "TRUSTED_FRIENSS_OPTION_TITLE" = "Enable Twitter Circle feature";
 
+"SHOW_SCOLL_INDICATOR_OPTION_TITLE" = "Show Scroll Bar";
+
 "COPY_PROFILE_INFO_OPTION_TITLE" = "Enable Copying profile information feature";
 "COPY_PROFILE_INFO_OPTION_DETAIL_TITLE" = "Add new button in Twitter profile that let you copy whatever info you want.";
 

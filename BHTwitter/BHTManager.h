@@ -41,6 +41,7 @@
 + (BOOL)DmModularSearch;
 + (BOOL)disableSensitiveTweetWarnings;
 + (BOOL)TwitterCircle;
++ (BOOL)showScrollIndicator;
 + (BOOL)CopyProfileInfo;
 + (BOOL)tweetToImage;
 + (BOOL)hideSpacesBar;
