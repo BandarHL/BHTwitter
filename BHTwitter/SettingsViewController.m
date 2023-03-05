@@ -173,8 +173,6 @@
         PSSpecifier *disableSensitiveTweetWarnings = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE"] detailTitle:nil key:@"disableSensitiveTweetWarnings" defaultValue:true changeAction:nil];
         
         PSSpecifier *trustedFriends = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TRUSTED_FRIENSS_OPTION_TITLE"] detailTitle:nil key:@"TrustedFriends" defaultValue:true changeAction:nil];
-
-        PSSpecifier *showScrollIndicator = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SHOW_SCOLL_INDICATOR_OPTION_TITLE"] detailTitle:nil key:@"showScollIndicator" defaultValue:true changeAction:nil];
         
         PSSpecifier *copyProfileInfo = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_OPTION_DETAIL_TITLE"] key:@"CopyProfileInfo" defaultValue:false changeAction:nil];
         
@@ -205,6 +203,8 @@
         PSSpecifier *forceFullFrame = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FORCE_TWEET_FULL_FRAME_TITLE"] detailTitle:nil key:@"force_tweet_full_frame" defaultValue:false changeAction:nil];
         
         PSSpecifier *disableImmersive = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_IMMERSIVE_PLAYER_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_IMMERSIVE_PLAYER_DETAIL_TITLE"] key:@"disable_immersive_player" defaultValue:true changeAction:nil];
+        
+        PSSpecifier *showScrollIndicator = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SHOW_SCOLL_INDICATOR_OPTION_TITLE"] detailTitle:nil key:@"showScollIndicator" defaultValue:true changeAction:nil];
         
         PSSpecifier *font = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FONT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FONT_OPTION_DETAIL_TITLE"] key:@"en_font" defaultValue:false changeAction:nil];
         
@@ -252,7 +252,6 @@
             alwaysOpenSafari,
             stripTrackingParams,
             trustedFriends,
-            showScrollIndicator,
             
             twitterBlueSection, // 1
             undoTweet,
@@ -265,6 +264,7 @@
             hideViewCount,
             forceFullFrame,
             disableImmersive,
+            showScrollIndicator,
             font,
             regularFontsPicker,
             boldFontsPicker,
