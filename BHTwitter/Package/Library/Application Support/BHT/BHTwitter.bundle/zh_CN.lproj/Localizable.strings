@@ -1,16 +1,16 @@
 /* 
   zh_CN
-  PatrickHuang
+  PatrickHuang, jluo98
 */
 
-"BHTWITTER_SETTINGS_TITLE" = "BHTwitter 设置";
-"BHTWITTER_SETTINGS_DETAIL" = "偏好设置";
+"BHTWITTER_SETTINGS_TITLE" = "设置";
+"BHTWITTER_SETTINGS_DETAIL" = "BHTwitter 偏好设置";
 
-"DOWNLOAD_MENU_TITLE" = "\选择视频下载画质";
+"DOWNLOAD_MENU_TITLE" = "\n选择视频下载画质";
 "CUSTOM_FONTS_MENU_TITLE" = "\n选择自定义字体";
-"CUSTOM_FONTS_TUT_ALERT_MESSAGE" = "在此设备上找不到任何自定义/安装的字体。 \n如何安装自定义字体？ \n去 AppStore 安装 iFont 应用程序，从 iFont 你可以搜索或导入字体来安装，之后你应该在这里找到你的自定义字体。";
+"CUSTOM_FONTS_TUT_ALERT_MESSAGE" = "在此设备上找不到任何自定义或安装的字体。 \n如何安装自定义字体？ \n去 AppStore 安装 iFont app，你可以在 iFont 中搜索或导入和安装字体，之后你就能在这里找到你的自定义字体。";
 
-"OK_BUTTON_TITLE" = "OK";
+"OK_BUTTON_TITLE" = "确定";
 "YES_BUTTON_TITLE" = "是";
 "NO_BUTTON_TITLE" = "否";
 "CONFIRM_ALERT_MESSAGE" = "你确定吗？";
@@ -24,107 +24,134 @@
 "CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE" = "自定义标签栏";
 "ACKNOWLEDGEMENTS_SETTINGS_NAVIGATION_TITLE" = "致谢";
 
-"COPY_PROFILE_INFO_MENU_OPTION_1" = "复制用户资料";
+"COPY_PROFILE_INFO_MENU_OPTION_1" = "复制用户个人资料";
 "COPY_PROFILE_INFO_MENU_OPTION_2" = "复制用户名";
 "COPY_PROFILE_INFO_MENU_OPTION_3" = "复制完整用户名";
-"COPY_PROFILE_INFO_MENU_OPTION_4" = "复制用户资料网页链接";
-"COPY_PROFILE_INFO_MENU_OPTION_5" = "复制用户位置";
+"COPY_PROFILE_INFO_MENU_OPTION_4" = "复制用户个人资料中的链接";
+"COPY_PROFILE_INFO_MENU_OPTION_5" = "复制用户的位置";
 
-"MAIN_SECTION_HEADER_TITLE" = "偏好设置";
+"MAIN_SECTION_HEADER_TITLE" = "BHTwitter 偏好设置";
 "DOWNLOAD_VIDEOS_OPTION_TITLE" = "下载视频";
-"DOWNLOAD_VIDEOS_OPTION_DETAIL_TITLE" = "在推文的右下方新增下载按钮";
+"DOWNLOAD_VIDEOS_OPTION_DETAIL_TITLE" = "在推文的右下方添加下载按钮";
 
 "DIRECT_SAVE_OPTION_TITLE" = "直接保存";
-"DIRECT_SAVE_OPTION_DETAIL_TITLE" = "下载后直接保存视频";
+"DIRECT_SAVE_OPTION_DETAIL_TITLE" = "下载视频后直接保存";
 
 "HIDE_ADS_OPTION_TITLE" = "隐藏广告";
-"HIDE_ADS_OPTION_DETAIL_TITLE" = "移除所有推特上的广告";
+"HIDE_ADS_OPTION_DETAIL_TITLE" = "移除所有推特上所有的广告";
 
 "HIDE_TOPICS_OPTION_TITLE" = "隐藏话题推文";
 "HIDE_TOPICS_OPTION_DETAIL_TITLE" = "在时间轴上移除所有话题推文";
 
-"HIDE_WHO_FOLLOW_OPTION" = "隐藏推荐用户";
-"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE" = "在个人资料中隐藏推荐用户";
+"HIDE_WHO_FOLLOW_OPTION" = "隐藏推荐关注";
+"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE" = "在个人资料中隐藏推荐关注";
 
-"HIDE_TOPICS_TO_FOLLOW_OPTION" = "隐藏关注话题";
-"HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "在个人资料中隐藏关乎话题";
+"HIDE_TOPICS_TO_FOLLOW_OPTION" = "隐藏推荐话题";
+"HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "在个人资料中隐藏推荐话题";
 
 "DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "开启视频字幕";
 
 "VOICE_OPTION_TITLE" = "语音功能";
-"VOICE_OPTION_DETAIL_TITLE" = "在私人信息中启动语音功能";
+"VOICE_OPTION_DETAIL_TITLE" = "在私信中启动语音功能";
 
-"VIDEO_ZOOM_OPTION_TITLE" = "视频播放";
-"VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "您可以通过双击视频来缩放视频";
+"VIDEO_ZOOM_OPTION_TITLE" = "视频缩放";
+"VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "你可以通过双击来缩放视频";
 
-"NO_HISTORY_OPTION_TITLE" = "没有搜索记录";
-"NO_HISTORY_OPTION_DETAIL_TITLE" = "强制 Twitter 停止记录你的搜索历史。";
+"NO_HISTORY_OPTION_TITLE" = "禁用搜索记录";
+"NO_HISTORY_OPTION_DETAIL_TITLE" = "强制推特停止记录你的搜索历史";
 
-"BIO_TRANSALTE_OPTION_TITLE" = "翻译自我介绍";
-"BIO_TRANSALTE_OPTION_DETAIL_TITLE" = "功能按钮显示在用户简介页面";
+"BIO_TRANSALTE_OPTION_TITLE" = "翻译用户个人资料";
+"BIO_TRANSALTE_OPTION_DETAIL_TITLE" = "在用户个人资料页面添加翻译按钮";
 
 "LIKE_CONFIRM_OPTION_TITLE" = "确认喜欢";
-"LIKE_CONFIRM_OPTION_DETAIL_TITLE" = "当您点击确认喜欢按钮，会再次提示确认";
+"LIKE_CONFIRM_OPTION_DETAIL_TITLE" = "点击喜欢按钮时再次提示确认";
 
 "TWEET_CONFIRM_OPTION_TITLE" = "确认推文";
-"TWEET_CONFIRM_OPTION_DETAIL_TITLE" = "当您发送推文时，会再次提示确认";
+"TWEET_CONFIRM_OPTION_DETAIL_TITLE" = "发送推文时再次提示确认";
 
 "FOLLOW_CONFIRM_OPTION_TITLE" = "关注确认";
-"FOLLOW_CONFIRM_OPTION_DETAIL_TITLE" = "当您点击关注按钮，会再次提示确认";
+"FOLLOW_CONFIRM_OPTION_DETAIL_TITLE" = "点击关注按钮时再次提示确认";
 
-"PADLOCK_OPTION_TITLE" = "Twitter 密码锁";
-"PADLOCK_OPTION_DETAIL_TITLE" = "开启 Twitter 会提示输入密码解锁";
+"PADLOCK_OPTION_TITLE" = "密码锁";
+"PADLOCK_OPTION_DETAIL_TITLE" = "打开推特会提示输入密码解锁";
 
-"DN_MODULAR_SEARCH_OPTION_TITLE" = "启用 DM 模块组搜索";
-"DN_MODULAR_SEARCH_OPTION_DETAIL_TITLE" = "启用 DM 搜索的新 UI。";
+"DN_MODULAR_SEARCH_OPTION_TITLE" = "启用私信模块化搜索";
+"DN_MODULAR_SEARCH_OPTION_DETAIL_TITLE" = "启用私信搜索的新界面";
 
-"AUTO_HIGHEST_LOAD_OPTION_TITLE" = "以最高质量自动加载照片";
-"AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE" = "此选项可让您上传照片并以最高质量加载。";
+"AUTO_HIGHEST_LOAD_OPTION_TITLE" = "自动加载最高画质的图片";
+"AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE" = "此选项可让你上传并以最高画质加载图片";
 
-"DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE" = "禁用敏感推文警告通知";
-"TRUSTED_FRIENSS_OPTION_TITLE" = "启用 Twitter Circle 社交功能";
+"DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE" = "禁用敏感推文警告";
+"TRUSTED_FRIENSS_OPTION_TITLE" = "启用 Twitter Circle 功能";
 
 "COPY_PROFILE_INFO_OPTION_TITLE" = "启用复制用户信息功能";
-"COPY_PROFILE_INFO_OPTION_DETAIL_TITLE" = "在用户信息页面新增功能按钮，让您复制你想要的信息";
+"COPY_PROFILE_INFO_OPTION_DETAIL_TITLE" = "在用户个人资料页面添加功能按钮，让你复制你想要的信息";
 
-"TWEET_TO_IMAGE_OPTION_TITLE" = "推文保存为图片";
-"TWEET_TO_IMAGE_OPTION_DETAIL_TITLE" = "通过长按分享按钮\n将推文以图片方式保存";
+"TWEET_TO_IMAGE_OPTION_TITLE" = "保存推文为图片";
+"TWEET_TO_IMAGE_OPTION_DETAIL_TITLE" = "长按分享按钮将推文保存为图片";
 
-"HIDE_SPACE_OPTION_TITLE" = "隐藏空格键";
+"HIDE_SPACE_OPTION_TITLE" = "隐藏推特空间";
 
-"DISABLE_RTL_OPTION_TITLE" = "禁用 RTL";
-"DISABLE_RTL_OPTION_DETAIL_TITLE" = "强制 Twitter 将 LTR 与 RTL 语言一起使用。\n重新启动 Twitter 应用生效。";
+"DISABLE_RTL_OPTION_TITLE" = "禁用右至左语言";
+"DISABLE_RTL_OPTION_DETAIL_TITLE" = "强制推特将右至左语言显示为左至右\n重启推特 app 生效";
 
 "ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "始终在 Safari 中打开";
-"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "强制 twitter 在 Safari 或您的默认浏览器中打开 URL。";
+"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "强制推特使用 Safari 或你的默认浏览器打开链接";
 
-"TWITTER_BLUE_SECTION_HEADER_TITLE" = "Twitter blue 功能";
+"STRIP_URL_TRACKING_PARAMETERS_TITLE" = "从链接中删除跟踪信息";
+"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE" = "复制推文链接时剥离跟踪参数";
+
+"TWITTER_BLUE_SECTION_HEADER_TITLE" = "Twitter Blue 功能";
 "UNDO_TWEET_OPTION_TITLE" = "撤回推文功能";
-"UNDO_TWEET_OPTION_DETAIL_TITLE" = "发布推文后，在限定的時間內可以撤回";
+"UNDO_TWEET_OPTION_DETAIL_TITLE" = "发布推文后，在限定时间内可以撤回";
 
 "READER_MODE_OPTION_TITLE" = "阅读器模式";
-"READER_MODE_OPTION_DETAIL_TITLE" = "在讨论串红启用阅读器";
+"READER_MODE_OPTION_DETAIL_TITLE" = "在帖子中启用阅读器模式";
 
 "THEME_OPTION_TITLE" = "主题";
-"THEME_OPTION_DETAIL_TITLE" = "为您的 Twitter 选择一种主题颜色\n（只有您自己才看的到）";
+"THEME_OPTION_DETAIL_TITLE" = "选择一个只有你自己能看到的主题颜色";
+"THEME_OPTION_1" = "蓝色";
+"THEME_OPTION_2" = "黄色";
+"THEME_OPTION_3" = "红色";
+"THEME_OPTION_4" = "紫色";
+"THEME_OPTION_5" = "橙色";
+"THEME_OPTION_6" = "绿色";
 
 "CUSTOM_TAB_BAR_OPTION_TITLE" = "自定义标签栏";
-"TWITTER_BLUE_SECTION_FOOTER_TITLE" = "必须重启 Twitter 方可生效";
+"CUSTOM_TAB_BAR_REST_MESSAGE" = "你确定要恢复默认设置吗？";
+"CUSTOM_TAB_BAR_SECTION_1_TITLE" = "启用的标签栏";
+"CUSTOM_TAB_BAR_SECTION_2_TITLE" = "隐藏的标签蓝";
+"CUSTOM_TAB_BAR_OPTION_1" = "主页";
+"CUSTOM_TAB_BAR_OPTION_2" = "探索";
+"CUSTOM_TAB_BAR_OPTION_3" = "空间";
+"CUSTOM_TAB_BAR_OPTION_4" = "社区";
+"CUSTOM_TAB_BAR_OPTION_5" = "通知";
+"CUSTOM_TAB_BAR_OPTION_6" = "私信";
 
-"LAYOUT_CUS_SECTION_HEADER_TITLE" = "布局设置";
-"ORIG_TWEET_STYLE_OPTION_TITLE" = "禁用边对边推文样式";
-"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "强制 Twitter 使用原始推文样式。";
+"TWITTER_BLUE_SECTION_FOOTER_TITLE" = "你可能需要重启推特 app 来应用设置";
 
-"FONT_OPTION_TITLE" = "启用更改字体";
-"FONT_OPTION_DETAIL_TITLE" = "启动此选项，可以更换 Twitter 字体";
+"LAYOUT_CUS_SECTION_HEADER_TITLE" = "布局定制";
+"ORIG_TWEET_STYLE_OPTION_TITLE" = "禁用边到边推文样式";
+"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "强制推特使用原始的推文样式";
 
-"REQULAR_FONTS_PICKER_OPTION_TITLE" = "选择字体";
+"HIDE_VIEW_COUNT_OPTION_TITLE" = "隐藏浏览次数";
+"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE" = "移除推文的浏览次数";
+
+"FORCE_TWEET_FULL_FRAME_TITLE" = "强制推特使用全幅图片";
+
+"DISABLE_IMMERSIVE_PLAYER_TITLE" = "禁用沉浸式播放器";
+"DISABLE_IMMERSIVE_PLAYER_DETAIL_TITLE" = "禁用推特全新的沉浸式视频播放器";
+
+"FONT_OPTION_TITLE" = "启用更换字体";
+"FONT_OPTION_DETAIL_TITLE" = "允许更改推特的字体并显示字体选择器";
+
+"REQULAR_FONTS_PICKER_OPTION_TITLE" = "字体";
 "BOLD_FONTS_PICKER_OPTION_TITLE" = "粗体字体";
-"LAYOUT_CUS_SECTION_FOOTER_TITLE" = "必须重启 Twitter 方可生效";
+"LAYOUT_CUS_SECTION_FOOTER_TITLE" = "必须重启推特才能应用设置";
 
-"DEBUG_SECTION_HEADER_TITLE" = "调试功能";
+"DEBUG_SECTION_HEADER_TITLE" = "调试";
 "FLEX_OPTION_TITLE" = "启用 FLEX";
-"FLEX_OPTION_DETAIL_TITLE" = "在 Twitter 中显示FLEX";
+"FLEX_OPTION_DETAIL_TITLE" = "在推特 app 中显示 FLEX";
 
 "LEGAL_SECTION_HEADER_TITLE" = "法律声明";
 "LEGAL_BUTTON_TITLE" = "致谢";
