@@ -1102,9 +1102,15 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         Method *methods = class_copyMethodList([self class], &methodCount);
         for (unsigned int i = 0; i < methodCount; ++i) {
             Method method = methods[i];
+            char returnType[255];
+            method_getReturnType(method, returnType, 255);
             const char *name = sel_getName(method_getName(method));
             NSString *selector = [NSString stringWithUTF8String:name];
-            [fontsMethods addObject:selector];
+
+            // Just add methods that have return type.
+            if ([@(returnType) containsString:@"@"]) {
+                [fontsMethods addObject:selector];
+            }
         }
         free(methods);
         
