@@ -134,9 +134,10 @@
 "ORIG_TWEET_STYLE_OPTION_TITLE" = "Старый дизайн";
 "ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "Принудительно возвращает старый дизайн";
 
-"SHOW_TWEET_SOURCE_TITLE" = "Отображать источник твита";
-
 "FORCE_TWEET_FULL_FRAME_TITLE" = "Полноразмерные изображения";
+
+"DISABLE_IMMERSIVE_PLAYER_TITLE" = "Отключить иммерсивный видеоплеер";
+"DISABLE_IMMERSIVE_PLAYER_DETAIL_TITLE" = "Отключает новый видеоплеер приложения (с эффектом погружения)";
 
 "FONT_OPTION_TITLE" = "Сменить шрифт";
 "FONT_OPTION_DETAIL_TITLE" = "Позволяет установить кастомный шрифт";

@@ -142,6 +142,8 @@
 "DISABLE_IMMERSIVE_PLAYER_TITLE" = "تعطيل مشغل Immersive";
 "DISABLE_IMMERSIVE_PLAYER_DETAIL_TITLE" = "تعطيل مشغل الفيديو الجديد لتويتر (Immersive Player)";
 
+"SHOW_SCOLL_INDICATOR_OPTION_TITLE" = "إظهار شريط التمرير الجانبي";
+
 "FONT_OPTION_TITLE" = "تفعيل تغيير خط التطبيق";
 "FONT_OPTION_DETAIL_TITLE" = "خيار لتفعيل تغيير خط تويتر";
 

@@ -137,9 +137,10 @@
 "HIDE_VIEW_COUNT_OPTION_TITLE" = "Ocultar recuento de vistas";
 "HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE" = "Eliminar el recuento de vistas del tuit";
 
-"SHOW_TWEET_SOURCE_TITLE" = "Mostrar la fuente del tweet";
-
 "FORCE_TWEET_FULL_FRAME_TITLE" = "Forzar a Twitter a utilizar el marco completo para las imágenes";
+
+"DISABLE_IMMERSIVE_PLAYER_TITLE" = "Desactivar reproductor inmersivo";
+"DISABLE_IMMERSIVE_PLAYER_DETAIL_TITLE" = "Desactivar el nuevo reproductor de vídeo de Twitter (Reproductor inmersivo)";
 
 "FONT_OPTION_TITLE" = "Activar el cambio de fuente";
 "FONT_OPTION_DETAIL_TITLE" = "Opción para permitir cambiar la fuente de Twitter y mostrar el selector de fuentes";
