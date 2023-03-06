@@ -1165,7 +1165,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %end
 
 // MARK: Fix login keychain in non-JB (IPA).
-%hook TFSKeychain
+//%hook TFSKeychain
 //- (NSString *)providerDefaultAccessGroup {
 //    return accessGroupID();
 //}
