@@ -1165,25 +1165,23 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %end
 
 // MARK: Fix login keychain in non-JB (IPA).
-#if 0
 %hook TFSKeychain
-- (NSString *)providerDefaultAccessGroup {
-   return accessGroupID();
-}
-- (NSString *)providerSharedAccessGroup {
-   return accessGroupID();
-}
-%end
-
-%hook TFSKeychainDefaultTwitterConfiguration
-- (NSString *)defaultAccessGroup {
-   return accessGroupID();
-}
-- (NSString *)sharedAccessGroup {
-   return accessGroupID();
-}
-%end
-#endif 
+//- (NSString *)providerDefaultAccessGroup {
+//    return accessGroupID();
+//}
+//- (NSString *)providerSharedAccessGroup {
+//    return accessGroupID();
+//}
+//%end
+//
+//%hook TFSKeychainDefaultTwitterConfiguration
+//- (NSString *)defaultAccessGroup {
+//    return accessGroupID();
+//}
+//- (NSString *)sharedAccessGroup {
+//    return accessGroupID();
+//}
+//%end
 
 // MARK: Clean tracking from copied links: https://github.com/BandarHL/BHTwitter/issues/75
 %ctor {
