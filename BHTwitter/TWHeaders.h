@@ -20,7 +20,7 @@
 #import <Preferences/PSSwitchTableCell.h>
 
 
-typedef UIFont *(*BH_BaseImp)(id,SEL);
+typedef UIFont *(*BH_BaseImp)(id,SEL,...);
 static NSMutableDictionary<NSString*, NSValue*>* originalFontsIMP;
 static id _PasteboardChangeObserver;
 static NSDictionary<NSString*, NSArray<NSString*>*> *trackingParams;
