@@ -6,9 +6,26 @@
 
 %config(generator=internal)
 
-static UIFont * _Nullable TAEStandardFontGroupReplacement(UIFont *self, SEL _cmd) {
+static UIFont * _Nullable TAEStandardFontGroupReplacement(UIFont *self, SEL _cmd, CGFloat arg1, CGFloat arg2) {
     BH_BaseImp orig  = originalFontsIMP[NSStringFromSelector(_cmd)].pointerValue;
-    UIFont *origFont = orig(self, _cmd);
+    NSUInteger nArgs = [[self class] instanceMethodSignatureForSelector:_cmd].numberOfArguments;
+    UIFont *origFont;
+    switch (nArgs) {
+        case 2:
+            origFont = orig(self, _cmd);
+            break;
+        case 3:
+            origFont = orig(self, _cmd, arg1);
+            break;
+        case 4:
+            origFont = orig(self, _cmd, arg1, arg2);
+            break;
+        default:
+            // Should not be reachable, as it was verified before swizzling
+            origFont = orig(self, _cmd);
+            break;
+    };
+    
     UIFont *newFont  = BH_getDefaultFont(origFont);
     return newFont != nil ? newFont : origFont;
 }
@@ -17,7 +34,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         SEL origSel = NSSelectorFromString(sel);
         Method origMethod = class_getInstanceMethod(cls, origSel);
         if (origMethod != NULL) {
-            BH_BaseImp oldImp = (BH_BaseImp)class_replaceMethod(cls, origSel, newIMP, method_getTypeEncoding(origMethod));
+            IMP oldImp = class_replaceMethod(cls, origSel, newIMP, method_getTypeEncoding(origMethod));
             [originalFontsIMP setObject:[NSValue valueWithPointer:oldImp] forKey:sel];
         } else {
             NSLog(@"[BHTwitter] Can't find method (%@) in Class (%@)", sel, NSStringFromClass(cls));
@@ -1102,14 +1119,27 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         Method *methods = class_copyMethodList([self class], &methodCount);
         for (unsigned int i = 0; i < methodCount; ++i) {
             Method method = methods[i];
-            char returnType[255];
-            method_getReturnType(method, returnType, 255);
-            const char *name = sel_getName(method_getName(method));
-            NSString *selector = [NSString stringWithUTF8String:name];
-
-            // Just add methods that have return type.
-            if ([@(returnType) containsString:@"@"]) {
-                [fontsMethods addObject:selector];
+            SEL sel = method_getName(method);
+            NSString *selStr = NSStringFromSelector(sel);
+            
+            NSMethodSignature *methodSig = [self instanceMethodSignatureForSelector:sel];
+            if (strcmp(methodSig.methodReturnType, @encode(void)) == 0) {
+                // Only add methods that return an object
+                continue;
+            } else if (methodSig.numberOfArguments == 2) {
+                // - (id)bodyFont; ...
+                [fontsMethods addObject:selStr];
+            } else if (methodSig.numberOfArguments == 3
+                       && strcmp([methodSig getArgumentTypeAtIndex:2], @encode(CGFloat)) == 0) {
+                // - (id)fontOfSize:(CGFloat); ...
+                [fontsMethods addObject:selStr];
+            } else if (methodSig.numberOfArguments == 4
+                       && strcmp([methodSig getArgumentTypeAtIndex:2], @encode(CGFloat)) == 0
+                       && strcmp([methodSig getArgumentTypeAtIndex:3], @encode(CGFloat)) == 0) {
+                // - (id)monospacedDigitalFontOfSize:(CGFloat) weight:(CGFloat); ...
+                [fontsMethods addObject:selStr];
+            } else {
+                NSLog(@"[BHTwitter] Method (%@) with unknown signiture (%@) in TAEStandardFontGroup", selStr, methodSig);
             }
         }
         free(methods);
@@ -1128,23 +1158,25 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %end
 
 // MARK: Fix login keychain in non-JB (IPA).
-//%hook TFSKeychain
-//- (NSString *)providerDefaultAccessGroup {
-//    return accessGroupID();
-//}
-//- (NSString *)providerSharedAccessGroup {
-//    return accessGroupID();
-//}
-//%end
-//
-//%hook TFSKeychainDefaultTwitterConfiguration
-//- (NSString *)defaultAccessGroup {
-//    return accessGroupID();
-//}
-//- (NSString *)sharedAccessGroup {
-//    return accessGroupID();
-//}
-//%end
+#if 0
+%hook TFSKeychain
+- (NSString *)providerDefaultAccessGroup {
+   return accessGroupID();
+}
+- (NSString *)providerSharedAccessGroup {
+   return accessGroupID();
+}
+%end
+
+%hook TFSKeychainDefaultTwitterConfiguration
+- (NSString *)defaultAccessGroup {
+   return accessGroupID();
+}
+- (NSString *)sharedAccessGroup {
+   return accessGroupID();
+}
+%end
+#endif 
 
 // MARK: Clean tracking from copied links: https://github.com/BandarHL/BHTwitter/issues/75
 %ctor {
