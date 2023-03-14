@@ -144,6 +144,9 @@
 
 "SHOW_SCOLL_INDICATOR_OPTION_TITLE" = "Show Scroll Bar";
 
+"ALWAYS_FOLLOWING_PAGE_OPTION_TITLE" = "Always start on Following page";
+"ALWAYS_FOLLOWING_PAGE_OPTION_DETAIL_TITLE" = "Force Twitter to always use Following section of the timeline when the user start the application";
+
 "FONT_OPTION_TITLE" = "Enable changing font";
 "FONT_OPTION_DETAIL_TITLE" = "Option to allow changing Twitter font and show font picker.";
 

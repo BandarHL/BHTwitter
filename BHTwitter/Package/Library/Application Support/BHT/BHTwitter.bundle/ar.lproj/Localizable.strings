@@ -144,6 +144,9 @@
 
 "SHOW_SCOLL_INDICATOR_OPTION_TITLE" = "إظهار شريط التمرير الجانبي";
 
+"ALWAYS_FOLLOWING_PAGE_OPTION_TITLE" = "فتح التطبيق على صفحة المتابعة";
+"ALWAYS_FOLLOWING_PAGE_OPTION_DETAIL_TITLE" = "إجبار تويتر على إستخدام قسم المتابعة في التايم لاين كصفحة رئيسية عند فتح التطبيق.";
+
 "FONT_OPTION_TITLE" = "تفعيل تغيير خط التطبيق";
 "FONT_OPTION_DETAIL_TITLE" = "خيار لتفعيل تغيير خط تويتر";
 

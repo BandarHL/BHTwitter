@@ -84,6 +84,10 @@ static NSString *_lastCopiedURL;
 @property (nonatomic, strong) TFNTwitterAccount *account;
 @end
 
+@interface TFNScrollingHorizontalLabelView : UIView
+- (UIViewController *)NearestViewController;
+@end
+
 @interface TFNNavigationController : UINavigationController
 @end
 

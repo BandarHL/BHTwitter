@@ -53,5 +53,6 @@
 + (BOOL)forceTweetFullFrame;
 + (BOOL)stripTrackingParams;
 + (BOOL)disableImmersive;
++ (BOOL)alwaysFollowingPage;
 @end
 

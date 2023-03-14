@@ -593,6 +593,29 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
+
+// MARK: Always use Following page
+%hook TFNScrollingHorizontalLabelView
+- (NSUInteger)startingIndex {
+    if ([BHTManager alwaysFollowingPage]) {
+        UIViewController *Navigation = self.NearestViewController;
+        if ([Navigation.childViewControllers[0] isKindOfClass:%c(THFHomeTimelineContainerViewController)] || [Navigation.childViewControllers[0] isKindOfClass:%c(T1HomeTimelineContainerViewController)]) {
+            [self setValue:[NSNumber numberWithInteger:1] forKey:@"_startingIndex"];
+            return 1;
+        }
+    }
+    return %orig;
+}
+
+%new - (UIViewController *)NearestViewController {
+    UIResponder *responder = self;
+    while ([responder isKindOfClass:[UIView class]])
+        responder = [responder nextResponder];
+    return (UIViewController *)responder;
+}
+%end
+
+
 // MARK: Always open in Safrai
 // Thanks nyuszika7h https://github.com/nyuszika7h/noinappsafari/
 %hook SFSafariViewController

@@ -142,6 +142,8 @@
 "DISABLE_IMMERSIVE_PLAYER_TITLE" = "Desactivar reproductor inmersivo";
 "DISABLE_IMMERSIVE_PLAYER_DETAIL_TITLE" = "Desactivar el nuevo reproductor de vídeo de Twitter (Reproductor inmersivo)";
 
+"SHOW_SCOLL_INDICATOR_OPTION_TITLE" = "Mostrar barra de desplazamiento";
+
 "FONT_OPTION_TITLE" = "Activar el cambio de fuente";
 "FONT_OPTION_DETAIL_TITLE" = "Opción para permitir cambiar la fuente de Twitter y mostrar el selector de fuentes";
 

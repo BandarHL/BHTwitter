@@ -140,7 +140,9 @@
 "FORCE_TWEET_FULL_FRAME_TITLE" = "Twitterで画像を全体表示するように強制する";
 
 "DISABLE_IMMERSIVE_PLAYER_TITLE" = "イマーシブプレーヤーを無効化";
-"DISABLE_IMMERSIVE_PLAYER_DETAIL_TITLE" = "Twitterの新しい動画プレーヤーを無効にする (イマーシブプレーヤー)";
+"DISABLE_IMMERSIVE_PLAYER_DETAIL_TITLE" = "Twitterの新しい動画プレーヤーを無効にします。 (イマーシブプレーヤー)";
+
+"SHOW_SCOLL_INDICATOR_OPTION_TITLE" = "スクロールバーを表示します。";
 
 "FONT_OPTION_TITLE" = "カスタムフォントの有効化";
 "FONT_OPTION_DETAIL_TITLE" = "Twitterのフォントを変更できるようにします。";
@@ -151,7 +153,7 @@
 
 "DEBUG_SECTION_HEADER_TITLE" = "デバッグ";
 "FLEX_OPTION_TITLE" = "FLEXの有効化";
-"FLEX_OPTION_DETAIL_TITLE" = "TwitterアプリでFLEXを表示";
+"FLEX_OPTION_DETAIL_TITLE" = "TwitterアプリでFLEXを表示します。";
 
 "LEGAL_SECTION_HEADER_TITLE" = "法的通知";
 "LEGAL_BUTTON_TITLE" = "謝辞";

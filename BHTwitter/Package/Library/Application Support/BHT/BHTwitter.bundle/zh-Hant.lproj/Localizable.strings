@@ -142,6 +142,8 @@
 "DISABLE_IMMERSIVE_PLAYER_TITLE" = "禁用沉浸式播放器";
 "DISABLE_IMMERSIVE_PLAYER_DETAIL_TITLE" = "禁用 Twitter 新版影片播放器（沉浸式播放）";
 
+"SHOW_SCOLL_INDICATOR_OPTION_TITLE" = "顯示滾動條";
+
 "FONT_OPTION_TITLE" = "更換字體";
 "FONT_OPTION_DETAIL_TITLE" = "啟用此選項，可以更換 Twitter 字體";
 

@@ -201,6 +201,9 @@
 + (BOOL)disableImmersive {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"disable_immersive_player"];
 }
++ (BOOL)alwaysFollowingPage {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"always_following_page"];
+}
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount {
     SettingsViewController *pref = [[SettingsViewController alloc] initWithTwitterAccount:twAccount];
     [pref.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:@"BHTwitter" subtitle:twAccount.displayUsername]];

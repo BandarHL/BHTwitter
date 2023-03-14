@@ -206,13 +206,15 @@
         
         PSSpecifier *showScrollIndicator = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SHOW_SCOLL_INDICATOR_OPTION_TITLE"] detailTitle:nil key:@"showScollIndicator" defaultValue:false changeAction:nil];
         
+        PSSpecifier *alwaysFollowingPage = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ALWAYS_FOLLOWING_PAGE_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ALWAYS_FOLLOWING_PAGE_OPTION_DETAIL_TITLE"] key:@"always_following_page" defaultValue:false changeAction:nil];
+        
         PSSpecifier *font = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FONT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FONT_OPTION_DETAIL_TITLE"] key:@"en_font" defaultValue:false changeAction:nil];
         
         PSSpecifier *regularFontsPicker = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"REQULAR_FONTS_PICKER_OPTION_TITLE"] detailTitle:[[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"] dynamicRule:@"en_font, ==, 0" action:@selector(showRegularFontPicker:)];
         
         PSSpecifier *boldFontsPicker = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BOLD_FONTS_PICKER_OPTION_TITLE"] detailTitle:[[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"] dynamicRule:@"en_font, ==, 0" action:@selector(showBoldFontPicker:)];
         
-        // dubug section
+        // debug section
         PSSpecifier *flex = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_DETAIL_TITLE"] key:@"flex_twitter" defaultValue:false changeAction:@selector(FLEXAction:)];
         
         // legal section
@@ -265,6 +267,7 @@
             forceFullFrame,
             disableImmersive,
             showScrollIndicator,
+            alwaysFollowingPage,
             font,
             regularFontsPicker,
             boldFontsPicker,
