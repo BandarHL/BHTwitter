@@ -21,9 +21,7 @@
 
 + (BOOL)DownloadingVideos;
 + (BOOL)DirectSave;
-+ (BOOL)VoiceFeature;
 + (BOOL)UndoTweet;
-+ (BOOL)ReaderMode;
 + (BOOL)VideoZoom;
 + (BOOL)NoHistory;
 + (BOOL)BioTranslate;
@@ -38,7 +36,6 @@
 + (BOOL)changeFont;
 + (BOOL)FLEX;
 + (BOOL)autoHighestLoad;
-+ (BOOL)DmModularSearch;
 + (BOOL)disableSensitiveTweetWarnings;
 + (BOOL)TwitterCircle;
 + (BOOL)showScrollIndicator;
@@ -54,5 +51,9 @@
 + (BOOL)stripTrackingParams;
 + (BOOL)disableImmersive;
 + (BOOL)alwaysFollowingPage;
++ (BOOL)stopHidingTabBar;
++ (BOOL)advancedSearch;
++ (BOOL)changeBackground;
++ (bool)backgroundImage;
 @end
 

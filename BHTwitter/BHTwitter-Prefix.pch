@@ -4,5 +4,5 @@
 
 #ifdef __OBJC__
     #import <Foundation/Foundation.h>
-    #import "/opt/theos/Prefix.pch"  //path/to/theos/Prefix.pch
+    #import "/Users/bandaralruwaili/theos/Prefix.pch"  //path/to/theos/Prefix.pch
 #endif

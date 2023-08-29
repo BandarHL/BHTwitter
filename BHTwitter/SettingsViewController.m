@@ -8,8 +8,9 @@
 #import "SettingsViewController.h"
 #import "BHTBundle.h"
 #import "BHTwitter-Swift.h"
+#import "Colours.h"
 
-@interface SettingsViewController () <UIFontPickerViewControllerDelegate>
+@interface SettingsViewController () <UIFontPickerViewControllerDelegate, UINavigationControllerDelegate, UIImagePickerControllerDelegate, UIColorPickerViewControllerDelegate>
 @property (nonatomic, strong) TFNTwitterAccount *twAccount;
 @property (nonatomic, assign) BOOL hasDynamicSpecifiers;
 @property (nonatomic, retain) NSMutableDictionary *dynamicSpecifiers;
@@ -150,8 +151,6 @@
         
         PSSpecifier *videoLayerCaption = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE"] detailTitle:nil key:@"dis_VODCaptions" defaultValue:false changeAction:nil];
         
-        PSSpecifier *voice = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"VOICE_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"VOICE_OPTION_DETAIL_TITLE"] key:@"voice" defaultValue:true changeAction:nil];
-        
         PSSpecifier *videoZoom = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"VIDEO_ZOOM_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"VIDEO_ZOOM_OPTION_DETAIL_TITLE"] key:@"video_zoom" defaultValue:false changeAction:nil];
         
         PSSpecifier *noHistory = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"NO_HISTORY_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"NO_HISTORY_OPTION_DETAIL_TITLE"] key:@"no_his" defaultValue:false changeAction:nil];
@@ -165,8 +164,6 @@
         PSSpecifier *followConfirm = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FOLLOW_CONFIRM_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FOLLOW_CONFIRM_OPTION_DETAIL_TITLE"] key:@"follow_con" defaultValue:false changeAction:nil];
         
         PSSpecifier *padLock = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"PADLOCK_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"PADLOCK_OPTION_DETAIL_TITLE"] key:@"padlock" defaultValue:false changeAction:nil];
-        
-        PSSpecifier *DmModularSearch = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DN_MODULAR_SEARCH_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DN_MODULAR_SEARCH_OPTION_DETAIL_TITLE"] key:@"DmModularSearch" defaultValue:false changeAction:nil];
         
         PSSpecifier *autoHighestLoad = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"AUTO_HIGHEST_LOAD_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE"] key:@"autoHighestLoad" defaultValue:true changeAction:nil];
         
@@ -185,18 +182,22 @@
         PSSpecifier *alwaysOpenSafari = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ALWAYS_OPEN_SAFARI_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE"] key:@"openInBrowser" defaultValue:false changeAction:nil];
         
         PSSpecifier *stripTrackingParams = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"STRIP_URL_TRACKING_PARAMETERS_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE"] key:@"strip_tracking_params" defaultValue:false changeAction:nil];
+        
+        PSSpecifier *advancedSearch = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ADVANCED_SEARCH_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ADVANCED_SEARCH_DETAIL_TITLE"] key:@"advanced_search" defaultValue:false changeAction:nil];
 
         // Twitter bule section
         PSSpecifier *undoTweet = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"UNDO_TWEET_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"UNDO_TWEET_OPTION_DETAIL_TITLE"] key:@"undo_tweet" defaultValue:false changeAction:nil];
-        
-        PSSpecifier *readerMode = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"READER_MODE_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"READER_MODE_OPTION_DETAIL_TITLE"] key:@"reader_mode" defaultValue:false changeAction:nil];
         
         PSSpecifier *appTheme = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"THEME_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"THEME_OPTION_DETAIL_TITLE"] dynamicRule:nil action:@selector(showThemeViewController:)];
         
         PSSpecifier *customTabBarVC = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_OPTION_TITLE"] detailTitle:nil dynamicRule:nil action:@selector(showCustomTabBarVC:)];
         
         // Layout customization section
+        PSSpecifier *customDirectBackgroundView = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_DIRECT_BACKGROUND_VIEW_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_DIRECT_BACKGROUND_VIEW_DETAIL_TITLE"] dynamicRule:nil action:@selector(showCustomBackgroundViewViewController:)];
+        
         PSSpecifier *origTweetStyle = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ORIG_TWEET_STYLE_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE"] key:@"old_style" defaultValue:true changeAction:nil];
+        
+        PSSpecifier *stopHidingTabBar = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"STOP_HIDING_TAB_BAR_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"STOP_HIDING_TAB_BAR_DETAIL_TITLE"] key:@"no_tab_bar_hiding" defaultValue:false changeAction:nil];
         
         PSSpecifier *hideViewCount = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE"] key:@"hide_view_count" defaultValue:false changeAction:nil];
 
@@ -205,8 +206,6 @@
         PSSpecifier *disableImmersive = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_IMMERSIVE_PLAYER_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_IMMERSIVE_PLAYER_DETAIL_TITLE"] key:@"disable_immersive_player" defaultValue:true changeAction:nil];
         
         PSSpecifier *showScrollIndicator = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SHOW_SCOLL_INDICATOR_OPTION_TITLE"] detailTitle:nil key:@"showScollIndicator" defaultValue:false changeAction:nil];
-        
-        PSSpecifier *alwaysFollowingPage = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ALWAYS_FOLLOWING_PAGE_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ALWAYS_FOLLOWING_PAGE_OPTION_DETAIL_TITLE"] key:@"always_following_page" defaultValue:false changeAction:nil];
         
         PSSpecifier *font = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FONT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FONT_OPTION_DETAIL_TITLE"] key:@"en_font" defaultValue:false changeAction:nil];
         
@@ -236,7 +235,6 @@
             hideTopicsToFollow,
             videoLayerCaption,
             directSave,
-            voice,
             videoZoom,
             noHistory,
             bioTranslate,
@@ -244,7 +242,6 @@
             tweetConfirm,
             followConfirm,
             padLock,
-            DmModularSearch,
             autoHighestLoad,
             disableSensitiveTweetWarnings,
             copyProfileInfo,
@@ -254,20 +251,21 @@
             alwaysOpenSafari,
             stripTrackingParams,
             trustedFriends,
+            advancedSearch,
             
             twitterBlueSection, // 1
             undoTweet,
-            readerMode,
             appTheme,
             customTabBarVC,
             
             layoutSection, // 2
+            customDirectBackgroundView,
             origTweetStyle,
+            stopHidingTabBar,
             hideViewCount,
             forceFullFrame,
             disableImmersive,
             showScrollIndicator,
-            alwaysFollowingPage,
             font,
             regularFontsPicker,
             boldFontsPicker,
@@ -486,12 +484,86 @@
     }
     [self.navigationController pushViewController:themeVC animated:true];
 }
+- (void)showCustomBackgroundViewViewController:(PSSpecifier *)specifier {
+    UITableViewCell *specifierCell = [specifier propertyForKey:PSTableCellKey];
+    
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"BHTwitter" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
+    
+    if (alert.popoverPresentationController != nil) {
+        CGFloat midX = CGRectGetMidX(specifierCell.frame);
+        CGFloat midY = CGRectGetMidY(specifierCell.frame);
+
+        alert.popoverPresentationController.sourceRect = CGRectMake(midX, midY, 0, 0);
+        alert.popoverPresentationController.sourceView = specifierCell;
+    }
+    
+    UIAlertAction *imageAction = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_1"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        UIImagePickerController *imagePicker = [[UIImagePickerController alloc] init];
+        imagePicker.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
+        imagePicker.delegate = self;
+        [self presentViewController:imagePicker animated:YES completion:nil];
+    }];
+    
+    UIAlertAction *colorAction = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_2"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        UIColorPickerViewController *colorPicker = [[UIColorPickerViewController alloc] init];
+        colorPicker.delegate = self;
+        [self presentViewController:colorPicker animated:true completion:nil];
+    }];
+    
+    UIAlertAction *resetAction = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_3"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"change_msg_background"];
+        [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"background_image"];
+        [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"background_color"];
+    }];
+    
+    UIAlertAction *cancel = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"] style:UIAlertActionStyleCancel handler:nil];
+    
+    [alert addAction:imageAction];
+    [alert addAction:colorAction];
+    [alert addAction:resetAction];
+    [alert addAction:cancel];
+    
+    [self presentViewController:alert animated:true completion:nil];
+}
+
 - (void)FLEXAction:(UISwitch *)sender {
     if (sender.isOn) {
         [[FLEXManager sharedManager] showExplorer];
     } else {
         [[FLEXManager sharedManager] hideExplorer];
     }
+}
+
+
+- (void)colorPickerViewControllerDidSelectColor:(UIColorPickerViewController *)viewController {
+    [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"change_msg_background"];
+    [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"background_image"];
+    
+    
+    UIColor *selectedColor = viewController.selectedColor;
+    [[NSUserDefaults standardUserDefaults] setObject:selectedColor.hexString forKey:@"background_color"];
+}
+- (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary<UIImagePickerControllerInfoKey,id> *)info {
+    NSFileManager *manager = [NSFileManager defaultManager];
+    NSString *DocPath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true).firstObject;
+    
+    NSURL *oldImgPath = info[UIImagePickerControllerImageURL];
+    NSURL *newImgPath = [[NSURL fileURLWithPath:DocPath] URLByAppendingPathComponent:@"msg_background.png"];
+    
+    if ([manager fileExistsAtPath:newImgPath.path]) {
+        [manager removeItemAtURL:newImgPath error:nil];
+    }
+    
+    [manager copyItemAtURL:oldImgPath toURL:newImgPath error:nil];
+    
+    [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"change_msg_background"];
+    [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"background_image"];
+    [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"background_color"];
+    
+    [picker dismissViewControllerAnimated:true completion:nil];
+}
+- (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker {
+    [picker dismissViewControllerAnimated:true completion:nil];
 }
 @end
 

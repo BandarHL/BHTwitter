@@ -6,6 +6,7 @@
 
 %config(generator=internal)
 
+static bool didMoveToFollowingPage = false;
 static UIFont * _Nullable TAEStandardFontGroupReplacement(UIFont *self, SEL _cmd, CGFloat arg1, CGFloat arg2) {
     BH_BaseImp orig  = originalFontsIMP[NSStringFromSelector(_cmd)].pointerValue;
     NSUInteger nArgs = [[self class] instanceMethodSignatureForSelector:_cmd].numberOfArguments;
@@ -114,6 +115,48 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     for (T1TabView *tabView in self.tabViews) {
         if ([hiddenBars containsObject:tabView.scribePage]) {
             [tabView setHidden:true];
+        }
+    }
+}
+
+- (void)setTabBarHidden:(BOOL)arg1 withDuration:(CGFloat)arg2 {
+    if ([BHTManager stopHidingTabBar]) {
+        return;
+    }
+    
+    return %orig;
+}
+- (void)setTabBarHidden:(BOOL)arg1 {
+    if ([BHTManager stopHidingTabBar]) {
+        return;
+    }
+    
+    return %orig;
+}
+%end
+
+
+%hook T1DirectMessageConversationEntriesViewController
+- (void)viewDidLoad {
+    %orig;
+    if ([BHTManager changeBackground]) {
+        if ([BHTManager backgroundImage]) { // set the backgeound as image
+            NSFileManager *manager = [NSFileManager defaultManager];
+            NSString *DocPath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true).firstObject;
+            NSURL *imagePath = [[NSURL fileURLWithPath:DocPath] URLByAppendingPathComponent:@"msg_background.png"];
+            
+            if ([manager fileExistsAtPath:imagePath.path]) {
+                UIImageView *backgroundImage = [[UIImageView alloc] initWithFrame:UIScreen.mainScreen.bounds];
+                backgroundImage.image = [UIImage imageNamed:imagePath.path];
+                [backgroundImage setContentMode:UIViewContentModeScaleAspectFill];
+                [self.view insertSubview:backgroundImage atIndex:0];
+            }
+        }
+        
+        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"background_color"]) { // set the backgeound as color
+            NSString *hexCode = [[NSUserDefaults standardUserDefaults] objectForKey:@"background_color"];
+            UIColor *selectedColor = [UIColor colorFromHexString:hexCode];
+            self.view.backgroundColor = selectedColor;
         }
     }
 }
@@ -594,28 +637,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %end
 
 
-// MARK: Always use Following page
-%hook TFNScrollingHorizontalLabelView
-- (NSUInteger)startingIndex {
-    if ([BHTManager alwaysFollowingPage]) {
-        UIViewController *Navigation = self.NearestViewController;
-        if ([Navigation.childViewControllers[0] isKindOfClass:%c(THFHomeTimelineContainerViewController)] || [Navigation.childViewControllers[0] isKindOfClass:%c(T1HomeTimelineContainerViewController)]) {
-            [self setValue:[NSNumber numberWithInteger:1] forKey:@"_startingIndex"];
-            return 1;
-        }
-    }
-    return %orig;
-}
-
-%new - (UIViewController *)NearestViewController {
-    UIResponder *responder = self;
-    while ([responder isKindOfClass:[UIView class]])
-        responder = [responder nextResponder];
-    return (UIViewController *)responder;
-}
-%end
-
-
 // MARK: Always open in Safrai
 // Thanks nyuszika7h https://github.com/nyuszika7h/noinappsafari/
 %hook SFSafariViewController
@@ -699,15 +720,15 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 // Twitter save all the features and keys in side JSON file in bundle of application fs_embedded_defaults_production.json, and use it in TFNTwitterAccount class but with DM voice maybe developers forget to add boolean variable in the class, so i had to change it from the file.
 // also, you can find every key for every feature i used in this tweak, i can remove all the codes below and find every key for it but I'm lazy to do that, :)
 - (BOOL)boolForKey:(NSString *)key {
-    if ([BHTManager VoiceFeature] && [key isEqualToString:@"dm_voice_creation_enabled"]) {
-        return true;
-    }
-    
     if ([key isEqualToString:@"edit_tweet_enabled"] || [key isEqualToString:@"edit_tweet_ga_composition_enabled"] || [key isEqualToString:@"edit_tweet_pdp_dialog_enabled"] || [key isEqualToString:@"edit_tweet_upsell_enabled"]) {
         return true;
     }
     
     if ([key isEqualToString:@"conversational_replies_ios_pinned_replies_consumption_enabled"] || [key isEqualToString:@"conversational_replies_ios_pinned_replies_creation_enabled"]) {
+        return true;
+    }
+    
+    if ([BHTManager advancedSearch] && [key isEqualToString:@"search_features_advanced_search_enabled"]) {
         return true;
     }
     
@@ -722,7 +743,10 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 // MARK: Force Tweets to show images as Full frame: https://github.com/BandarHL/BHTwitter/issues/101
 %hook T1StandardStatusAttachmentViewAdapter
 - (NSUInteger)displayType {
-    return [BHTManager forceTweetFullFrame] ? 1 : %orig;
+    if (self.attachmentType == 2) {
+        return [BHTManager forceTweetFullFrame] ? 1 : %orig;
+    }
+    return %orig;
 }
 %end
 
@@ -805,9 +829,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (_Bool)isSensitiveTweetWarningsConsumeEnabled {
     return [BHTManager disableSensitiveTweetWarnings] ? false : %orig;
 }
-- (_Bool)isDmModularSearchEnabled {
-    return [BHTManager DmModularSearch] ? true : %orig;
-}
 - (_Bool)isVideoDynamicAdEnabled {
     return [BHTManager HidePromoted] ? false : %orig;
 }
@@ -826,24 +847,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 - (_Bool)isVideoZoomEnabled {
     return [BHTManager VideoZoom] ? true : %orig;
-}
-- (_Bool)isDMVoiceRenderingEnabled {
-    return [BHTManager VoiceFeature] ? true : %orig;
-}
-- (_Bool)isDMVoiceCreationEnabled {
-    return [BHTManager VoiceFeature] ? true : %orig;
-}
-%end
-
-%hook T1PhotoMediaRailViewController
-- (void)setVoiceButtonHidden:(BOOL)arg1 {
-    if ([BHTManager VoiceFeature]) {
-        arg1 = false;
-    }
-    return %orig(arg1);
-}
-- (BOOL)isVoiceButtonHidden {
-    return [BHTManager VoiceFeature] ? false : %orig;
 }
 %end
 
@@ -975,13 +978,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %hook TFNTwitterToastNudgeExperimentModel
 - (BOOL)shouldShowShowUndoTweetSentToast {
     return [BHTManager UndoTweet] ? true : %orig;
-}
-%end
-
-// MARK: Reader mode
-%hook T1ReaderModeConfig
-- (_Bool)isReaderModeEnabled {
-    return [BHTManager ReaderMode] ? true : %orig;
 }
 %end
 
@@ -1216,7 +1212,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^{
             trackingParams = @{
-                @"twitter.com" : @[@"s", @"t"]
+                @"twitter.com" : @[@"s", @"t"],
+                @"x.com" : @[@"s", @"t"],
             };
         });
         

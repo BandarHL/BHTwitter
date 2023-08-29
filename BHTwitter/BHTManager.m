@@ -105,9 +105,6 @@
 + (BOOL)DirectSave {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"direct_save"];
 }
-+ (BOOL)VoiceFeature {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"voice"];
-}
 + (BOOL)LikeConfirm {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"like_con"];
 }
@@ -128,9 +125,6 @@
 }
 + (BOOL)UndoTweet {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"undo_tweet"];
-}
-+ (BOOL)ReaderMode {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"reader_mode"];
 }
 + (BOOL)VideoZoom {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"video_zoom"];
@@ -158,9 +152,6 @@
 }
 + (BOOL)disableSensitiveTweetWarnings {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"disableSensitiveTweetWarnings"];
-}
-+ (BOOL)DmModularSearch {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"DmModularSearch"];
 }
 + (BOOL)TwitterCircle {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"TrustedFriends"];
@@ -203,6 +194,18 @@
 }
 + (BOOL)alwaysFollowingPage {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"always_following_page"];
+}
++ (BOOL)stopHidingTabBar {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"no_tab_bar_hiding"];
+}
++ (BOOL)advancedSearch {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"advanced_search"];
+}
++ (BOOL)changeBackground {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"change_msg_background"];
+}
++ (bool)backgroundImage {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"background_image"];
 }
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount {
     SettingsViewController *pref = [[SettingsViewController alloc] initWithTwitterAccount:twAccount];

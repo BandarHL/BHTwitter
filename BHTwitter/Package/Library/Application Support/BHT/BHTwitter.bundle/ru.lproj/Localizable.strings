@@ -139,6 +139,11 @@
 "DISABLE_IMMERSIVE_PLAYER_TITLE" = "Отключить иммерсивный видеоплеер";
 "DISABLE_IMMERSIVE_PLAYER_DETAIL_TITLE" = "Отключает новый видеоплеер приложения (с эффектом погружения)";
 
+"SHOW_SCOLL_INDICATOR_OPTION_TITLE" = "Отображать ползунок";
+
+"ALWAYS_FOLLOWING_PAGE_OPTION_TITLE" = "Открывать вкладку «Вы читаете»";
+"ALWAYS_FOLLOWING_PAGE_OPTION_DETAIL_TITLE" = "Загружает твиттер с вкладки «Вы читаете» по умолчанию";
+
 "FONT_OPTION_TITLE" = "Сменить шрифт";
 "FONT_OPTION_DETAIL_TITLE" = "Позволяет установить кастомный шрифт";
 

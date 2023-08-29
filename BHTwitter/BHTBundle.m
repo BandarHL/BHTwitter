@@ -20,6 +20,8 @@
         NSURL *bundlePath = [NSURL new];
         if ([fileManager fileExistsAtPath:@"/Library/Application Support/BHT/BHTwitter.bundle"]) {
             bundlePath = [NSURL fileURLWithPath:@"/Library/Application Support/BHT/BHTwitter.bundle"];
+        } else if ([fileManager fileExistsAtPath:@"/var/jb/Library/Application Support/BHT/BHTwitter.bundle"]) {
+            bundlePath = [NSURL fileURLWithPath:@"/var/jb/Library/Application Support/BHT/BHTwitter.bundle"];
         } else {
             bundlePath = [[NSBundle mainBundle] URLForResource:@"BHTwitter" withExtension:@"bundle"];
         }

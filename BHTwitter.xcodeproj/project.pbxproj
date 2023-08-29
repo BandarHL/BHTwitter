@@ -45,15 +45,15 @@
 		50EE4D4B286F7F70007DE117 /* BHColorThemeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50EE4D4A286F7F70007DE117 /* BHColorThemeViewController.swift */; };
 		50F7929028A0EA22000A2269 /* BHTBundle.m in Sources */ = {isa = PBXBuildFile; fileRef = 50F7928E28A0EA22000A2269 /* BHTBundle.m */; };
 		50F7929128A0EA22000A2269 /* BHTBundle.h in Headers */ = {isa = PBXBuildFile; fileRef = 50F7928F28A0EA22000A2269 /* BHTBundle.h */; };
-		50FAE057288545DB00CDCEB2 /* CepheiPrefs.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 50FAE054288545DB00CDCEB2 /* CepheiPrefs.framework */; };
-		50FAE059288545DB00CDCEB2 /* Cephei.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 50FAE055288545DB00CDCEB2 /* Cephei.framework */; };
-		50FAE05B288545DC00CDCEB2 /* CepheiUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 50FAE056288545DB00CDCEB2 /* CepheiUI.framework */; };
 		50FAE060288545F600CDCEB2 /* SettingsViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = 50FAE05E288545F600CDCEB2 /* SettingsViewController.h */; };
 		50FAE061288545F600CDCEB2 /* SettingsViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 50FAE05F288545F600CDCEB2 /* SettingsViewController.m */; };
 		91086148293001530011609E /* FLEX in Frameworks */ = {isa = PBXBuildFile; productRef = 91086147293001530011609E /* FLEX */; };
 		9108614B293005750011609E /* JGProgressHUD in Frameworks */ = {isa = PBXBuildFile; productRef = 9108614A293005750011609E /* JGProgressHUD */; };
 		916CFDE12971A4CF00325345 /* BHTwitter.m in Sources */ = {isa = PBXBuildFile; fileRef = 916CFDE02971A4CF00325345 /* BHTwitter.m */; };
-		916F1E1B2912F16D00865DD2 /* Preferences.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 916F1E1A2912F16D00865DD2 /* Preferences.framework */; };
+		91F030DC2A292C0E00A0CC36 /* CepheiPrefs.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 91F030D92A292C0E00A0CC36 /* CepheiPrefs.framework */; };
+		91F030DE2A292C0F00A0CC36 /* Cephei.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 91F030DA2A292C0E00A0CC36 /* Cephei.framework */; };
+		91F030E02A292C0F00A0CC36 /* CepheiUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 91F030DB2A292C0E00A0CC36 /* CepheiUI.framework */; };
+		91F030E42A292E8B00A0CC36 /* Preferences.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 91F030E32A292E8B00A0CC36 /* Preferences.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -90,7 +90,6 @@
 		5020AA7824E759960080F292 /* SafariServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SafariServices.framework; path = System/Library/Frameworks/SafariServices.framework; sourceTree = SDKROOT; };
 		5020AA7A24E7599B0080F292 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		5020AA7C24E759A20080F292 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
-		504C1C5A288F32050056F5EC /* Preferences.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Preferences.framework; path = ../../../../../opt/theos/sdks/iPhoneOS15.0.sdk/System/Library/PrivateFrameworks/Preferences.framework; sourceTree = "<group>"; };
 		505C0EBB2801ECAB0028D1C9 /* BHDownloadInlineButton.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BHDownloadInlineButton.h; sourceTree = "<group>"; };
 		505C0EBD2801ED020028D1C9 /* BHDownloadInlineButton.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BHDownloadInlineButton.m; sourceTree = "<group>"; };
 		505C0ED028038B810028D1C9 /* BHTwitter-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "BHTwitter-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -102,13 +101,13 @@
 		50EE4D4A286F7F70007DE117 /* BHColorThemeViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BHColorThemeViewController.swift; sourceTree = "<group>"; };
 		50F7928E28A0EA22000A2269 /* BHTBundle.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BHTBundle.m; sourceTree = "<group>"; };
 		50F7928F28A0EA22000A2269 /* BHTBundle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BHTBundle.h; sourceTree = "<group>"; };
-		50FAE054288545DB00CDCEB2 /* CepheiPrefs.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CepheiPrefs.framework; path = ../../../../../opt/theos/vendor/lib/CepheiPrefs.framework; sourceTree = "<group>"; };
-		50FAE055288545DB00CDCEB2 /* Cephei.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cephei.framework; path = ../../../../../opt/theos/vendor/lib/Cephei.framework; sourceTree = "<group>"; };
-		50FAE056288545DB00CDCEB2 /* CepheiUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CepheiUI.framework; path = ../../../../../opt/theos/vendor/lib/CepheiUI.framework; sourceTree = "<group>"; };
 		50FAE05E288545F600CDCEB2 /* SettingsViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SettingsViewController.h; sourceTree = "<group>"; };
 		50FAE05F288545F600CDCEB2 /* SettingsViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SettingsViewController.m; sourceTree = "<group>"; };
 		916CFDE02971A4CF00325345 /* BHTwitter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BHTwitter.m; sourceTree = "<group>"; };
-		916F1E1A2912F16D00865DD2 /* Preferences.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Preferences.framework; path = ../../../../../opt/theos/sdks/iPhoneOS16.0.sdk/System/Library/PrivateFrameworks/Preferences.framework; sourceTree = "<group>"; };
+		91F030D92A292C0E00A0CC36 /* CepheiPrefs.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CepheiPrefs.framework; path = ../../../theos/vendor/lib/CepheiPrefs.framework; sourceTree = "<group>"; };
+		91F030DA2A292C0E00A0CC36 /* Cephei.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cephei.framework; path = ../../../theos/vendor/lib/Cephei.framework; sourceTree = "<group>"; };
+		91F030DB2A292C0E00A0CC36 /* CepheiUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CepheiUI.framework; path = ../../../theos/vendor/lib/CepheiUI.framework; sourceTree = "<group>"; };
+		91F030E32A292E8B00A0CC36 /* Preferences.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Preferences.framework; path = ../../../theos/sdks/iPhoneOS16.4.sdk/System/Library/PrivateFrameworks/Preferences.framework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -121,23 +120,23 @@
 				5020AA7D24E759A20080F292 /* QuartzCore.framework in Frameworks */,
 				91086148293001530011609E /* FLEX in Frameworks */,
 				5020AA7324E759860080F292 /* Photos.framework in Frameworks */,
-				916F1E1B2912F16D00865DD2 /* Preferences.framework in Frameworks */,
-				50FAE05B288545DC00CDCEB2 /* CepheiUI.framework in Frameworks */,
 				50D73502252CBFC6007838C7 /* SceneKit.framework in Frameworks */,
 				50D73500252CBFC1007838C7 /* libz.tbd in Frameworks */,
+				91F030DE2A292C0F00A0CC36 /* Cephei.framework in Frameworks */,
 				5020AA6924E759700080F292 /* Accelerate.framework in Frameworks */,
-				50FAE057288545DB00CDCEB2 /* CepheiPrefs.framework in Frameworks */,
 				9108614B293005750011609E /* JGProgressHUD in Frameworks */,
 				5020AA7124E7597F0080F292 /* ImageIO.framework in Frameworks */,
 				5020AA7524E7598D0080F292 /* CoreServices.framework in Frameworks */,
 				5020A87824E758E00080F292 /* UIKit.framework in Frameworks */,
 				5020AA7724E759910080F292 /* SystemConfiguration.framework in Frameworks */,
+				91F030E42A292E8B00A0CC36 /* Preferences.framework in Frameworks */,
 				5020A87A24E758E00080F292 /* Foundation.framework in Frameworks */,
 				5020AA6D24E759790080F292 /* CoreImage.framework in Frameworks */,
-				50FAE059288545DB00CDCEB2 /* Cephei.framework in Frameworks */,
+				91F030DC2A292C0E00A0CC36 /* CepheiPrefs.framework in Frameworks */,
 				5020AA6E24E759790080F292 /* CoreMedia.framework in Frameworks */,
 				50D73504252CBFD0007838C7 /* libsqlite3.tbd in Frameworks */,
 				5020AA7B24E7599B0080F292 /* Security.framework in Frameworks */,
+				91F030E02A292C0F00A0CC36 /* CepheiUI.framework in Frameworks */,
 				5020AA7924E759960080F292 /* SafariServices.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -180,11 +179,10 @@
 		5020A87624E758E00080F292 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				504C1C5A288F32050056F5EC /* Preferences.framework */,
-				916F1E1A2912F16D00865DD2 /* Preferences.framework */,
-				50FAE055288545DB00CDCEB2 /* Cephei.framework */,
-				50FAE054288545DB00CDCEB2 /* CepheiPrefs.framework */,
-				50FAE056288545DB00CDCEB2 /* CepheiUI.framework */,
+				91F030E32A292E8B00A0CC36 /* Preferences.framework */,
+				91F030DA2A292C0E00A0CC36 /* Cephei.framework */,
+				91F030D92A292C0E00A0CC36 /* CepheiPrefs.framework */,
+				91F030DB2A292C0E00A0CC36 /* CepheiUI.framework */,
 				50D73503252CBFCB007838C7 /* libsqlite3.tbd */,
 				50D73501252CBFC6007838C7 /* SceneKit.framework */,
 				50D734FF252CBFBD007838C7 /* libz.tbd */,
@@ -566,16 +564,16 @@
 				DYLIB_CURRENT_VERSION = 1;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
-					/opt/theos/lib,
-					/opt/theos/vendor/lib,
-					/opt/theos/sdks/iPhoneOS16.0.sdk/System/Library/PrivateFrameworks,
+					/Users/bandaralruwaili/theos/lib,
+					/Users/bandaralruwaili/theos/vendor/lib,
+					/Users/bandaralruwaili/theos/sdks/iPhoneOS16.4.sdk/System/Library/PrivateFrameworks,
 				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "BHTwitter/BHTwitter-Prefix.pch";
 				GCC_TREAT_INCOMPATIBLE_POINTER_TYPE_WARNINGS_AS_ERRORS = NO;
 				INFOPLIST_FILE = "";
 				INSTALL_PATH = /Library/MobileSubstrate/DynamicLibraries;
-				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -595,6 +593,7 @@
 				MonkeyDevDevicePort = "";
 				MonkeyDevInstallOnAnyBuild = YES;
 				MonkeyDevInstallOnProfiling = YES;
+				MonkeyDevTheosPath = /Users/bandaralruwaili/theos;
 				MonkeyDevkillProcessOnInstall = "Twitter || true";
 				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -630,16 +629,16 @@
 				DYLIB_CURRENT_VERSION = 1;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
-					/opt/theos/lib,
-					/opt/theos/vendor/lib,
-					/opt/theos/sdks/iPhoneOS16.0.sdk/System/Library/PrivateFrameworks,
+					/Users/bandaralruwaili/theos/lib,
+					/Users/bandaralruwaili/theos/vendor/lib,
+					/Users/bandaralruwaili/theos/sdks/iPhoneOS16.4.sdk/System/Library/PrivateFrameworks,
 				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "BHTwitter/BHTwitter-Prefix.pch";
 				GCC_TREAT_INCOMPATIBLE_POINTER_TYPE_WARNINGS_AS_ERRORS = NO;
 				INFOPLIST_FILE = "";
 				INSTALL_PATH = /Library/MobileSubstrate/DynamicLibraries;
-				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -659,6 +658,7 @@
 				MonkeyDevDevicePort = "";
 				MonkeyDevInstallOnAnyBuild = YES;
 				MonkeyDevInstallOnProfiling = YES;
+				MonkeyDevTheosPath = /Users/bandaralruwaili/theos;
 				MonkeyDevkillProcessOnInstall = "Twitter || true";
 				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";

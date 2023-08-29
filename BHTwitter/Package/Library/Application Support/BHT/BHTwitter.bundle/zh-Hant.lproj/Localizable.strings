@@ -144,6 +144,9 @@
 
 "SHOW_SCOLL_INDICATOR_OPTION_TITLE" = "顯示滾動條";
 
+"ALWAYS_FOLLOWING_PAGE_OPTION_TITLE" = "更換首頁時間軸起始頁面";
+"ALWAYS_FOLLOWING_PAGE_OPTION_DETAIL_TITLE" = "當開啟 Twitter 應用時，將首頁時間軸頁面更改為'正在跟隨'";
+
 "FONT_OPTION_TITLE" = "更換字體";
 "FONT_OPTION_DETAIL_TITLE" = "啟用此選項，可以更換 Twitter 字體";
 

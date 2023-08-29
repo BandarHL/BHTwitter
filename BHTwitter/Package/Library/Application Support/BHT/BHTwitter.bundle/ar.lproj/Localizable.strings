@@ -163,3 +163,15 @@
 
 "DEVELOPER_SECTION_HEADER_TITLE" = "المطور";
 
+"ADVANCED_SEARCH_TITLE" = "البحث المُتقدّم";
+"ADVANCED_SEARCH_DETAIL_TITLE" = "تفعيل خاصيّة البحث المُتقدّم في تويتر .";
+
+"STOP_HIDING_TAB_BAR_TITLE" = "تعطيل إخفاء الشريط السُفلي ";
+"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "إيقاف تويتر من إخفاء الشريط السُفلي عند التصفُّح .";
+
+"CUSTOM_DIRECT_BACKGROUND_VIEW_TITLE" = "إختيار خلفية المُحادثة";
+"CUSTOM_DIRECT_BACKGROUND_VIEW_DETAIL_TITLE" = "إختيار صورة أو لون لخلفيّة المُحادثة الخاصّة .";
+
+"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_1" = "إختيار صورة";
+"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_2" = "إختيار لون";
+"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_3" = "إعادة تعيين للإفتراضي";

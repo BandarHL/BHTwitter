@@ -88,7 +88,7 @@
 "COPY_PROFILE_INFO_OPTION_DETAIL_TITLE" = "プロフィールをコピーするボタンの追加";
 
 "TWEET_TO_IMAGE_OPTION_TITLE" = "ツイートを画像で保存";
-"TWEET_TO_IMAGE_OPTION_DETAIL_TITLE" = "ツイートを長押しすることで画像として保存できます。";
+"TWEET_TO_IMAGE_OPTION_DETAIL_TITLE" = "共有ボタンを長押しすることで画像として保存できます。";
 
 "HIDE_SPACE_OPTION_TITLE" = "スペースバーを消す";
 
@@ -143,6 +143,9 @@
 "DISABLE_IMMERSIVE_PLAYER_DETAIL_TITLE" = "Twitterの新しい動画プレーヤーを無効にします。 (イマーシブプレーヤー)";
 
 "SHOW_SCOLL_INDICATOR_OPTION_TITLE" = "スクロールバーを表示します。";
+
+"ALWAYS_FOLLOWING_PAGE_OPTION_TITLE" = "常にフォロー中からスタートする";
+"ALWAYS_FOLLOWING_PAGE_OPTION_DETAIL_TITLE" = "ユーザーがアプリを起動したときに、タイムラインの次のセクションを常に使用するようにします。";
 
 "FONT_OPTION_TITLE" = "カスタムフォントの有効化";
 "FONT_OPTION_DETAIL_TITLE" = "Twitterのフォントを変更できるようにします。";

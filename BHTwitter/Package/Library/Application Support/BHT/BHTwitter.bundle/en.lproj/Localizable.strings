@@ -162,3 +162,16 @@
 "LEGAL_BUTTON_TITLE" = "Acknowledgements";
 
 "DEVELOPER_SECTION_HEADER_TITLE" = "Developer";
+
+"ADVANCED_SEARCH_TITLE" = "Advanced Search";
+"ADVANCED_SEARCH_DETAIL_TITLE" = "Enabled Advanced search in Twitter.";
+
+"STOP_HIDING_TAB_BAR_TITLE" = "Stop hidden Tab Bar";
+"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "Stop Twitter from hidding the tab bar when scrolling.";
+
+"CUSTOM_DIRECT_BACKGROUND_VIEW_TITLE" = "Set conversation Backgound";
+"CUSTOM_DIRECT_BACKGROUND_VIEW_DETAIL_TITLE" = "Set image or color of direct Conversation backgound.";
+
+"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_1" = "Set image as background";
+"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_2" = "Set color as background";
+"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_3" = "Reset to default";

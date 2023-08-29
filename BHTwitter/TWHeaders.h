@@ -46,6 +46,13 @@ static NSString *_lastCopiedURL;
 @property (nonatomic, strong) id scribe;
 @end
 
+@interface T1StandardStatusAttachmentViewAdapter : NSObject
+@property (nonatomic, assign, readonly) NSUInteger attachmentType;
+@end
+
+@interface T1DirectMessageConversationEntriesViewController: UIViewController
+@end
+
 @interface TFNTableView : UITableView
 - (void)setShowsVerticalScrollIndicator:(BOOL)arg1;
 @end
@@ -82,10 +89,6 @@ static NSString *_lastCopiedURL;
 @property (nonatomic, strong) TFNItemsDataViewControllerBackingStore *backingStore;
 @property (nonatomic, strong) NSArray *sections;
 @property (nonatomic, strong) TFNTwitterAccount *account;
-@end
-
-@interface TFNScrollingHorizontalLabelView : UIView
-- (UIViewController *)NearestViewController;
 @end
 
 @interface TFNNavigationController : UINavigationController
