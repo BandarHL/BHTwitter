@@ -25,7 +25,7 @@
 "ACKNOWLEDGEMENTS_SETTINGS_NAVIGATION_TITLE" = "謝辞";
 
 "COPY_PROFILE_INFO_MENU_OPTION_1" = "プロフィールをコピー";
-"COPY_PROFILE_INFO_MENU_OPTION_2" = "ユーザー名をコピー(@)";
+"COPY_PROFILE_INFO_MENU_OPTION_2" = "ユーザー名(@)をコピー";
 "COPY_PROFILE_INFO_MENU_OPTION_3" = "名前をコピー";
 "COPY_PROFILE_INFO_MENU_OPTION_4" = "プロフィールのURLをコピー";
 "COPY_PROFILE_INFO_MENU_OPTION_5" = "場所をコピー";
@@ -96,7 +96,7 @@
 "DISABLE_RTL_OPTION_DETAIL_TITLE" = "右向きの言語を左向きで表示します。\n設定を適応させるにはTwitterを再起動してください。";
 
 "ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "常にSafariで開く";
-"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "URLをSafari、もしくはデフォルトのブラウザで開きます。";
+"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "URLをSafariもしくはデフォルトのブラウザで開きます。";
 
 "STRIP_URL_TRACKING_PARAMETERS_TITLE" = "URLからトラッキングを取り除く";
 "STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE" = "ツイートURLのコピー時にトラッキングパラメータを除去します。";
@@ -162,3 +162,16 @@
 "LEGAL_BUTTON_TITLE" = "謝辞";
 
 "DEVELOPER_SECTION_HEADER_TITLE" = "開発者";
+
+"ADVANCED_SEARCH_TITLE" = "高度な検索";
+"ADVANCED_SEARCH_DETAIL_TITLE" = "Twitterでの高度な検索を有効にします。";
+
+"STOP_HIDING_TAB_BAR_TITLE" = "タブバーを非表示にしない";
+"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "スクロール時にタブバーが非表示にならないようにします。";
+
+"CUSTOM_DIRECT_BACKGROUND_VIEW_TITLE" = "メッセージの背景を設定する";
+"CUSTOM_DIRECT_BACKGROUND_VIEW_DETAIL_TITLE" = "ダイレクトメッセージの会話の背景に画像または色を設定します。";
+
+"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_1" = "背景に画像を設定する";
+"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_2" = "背景に色を設定する";
+"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_3" = "デフォルトにリセットする";
