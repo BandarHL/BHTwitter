@@ -26,7 +26,7 @@
 
 "COPY_PROFILE_INFO_MENU_OPTION_1" = "Copy bio";
 "COPY_PROFILE_INFO_MENU_OPTION_2" = "Copy Username";
-"COPY_PROFILE_INFO_MENU_OPTION_3" = "Copy Full Username";
+"COPY_PROFILE_INFO_MENU_OPTION_3" = "Copy Display name";
 "COPY_PROFILE_INFO_MENU_OPTION_4" = "Copy URL in the bio";
 "COPY_PROFILE_INFO_MENU_OPTION_5" = "Copy Location in the bio";
 
