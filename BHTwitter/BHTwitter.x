@@ -1217,27 +1217,34 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             };
         });
         
-        if ([BHTManager stripTrackingParams]) {
-            if (UIPasteboard.generalPasteboard.hasURLs) {
-                NSURL *pasteboardURL = UIPasteboard.generalPasteboard.URL;
-                NSArray<NSString*>* params = trackingParams[pasteboardURL.host];
-                
-                if ([pasteboardURL.absoluteString isEqualToString:_lastCopiedURL] == NO && params != nil && pasteboardURL.query != nil) {
-                    // to prevent endless copy loop
-                    _lastCopiedURL = pasteboardURL.absoluteString;
-                    NSURLComponents *cleanedURL = [NSURLComponents componentsWithURL:pasteboardURL resolvingAgainstBaseURL:NO];
-                    NSMutableArray<NSURLQueryItem*> *safeParams = [NSMutableArray arrayWithCapacity:0];
-                    
-                    for (NSURLQueryItem *item in cleanedURL.queryItems) {
-                        if ([params containsObject:item.name] == NO) {
-                            [safeParams addObject:item];
-                        }
-                    }
-                    cleanedURL.queryItems = safeParams;
-                    UIPasteboard.generalPasteboard.URL = cleanedURL.URL;
+if ([BHTManager stripTrackingParams]) {
+    if (UIPasteboard.generalPasteboard.hasURLs) {
+        NSURL *pasteboardURL = UIPasteboard.generalPasteboard.URL;
+        NSArray<NSString*>* params = trackingParams[pasteboardURL.host];
+        
+        if ([pasteboardURL.absoluteString isEqualToString:_lastCopiedURL] == NO && params != nil && pasteboardURL.query != nil) {
+            // to prevent endless copy loop
+            _lastCopiedURL = pasteboardURL.absoluteString;
+            NSURLComponents *cleanedURL = [NSURLComponents componentsWithURL:pasteboardURL resolvingAgainstBaseURL:NO];
+            NSMutableArray<NSURLQueryItem*> *safeParams = [NSMutableArray arrayWithCapacity:0];
+            
+            for (NSURLQueryItem *item in cleanedURL.queryItems) {
+                if ([params containsObject:item.name] == NO) {
+                    [safeParams addObject:item];
                 }
             }
+            cleanedURL.queryItems = safeParams;
+
+            if ([BHTManager copyAsVxTwitter]) {
+                if ([cleanedURL.host isEqualToString:@"twitter.com"] || [cleanedURL.host isEqualToString:@"x.com"]) {
+                    cleanedURL.host = @"vxtwitter.com";
+                }
+            }
+
+            UIPasteboard.generalPasteboard.URL = cleanedURL.URL;
         }
+    }
+}
     }];
     %init;
 }
