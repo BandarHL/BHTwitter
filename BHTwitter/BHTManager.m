@@ -189,6 +189,9 @@
 + (BOOL)stripTrackingParams {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"strip_tracking_params"];
 }
++ (BOOL)copyAsVxTwitter {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"copy_as_vxtwitter"];
+}
 + (BOOL)disableImmersive {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"disable_immersive_player"];
 }

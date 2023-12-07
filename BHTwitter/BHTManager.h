@@ -49,6 +49,7 @@
 + (BOOL)hideViewCount;
 + (BOOL)forceTweetFullFrame;
 + (BOOL)stripTrackingParams;
++ (BOOL)copyAsVxTwitter;
 + (BOOL)disableImmersive;
 + (BOOL)alwaysFollowingPage;
 + (BOOL)stopHidingTabBar;

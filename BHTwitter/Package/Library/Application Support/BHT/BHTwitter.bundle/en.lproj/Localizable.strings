@@ -101,6 +101,9 @@
 "STRIP_URL_TRACKING_PARAMETERS_TITLE" = "Remove tracking from URL's";
 "STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE" = "Strip tracking parameters from tweet URL's when it's copy";
 
+"COPY_URL_AS_VXTWITTER_OPTION_TITLE" = "Copy URL as VXtwitter";
+"COPY_URL_AS_VXTWITTER_OPTION_DETAIL_TITLE" = "Copy URL as VXtwitter instead of Twitter.com/X.com.\nThis is useful, since Twitter/X disables link previews every other day.";
+
 "TWITTER_BLUE_SECTION_HEADER_TITLE" = "Twitter blue features";
 "UNDO_TWEET_OPTION_TITLE" = "Undo tweets feature";
 "UNDO_TWEET_OPTION_DETAIL_TITLE" = "Undo tweets after tweeting.";

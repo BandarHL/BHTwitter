@@ -182,6 +182,8 @@
         PSSpecifier *alwaysOpenSafari = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ALWAYS_OPEN_SAFARI_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE"] key:@"openInBrowser" defaultValue:false changeAction:nil];
         
         PSSpecifier *stripTrackingParams = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"STRIP_URL_TRACKING_PARAMETERS_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE"] key:@"strip_tracking_params" defaultValue:false changeAction:nil];
+
+        PSSpecifier *copyAsVxTwitter = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_URL_AS_VXTWITTER_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_URL_AS_VXTWITTER_OPTION_DETAIL_TITLE"] key:@"copy_as_vxtwitter" defaultValue:false changeAction:nil];
         
         PSSpecifier *advancedSearch = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ADVANCED_SEARCH_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ADVANCED_SEARCH_DETAIL_TITLE"] key:@"advanced_search" defaultValue:false changeAction:nil];
 
@@ -250,6 +252,7 @@
             disableRTL,
             alwaysOpenSafari,
             stripTrackingParams,
+            copyAsVxTwitter,
             trustedFriends,
             advancedSearch,
             
