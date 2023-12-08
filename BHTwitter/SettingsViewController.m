@@ -151,8 +151,6 @@
         
         PSSpecifier *videoLayerCaption = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE"] detailTitle:nil key:@"dis_VODCaptions" defaultValue:false changeAction:nil];
         
-        PSSpecifier *videoZoom = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"VIDEO_ZOOM_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"VIDEO_ZOOM_OPTION_DETAIL_TITLE"] key:@"video_zoom" defaultValue:false changeAction:nil];
-        
         PSSpecifier *noHistory = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"NO_HISTORY_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"NO_HISTORY_OPTION_DETAIL_TITLE"] key:@"no_his" defaultValue:false changeAction:nil];
         
         PSSpecifier *bioTranslate = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BIO_TRANSALTE_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BIO_TRANSALTE_OPTION_DETAIL_TITLE"] key:@"bio_translate" defaultValue:false changeAction:nil];
@@ -190,6 +188,8 @@
         
         PSSpecifier *appTheme = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"THEME_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"THEME_OPTION_DETAIL_TITLE"] dynamicRule:nil action:@selector(showThemeViewController:)];
         
+        PSSpecifier *appIcon = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"APP_ICON_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"APP_ICON_DETAIL_TITLE"] dynamicRule:nil action:@selector(showBHAppIconViewController:)];
+        
         PSSpecifier *customTabBarVC = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_OPTION_TITLE"] detailTitle:nil dynamicRule:nil action:@selector(showCustomTabBarVC:)];
         
         // Layout customization section
@@ -202,8 +202,6 @@
         PSSpecifier *hideViewCount = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE"] key:@"hide_view_count" defaultValue:false changeAction:nil];
 
         PSSpecifier *forceFullFrame = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FORCE_TWEET_FULL_FRAME_TITLE"] detailTitle:nil key:@"force_tweet_full_frame" defaultValue:false changeAction:nil];
-        
-        PSSpecifier *disableImmersive = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_IMMERSIVE_PLAYER_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_IMMERSIVE_PLAYER_DETAIL_TITLE"] key:@"disable_immersive_player" defaultValue:true changeAction:nil];
         
         PSSpecifier *showScrollIndicator = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SHOW_SCOLL_INDICATOR_OPTION_TITLE"] detailTitle:nil key:@"showScollIndicator" defaultValue:false changeAction:nil];
         
@@ -235,7 +233,6 @@
             hideTopicsToFollow,
             videoLayerCaption,
             directSave,
-            videoZoom,
             noHistory,
             bioTranslate,
             likeConfrim,
@@ -256,6 +253,7 @@
             twitterBlueSection, // 1
             undoTweet,
             appTheme,
+            appIcon,
             customTabBarVC,
             
             layoutSection, // 2
@@ -264,7 +262,6 @@
             stopHidingTabBar,
             hideViewCount,
             forceFullFrame,
-            disableImmersive,
             showScrollIndicator,
             font,
             regularFontsPicker,
@@ -483,6 +480,13 @@
         [themeVC.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"THEME_SETTINGS_NAVIGATION_TITLE"] subtitle:self.twAccount.displayUsername]];
     }
     [self.navigationController pushViewController:themeVC animated:true];
+}
+- (void)showBHAppIconViewController:(PSSpecifier *)specifier {
+    BHAppIconViewController *appIconVC = [[BHAppIconViewController alloc] init];
+    if (self.twAccount != nil) {
+        [appIconVC.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"APP_ICON_NAV_TITLE"] subtitle:self.twAccount.displayUsername]];
+    }
+    [self.navigationController pushViewController:appIconVC animated:true];
 }
 - (void)showCustomBackgroundViewViewController:(PSSpecifier *)specifier {
     UITableViewCell *specifierCell = [specifier propertyForKey:PSTableCellKey];

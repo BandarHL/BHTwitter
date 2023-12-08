@@ -162,3 +162,16 @@
 "LEGAL_BUTTON_TITLE" = "Marco jurídico y normativo";
 
 "DEVELOPER_SECTION_HEADER_TITLE" = "Desarrollador";
+
+"ADVANCED_SEARCH_TITLE" = "Búsqueda Avanzada";
+"ADVANCED_SEARCH_DETAIL_TITLE" = "Búsqueda avanzada habilitada en Twitter.";
+
+"STOP_HIDING_TAB_BAR_TITLE" = "Detener ocultar la barra de pestañas";
+"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "Evita que Twitter oculte la barra de pestañas al desplazarse.";
+
+"CUSTOM_DIRECT_BACKGROUND_VIEW_TITLE" = "Establecer fondo de conversación";
+"CUSTOM_DIRECT_BACKGROUND_VIEW_DETAIL_TITLE" = "Establecer imagen o color de fondo de la conversación directa.";
+
+"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_1" = "Establecer imagen como fondo";
+"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_2" = "Establecer color como fondo";
+"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_3" = "Restablecer a predeterminado";

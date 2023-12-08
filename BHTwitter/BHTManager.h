@@ -18,11 +18,11 @@
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount;
 + (void)showSaveVC:(NSURL *)url;
 + (void)save:(NSURL *)url;
++ (TFNMenuSheetViewController *)newFFmpegDownloadSheet:(NSURL *)downloadingURL withProgressView:(JGProgressHUD *)hud;
 
 + (BOOL)DownloadingVideos;
 + (BOOL)DirectSave;
 + (BOOL)UndoTweet;
-+ (BOOL)VideoZoom;
 + (BOOL)NoHistory;
 + (BOOL)BioTranslate;
 + (BOOL)LikeConfirm;
@@ -49,7 +49,6 @@
 + (BOOL)hideViewCount;
 + (BOOL)forceTweetFullFrame;
 + (BOOL)stripTrackingParams;
-+ (BOOL)disableImmersive;
 + (BOOL)alwaysFollowingPage;
 + (BOOL)stopHidingTabBar;
 + (BOOL)advancedSearch;

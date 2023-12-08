@@ -7,6 +7,8 @@
 
 #import "BHTManager.h"
 #import "SettingsViewController.h"
+#import "BHTBundle.h"
+#import <ffmpegkit/FFmpegKit.h>
 
 @implementation BHTManager
 + (bool)isDMVideoCell:(T1InlineMediaView *)view {
@@ -99,6 +101,56 @@
     [topMostController() presentViewController:acVC animated:true completion:nil];
 }
 
+
++ (TFNMenuSheetViewController *)newFFmpegDownloadSheet:(NSURL *)downloadingURL withProgressView:(JGProgressHUD *)hud {
+    NSAttributedString *AttString = [[NSAttributedString alloc] initWithString:[[BHTBundle sharedBundle] localizedStringForKey:@"DOWNLOAD_MENU_TITLE"] attributes:@{
+        NSFontAttributeName: [[objc_getClass("TAEStandardFontGroup") sharedFontGroup] headline2BoldFont],
+        NSForegroundColorAttributeName: UIColor.labelColor
+    }];
+    TFNActiveTextItem *title = [[objc_getClass("TFNActiveTextItem") alloc] initWithTextModel:[[objc_getClass("TFNAttributedTextModel") alloc] initWithAttributedString:AttString] activeRanges:nil];
+    
+    NSMutableArray *actions = [[NSMutableArray alloc] init];
+    [actions addObject:title];
+    
+    MediaInformationSession *mediaInformationSession = [objc_getClass("FFprobeKit") getMediaInformation:downloadingURL.absoluteString];
+    MediaInformation *mediaInformation = [mediaInformationSession getMediaInformation];
+            
+    for (StreamInformation *stream in [mediaInformation getStreams]) {
+        NSNumber *width = [stream getWidth];
+        NSNumber *height = [stream getHeight];
+        if (width != nil && height != nil) {
+            NSString *resolution = [NSString stringWithFormat:@"%@x%@", width, height];
+            TFNActionItem *downloadOption = [objc_getClass("TFNActionItem") actionItemWithTitle:resolution imageName:@"arrow_down_circle_stroke" action:^{
+                NSURL *newFilePath = [[NSURL fileURLWithPath:NSTemporaryDirectory()] URLByAppendingPathComponent:[NSString stringWithFormat:@"%@.mp4", NSUUID.UUID.UUIDString]];
+                
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    hud.textLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"PROGRESS_DOWNLOADING_STATUS_TITLE"];
+                    [hud showInView:topMostController().view];
+                });
+                
+                [objc_getClass("FFmpegKit") executeAsync:[NSString stringWithFormat:@"-i %@ -vf scale=%@ -c:a copy %@", downloadingURL.absoluteString, resolution, newFilePath.path] withCompleteCallback:^(FFmpegSession *session) {
+                    ReturnCode *returnCode = [session getReturnCode];
+                    
+                    if ([objc_getClass("ReturnCode") isSuccess:returnCode]) {
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            if (!([BHTManager DirectSave])) {
+                                [hud dismiss];
+                                [BHTManager showSaveVC:newFilePath];
+                            } else {
+                                [BHTManager save:newFilePath];
+                            }
+                        });
+                    }
+                    
+                }];
+            }];
+            [actions addObject:downloadOption];
+        }
+    }
+    
+    TFNMenuSheetViewController *alert = [[objc_getClass("TFNMenuSheetViewController") alloc] initWithActionItems:[NSArray arrayWithArray:actions]];
+    return alert;
+}
 + (BOOL)DownloadingVideos {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"dw_v"];
 }
@@ -125,9 +177,6 @@
 }
 + (BOOL)UndoTweet {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"undo_tweet"];
-}
-+ (BOOL)VideoZoom {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"video_zoom"];
 }
 + (BOOL)NoHistory {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"no_his"];
@@ -188,9 +237,6 @@
 }
 + (BOOL)stripTrackingParams {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"strip_tracking_params"];
-}
-+ (BOOL)disableImmersive {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"disable_immersive_player"];
 }
 + (BOOL)alwaysFollowingPage {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"always_following_page"];

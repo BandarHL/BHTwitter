@@ -4,7 +4,6 @@
 # Features
 - Download Videos (even if account private).
 - Custom Tab Bar
-- Video zoom feature.
 - No history feature.
 - Hide topics tweet feature.
 - Disable video layer caption.
@@ -14,6 +13,7 @@
 - Auto load photos in highest quality feature.
 - Undo tweet feature.
 - Theme (like Twitter Blue).
+- App icon changer
 - Twitter Circle feature.
 - Copying profile information feature.
 - Save tweet as an image.
@@ -21,7 +21,6 @@
 - Disable RTL.
 - Always open in Safari.
 - Translate bio.
-- Reader mode feature.
 - Disable new tweet style (A.K.A edge to edge tweet)
 - Enable voice tweet and voice message in DM.
 - Hide promoted tweet from the timeline.
@@ -53,8 +52,9 @@
 - You should find the BHTwitter.dylib in LatestBuild dir of the project
 - To inject the tweak with IPA correctly, you need:
     - BHTwitter.dylib
-    - [libcephei SDK](https://1drv.ms/u/s!AkvDoVwju6c4gTL7_d-H3nmegFop?e=OqFpok)
+    - [libcephei SDK](https://drive.google.com/file/d/14-N5F4GyvlyxRQlBvNJTFW6XBm6C9dco/view?usp=sharing)
+    - [FFmpeg-kit SDK](https://github.com/arthenica/ffmpeg-kit/releases/download/v6.0.LTS/ffmpeg-kit-full-6.0.LTS-ios-framework.zip)
     - BHTwitter.bundle (You can find it in BHTwitter project 'BHTwitter/Package/Library/Application Support/BHT/BHTwitter.bundle'
     - Twitter.ipa
     - Use [Azule](https://github.com/Al4ise/Azule) to inject all these.
-      > exmaple command: azule -n BHTwitter -i /Users/bandarhelal/Desktop/Twitter.ipa -o /Users/bandarhelal/Desktop/ -r -f /Users/bandarhelal/Library/Developer/Xcode/DerivedData/BHTwitter-axvjvuqbopwuevhafqossnmzlzcm/Build/Products/Debug-iphoneos/BHTwitter.dylib /Users/bandarhelal/Desktop/libcephei/Cephei.framework /Users/bandarhelal/Desktop/libcephei/CepheiPrefs.framework /Users/bandarhelal/Desktop/libcephei/CepheiUI.framework /Users/bandarhelal/Documents/GitHub/BHTwitter/BHTwitter/Package/Library/Application\ Support/BHT/BHTwitter.bundle
+      > exmaple command: azule -n BHTwitter -i /Users/bandarhelal/Desktop/Twitter.ipa -o /Users/bandarhelal/Desktop/ -r -f /Users/bandarhelal/Library/Developer/Xcode/DerivedData/BHTwitter-axvjvuqbopwuevhafqossnmzlzcm/Build/Products/Debug-iphoneos/BHTwitter.dylib /Users/bandarhelal/Desktop/libcephei/Cephei.framework /Users/bandarhelal/Desktop/libcephei/CepheiPrefs.framework /Users/bandarhelal/Desktop/libcephei/CepheiUI.framework /Users/bandaralruwaili/Downloads/ffmpeg-kit-full-6.0.LTS-ios-framework/ffmpegkit.framework /Users/bandaralruwaili/Downloads/ffmpeg-kit-full-6.0.LTS-ios-framework/libavcodec.framework /Users/bandaralruwaili/Downloads/ffmpeg-kit-full-6.0.LTS-ios-framework/libavdevice.framework /Users/bandaralruwaili/Downloads/ffmpeg-kit-full-6.0.LTS-ios-framework/libavfilter.framework /Users/bandaralruwaili/Downloads/ffmpeg-kit-full-6.0.LTS-ios-framework/libavformat.framework /Users/bandaralruwaili/Downloads/ffmpeg-kit-full-6.0.LTS-ios-framework/libavutil.framework /Users/bandaralruwaili/Downloads/ffmpeg-kit-full-6.0.LTS-ios-framework/libswresample.framework /Users/bandaralruwaili/Downloads/ffmpeg-kit-full-6.0.LTS-ios-framework/libswscale.framework /Users/bandarhelal/Documents/GitHub/BHTwitter/BHTwitter/Package/Library/Application\ Support/BHT/BHTwitter.bundle

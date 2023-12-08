@@ -448,6 +448,16 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             }];
             [actions addObject:download];
         }
+        
+        if ([i.contentType isEqualToString:@"application/x-mpegURL"]) {
+            TFNActionItem *option = [objc_getClass("TFNActionItem") actionItemWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FFMPEG_DOWNLOAD_OPTION_TITLE"] imageName:@"arrow_down_circle_stroke" action:^{
+                self.hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
+                TFNMenuSheetViewController *alert2 = [BHTManager newFFmpegDownloadSheet:[NSURL URLWithString:i.url] withProgressView:self.hud];
+                [alert2 tfnPresentedCustomPresentFromViewController:topMostController() animated:YES completion:nil];
+            }];
+            
+            [actions addObject:option];
+        }
     }
     
     TFNMenuSheetViewController *alert = [[%c(TFNMenuSheetViewController) alloc] initWithActionItems:[NSArray arrayWithArray:actions]];
@@ -732,10 +742,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         return true;
     }
     
-    if ([BHTManager disableImmersive] && [key isEqualToString:@"explore_relaunch_enable_immersive_player_across_twitter"]) {
-        return false;
-    }
-    
     return %orig;
 }
 %end
@@ -844,9 +850,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 - (_Bool)isDoubleMaxZoomFor4KImagesEnabled {
     return [BHTManager autoHighestLoad] ? true : %orig;
-}
-- (_Bool)isVideoZoomEnabled {
-    return [BHTManager VideoZoom] ? true : %orig;
 }
 %end
 

@@ -175,3 +175,10 @@
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_1" = "إختيار صورة";
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_2" = "إختيار لون";
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_3" = "إعادة تعيين للإفتراضي";
+
+"APP_ICON_TITLE" = "أيقونة التطبيق";
+"APP_ICON_DETAIL_TITLE" = "بإمكانك إختيار الأيقونة التي تُريدها وتغييرها في أي وقت ، مُلاحظة تعمل هذه الميّزة لأصحاب الجلبريك والـ TrollStore";
+"APP_ICON_NAV_TITLE" = "أيقونة التطبيق";
+"APP_ICON_HEADER_TITLE" = "إختر الأيقونة التي تُريدها وبإمكانك تغييرها في أي وقت";
+
+"FFMPEG_DOWNLOAD_OPTION_TITLE" = "التحميل بإستخدام FFmpeg";
