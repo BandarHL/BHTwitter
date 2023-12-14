@@ -1,0 +1,13 @@
+prefix=/Users/bandaralruwaili/Downloads/ffmpeg-kit/prebuilt/apple-ios-arm64/openssl
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+enginesdir=${libdir}/engines-3
+modulesdir=${libdir}/ossl-modules
+
+Name: OpenSSL-libcrypto
+Description: OpenSSL cryptography library
+Version: 3.1.1
+Libs: -L${libdir} -lcrypto
+Libs.private: -lz 
+Cflags: -I${includedir}

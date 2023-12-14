@@ -1,0 +1,14 @@
+prefix=/Users/bandaralruwaili/Downloads/ffmpeg-kit/prebuilt/apple-ios-arm64/ffmpeg
+exec_prefix=${prefix}
+libdir=/Users/bandaralruwaili/Downloads/ffmpeg-kit/prebuilt/apple-ios-arm64/ffmpeg/lib
+includedir=/Users/bandaralruwaili/Downloads/ffmpeg-kit/prebuilt/apple-ios-arm64/ffmpeg/include
+
+Name: libavformat
+Description: FFmpeg container format library
+Version: 60.3.100
+Requires: libavcodec >= 60.3.100, libswresample >= 4.10.100, libavutil >= 58.2.100
+Requires.private: 
+Conflicts:
+Libs: -L${libdir}  -lavformat -lm -L/Users/bandaralruwaili/Downloads/ffmpeg-kit/prebuilt/apple-ios-arm64/openssl/lib -lssl -lcrypto
+Libs.private: 
+Cflags: -I${includedir}

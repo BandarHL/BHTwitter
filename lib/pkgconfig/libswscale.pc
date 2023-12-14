@@ -1,0 +1,14 @@
+prefix=/Users/bandaralruwaili/Downloads/ffmpeg-kit/prebuilt/apple-ios-arm64/ffmpeg
+exec_prefix=${prefix}
+libdir=/Users/bandaralruwaili/Downloads/ffmpeg-kit/prebuilt/apple-ios-arm64/ffmpeg/lib
+includedir=/Users/bandaralruwaili/Downloads/ffmpeg-kit/prebuilt/apple-ios-arm64/ffmpeg/include
+
+Name: libswscale
+Description: FFmpeg image rescaling library
+Version: 7.1.100
+Requires: libavutil >= 58.2.100
+Requires.private: 
+Conflicts:
+Libs: -L${libdir}  -lswscale -lm
+Libs.private: 
+Cflags: -I${includedir}

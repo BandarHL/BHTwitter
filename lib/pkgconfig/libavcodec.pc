@@ -1,0 +1,14 @@
+prefix=/Users/bandaralruwaili/Downloads/ffmpeg-kit/prebuilt/apple-ios-arm64/ffmpeg
+exec_prefix=${prefix}
+libdir=/Users/bandaralruwaili/Downloads/ffmpeg-kit/prebuilt/apple-ios-arm64/ffmpeg/lib
+includedir=/Users/bandaralruwaili/Downloads/ffmpeg-kit/prebuilt/apple-ios-arm64/ffmpeg/include
+
+Name: libavcodec
+Description: FFmpeg codec library
+Version: 60.3.100
+Requires: libswresample >= 4.10.100, libavutil >= 58.2.100
+Requires.private: 
+Conflicts:
+Libs: -L${libdir}  -lavcodec -pthread -lm
+Libs.private: 
+Cflags: -I${includedir}

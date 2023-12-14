@@ -1,0 +1,14 @@
+prefix=/Users/bandaralruwaili/Downloads/ffmpeg-kit/prebuilt/apple-ios-arm64/ffmpeg
+exec_prefix=${prefix}
+libdir=/Users/bandaralruwaili/Downloads/ffmpeg-kit/prebuilt/apple-ios-arm64/ffmpeg/lib
+includedir=/Users/bandaralruwaili/Downloads/ffmpeg-kit/prebuilt/apple-ios-arm64/ffmpeg/include
+
+Name: libswresample
+Description: FFmpeg audio resampling library
+Version: 4.10.100
+Requires: libavutil >= 58.2.100
+Requires.private: 
+Conflicts:
+Libs: -L${libdir}  -lswresample -lm
+Libs.private: 
+Cflags: -I${includedir}

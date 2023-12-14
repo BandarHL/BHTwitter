@@ -36,25 +36,57 @@
 
 # How to build the project
 - install [Theos](https://github.com/theos/theos)
-- install [MonkeyDev](https://github.com/AloneMonkey/MonkeyDev)
-- Open BHTwitter.xcodeproj
-- Make sure you're selecting (Any iOS Device)
- > If you get Code sign error, add an developer account to Xcode and then Go to Build settings and select "All" tab then search for "Sign", you should find "Code Signing Identity" change it to iOS developer and change "Developer Team" to match you're developer account
-### for jailbreak devices
-- Just press Run button of the project or command+b from you're keyboard
-- Wait until the build finished
-- You should find deb file in Packages folder of the project
-### for non-jailbreak devices
-- Go to the Build settings and scroll down to 'user-Defined' section and change "MonkeyDevInstallOnAnyBuild" value to NO
-- Select BHTwitter.xm and scroll down to 1237 line or 'Fix login keychain in non-JB (IPA).' section and enable the code below it
-- Press Run button of the project or command+b from you're keyboard
-- Wait until the build finished
-- You should find the BHTwitter.dylib in LatestBuild dir of the project
-- To inject the tweak with IPA correctly, you need:
-    - BHTwitter.dylib
-    - [libcephei SDK](https://drive.google.com/file/d/14-N5F4GyvlyxRQlBvNJTFW6XBm6C9dco/view?usp=sharing)
-    - [FFmpeg-kit SDK](https://github.com/arthenica/ffmpeg-kit/releases/download/v6.0.LTS/ffmpeg-kit-full-6.0.LTS-ios-framework.zip)
-    - BHTwitter.bundle (You can find it in BHTwitter project 'BHTwitter/Package/Library/Application Support/BHT/BHTwitter.bundle'
-    - Twitter.ipa
-    - Use [Azule](https://github.com/Al4ise/Azule) to inject all these.
-      > exmaple command: azule -n BHTwitter -i /Users/bandarhelal/Desktop/Twitter.ipa -o /Users/bandarhelal/Desktop/ -r -f /Users/bandarhelal/Library/Developer/Xcode/DerivedData/BHTwitter-axvjvuqbopwuevhafqossnmzlzcm/Build/Products/Debug-iphoneos/BHTwitter.dylib /Users/bandarhelal/Desktop/libcephei/Cephei.framework /Users/bandarhelal/Desktop/libcephei/CepheiPrefs.framework /Users/bandarhelal/Desktop/libcephei/CepheiUI.framework /Users/bandaralruwaili/Downloads/ffmpeg-kit-full-6.0.LTS-ios-framework/ffmpegkit.framework /Users/bandaralruwaili/Downloads/ffmpeg-kit-full-6.0.LTS-ios-framework/libavcodec.framework /Users/bandaralruwaili/Downloads/ffmpeg-kit-full-6.0.LTS-ios-framework/libavdevice.framework /Users/bandaralruwaili/Downloads/ffmpeg-kit-full-6.0.LTS-ios-framework/libavfilter.framework /Users/bandaralruwaili/Downloads/ffmpeg-kit-full-6.0.LTS-ios-framework/libavformat.framework /Users/bandaralruwaili/Downloads/ffmpeg-kit-full-6.0.LTS-ios-framework/libavutil.framework /Users/bandaralruwaili/Downloads/ffmpeg-kit-full-6.0.LTS-ios-framework/libswresample.framework /Users/bandaralruwaili/Downloads/ffmpeg-kit-full-6.0.LTS-ios-framework/libswscale.framework /Users/bandarhelal/Documents/GitHub/BHTwitter/BHTwitter/Package/Library/Application\ Support/BHT/BHTwitter.bundle
+- install [Azule](https://github.com/Al4ise/Azule) if you want to build for sideload or TrollStore
+
+- Clone the BHTwitter project repository:
+```bash
+git clone https://github.com/BandarHL/BHTwitter
+cd BHTwitter
+```
+- Make the script executable:
+```bash
+chmod +x ./build.sh
+```
+- Run the script with the desired options:
+```bash
+./build.sh [OPTIONS]
+```
+- Replace [OPTIONS] with one of the following:
+```--sideloaded: Build BHTwitter project for sideloaded deployment.
+--rootless: Build BHTwitter project for rootless deployment.
+--trollstore: Build BHTwitter project for TrollStore deployment.
+No option: Build BHTwitter project for rootfull deployment.
+```
+
+# Example Usages
+## Build for Sideloaded Deployment
+- Download a IPA file for X or Twitter from AppDB or decrypt it by your self.
+- Then rename the IPA file to `com.atebits.Tweetie2.ipa` and move it to `packages` folder.
+```bash
+./build.sh --sideloaded
+```
+- After the build we'll find `BHTwitter-sideloaded.ipa` inside `packages` folder.
+
+## Build for TrollStore Deployment
+- Download a IPA file for X or Twitter from AppDB or decrypt it by your self.
+- Then rename the IPA file to `com.atebits.Tweetie2.ipa` and move it to `packages` folder.
+```bash
+./build.sh --trollstore
+```
+- After the build we'll find `BHTwitter-trollstore.tipa` inside `packages` folder.
+
+
+## Build for Rootless Deployment
+- Just run the build command with rootless flag.
+```bash
+./build.sh --rootless
+```
+- After the build we'll find `com.bandarhl.bhtwitter_4.2_iphoneos-arm64.deb` inside `packages` folder.
+
+
+## Build for Rootfull Deployment
+- Just run the build command without any flag.
+```bash
+./build.sh
+```
+- After the build we'll find `com.bandarhl.bhtwitter_4.2_iphoneos-arm.deb` inside `packages` folder.
