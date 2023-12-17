@@ -1,0 +1,3 @@
+[submodule "libflex/FLEX"]
+	path = libflex/FLEX
+	url = https://github.com/FLEXTool/FLEX

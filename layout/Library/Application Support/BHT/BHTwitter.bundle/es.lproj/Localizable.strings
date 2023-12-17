@@ -17,6 +17,7 @@
 "CANCEL_BUTTON_TITLE" = "Cancelar";
 
 "PROGRESS_DOWNLOADING_STATUS_TITLE" = "Descargando";
+"FETCHING_PROGRESS_TITLE" = "Obtener información multimedia";
 
 "CUSTOM_FONTS_NAVIGATION_BUTTON_TITLE" = "Fuentes personalizadas";
 "CUSTOM_FONTS_NAVIGATION_TITLE" = "Elegir fuentes";
@@ -136,6 +137,9 @@
 
 "HIDE_VIEW_COUNT_OPTION_TITLE" = "Ocultar recuento de vistas";
 "HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE" = "Eliminar el recuento de vistas del tuit";
+
+"HIDE_MARKBOOK_BUTTON_OPTION_TITLE" = "Ocultar botón de favoritos";
+"HIDE_MARKBOOK_BUTTON_OPTION_DETAIL_TITLE" = "Ocultar el botón de favoritos del tweet";
 
 "FORCE_TWEET_FULL_FRAME_TITLE" = "Marco completo en imágenes";
 
