@@ -40,7 +40,7 @@
 
 - Clone the BHTwitter project repository:
 ```bash
-git clone https://github.com/BandarHL/BHTwitter
+git clone --recursive https://github.com/BandarHL/BHTwitter
 cd BHTwitter
 ```
 - Make the script executable:
