@@ -44,11 +44,11 @@
 "HIDE_TOPICS_OPTION_TITLE" = "Ukryj tweety tematyczne";
 "HIDE_TOPICS_OPTION_DETAIL_TITLE" = "Usuwa wszystkie tweety tematyczne z osi czasu.";
 
-"HIDE_WHO_FOLLOW_OPTION" = "Ukryj sekcję "Kogo zaobserwować"";
-"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE" = "Ukrywa sekcję "Kogo zaobserwować" w Profilach";
+"HIDE_WHO_FOLLOW_OPTION" = "Ukryj sekcję \"Kogo zaobserwować\"";
+"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE" = "Ukrywa sekcję \"Kogo zaobserwować\" w Profilach";
 
-"HIDE_TOPICS_TO_FOLLOW_OPTION" = "Ukryj sekcję "Tematy do obserwowania"";
-"HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "Ukrywa sekcję "Tematy do obserwowania" w Profilach";
+"HIDE_TOPICS_TO_FOLLOW_OPTION" = "Ukryj sekcję \"Tematy do obserwowania\"";
+"HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "Ukrywa sekcję \"Tematy do obserwowania\" w Profilach";
 
 "DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "Wyłącz podpisy pod wideo";
 
