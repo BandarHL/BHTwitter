@@ -186,3 +186,8 @@
 "APP_ICON_HEADER_TITLE" = "إختر الأيقونة التي تُريدها وبإمكانك تغييرها في أي وقت";
 
 "FFMPEG_DOWNLOAD_OPTION_TITLE" = "التحميل بإستخدام FFmpeg";
+
+"SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE" = "أختر رابط الموقع للتغريدة بعد النسخ";
+
+"UPLOAD_CUSTOM_VOICE_OPTION_TITLE" = "رفع صوت مخصص";
+"UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE" = "رفع فيديو مخصص بعد تسجيل المقطع الصوتي بالتغريدة";

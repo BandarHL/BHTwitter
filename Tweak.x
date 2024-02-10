@@ -43,8 +43,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %hook T1AppDelegate
 - (_Bool)application:(UIApplication *)application didFinishLaunchingWithOptions:(id)arg2 {
     %orig;
-    if (![[NSUserDefaults standardUserDefaults] objectForKey:@"FirstRun"]) {
-        [[NSUserDefaults standardUserDefaults] setValue:@"1strun" forKey:@"FirstRun"];
+    if (![[NSUserDefaults standardUserDefaults] objectForKey:@"FirstRun_4.3"]) {
+        [[NSUserDefaults standardUserDefaults] setValue:@"1strun" forKey:@"FirstRun_4.3"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"dw_v"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"hide_promoted"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"voice"];
@@ -52,6 +52,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"TrustedFriends"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"disableSensitiveTweetWarnings"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"disable_immersive_player"];
+        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"custom_voice_upload"];
     }
     [BHTManager cleanCache];
     if ([BHTManager FLEX]) {
@@ -490,6 +491,77 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
+// upload custom voice
+%hook T1MediaAttachmentsViewCell
+%property (nonatomic, strong) UIButton *uploadButton;
+- (void)updateCellElements {
+    %orig;
+
+    if ([BHTManager customVoice]) {
+        TFNButton *removeButton = [self valueForKey:@"_removeButton"];
+
+        if ([self.attachment isKindOfClass:%c(TTMAssetVoiceRecording)]) {
+            if (self.uploadButton == nil) {
+                self.uploadButton = [UIButton buttonWithType:UIButtonTypeCustom];
+                UIImageSymbolConfiguration *smallConfig = [UIImageSymbolConfiguration configurationWithScale:UIImageSymbolScaleSmall];
+                UIImage *arrowUpImage = [UIImage systemImageNamed:@"arrow.up" withConfiguration:smallConfig];
+                [self.uploadButton setImage:arrowUpImage forState:UIControlStateNormal];
+                [self.uploadButton addTarget:self action:@selector(handleUploadButton:) forControlEvents:UIControlEventTouchUpInside];
+                [self.uploadButton setTintColor:UIColor.labelColor];
+                [self.uploadButton setBackgroundColor:[UIColor blackColor]];
+                [self.uploadButton.layer setCornerRadius:29/2];
+                [self.uploadButton setTranslatesAutoresizingMaskIntoConstraints:false];
+
+                if (self.uploadButton.superview == nil) {
+                    [self addSubview:self.uploadButton];
+                    [NSLayoutConstraint activateConstraints:@[
+                        [self.uploadButton.trailingAnchor constraintEqualToAnchor:removeButton.leadingAnchor constant:-10],
+                        [self.uploadButton.topAnchor constraintEqualToAnchor:removeButton.topAnchor],
+                        [self.uploadButton.widthAnchor constraintEqualToConstant:29],
+                        [self.uploadButton.heightAnchor constraintEqualToConstant:29],
+                    ]];
+                }
+            }
+        }
+    }
+}
+%new - (void)handleUploadButton:(UIButton *)sender {
+    UIImagePickerController *videoPicker = [[UIImagePickerController alloc] init];
+    videoPicker.mediaTypes = @[(NSString*)kUTTypeMovie];
+    videoPicker.delegate = self;
+    
+    [topMostController() presentViewController:videoPicker animated:YES completion:nil];
+}
+%new - (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary<UIImagePickerControllerInfoKey,id> *)info {
+    NSURL *videoURL = info[UIImagePickerControllerMediaURL];
+    TTMAssetVoiceRecording *attachment = self.attachment;
+    NSURL *recorder_url = [NSURL fileURLWithPath:attachment.filePath];
+    
+    if (recorder_url != nil) {
+        NSFileManager *fileManager = [NSFileManager defaultManager];
+        
+        NSError *error = nil;
+        if ([fileManager fileExistsAtPath:[recorder_url path]]) {
+            [fileManager removeItemAtURL:recorder_url error:&error];
+            if (error) {
+                NSLog(@"[BHTwitter] Error removing existing file: %@", error);
+            }
+        }
+        
+        [fileManager copyItemAtURL:videoURL toURL:recorder_url error:&error];
+        if (error) {
+            NSLog(@"[BHTwitter] Error copying file: %@", error);
+        }
+    }
+    
+    [picker dismissViewControllerAnimated:true completion:nil];
+}
+%new - (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker {
+    [picker dismissViewControllerAnimated:true completion:nil];
+}
+%end
+
+
 // MARK: Color theme
 %hook TFNPagingViewController
 - (void)viewDidAppear:(_Bool)animated {
@@ -737,7 +809,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
-// MARK: Voice, TwitterCircle, SensitiveTweetWarnings, autoHighestLoad, VideoZoom, VODCaptions, disableSpacesBar feature
+// MARK: Voice, SensitiveTweetWarnings, autoHighestLoad, VideoZoom, VODCaptions, disableSpacesBar feature
 %hook TPSTwitterFeatureSwitches
 // Twitter save all the features and keys in side JSON file in bundle of application fs_embedded_defaults_production.json, and use it in TFNTwitterAccount class but with DM voice maybe developers forget to add boolean variable in the class, so i had to change it from the file.
 // also, you can find every key for every feature i used in this tweak, i can remove all the codes below and find every key for it but I'm lazy to do that, :)
@@ -747,10 +819,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     }
     
     if ([key isEqualToString:@"conversational_replies_ios_pinned_replies_consumption_enabled"] || [key isEqualToString:@"conversational_replies_ios_pinned_replies_creation_enabled"]) {
-        return true;
-    }
-    
-    if ([BHTManager advancedSearch] && [key isEqualToString:@"search_features_advanced_search_enabled"]) {
         return true;
     }
     
@@ -825,21 +893,12 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
-%hook T1TrustedFriendsFeatureSwitches
-+ (_Bool)isTrustedFriendsTweetCreationEnabled:(id)arg1 {
-    return [BHTManager TwitterCircle] ? true : %orig;
-}
-%end
-
 %hook TFNTwitterAccount
 - (_Bool)isEditProfileUsernameEnabled {
     return true;
 }
 - (_Bool)isEditTweetConsumptionEnabled {
     return true;
-}
-- (_Bool)isTrustedFriendsAPIEnabled {
-    return [BHTManager TwitterCircle] ? true : %orig;
 }
 - (_Bool)isSensitiveTweetWarningsComposeEnabled {
     return [BHTManager disableSensitiveTweetWarnings] ? false : %orig;
@@ -1230,6 +1289,11 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                         }
                     }
                     cleanedURL.queryItems = safeParams;
+
+                    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"tweet_url_host"]) {
+                        NSString *selectedHost = [[NSUserDefaults standardUserDefaults] objectForKey:@"tweet_url_host"];
+                        cleanedURL.host = selectedHost;
+                    }
                     UIPasteboard.generalPasteboard.URL = cleanedURL.URL;
                 }
             }

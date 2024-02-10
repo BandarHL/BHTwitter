@@ -15,6 +15,13 @@ do
       rm -rf .theos
       make SIDELOADED=1
 
+      if [ $? -eq 0 ]; then
+        echo -e '\033[1m\033[32mMake command succeeded.\033[0m'
+      else
+        echo -e '\033[1m\033[31mMake command failed.\033[0m'
+        exit 1
+      fi
+
       if [ -e ./packages/com.atebits.Tweetie2.ipa ]; then
 
         echo -e '\033[1m\033[32mDownloading libcephei SDK.\033[0m'
@@ -50,6 +57,13 @@ do
       make clean
       rm -rf .theos
       make
+
+      if [ $? -eq 0 ]; then
+        echo -e '\033[1m\033[32mMake command succeeded.\033[0m'
+      else
+        echo -e '\033[1m\033[31mMake command failed.\033[0m'
+        exit 1
+      fi
 
       if [ -e ./packages/com.atebits.Tweetie2.ipa ]; then
 

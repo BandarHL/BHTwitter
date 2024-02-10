@@ -38,7 +38,6 @@
 + (BOOL)FLEX;
 + (BOOL)autoHighestLoad;
 + (BOOL)disableSensitiveTweetWarnings;
-+ (BOOL)TwitterCircle;
 + (BOOL)showScrollIndicator;
 + (BOOL)CopyProfileInfo;
 + (BOOL)tweetToImage;
@@ -52,9 +51,9 @@
 + (BOOL)stripTrackingParams;
 + (BOOL)alwaysFollowingPage;
 + (BOOL)stopHidingTabBar;
-+ (BOOL)advancedSearch;
 + (BOOL)changeBackground;
 + (bool)backgroundImage;
 + (BOOL)hideBookmarkButton;
++ (BOOL)customVoice;
 @end
 

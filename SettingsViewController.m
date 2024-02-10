@@ -145,6 +145,8 @@
         
         PSSpecifier *hideAds = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_ADS_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_ADS_OPTION_DETAIL_TITLE"] key:@"hide_promoted" defaultValue:true changeAction:nil];
         
+        PSSpecifier *customVoice = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"UPLOAD_CUSTOM_VOICE_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE"] key:@"custom_voice_upload" defaultValue:true changeAction:nil];
+
         PSSpecifier *hideTopics = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_TOPICS_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_TOPICS_OPTION_DETAIL_TITLE"] key:@"hide_topics" defaultValue:false changeAction:nil];
         
         PSSpecifier *hideWhoToFollow = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_WHO_FOLLOW_OPTION"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE"] key:@"hide_who_to_follow" defaultValue:false changeAction:nil];
@@ -168,9 +170,7 @@
         PSSpecifier *autoHighestLoad = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"AUTO_HIGHEST_LOAD_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE"] key:@"autoHighestLoad" defaultValue:true changeAction:nil];
         
         PSSpecifier *disableSensitiveTweetWarnings = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE"] detailTitle:nil key:@"disableSensitiveTweetWarnings" defaultValue:true changeAction:nil];
-        
-        PSSpecifier *trustedFriends = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TRUSTED_FRIENSS_OPTION_TITLE"] detailTitle:nil key:@"TrustedFriends" defaultValue:true changeAction:nil];
-        
+
         PSSpecifier *copyProfileInfo = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_OPTION_DETAIL_TITLE"] key:@"CopyProfileInfo" defaultValue:false changeAction:nil];
         
         PSSpecifier *tweetToImage = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TWEET_TO_IMAGE_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TWEET_TO_IMAGE_OPTION_DETAIL_TITLE"] key:@"TweetToImage" defaultValue:false changeAction:nil];
@@ -182,8 +182,8 @@
         PSSpecifier *alwaysOpenSafari = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ALWAYS_OPEN_SAFARI_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE"] key:@"openInBrowser" defaultValue:false changeAction:nil];
         
         PSSpecifier *stripTrackingParams = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"STRIP_URL_TRACKING_PARAMETERS_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE"] key:@"strip_tracking_params" defaultValue:false changeAction:nil];
-        
-        PSSpecifier *advancedSearch = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ADVANCED_SEARCH_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ADVANCED_SEARCH_DETAIL_TITLE"] key:@"advanced_search" defaultValue:false changeAction:nil];
+
+        PSSpecifier *urlHost = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE"] detailTitle:[[NSUserDefaults standardUserDefaults] objectForKey:@"tweet_url_host"] dynamicRule:@"strip_tracking_params, ==, 0" action:@selector(showURLHostSelectionViewController:)];
 
         // Twitter bule section
         PSSpecifier *undoTweet = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"UNDO_TWEET_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"UNDO_TWEET_OPTION_DETAIL_TITLE"] key:@"undo_tweet" defaultValue:false changeAction:nil];
@@ -232,6 +232,7 @@
             mainSection, // 0
             download,
             hideAds,
+            customVoice,
             hideTopics,
             hideWhoToFollow,
             hideTopicsToFollow,
@@ -251,8 +252,7 @@
             disableRTL,
             alwaysOpenSafari,
             stripTrackingParams,
-            trustedFriends,
-            advancedSearch,
+            urlHost,
             
             twitterBlueSection, // 1
             undoTweet,
@@ -492,6 +492,51 @@
         [appIconVC.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"APP_ICON_NAV_TITLE"] subtitle:self.twAccount.displayUsername]];
     }
     [self.navigationController pushViewController:appIconVC animated:true];
+}
+- (void)showURLHostSelectionViewController:(PSSpecifier *)specifier {
+    UITableViewCell *specifierCell = [specifier propertyForKey:PSTableCellKey];
+    PSSpecifier *selectionSpecifier = [self specifierForID:@"Select URL host"];
+
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"BHTwitter" message:@"plaese select what host you prefre" preferredStyle:UIAlertControllerStyleActionSheet];
+
+    if (alert.popoverPresentationController != nil) {
+        CGFloat midX = CGRectGetMidX(specifierCell.frame);
+        CGFloat midY = CGRectGetMidY(specifierCell.frame);
+
+        alert.popoverPresentationController.sourceRect = CGRectMake(midX, midY, 0, 0);
+        alert.popoverPresentationController.sourceView = specifierCell;
+    }
+
+    UIAlertAction *xHostAction = [UIAlertAction actionWithTitle:@"x.com" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [[NSUserDefaults standardUserDefaults] setObject:@"x.com" forKey:@"tweet_url_host"];
+        [selectionSpecifier setProperty:@"x.com" forKey:@"subtitle"];
+        [self reloadSpecifiers];
+    }];
+    UIAlertAction *twitterHostAction = [UIAlertAction actionWithTitle:@"twitter.com" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [[NSUserDefaults standardUserDefaults] setObject:@"twitter.com" forKey:@"tweet_url_host"];
+        [selectionSpecifier setProperty:@"twitter.com" forKey:@"subtitle"];
+        [self reloadSpecifiers];
+    }];
+    UIAlertAction *fxHostAction = [UIAlertAction actionWithTitle:@"fxtwitter.com" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [[NSUserDefaults standardUserDefaults] setObject:@"fxtwitter.com" forKey:@"tweet_url_host"];
+        [selectionSpecifier setProperty:@"fxtwitter.com" forKey:@"subtitle"];
+        [self reloadSpecifiers];
+    }];
+    UIAlertAction *vxHostAction = [UIAlertAction actionWithTitle:@"vxtwitter.com" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [[NSUserDefaults standardUserDefaults] setObject:@"vxtwitter.com" forKey:@"tweet_url_host"];
+        [selectionSpecifier setProperty:@"vxtwitter.com" forKey:@"subtitle"];
+        [self reloadSpecifiers];
+    }];
+
+    UIAlertAction *cancel = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"] style:UIAlertActionStyleCancel handler:nil];
+    
+    [alert addAction:xHostAction];
+    [alert addAction:twitterHostAction];
+    [alert addAction:fxHostAction];
+    [alert addAction:vxHostAction];
+    [alert addAction:cancel];
+    
+    [self presentViewController:alert animated:true completion:nil];
 }
 - (void)showCustomBackgroundViewViewController:(PSSpecifier *)specifier {
     UITableViewCell *specifierCell = [specifier propertyForKey:PSTableCellKey];

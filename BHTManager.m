@@ -199,9 +199,6 @@
 + (BOOL)disableSensitiveTweetWarnings {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"disableSensitiveTweetWarnings"];
 }
-+ (BOOL)TwitterCircle {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"TrustedFriends"];
-}
 + (BOOL)showScrollIndicator {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"showScollIndicator"];
 }
@@ -241,9 +238,6 @@
 + (BOOL)stopHidingTabBar {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"no_tab_bar_hiding"];
 }
-+ (BOOL)advancedSearch {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"advanced_search"];
-}
 + (BOOL)changeBackground {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"change_msg_background"];
 }
@@ -252,6 +246,9 @@
 }
 + (BOOL)hideBookmarkButton {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_bookmark_button"];
+}
++ (BOOL)customVoice {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"custom_voice_upload"];
 }
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount {
     SettingsViewController *pref = [[SettingsViewController alloc] initWithTwitterAccount:twAccount];

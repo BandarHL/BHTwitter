@@ -8,6 +8,8 @@
 #import <objc/runtime.h>
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
+#import <MobileCoreServices/MobileCoreServices.h>
+#import <AVKit/AVKit.h>
 #import <Photos/Photos.h>
 #import <SafariServices/SafariServices.h>
 #import "BHDownload/BHDownload.h"
@@ -32,6 +34,37 @@ static NSString *_lastCopiedURL;
 
 @interface T1AppDelegate : UIResponder <UIApplicationDelegate>
 @property(retain, nonatomic) UIWindow *window;
+@end
+
+
+@interface TTMAssetVideoFile: NSObject
+@property (nonatomic, copy, readonly) NSString *filePath;
+@property (nonatomic, assign, readonly) CGFloat duration;
+
+@end
+
+@interface TTMAssetVoiceRecording: TTMAssetVideoFile
+@property (nonatomic, strong, readwrite) NSNumber *totalDurationMillis;
+@end
+
+@interface T1MediaAttachmentsViewCell: UICollectionViewCell
+@property (nonatomic, strong, readwrite) id attachment;
+@property (nonatomic, strong) UIButton *uploadButton;
+@end
+
+@interface T1MediaAttachmentsViewCell () <UINavigationControllerDelegate, UIImagePickerControllerDelegate>
+@end
+
+@interface TCRVoiceRecordingViewController: UIViewController
+@property (nonatomic, assign, readwrite) CGFloat clipDuration;
+- (void)_tcr_pauseRecording;
+- (void)_tcr_endRecording;
+@end
+
+@interface TCRVoiceRecordingView: UIView
+@property (nonatomic, strong) NSTimer *recordingTimer;
+@property (nonatomic, assign) CGFloat desiredRecordingDuration;
+@property (nonatomic, weak, readwrite) id delegate;
 @end
 
 @interface NSParagraphStyle ()

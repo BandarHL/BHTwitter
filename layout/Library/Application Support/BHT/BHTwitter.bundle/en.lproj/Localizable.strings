@@ -186,3 +186,8 @@
 "APP_ICON_HEADER_TITLE" = "Choose a custom app icon for your device’s home screen. Change it any time.";
 
 "FFMPEG_DOWNLOAD_OPTION_TITLE" = "Download using FFmpeg";
+
+"SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE" = "Select URL host of tweet after copy";
+
+"UPLOAD_CUSTOM_VOICE_OPTION_TITLE" = "Upload custom voice";
+"UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE" = "Upload custom video after recording a voice in the post";
