@@ -93,7 +93,9 @@
                 [[BHCustomTabBarItem alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_OPTION_3"] pageID:@"audiospace"],
                 [[BHCustomTabBarItem alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_OPTION_4"] pageID:@"communities"],
                 [[BHCustomTabBarItem alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_OPTION_5"] pageID:@"ntab"],
-                [[BHCustomTabBarItem alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_OPTION_6"] pageID:@"messages"]
+                [[BHCustomTabBarItem alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_OPTION_6"] pageID:@"messages"],
+                [[BHCustomTabBarItem alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_OPTION_7"] pageID:@"grok"],
+
             ]],
             [[BHCustomTabBarSection alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_SECTION_2_TITLE"] items:@[]]
         ] mutableCopy];
