@@ -1,0 +1,40 @@
+name: Build
+
+on:
+  push:
+    paths-ignore:
+      - 'docs/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        type: ["Sideloaded", "TrollStore", "Rootless", "Rootfull"]
+    name: Build for ${{ matrix.type }} Deployment
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      - name: Build
+        run: |
+          declare -A build_options=(["Sideloaded"]="--sideloaded" ["TrollStore"]="--trollstore" ["Rootless"]="--rootless" ["Rootfull"]="")
+          ./build.sh ${build_options[${{ matrix.type }}]}
+          {
+            echo "repo=$(echo ${GITHUB_REPOSITORY#$GITHUB_REPOSITORY_OWNER/})"
+            echo "commit=$(echo ${{ github.sha }} | cut -c-7)"
+          } >> $GITHUB_ENV
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.repo }}@${{ env.commit }}(${{ matrix.type }})
+          path: |
+            !packages/PUT_IPA_HERE
+            packages/**
+          if-no-files-found: error
