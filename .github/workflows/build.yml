@@ -13,6 +13,16 @@ on:
         default: ""
         required: true
         type: string
+      deploy_target:
+        description: "Deployment target"
+        default: rootfull
+        required: true
+        type: choice
+        options:
+          - rootfull
+          - sideloaded
+          - trollstore
+          - rootless
       commit_id:
         description: "(Optional) Commit ID to build at"
         default: ""
@@ -88,63 +98,67 @@ jobs:
           cd sdks
           git sparse-checkout set --no-cone iPhoneOS${{ inputs.sdk_version }}.sdk
           git checkout
-          mv *.sdk $THEOS/sdks
+          mv ./*.sdk "${THEOS}/sdks"
         env:
           THEOS: ${{ github.workspace }}/theos
 
       - name: Fix Compiling
         run: |
           # Update GNU Make to allow for faster building
-          echo "$(brew --prefix make)/libexec/gnubin" >> $GITHUB_PATH
-          (echo export PATH="/usr/local/opt/make/libexec/gnubin:$PATH" >> ~/.bash_profile)
-          source ~/.bash_profile
+          echo "$(brew --prefix make)/libexec/gnubin" >> "$GITHUB_PATH"
 
       - name: Prepare X iPA
+        if: inputs.deploy_target == 'sideloaded' || inputs.deploy_target == 'trollstore'
         run: |
           # Download and unzip iPA
           wget "$IPA_URL" --no-verbose -O main/packages/com.atebits.Tweetie2.ipa
           unzip -q main/packages/com.atebits.Tweetie2.ipa -d main/tmp
           # Get the version number of the X app and store it
-          echo "X_VERSION=$(grep -A 1 '<key>CFBundleShortVersionString</key>' main/tmp/Payload/Twitter.app/Info.plist | grep '<string>' | awk -F'[><]' '{print $3}')" >> $GITHUB_ENV
-          # Get the version number of the latest release
-          BHTWITTER_VERSION=$(wget --no-verbose -O- https://api.github.com/repos/BandarHL/BHTwitter/releases/latest | jq -r '.tag_name')
-          echo "BHTWITTER_VERSION=${BHTWITTER_VERSION}" >> $GITHUB_ENV
-          echo "$BHTWITTER_VERSION"
+          X_VERSION=$(grep -A 1 '<key>CFBundleShortVersionString</key>' main/tmp/Payload/Twitter.app/Info.plist |
+            grep '<string>' | awk -F'[><]' '{print $3}')
+          echo "X_VERSION=${X_VERSION}" >> "$GITHUB_ENV"
+          echo "$X_VERSION"
         env:
-          THEOS: ${{ github.workspace }}/theos
           IPA_URL: ${{ inputs.decrypted_ipa_url }}
 
+      - name: Get BHTwitter Version
+        run: |
+          BHTWITTER_VERSION=$(awk '/Version:/ {print $2}' control)
+          echo "BHTWITTER_VERSION=${BHTWITTER_VERSION}" >> "$GITHUB_ENV"
+          echo "$BHTWITTER_VERSION"
+
       - name: Build Package
-        id: build_package
         run: |
           cd ${{ github.workspace }}/main
           # Replace lines in Makefile based on inputs
           sed -i '' "s/^TARGET.*$/TARGET := iphone:clang:${{ inputs.sdk_version }}:14.0/" Makefile
           # Build the package
-          ./build.sh --sideloaded
-          # Rename the package based on the version
-          (mv "packages/$(ls -t packages | head -n1)" "packages/BHTwitter_${{ env.X_VERSION }}_${{ env.BHTWITTER_VERSION }}.ipa")
-          # Pass package name to the upload step
-          echo "package=$(ls -t packages | head -n1)" >> $GITHUB_OUTPUT
-          # Print out the hash and bundle ID
-          echo -e "==> \033[1mSHASUM256: $(shasum -a 256 packages/BHTwitter_*.ipa | cut -f1 -d' ')\033[0m"
+          ./build.sh ${{ inputs.deploy_target == 'rootfull' && '' || format('--{0}', inputs.deploy_target) }}
         env:
           THEOS: ${{ github.workspace }}/theos
+
+      - name: Rename IPA
+        if: inputs.deploy_target == 'sideloaded' || inputs.deploy_target == 'trollstore'
+        run: |
+          # Rename the package based on the version
+          mv "packages/$(ls -t packages | head -n1)" \
+             "packages/BHTwitter-${{ inputs.deploy_target }}_${{ env.X_VERSION }}_${{ env.BHTWITTER_VERSION }}.${IPA_EXT}"
+        env:
+          IPA_EXT: ${{ inputs.deploy_target == 'trollstore' && 'tipa' || 'ipa' }}
+
+      - name: Pass package name
+        id: package_name
+        run: |
+          # Pass package name to the upload step
+          echo "package=$(ls -t packages | head -n1)" >> "$GITHUB_OUTPUT"
 
       - name: Upload Artifact
         if: ${{ inputs.upload_artifact }}
         uses: actions/upload-artifact@v4
         with:
           name: BHTwitter_${{ env.X_VERSION }}_${{ env.BHTWITTER_VERSION }}
-          path: ${{ github.workspace }}/main/packages/${{ steps.build_package.outputs.package }}
+          path: ${{ github.workspace }}/main/packages/${{ steps.package_name.outputs.package }}
           if-no-files-found: error
-
-      - name: Prepare Release Notes
-        if: ${{ inputs.create_release }}
-        run: |
-          export TODAY=$(date '+%Y-%m-%d')
-          sed "s/%bhtwitter_version%/${{ env.BHTWITTER_VERSION }}/g; s/%x_version%/${{ env.X_VERSION }}/g; s/%date%/$TODAY/g" \
-          main/.github/RELEASE_TEMPLATE/Release.md > ${{ github.workspace }}/release_notes.md
 
       - name: Create Draft Release
         if: ${{ inputs.create_release }}
@@ -155,22 +169,5 @@ jobs:
         with:
           tag_name: v${{ env.X_VERSION }}-${{ env.BHTWITTER_VERSION }}
           name: v${{ env.X_VERSION }}-${{ env.BHTWITTER_VERSION }} - BHTwitter
-          files: main/packages/${{ steps.build_package.outputs.package }}
+          files: main/packages/${{ steps.package_name.outputs.package }}
           draft: true
-          body_path: ${{ github.workspace }}/release_notes.md
-
-      - name: Job Summary
-        run: |
-          echo -e '### 📺 Build Complete' >> $GITHUB_STEP_SUMMARY
-
-      - name: Job Summary - Artifact Upload
-        if: ${{ inputs.upload_artifact }}
-        run: |
-          echo -e '### 📦 Artifact Upload\n\nThe artifact was uploaded successfully! Refresh and [scroll down](#artifacts) to view the artifact. Note that you must be signed in to GitHub to download it.' >> $GITHUB_STEP_SUMMARY
-
-      - name: Job Summary - Draft Release
-        if: ${{ inputs.create_release }}
-        run: |
-          REPO_URL="https://github.com/${{ github.repository }}"
-          RELEASES_URL="$REPO_URL/releases"
-          echo -e '### 🚀 Draft Release\n\nThe release draft has been created successfully! You can view your releases here: '$RELEASES_URL >> $GITHUB_STEP_SUMMARY
