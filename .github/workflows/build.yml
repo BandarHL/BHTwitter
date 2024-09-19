@@ -1,0 +1,173 @@
+name: Build and Release BHTwitter
+
+on:
+  workflow_dispatch:
+    inputs:
+      sdk_version:
+        description: "iOS SDK Version"
+        default: "16.5"
+        required: true
+        type: string
+      target_version:
+        description: "Target iOS Version"
+        default: "14.0"
+        required: true
+      decrypted_ipa_url:
+        description: "Direct URL of the decrypted X ipa"
+        default: ""
+        required: true
+        type: string
+      deploy_format:
+        description: "Deployment format"
+        default: rootfull
+        required: true
+        type: choice
+        options:
+          - rootfull
+          - sideloaded
+          - trollstore
+          - rootless
+      commit_id:
+        description: "(Optional) Commit ID to build at"
+        default: ""
+        required: false
+        type: string
+      upload_artifact:
+        description: "Upload iPA as artifact (Public)"
+        default: false
+        required: false
+        type: boolean
+      create_release:
+        description: "Create a draft release (Private)"
+        default: true
+        required: false
+        type: boolean
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build BHTwitter
+    runs-on: macos-13
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Main
+        uses: actions/checkout@v4
+        with:
+          path: main
+          ref: ${{ github.event.inputs.commit_id || github.ref }}
+          submodules: recursive
+
+      - name: Install Dependencies
+        run: brew install make dpkg ldid
+
+      - name: Add GNU Make to PATH
+        run: |
+          echo "$(brew --prefix make)/libexec/gnubin" >> "$GITHUB_PATH"
+
+      - name: Download Theos
+        uses: actions/checkout@v4
+        with:
+          repository: theos/theos
+          ref: master
+          path: theos
+          submodules: recursive
+
+      - name: Download Azule
+        if: inputs.deploy_format == 'sideloaded' || inputs.deploy_format == 'trollstore'
+        uses: actions/checkout@v4
+        with:
+          repository: Al4ise/Azule
+          ref: main
+          path: azule
+
+      - name: Add Azule to PATH
+        if: inputs.deploy_format == 'sideloaded' || inputs.deploy_format == 'trollstore'
+        run: |
+          echo "${{ github.workspace }}/azule" >> "$GITHUB_PATH"
+
+      - name: iOS SDK Caching
+        id: SDK
+        uses: actions/cache@v4
+        env:
+          cache-name: iOS-${{ inputs.sdk_version }}-SDK
+        with:
+          path: theos/sdks/
+          key: ${{ env.cache-name }}
+          restore-keys: ${{ env.cache-name }}
+
+      - name: Download iOS SDK
+        if: steps.SDK.outputs.cache-hit != 'true'
+        run: |
+          # Only download the specific SDK version
+          git clone -n --depth=1 --filter=tree:0 https://github.com/theos/sdks/
+          cd sdks
+          git sparse-checkout set --no-cone iPhoneOS${{ inputs.sdk_version }}.sdk
+          git checkout
+          mv ./*.sdk "${THEOS}/sdks"
+        env:
+          THEOS: ${{ github.workspace }}/theos
+
+      - name: Get BHTwitter Version
+        run: |
+          BHTWITTER_VERSION=$(awk '/Version:/ {print $2}' main/control)
+          echo "BHTWITTER_VERSION=${BHTWITTER_VERSION}" >> "$GITHUB_ENV"
+          echo "$BHTWITTER_VERSION"
+
+      - name: Prepare X iPA
+        if: inputs.deploy_format == 'sideloaded' || inputs.deploy_format == 'trollstore'
+        run: |
+          wget "$IPA_URL" --no-verbose -O main/packages/com.atebits.Tweetie2.ipa
+          unzip -q main/packages/com.atebits.Tweetie2.ipa -d main/tmp
+          # Get the version number of the X app and store it
+          X_VERSION=$(grep -A 1 '<key>CFBundleShortVersionString</key>' main/tmp/Payload/Twitter.app/Info.plist |
+            grep '<string>' | awk -F'[><]' '{print $3}')
+          echo "X_VERSION=${X_VERSION}" >> "$GITHUB_ENV"
+          echo "$X_VERSION"
+        env:
+          IPA_URL: ${{ inputs.decrypted_ipa_url }}
+
+      - name: Build Package
+        run: |
+          cd ${{ github.workspace }}/main
+          sed -i '' "s/^TARGET.*$/TARGET := iphone:clang:${{ inputs.sdk_version }}:${{ inputs.target_version }}/" Makefile
+          ./build.sh --${{ inputs.deploy_format }}
+        env:
+          THEOS: ${{ github.workspace }}/theos
+
+      - name: Rename IPA to include IPA version
+        if: inputs.deploy_format == 'sideloaded' || inputs.deploy_format == 'trollstore'
+        run: |
+          mv "main/packages/$(ls -t main/packages | head -n1)" \
+             "main/packages/BHTwitter-${{ inputs.deploy_format }}_${{ env.BHTWITTER_VERSION }}_${{ env.X_VERSION }}.${IPA_EXT}"
+        env:
+          IPA_EXT: ${{ inputs.deploy_format == 'trollstore' && 'tipa' || 'ipa' }}
+
+      - name: Pass package name
+        id: package_name
+        run: |
+          echo "package=$(ls -t main/packages | head -n1)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Artifact
+        if: ${{ inputs.upload_artifact }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: BHTwitter_${{ env.BHTWITTER_VERSION }}
+          path: ${{ github.workspace }}/main/packages/${{ steps.package_name.outputs.package }}
+          if-no-files-found: error
+
+      - name: Create Draft Release
+        if: ${{ inputs.create_release }}
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ env.BHTWITTER_VERSION }}
+          name: v${{ env.BHTWITTER_VERSION }} - BHTwitter
+          files: main/packages/${{ steps.package_name.outputs.package }}
+          draft: true
