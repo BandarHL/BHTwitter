@@ -104,13 +104,11 @@ jobs:
 
       - name: Fix Compiling
         run: |
-          # Update GNU Make to allow for faster building
           echo "$(brew --prefix make)/libexec/gnubin" >> "$GITHUB_PATH"
 
       - name: Prepare X iPA
         if: inputs.deploy_target == 'sideloaded' || inputs.deploy_target == 'trollstore'
         run: |
-          # Download and unzip iPA
           wget "$IPA_URL" --no-verbose -O main/packages/com.atebits.Tweetie2.ipa
           unzip -q main/packages/com.atebits.Tweetie2.ipa -d main/tmp
           # Get the version number of the X app and store it
@@ -130,33 +128,29 @@ jobs:
       - name: Build Package
         run: |
           cd ${{ github.workspace }}/main
-          # Replace lines in Makefile based on inputs
           sed -i '' "s/^TARGET.*$/TARGET := iphone:clang:${{ inputs.sdk_version }}:14.0/" Makefile
-          # Build the package
-          ./build.sh ${{ inputs.deploy_target == 'rootfull' && '' || format('--{0}', inputs.deploy_target) }}
+          ./build.sh --${{ inputs.deploy_target }}
         env:
           THEOS: ${{ github.workspace }}/theos
 
-      - name: Rename IPA
+      - name: Rename IPA to include IPA version
         if: inputs.deploy_target == 'sideloaded' || inputs.deploy_target == 'trollstore'
         run: |
-          # Rename the package based on the version
           mv "main/packages/$(ls -t main/packages | head -n1)" \
-             "main/packages/BHTwitter-${{ inputs.deploy_target }}_${{ env.X_VERSION }}_${{ env.BHTWITTER_VERSION }}.${IPA_EXT}"
+             "main/packages/BHTwitter-${{ inputs.deploy_target }}_${{ env.BHTWITTER_VERSION }}_${{ env.X_VERSION }}.${IPA_EXT}"
         env:
           IPA_EXT: ${{ inputs.deploy_target == 'trollstore' && 'tipa' || 'ipa' }}
 
       - name: Pass package name
         id: package_name
         run: |
-          # Pass package name to the upload step
           echo "package=$(ls -t main/packages | head -n1)" >> "$GITHUB_OUTPUT"
 
       - name: Upload Artifact
         if: ${{ inputs.upload_artifact }}
         uses: actions/upload-artifact@v4
         with:
-          name: BHTwitter_${{ env.X_VERSION }}_${{ env.BHTWITTER_VERSION }}
+          name: BHTwitter_${{ env.BHTWITTER_VERSION }}
           path: ${{ github.workspace }}/main/packages/${{ steps.package_name.outputs.package }}
           if-no-files-found: error
 
@@ -167,7 +161,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ env.X_VERSION }}-${{ env.BHTWITTER_VERSION }}
-          name: v${{ env.X_VERSION }}-${{ env.BHTWITTER_VERSION }} - BHTwitter
+          tag_name: v${{ env.BHTWITTER_VERSION }}
+          name: v${{ env.BHTWITTER_VERSION }} - BHTwitter
           files: main/packages/${{ steps.package_name.outputs.package }}
           draft: true
