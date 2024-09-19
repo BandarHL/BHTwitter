@@ -123,7 +123,7 @@ jobs:
 
       - name: Get BHTwitter Version
         run: |
-          BHTWITTER_VERSION=$(awk '/Version:/ {print $2}' control)
+          BHTWITTER_VERSION=$(awk '/Version:/ {print $2}' main/control)
           echo "BHTWITTER_VERSION=${BHTWITTER_VERSION}" >> "$GITHUB_ENV"
           echo "$BHTWITTER_VERSION"
 
