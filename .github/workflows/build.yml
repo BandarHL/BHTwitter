@@ -59,7 +59,11 @@ jobs:
           submodules: recursive
 
       - name: Install Dependencies
-        run: brew install ldid dpkg make
+        run: brew install make
+
+      - name: Add GNU Make to PATH
+        run: |
+          echo "$(brew --prefix make)/libexec/gnubin" >> "$GITHUB_PATH"
 
       - name: Download Theos
         uses: actions/checkout@v4
@@ -76,9 +80,9 @@ jobs:
           ref: main
           path: azule
 
-      - name: Add Azule command
+      - name: Add Azule to PATH
         run: |
-          ln -sf ${{ github.workspace }}/azule/azule /usr/local/bin/azule
+          echo "${{ github.workspace }}/azule" >> "$GITHUB_PATH"
 
       - name: iOS SDK Caching
         id: SDK
@@ -101,10 +105,6 @@ jobs:
           mv ./*.sdk "${THEOS}/sdks"
         env:
           THEOS: ${{ github.workspace }}/theos
-
-      - name: Fix Compiling
-        run: |
-          echo "$(brew --prefix make)/libexec/gnubin" >> "$GITHUB_PATH"
 
       - name: Prepare X iPA
         if: inputs.deploy_target == 'sideloaded' || inputs.deploy_target == 'trollstore'
