@@ -141,8 +141,8 @@ jobs:
         if: inputs.deploy_target == 'sideloaded' || inputs.deploy_target == 'trollstore'
         run: |
           # Rename the package based on the version
-          mv "packages/$(ls -t packages | head -n1)" \
-             "packages/BHTwitter-${{ inputs.deploy_target }}_${{ env.X_VERSION }}_${{ env.BHTWITTER_VERSION }}.${IPA_EXT}"
+          mv "main/packages/$(ls -t main/packages | head -n1)" \
+             "main/packages/BHTwitter-${{ inputs.deploy_target }}_${{ env.X_VERSION }}_${{ env.BHTWITTER_VERSION }}.${IPA_EXT}"
         env:
           IPA_EXT: ${{ inputs.deploy_target == 'trollstore' && 'tipa' || 'ipa' }}
 
@@ -150,7 +150,7 @@ jobs:
         id: package_name
         run: |
           # Pass package name to the upload step
-          echo "package=$(ls -t packages | head -n1)" >> "$GITHUB_OUTPUT"
+          echo "package=$(ls -t main/packages | head -n1)" >> "$GITHUB_OUTPUT"
 
       - name: Upload Artifact
         if: ${{ inputs.upload_artifact }}
