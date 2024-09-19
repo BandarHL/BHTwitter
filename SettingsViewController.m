@@ -152,6 +152,8 @@
         PSSpecifier *hideWhoToFollow = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_WHO_FOLLOW_OPTION"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE"] key:@"hide_who_to_follow" defaultValue:false changeAction:nil];
         
         PSSpecifier *hideTopicsToFollow = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_TOPICS_TO_FOLLOW_OPTION"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE"] key:@"hide_topics_to_follow" defaultValue:false changeAction:nil];
+
+        PSSpecifier *hidePremiumOffer = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_PREMIUM_OFFER_OPTION"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_PREMIUM_OFFER_OPTION_DETAIL_TITLE"] key:@"hide_premium_offer" defaultValue:false changeAction:nil];
         
         PSSpecifier *videoLayerCaption = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE"] detailTitle:nil key:@"dis_VODCaptions" defaultValue:false changeAction:nil];
         
@@ -236,6 +238,7 @@
             hideTopics,
             hideWhoToFollow,
             hideTopicsToFollow,
+            hidePremiumOffer,
             videoLayerCaption,
             directSave,
             noHistory,

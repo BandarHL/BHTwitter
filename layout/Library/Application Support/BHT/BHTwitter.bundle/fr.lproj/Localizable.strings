@@ -50,6 +50,9 @@
 "HIDE_TOPICS_TO_FOLLOW_OPTION" = "Masquer la section Sujets à suivre";
 "HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "Masquer la section Sujets à suivre dans les profils";
 
+"HIDE_PREMIUM_OFFER_OPTION" = "Masquer l'offre d'enregistrement Premium";
+"HIDE_PREMIUM_OFFER_OPTION_DETAIL_TITLE" = "Masquer les boutons Obtenir la certification et Mettre à niveau dans le profil et la barre de navigation";
+
 "DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "Désactiver les sous-titres du calque vidéo";
 
 "VOICE_OPTION_TITLE" = "Fonction vocale";

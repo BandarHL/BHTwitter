@@ -50,6 +50,9 @@
 "HIDE_TOPICS_TO_FOLLOW_OPTION" = "Hide Topics to follow section";
 "HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "Hide Topics to follow section in Profiles";
 
+"HIDE_PREMIUM_OFFER_OPTION" = "Hide Premium registration offer";
+"HIDE_PREMIUM_OFFER_OPTION_DETAIL_TITLE" = "Hide Get verified and Upgrade button in the profile and navigation bar";
+
 "DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "Disable video layer captions";
 
 "VOICE_OPTION_TITLE" = "Voice feature";
