@@ -8,13 +8,17 @@ on:
         default: "16.5"
         required: true
         type: string
+      target_version:
+        description: "Target iOS Version"
+        default: "14.0"
+        required: true
       decrypted_ipa_url:
         description: "Direct URL of the decrypted X ipa"
         default: ""
         required: true
         type: string
-      deploy_target:
-        description: "Deployment target"
+      deploy_format:
+        description: "Deployment format"
         default: rootfull
         required: true
         type: choice
@@ -59,7 +63,7 @@ jobs:
           submodules: recursive
 
       - name: Install Dependencies
-        run: brew install make
+        run: brew install make dpkg ldid
 
       - name: Add GNU Make to PATH
         run: |
@@ -74,6 +78,7 @@ jobs:
           submodules: recursive
 
       - name: Download Azule
+        if: inputs.deploy_format == 'sideloaded' || inputs.deploy_format == 'trollstore'
         uses: actions/checkout@v4
         with:
           repository: Al4ise/Azule
@@ -81,6 +86,7 @@ jobs:
           path: azule
 
       - name: Add Azule to PATH
+        if: inputs.deploy_format == 'sideloaded' || inputs.deploy_format == 'trollstore'
         run: |
           echo "${{ github.workspace }}/azule" >> "$GITHUB_PATH"
 
@@ -106,8 +112,14 @@ jobs:
         env:
           THEOS: ${{ github.workspace }}/theos
 
+      - name: Get BHTwitter Version
+        run: |
+          BHTWITTER_VERSION=$(awk '/Version:/ {print $2}' main/control)
+          echo "BHTWITTER_VERSION=${BHTWITTER_VERSION}" >> "$GITHUB_ENV"
+          echo "$BHTWITTER_VERSION"
+
       - name: Prepare X iPA
-        if: inputs.deploy_target == 'sideloaded' || inputs.deploy_target == 'trollstore'
+        if: inputs.deploy_format == 'sideloaded' || inputs.deploy_format == 'trollstore'
         run: |
           wget "$IPA_URL" --no-verbose -O main/packages/com.atebits.Tweetie2.ipa
           unzip -q main/packages/com.atebits.Tweetie2.ipa -d main/tmp
@@ -119,27 +131,21 @@ jobs:
         env:
           IPA_URL: ${{ inputs.decrypted_ipa_url }}
 
-      - name: Get BHTwitter Version
-        run: |
-          BHTWITTER_VERSION=$(awk '/Version:/ {print $2}' main/control)
-          echo "BHTWITTER_VERSION=${BHTWITTER_VERSION}" >> "$GITHUB_ENV"
-          echo "$BHTWITTER_VERSION"
-
       - name: Build Package
         run: |
           cd ${{ github.workspace }}/main
-          sed -i '' "s/^TARGET.*$/TARGET := iphone:clang:${{ inputs.sdk_version }}:14.0/" Makefile
-          ./build.sh --${{ inputs.deploy_target }}
+          sed -i '' "s/^TARGET.*$/TARGET := iphone:clang:${{ inputs.sdk_version }}:${{ inputs.target_version }}/" Makefile
+          ./build.sh --${{ inputs.deploy_format }}
         env:
           THEOS: ${{ github.workspace }}/theos
 
       - name: Rename IPA to include IPA version
-        if: inputs.deploy_target == 'sideloaded' || inputs.deploy_target == 'trollstore'
+        if: inputs.deploy_format == 'sideloaded' || inputs.deploy_format == 'trollstore'
         run: |
           mv "main/packages/$(ls -t main/packages | head -n1)" \
-             "main/packages/BHTwitter-${{ inputs.deploy_target }}_${{ env.BHTWITTER_VERSION }}_${{ env.X_VERSION }}.${IPA_EXT}"
+             "main/packages/BHTwitter-${{ inputs.deploy_format }}_${{ env.BHTWITTER_VERSION }}_${{ env.X_VERSION }}.${IPA_EXT}"
         env:
-          IPA_EXT: ${{ inputs.deploy_target == 'trollstore' && 'tipa' || 'ipa' }}
+          IPA_EXT: ${{ inputs.deploy_format == 'trollstore' && 'tipa' || 'ipa' }}
 
       - name: Pass package name
         id: package_name
