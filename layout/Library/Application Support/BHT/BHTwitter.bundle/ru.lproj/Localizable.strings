@@ -49,6 +49,9 @@
 "HIDE_TOPICS_TO_FOLLOW_OPTION" = "Скрыть секцию «Темы для чтения»";
 "HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "Скрывает секцию «Темы для чтения» в профилях пользователей";
 
+"HIDE_PREMIUM_OFFER_OPTION" = "Скрыть предложение премиум-регистрации";
+"HIDE_PREMIUM_OFFER_OPTION_DETAIL_TITLE" = "Скрыть кнопку «Подтвердить подлинность» и «Улучшить подписку» в профиле и на панели навигации";
+
 "DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "Отключить описания видео";
 
 "VOICE_OPTION_TITLE" = "Голосовые";

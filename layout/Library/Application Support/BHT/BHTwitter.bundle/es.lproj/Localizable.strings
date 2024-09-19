@@ -50,6 +50,9 @@
 "HIDE_TOPICS_TO_FOLLOW_OPTION" = "Ocultar Temas a seguir";
 "HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "Ocultar la sección Temas a seguir en Perfiles";
 
+"HIDE_PREMIUM_OFFER_OPTION" = "Ocultar la oferta de registro Premium";
+"HIDE_PREMIUM_OFFER_OPTION_DETAIL_TITLE" = "Ocultar los botones Obtener verificación y Actualizar a nivel superior en el perfil y en la barra de navegación";
+
 "DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "Desactivar subtítulos";
 
 "VOICE_OPTION_TITLE" = "Función de voz";

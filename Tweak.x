@@ -257,6 +257,11 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
+%hook T1ProfileSummaryView
+- (BOOL)shouldShowGetVerifiedButton {
+    return [BHTManager hidePremiumOffer] ? false : %orig;
+}
+%end
 
 // MARK: hide ADs
 // credit goes to haoict https://github.com/haoict/twitter-no-ads
@@ -848,6 +853,15 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %hook THFHomeTimelineItemsViewController
 - (void)_t1_initializeFleets {
     if ([BHTManager hideSpacesBar]) {
+        return;
+    }
+    return %orig;
+}
+%end
+
+%hook THFHomeTimelineContainerViewController
+- (void)_t1_showPremiumUpsellIfNeeded {
+    if ([BHTManager hidePremiumOffer]) {
         return;
     }
     return %orig;
