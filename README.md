@@ -35,6 +35,9 @@
 |<img width="1604" alt="screen shot 2017-08-07 at 12 18 15 pm" src="4.png">  |
 
 # How to build the project
+
+## Local
+
 - install [Theos](https://github.com/theos/theos)
 - install [Azule](https://github.com/Al4ise/Azule) if you want to build for sideload or TrollStore
 
@@ -52,11 +55,24 @@ chmod +x ./build.sh
 ./build.sh [OPTIONS]
 ```
 - Replace [OPTIONS] with one of the following:
-```--sideloaded: Build BHTwitter project for sideloaded deployment.
+
+```
+--sideloaded: Build BHTwitter project for sideloaded deployment.
 --rootless: Build BHTwitter project for rootless deployment.
 --trollstore: Build BHTwitter project for TrollStore deployment.
 No option: Build BHTwitter project for rootfull deployment.
 ```
+
+## Using GitHub Actions
+
+- Fork this repository.
+- Open "Actions" tab on your fork, and press "I understand my workflows, go ahead and enable them" to proceed.
+- Select "Build and Release BHTwitter" workflow.
+- Press "Run workflow" menu, and enter parameters in the popup that appears.
+  - Don't forget to choose deployment format (`rootfull`, `rootless`, `sideloaded`, `trollstore`).
+  - For `sideloaded` and `trollstore` builds, a valid URL of decrypted IPA is required. For `rootfull` and `rootless` builds, enter any value (it won't be used).
+  - For other parameters, defaults are usually sufficient.
+- Press "Run workflow" button, and after a while you should see build artifacts on "Releases" page.
 
 # Example Usages
 ## Build for Sideloaded Deployment
