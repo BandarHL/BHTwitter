@@ -1302,7 +1302,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                             [safeParams addObject:item];
                         }
                     }
-                    cleanedURL.queryItems = safeParams;
+                    cleanedURL.queryItems = safeParams.count > 0 ? safeParams : nil;
 
                     if ([[NSUserDefaults standardUserDefaults] objectForKey:@"tweet_url_host"]) {
                         NSString *selectedHost = [[NSUserDefaults standardUserDefaults] objectForKey:@"tweet_url_host"];
