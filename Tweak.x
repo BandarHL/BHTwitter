@@ -866,6 +866,12 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     }
     return %orig;
 }
+- (void)_t1_showPremiumUpsellIfNeededWithScribing:(BOOL)arg1 {
+    if ([BHTManager hidePremiumOffer]) {
+        return;
+    }
+    return %orig;
+}
 %end
 
 %hook TFNTwitterMediaUploadConfiguration
