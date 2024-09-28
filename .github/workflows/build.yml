@@ -19,7 +19,7 @@ on:
         type: string
       deploy_format:
         description: "Deployment format"
-        default: rootfull
+        default: sideloaded
         required: true
         type: choice
         options:
@@ -167,7 +167,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ env.BHTWITTER_VERSION }}
-          name: v${{ env.BHTWITTER_VERSION }} - BHTwitter
+          tag_name: v${{ env.BHTWITTER_VERSION }}-${{ env.X_VERSION }}
+          name: v${{ env.BHTWITTER_VERSION }}-${{ env.X_VERSION }} - BHTwitter
           files: main/packages/${{ steps.package_name.outputs.package }}
           draft: true
