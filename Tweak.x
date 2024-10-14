@@ -384,6 +384,12 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                 return 0;
             }
         }
+
+        if ([BHTManager hidePremiumOffer]) {
+            if ([class_name isEqualToString:@"T1URTTimelineMessageItemViewModel"]) {
+                return 0;
+            }
+        }
     }
     
     return %orig;
