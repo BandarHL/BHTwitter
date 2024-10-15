@@ -77,18 +77,9 @@ jobs:
           path: theos
           submodules: recursive
 
-      - name: Download Azule
+      - name: Install cyan
         if: inputs.deploy_format == 'sideloaded' || inputs.deploy_format == 'trollstore'
-        uses: actions/checkout@v4
-        with:
-          repository: Al4ise/Azule
-          ref: main
-          path: azule
-
-      - name: Add Azule to PATH
-        if: inputs.deploy_format == 'sideloaded' || inputs.deploy_format == 'trollstore'
-        run: |
-          echo "${{ github.workspace }}/azule" >> "$GITHUB_PATH"
+        run: pip install https://github.com/asdfzxcvbn/pyzule-rw/archive/main.zip
 
       - name: iOS SDK Caching
         id: SDK
