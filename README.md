@@ -39,7 +39,7 @@
 ## Local
 
 - install [Theos](https://github.com/theos/theos)
-- install [Azule](https://github.com/Al4ise/Azule) if you want to build for sideload or TrollStore
+- install [cyan](https://github.com/asdfzxcvbn/pyzule-rw) if you want to build for sideload or TrollStore
 
 - Clone the BHTwitter project repository:
 ```bash
