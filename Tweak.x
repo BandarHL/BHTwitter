@@ -307,6 +307,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                 [_orig setHidden:true];
             }
         }
+        if ([BHTManager hideTrendVideos] && ([class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"] || [class_name isEqualToString:@"T1TwitterSwift.URTTimelineCarouselViewModel"])) {
+            [_orig setHidden:true];
+        }
     }
     
     if ([self.adDisplayLocation isEqualToString:@"TIMELINE_HOME"]) {
@@ -365,6 +368,10 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             if ([[trendModel.scribeItem allKeys] containsObject:@"promoted_id"]) {
                 return 0;
             }
+        }
+
+        if ([BHTManager hideTrendVideos] && ([class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"] || [class_name isEqualToString:@"T1TwitterSwift.URTTimelineCarouselViewModel"])) {
+            return 0;
         }
     }
     

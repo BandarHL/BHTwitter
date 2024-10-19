@@ -46,6 +46,9 @@
 "HIDE_PREMIUM_OFFER_OPTION" = "Sembunyikan penawaran pendaftaran Premium";
 "HIDE_PREMIUM_OFFER_OPTION_DETAIL_TITLE" = "Sembunyikan tombol Dapatkan verifikasi dan Tingkatkan di profil dan bilah navigasi";
 
+"HIDE_TREND_VIDEOS_OPTION_TITLE" = "Sembunyikan video yang sedang tren";
+"HIDE_TREND_VIDEOS_OPTION_DETAIL_TITLE" = "Sembunyikan video yang sedang tren di tab pencarian";
+
 "DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "nonaktifkan text video";
 
 "VOICE_OPTION_TITLE" = "Fitur Suara";
