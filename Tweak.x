@@ -327,6 +327,12 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                 [_orig setHidden:true];
             }
         }
+
+        if ([BHTManager hidePremiumOffer]) {
+            if ([class_name isEqualToString:@"T1URTTimelineMessageItemViewModel"]) {
+                [_orig setHidden:true];
+            }
+        }
     }
     
     return _orig;
@@ -388,6 +394,12 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         
         if ([BHTManager HideTopics]) {
             if ([tweet isKindOfClass:%c(_TtC10TwitterURT26URTTimelinePromptViewModel)]) {
+                return 0;
+            }
+        }
+
+        if ([BHTManager hidePremiumOffer]) {
+            if ([class_name isEqualToString:@"T1URTTimelineMessageItemViewModel"]) {
                 return 0;
             }
         }
