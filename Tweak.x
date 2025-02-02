@@ -2,6 +2,8 @@
 #import "Colours/Colours.h"
 #import "BHTManager.h"
 #import "BHTBundle/BHTBundle.h"
+#import "MobileCoreServices/MobileCoreServices.h"
+#import "MobileCoreServices/UTCoreTypes.h"
 
 static UIFont * _Nullable TAEStandardFontGroupReplacement(UIFont *self, SEL _cmd, CGFloat arg1, CGFloat arg2) {
     BH_BaseImp orig  = originalFontsIMP[NSStringFromSelector(_cmd)].pointerValue;
