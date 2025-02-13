@@ -95,6 +95,7 @@
                 [[BHCustomTabBarItem alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_OPTION_5"] pageID:@"ntab"],
                 [[BHCustomTabBarItem alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_OPTION_6"] pageID:@"messages"],
                 [[BHCustomTabBarItem alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_OPTION_7"] pageID:@"grok"],
+                [[BHCustomTabBarItem alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_OPTION_8"] pageID:@"media"],
 
             ]],
             [[BHCustomTabBarSection alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_SECTION_2_TITLE"] items:@[]]
