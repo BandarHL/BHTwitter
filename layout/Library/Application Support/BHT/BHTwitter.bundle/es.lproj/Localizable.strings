@@ -194,3 +194,8 @@
 "APP_ICON_HEADER_TITLE" = "Elige un icono de aplicación personalizado para la pantalla de inicio de tu dispositivo. Cámbialo en cualquier momento.";
 
 "FFMPEG_DOWNLOAD_OPTION_TITLE" = "Descarga con FFmpeg";
+
+"SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE" = "Seleccione el host URL del tweet después de copiar";
+
+"UPLOAD_CUSTOM_VOICE_OPTION_TITLE" = "Subir voz personalizada";
+"UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE" = "Subir vídeo personalizado después de grabar una voz en el puesto";
