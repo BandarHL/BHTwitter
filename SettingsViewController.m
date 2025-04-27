@@ -5,6 +5,7 @@
 //  Created by BandarHelal
 //
 
+
 #import "SettingsViewController.h"
 #import "BHTBundle/BHTBundle.h"
 #import "Colours/Colours.h"
@@ -12,6 +13,35 @@
 #import "ThemeColor/BHColorThemeViewController.h"
 #import "CustomTabBar/BHCustomTabBarViewController.h"
 
+typedef NS_ENUM(NSInteger, TwitterFontWeight) {
+    TwitterFontWeightRegular,
+    TwitterFontWeightMedium,
+    TwitterFontWeightSemibold,
+    TwitterFontWeightBold
+};
+
+typedef NS_ENUM(NSInteger, TwitterFontStyle) {
+    TwitterFontStyleRegular,
+    TwitterFontStyleSemibold,
+    TwitterFontStyleBold
+};
+
+static UIFont *TwitterChirpFont(TwitterFontStyle style) {
+    switch (style) {
+        case TwitterFontStyleBold:
+            return [UIFont fontWithName:@"ChirpUIVF_wght3200000_opsz150000" size:17] ?: 
+                   [UIFont systemFontOfSize:17 weight:UIFontWeightBold];
+            
+        case TwitterFontStyleSemibold:
+            return [UIFont fontWithName:@"ChirpUIVF_wght2BC0000_opszE0000" size:14] ?: 
+                   [UIFont systemFontOfSize:14 weight:UIFontWeightSemibold];
+            
+        case TwitterFontStyleRegular:
+        default:
+            return [UIFont fontWithName:@"ChirpUIVF_wght1900000_opszE0000" size:12] ?: 
+                   [UIFont systemFontOfSize:12 weight:UIFontWeightRegular];
+    }
+}
 @interface SettingsViewController () <UIFontPickerViewControllerDelegate, UINavigationControllerDelegate, UIImagePickerControllerDelegate, UIColorPickerViewControllerDelegate>
 @property (nonatomic, strong) TFNTwitterAccount *twAccount;
 @property (nonatomic, assign) BOOL hasDynamicSpecifiers;
@@ -66,8 +96,112 @@
     }
 }
 
+
+// Add this method to configure the table view appearance
+- (void)viewDidLoad {
+    [super viewDidLoad];
+
+
+    
+    
+    // Set the background color to match system background
+    self.view.backgroundColor = [UIColor systemBackgroundColor];
+    
+    // Configure the table view to blend with background
+    self.table.backgroundColor = [UIColor systemBackgroundColor];
+    self.table.separatorColor = [UIColor separatorColor];
+    
+    // Remove extra separators below content
+    self.table.tableFooterView = [UIView new];
+    self.table.separatorStyle = UITableViewCellSeparatorStyleNone;
+
+    if (@available(iOS 15.0, *)) {
+        self.table.sectionHeaderTopPadding = 8; 
+    }
+    
+    // These ensure cells align with headers
+    self.table.separatorInset = UIEdgeInsetsMake(0, 16, 0, 0);
+    self.table.layoutMargins = UIEdgeInsetsMake(0, 16, 0, 16);
+
+
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
+    NSString *title = [self tableView:tableView titleForHeaderInSection:section];
+    if (!title) {
+        return nil;
+    }
+    
+    UIView *headerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 52)];
+    
+    // Top separator - modified to extend full width
+    UIView *topSeparator = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 0.5)];
+    topSeparator.backgroundColor = [UIColor separatorColor];
+    topSeparator.autoresizingMask = UIViewAutoresizingFlexibleWidth; // Ensure it stays full width
+    [headerView addSubview:topSeparator];
+    
+    // Header label
+    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(16, 16, tableView.frame.size.width - 32, 28)];
+    label.text = title; 
+    label.font = TwitterChirpFont(TwitterFontStyleBold); // 17pt bold
+    label.textColor = [UIColor labelColor];
+    [headerView addSubview:label];
+    
+    return headerView;
+}
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
+    return 52; // Increased from 44 to accommodate larger text
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section {
+    NSString *footerText = [self tableView:tableView titleForFooterInSection:section];
+    if (!footerText) {
+        return nil;
+    }
+    
+    UIView *footerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 44)];
+    
+    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(16, 8, tableView.frame.size.width - 32, 36)];
+    label.text = footerText;
+    label.font = TwitterChirpFont(TwitterFontStyleRegular); // 12pt regular
+    label.textColor = [UIColor secondaryLabelColor];
+    label.numberOfLines = 0;
+    [footerView addSubview:label];
+    
+    return footerView;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section {
+    NSString *footerText = [self tableView:tableView titleForFooterInSection:section];
+    if (!footerText) {
+        return CGFLOAT_MIN; // Use minimal height when no footer
+    }
+    
+    // Calculate dynamic height
+    CGFloat width = tableView.frame.size.width - 32;
+    CGRect rect = [footerText boundingRectWithSize:CGSizeMake(width, CGFLOAT_MAX)
+                                         options:NSStringDrawingUsesLineFragmentOrigin
+                                        attributes:@{NSFontAttributeName: TwitterChirpFont(TwitterFontStyleRegular)}
+                                         context:nil];
+    
+    return ceil(rect.size.height) + 24; // Top/bottom padding
+}
+
+// And replace with this single implementation:
+- (void)tableView:(UITableView *)tableView willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath {
+    // Remove any default separator insets
+    cell.separatorInset = UIEdgeInsetsMake(0, 0, 0, CGRectGetWidth(tableView.bounds));
+    
+    // Set cell background
+    cell.backgroundColor = [UIColor systemBackgroundColor];
+    
+    // Remove selection highlight if needed
+    cell.selectionStyle = UITableViewCellSelectionStyleDefault;
+}
+
+
 - (UITableViewStyle)tableViewStyle {
-    return UITableViewStyleInsetGrouped;
+    return UITableViewStyleGrouped;
 }
 
 - (PSSpecifier *)newSectionWithTitle:(NSString *)header footer:(NSString *)footer {
@@ -226,24 +360,22 @@
         PSSpecifier *acknowledgements = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"LEGAL_BUTTON_TITLE"] detailTitle:nil dynamicRule:nil action:@selector(showAcknowledgements:)];
         
         // dvelopers section
+    
+        PSSpecifier *actuallyaridan = [self newHBTwitterCellWithTitle:@"aridan" twitterUsername:@"actuallyaridan" customAvatarURL:@"https://avatars.githubusercontent.com/u/96298432?v=4"];
+        PSSpecifier *timi2506 = [self newHBTwitterCellWithTitle:@"timi2506" twitterUsername:@"timi2506" customAvatarURL:@"https://avatars.githubusercontent.com/u/172171055?v=4"];
+        PSSpecifier *nyathea = [self newHBTwitterCellWithTitle:@"nyathea" twitterUsername:@"nyaathea" customAvatarURL:@"https://avatars.githubusercontent.com/u/108613931?v=4"];
         PSSpecifier *bandarHL = [self newHBTwitterCellWithTitle:@"BandarHelal" twitterUsername:@"BandarHL" customAvatarURL:@"https://unavatar.io/twitter/BandarHL"];
-        PSSpecifier *tipJar = [self newHBLinkCellWithTitle:@"Tip Jar" detailTitle:@"Donate Via Paypal" url:@"https://www.paypal.me/BandarHL"];
-        PSSpecifier *buymecoffee = [self newHBLinkCellWithTitle:@"Buy Me A Coffee" detailTitle:nil url:@"https://www.buymeacoffee.com/bandarHL"];
-        PSSpecifier *sourceCode = [self newHBLinkCellWithTitle:@"BHTwitter" detailTitle:@"Code source of BHTwitter" url:@"https://github.com/BandarHL/BHTwitter/"];
         
         _specifiers = [NSMutableArray arrayWithArray:@[
             
             mainSection, // 0
-            download,
-            hideAds,
             customVoice,
             hideTopics,
             hideWhoToFollow,
             hideTopicsToFollow,
-            hidePremiumOffer,
             hideTrendVideos,
+            hideSpace,
             videoLayerCaption,
-            directSave,
             noHistory,
             bioTranslate,
             likeConfrim,
@@ -254,7 +386,6 @@
             disableSensitiveTweetWarnings,
             copyProfileInfo,
             tweetToImage,
-            hideSpace,
             disableRTL,
             alwaysOpenSafari,
             stripTrackingParams,
@@ -262,6 +393,10 @@
             
             twitterBlueSection, // 1
             undoTweet,
+            download,
+            directSave,
+            hideAds,
+            hidePremiumOffer,
             appTheme,
             appIcon,
             customTabBarVC,
@@ -285,10 +420,10 @@
             flex,
             
             developer, // 5
-            bandarHL,
-            tipJar,
-            buymecoffee,
-            sourceCode
+            actuallyaridan,
+            timi2506,
+            nyathea,
+            bandarHL
         ]];
         
         [self collectDynamicSpecifiersFromArray:_specifiers];
@@ -503,7 +638,7 @@
     UITableViewCell *specifierCell = [specifier propertyForKey:PSTableCellKey];
     PSSpecifier *selectionSpecifier = [self specifierForID:@"Select URL host"];
 
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"BHTwitter" message:@"plaese select what host you prefre" preferredStyle:UIAlertControllerStyleActionSheet];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"NeoFreeBird" message:@"URL" preferredStyle:UIAlertControllerStyleActionSheet];
 
     if (alert.popoverPresentationController != nil) {
         CGFloat midX = CGRectGetMidX(specifierCell.frame);
@@ -612,7 +747,7 @@
     
     if ([manager fileExistsAtPath:newImgPath.path]) {
         [manager removeItemAtURL:newImgPath error:nil];
-    }
+    } 
     
     [manager copyItemAtURL:oldImgPath toURL:newImgPath error:nil];
     
@@ -633,13 +768,20 @@
     if (self) {
         NSString *subTitle = [specifier.properties[@"subtitle"] copy];
         BOOL isBig = specifier.properties[@"big"] ? ((NSNumber *)specifier.properties[@"big"]).boolValue : NO;
+        
+        // Get the default font size and make it bold
+        UIFont *defaultFont = self.textLabel.font;
+        self.textLabel.font = TwitterChirpFont(TwitterFontStyleSemibold); // 14pt semibold
+        
+        // Keep subtitle style exactly as before
         self.detailTextLabel.text = subTitle;
         self.detailTextLabel.numberOfLines = isBig ? 0 : 1;
         self.detailTextLabel.textColor = [UIColor secondaryLabelColor];
+        self.detailTextLabel.font = TwitterChirpFont(TwitterFontStyleRegular); // Match footer font
+        self.selectionStyle = UITableViewCellSelectionStyleDefault; // or .None if you don't want selection highlight
     }
     return self;
 }
-
 @end
 
 @implementation BHSwitchTableCell
@@ -647,9 +789,17 @@
     if ((self = [super initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:reuseIdentifier specifier:specifier])) {
         NSString *subTitle = [specifier.properties[@"subtitle"] copy];
         BOOL isBig = specifier.properties[@"big"] ? ((NSNumber *)specifier.properties[@"big"]).boolValue : NO;
+        
+        // Get the default font size and make it bold
+        UIFont *defaultFont = self.textLabel.font;
+        self.textLabel.font = TwitterChirpFont(TwitterFontStyleSemibold); // 14pt semibold
+
+        // Keep subtitle style exactly as before
         self.detailTextLabel.text = subTitle;
         self.detailTextLabel.numberOfLines = isBig ? 0 : 1;
         self.detailTextLabel.textColor = [UIColor secondaryLabelColor];
+        self.detailTextLabel.font = TwitterChirpFont(TwitterFontStyleRegular); // Match footer font
+        self.selectionStyle = UITableViewCellSelectionStyleDefault; // or .None if you don't want selection highlight
         
         if (specifier.properties[@"switchAction"]) {
             UISwitch *targetSwitch = ((UISwitch *)[self control]);

@@ -258,7 +258,7 @@
 }
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount {
     SettingsViewController *pref = [[SettingsViewController alloc] initWithTwitterAccount:twAccount];
-    [pref.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:@"BHTwitter" subtitle:twAccount.displayUsername]];
+    [pref.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:@"NeoFreeBird" subtitle:twAccount.displayUsername]];
     return pref;
 }
 

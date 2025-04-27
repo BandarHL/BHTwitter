@@ -1129,14 +1129,14 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     %orig;
     if ([self.sections count] == 1) {
         TFNItemsDataViewControllerBackingStore *backingStore = self.backingStore;
-        TFNSettingsNavigationItem *bhtwitter = [[%c(TFNSettingsNavigationItem) alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"] detail:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_DETAIL"] systemIconName:@"gear" controllerFactory:^UIViewController *{
+        TFNSettingsNavigationItem *bhtwitter = [[%c(TFNSettingsNavigationItem) alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"] detail:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_DETAIL"] systemIconName:@"gearshape.circle" controllerFactory:^UIViewController *{
             return [BHTManager BHTSettingsWithAccount:self.account];
         }];
         
         if ([backingStore respondsToSelector:@selector(insertSection:atIndex:)]) {
-            [backingStore insertSection:0 atIndex:0];
+            [backingStore insertSection:0 atIndex:1];
         } else {
-            [backingStore _tfn_insertSection:0 atIndex:0];
+            [backingStore _tfn_insertSection:0 atIndex:1];
         }
         if ([backingStore respondsToSelector:@selector(insertItem:atIndexPath:)]) {
             [backingStore insertItem:bhtwitter atIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
@@ -1152,7 +1152,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     %orig;
     if ([self.sections count] == 2) {
         TFNItemsDataViewControllerBackingStore *DataViewControllerBackingStore = self.backingStore;
-        [DataViewControllerBackingStore insertSection:0 atIndex:0];
+        [DataViewControllerBackingStore insertSection:0 atIndex:1];
         [DataViewControllerBackingStore insertItem:@"Row 0 " atIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
         [DataViewControllerBackingStore insertItem:@"Row1" atIndexPath:[NSIndexPath indexPathForRow:1 inSection:0]];
     }

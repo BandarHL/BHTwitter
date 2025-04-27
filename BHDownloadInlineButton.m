@@ -1,326 +1,277 @@
 //
 //  BHDownloadInlineButton.m
-//  BHTwitter
+//  NeoFreeBird, fixed for Twitter 10.94 / 10.94.1
 //
-//  Created by BandarHelal on 09/04/2022.
+//  Original author: BandarHelal at 09/04/2022
+//  Modified by: actuallyaridan at 27/04/2025
 //
 
 #import "BHDownloadInlineButton.h"
+#import <objc/runtime.h>
+#import <objc/message.h>
 #import "Colours/Colours.h"
 #import "BHTBundle/BHTBundle.h"
 
+#pragma mark - Helpers
+static inline UIViewController *BHTopMostController(void) {
+    UIViewController *top = UIApplication.sharedApplication.keyWindow.rootViewController;
+    while (top.presentedViewController) top = top.presentedViewController;
+    return top;
+}
+
+static char kHitTestEdgeInsetsKey;   // associated‑object key
+
+// Convenience shim to invoke a superclass selector that isn’t visible at compile‑time
+static void _bh_callSuperIfPossible(__unsafe_unretained id self,
+                                    SEL sel,
+                                    id  a1,
+                                    NSUInteger a2,
+                                    NSUInteger a3,
+                                    BOOL a4,
+                                    id  a5)
+{
+    struct objc_super sup = { .receiver = self, .super_class = class_getSuperclass(object_getClass(self)) };
+    if (class_getInstanceMethod(sup.super_class, sel)) {
+        ((void (*)(struct objc_super *, SEL, id, NSUInteger, NSUInteger, BOOL, id))objc_msgSendSuper)(&sup, sel, a1, a2, a3, a4, a5);
+    }
+}
+
+#pragma mark - BHDownloadInlineButton
 @interface BHDownloadInlineButton () <BHDownloadDelegate>
 @property (nonatomic, strong) JGProgressHUD *hud;
 @end
 
 @implementation BHDownloadInlineButton
-static const NSString *KEY_HIT_TEST_EDGE_INSETS = @"HitTestEdgeInsets";
 
-+ (CGSize)buttonImageSizeUsingViewModel:(id)arg1 options:(NSUInteger)arg2 overrideButtonSize:(CGSize)arg3 account:(id)arg4 {
-    return CGSizeZero;
+#pragma mark ••• Class helpers
++ (CGSize)buttonImageSizeUsingViewModel:(id)viewModel
+                                options:(NSUInteger)options
+                      overrideButtonSize:(CGSize)overrideSize
+                                 account:(id)account
+{
+    return CGSizeZero; // let host lay the image out
 }
 
-- (void)statusDidUpdate:(id)arg1 options:(NSUInteger)arg2 displayTextOptions:(NSUInteger)arg3 animated:(BOOL)arg4 featureSwitches:(id)arg5 {
-    [self statusDidUpdate:arg1 options:arg2 displayTextOptions:arg3 animated:arg4];
+#pragma mark ••• Status updates
+- (void)statusDidUpdate:(id)status
+                options:(NSUInteger)options
+     displayTextOptions:(NSUInteger)textOptions
+               animated:(BOOL)animated
+        featureSwitches:(id)featureSwitches
+{
+    _bh_callSuperIfPossible(self, _cmd, status, options, textOptions, animated, featureSwitches);
+    [self _bh_applyTint];
 }
 
-- (void)statusDidUpdate:(id)arg1 options:(NSUInteger)arg2 displayTextOptions:(NSUInteger)arg3 animated:(BOOL)arg4 {
-    if ([self.delegate.delegate isKindOfClass:objc_getClass("T1SlideshowStatusView")]) {
-        [self setTintColor:UIColor.whiteColor];
-    } else if ([self.delegate.delegate isKindOfClass:objc_getClass("T1ImmersiveExploreCardView")]) {
-        [self setTintColor:UIColor.whiteColor];
-    } else if ([self.delegate.delegate isKindOfClass:objc_getClass("T1TwitterSwift.ImmersiveExploreCardViewHelper")]) {
-        [self setTintColor:UIColor.whiteColor];
+- (void)statusDidUpdate:(id)status
+                options:(NSUInteger)options
+     displayTextOptions:(NSUInteger)textOptions
+               animated:(BOOL)animated
+{
+    _bh_callSuperIfPossible(self, _cmd, status, options, textOptions, animated, nil);
+    [self _bh_applyTint];
+}
+
+- (void)_bh_applyTint {
+    id dlg = self.delegate.delegate;
+    if ([dlg isKindOfClass:objc_getClass("T1SlideshowStatusView")] ||
+        [dlg isKindOfClass:objc_getClass("T1ImmersiveExploreCardView")] ||
+        [dlg isKindOfClass:objc_getClass("T1TwitterSwift.ImmersiveExploreCardViewHelper")])
+    {
+        self.tintColor = UIColor.whiteColor;
     } else {
-        [self setTintColor:[UIColor colorFromHexString:@"6D6E70"]];
+        self.tintColor = [UIColor colorFromHexString:@"6D6E70"];
     }
 }
-- (instancetype)initWithOptions:(NSUInteger)arg1 overrideSize:(id)arg2 account:(id)arg3 {
-    self = [super initWithFrame:CGRectZero];
-    if (self != nil) {
-        [self setInlineActionType:131];
-        [self setTintColor:[UIColor colorFromHexString:@"6D6E70"]];
-        [self setImage:[UIImage systemImageNamed:@"arrow.down"] forState:UIControlStateNormal];
-        [self addTarget:self action:@selector(DownloadHandler:) forControlEvents:UIControlEventTouchUpInside];
+
+#pragma mark ••• Init
+- (instancetype)initWithOptions:(NSUInteger)options overrideSize:(id)overrideSize account:(id)account {
+    if ((self = [super initWithFrame:CGRectZero])) {
+        [self _bh_commonInitWithInlineType:131];
     }
     return self;
 }
-- (instancetype)initWithInlineActionType:(NSUInteger)arg1 options:(NSUInteger)arg2 overrideSize:(id)arg3 account:(id)arg4 {
-    self = [super initWithFrame:CGRectZero];
-    if (self != nil) {
-        [self setInlineActionType:arg1];
-        [self setTintColor:[UIColor colorFromHexString:@"6D6E70"]];
-        [self setImage:[UIImage systemImageNamed:@"arrow.down"] forState:UIControlStateNormal];
-        [self addTarget:self action:@selector(DownloadHandler:) forControlEvents:UIControlEventTouchUpInside];
+
+- (instancetype)initWithInlineActionType:(NSUInteger)actionType
+                                 options:(NSUInteger)options
+                              overrideSize:(id)overrideSize
+                                 account:(id)account
+{
+    if ((self = [super initWithFrame:CGRectZero])) {
+        [self _bh_commonInitWithInlineType:actionType];
     }
     return self;
 }
-- (id)_t1_imageNamed:(id)arg1 fitSize:(CGSize)arg2 fillColor:(id)arg3 {
-    return nil;
-}
-- (void)DownloadHandler:(UIButton *)sender {
-    NSAttributedString *AttString = [[NSAttributedString alloc] initWithString:[[BHTBundle sharedBundle] localizedStringForKey:@"DOWNLOAD_MENU_TITLE"] attributes:@{
-        NSFontAttributeName: [[objc_getClass("TAEStandardFontGroup") sharedFontGroup] headline2BoldFont],
-        NSForegroundColorAttributeName: UIColor.labelColor
-    }];
-    TFNActiveTextItem *title = [[objc_getClass("TFNActiveTextItem") alloc] initWithTextModel:[[objc_getClass("TFNAttributedTextModel") alloc] initWithAttributedString:AttString] activeRanges:nil];
-    
-    NSMutableArray *actions = [[NSMutableArray alloc] init];
-    [actions addObject:title];
-    NSMutableArray *innerActions = [[NSMutableArray alloc] init];
-    [innerActions addObject:title];
-    
-    
-    if ([self.delegate.delegate isKindOfClass:objc_getClass("T1SlideshowStatusView")]) {
-        T1SlideshowStatusView *selectedMedia = self.delegate.delegate;
-        
-        for (TFSTwitterEntityMediaVideoVariant *video in selectedMedia.media.videoInfo.variants) {
-            if ([video.contentType isEqualToString:@"video/mp4"]) {
-                TFNActionItem *option = [objc_getClass("TFNActionItem") actionItemWithTitle:[BHTManager getVideoQuality:video.url] imageName:@"arrow_down_circle_stroke" action:^{
-                    BHDownload *dwManager = [[BHDownload alloc] init];
-                    [dwManager downloadFileWithURL:[NSURL URLWithString:video.url]];
-                    [dwManager setDelegate:self];
-                    
-                    if (![BHTManager DirectSave]) {
-                        self.hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
-                        self.hud.textLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"PROGRESS_DOWNLOADING_STATUS_TITLE"];
-                        [self.hud showInView:topMostController().view];
-                    }
-                }];
-                
-                [actions addObject:option];
-            }
-            
-            if ([video.contentType isEqualToString:@"application/x-mpegURL"]) {
-                TFNActionItem *option = [objc_getClass("TFNActionItem") actionItemWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FFMPEG_DOWNLOAD_OPTION_TITLE"] imageName:@"arrow_down_circle_stroke" action:^{
-                    
-                    self.hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
-                    self.hud.textLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"FETCHING_PROGRESS_TITLE"];
-                    [self.hud showInView:topMostController().view];
-                    
-                    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-                        MediaInformation *mediaInfo = [BHTManager getM3U8Information:[NSURL URLWithString:video.url]];
-                        dispatch_async(dispatch_get_main_queue(), ^(void) {
-                            [self.hud dismiss];
-                            
-                            TFNMenuSheetViewController *alert2 = [BHTManager newFFmpegDownloadSheet:mediaInfo downloadingURL:[NSURL URLWithString:video.url] progressView:self.hud];
-                            [alert2 tfnPresentedCustomPresentFromViewController:topMostController() animated:YES completion:nil];
-                        });
-                    });
-                    
-                }];
-                
-                [actions addObject:option];
-            }
-        }
-    } else {
-        if (self.delegate.viewModel.representedMediaEntities.count > 1) {
-            [self.delegate.viewModel.representedMediaEntities enumerateObjectsUsingBlock:^(TFSTwitterEntityMedia * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
-                
-                if (obj.mediaType == 2 || obj.mediaType == 3) {
-                    TFNActionItem *option = [objc_getClass("TFNActionItem") actionItemWithTitle:[NSString stringWithFormat:@"Video %lu", (unsigned long)idx+1] imageName:@"arrow_down_circle_stroke" action:^{
-                        
-                        for (TFSTwitterEntityMediaVideoVariant *video in obj.videoInfo.variants) {
-                            if ([video.contentType isEqualToString:@"video/mp4"]) {
-                                TFNActionItem *innerOption = [objc_getClass("TFNActionItem") actionItemWithTitle:[BHTManager getVideoQuality:video.url] imageName:@"arrow_down_circle_stroke" action:^{
-                                    
-                                    BHDownload *dwManager = [[BHDownload alloc] init];
-                                    [dwManager downloadFileWithURL:[NSURL URLWithString:video.url]];
-                                    [dwManager setDelegate:self];
-                                    
-                                    if (![BHTManager DirectSave]) {
-                                        self.hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
-                                        self.hud.textLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"PROGRESS_DOWNLOADING_STATUS_TITLE"];
-                                        [self.hud showInView:topMostController().view];
-                                    }
-                                    
-                                }];
-                                
-                                [innerActions addObject:innerOption];
-                            }
-                            
-                            if ([video.contentType isEqualToString:@"application/x-mpegURL"]) {
-                                TFNActionItem *option = [objc_getClass("TFNActionItem") actionItemWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FFMPEG_DOWNLOAD_OPTION_TITLE"] imageName:@"arrow_down_circle_stroke" action:^{
-                                    
-                                    self.hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
-                                    self.hud.textLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"FETCHING_PROGRESS_TITLE"];
-                                    [self.hud showInView:topMostController().view];
-                                    
-                                    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-                                        MediaInformation *mediaInfo = [BHTManager getM3U8Information:[NSURL URLWithString:video.url]];
-                                        dispatch_async(dispatch_get_main_queue(), ^(void) {
-                                            [self.hud dismiss];
-                                            
-                                            TFNMenuSheetViewController *alert2 = [BHTManager newFFmpegDownloadSheet:mediaInfo downloadingURL:[NSURL URLWithString:video.url] progressView:self.hud];
-                                            [alert2 tfnPresentedCustomPresentFromViewController:topMostController() animated:YES completion:nil];
-                                        });
-                                    });
-                                }];
-                                
-                                [innerActions addObject:option];
-                            }
-                        }
-                        
-                        TFNMenuSheetViewController *innerAlert = [[objc_getClass("TFNMenuSheetViewController") alloc] initWithActionItems:[NSArray arrayWithArray:innerActions]];
-                        [innerAlert tfnPresentedCustomPresentFromViewController:topMostController() animated:YES completion:nil];
-                    }];
-                    
-                    [actions addObject:option];
-                }
-            }];
-        } else {
-            for (TFSTwitterEntityMediaVideoVariant *video in self.delegate.viewModel.representedMediaEntities.firstObject.videoInfo.variants) {
-                if ([video.contentType isEqualToString:@"video/mp4"]) {
-                    
-                    TFNActionItem *option = [objc_getClass("TFNActionItem") actionItemWithTitle:[BHTManager getVideoQuality:video.url] imageName:@"arrow_down_circle_stroke" action:^{
-                        BHDownload *dwManager = [[BHDownload alloc] init];
-                        [dwManager downloadFileWithURL:[NSURL URLWithString:video.url]];
-                        [dwManager setDelegate:self];
-                        
-                        if (![BHTManager DirectSave]) {
-                            self.hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
-                            self.hud.textLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"PROGRESS_DOWNLOADING_STATUS_TITLE"];
-                            [self.hud showInView:topMostController().view];
-                        }
-                    }];
-                    
-                    [actions addObject:option];
-                }
-                if ([video.contentType isEqualToString:@"application/x-mpegURL"]) {
-                    TFNActionItem *option = [objc_getClass("TFNActionItem") actionItemWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FFMPEG_DOWNLOAD_OPTION_TITLE"] imageName:@"arrow_down_circle_stroke" action:^{
-                        
-                        self.hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
-                        self.hud.textLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"FETCHING_PROGRESS_TITLE"];
-                        [self.hud showInView:topMostController().view];
-                        
-                        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-                            MediaInformation *mediaInfo = [BHTManager getM3U8Information:[NSURL URLWithString:video.url]];
-                            dispatch_async(dispatch_get_main_queue(), ^(void) {
-                                [self.hud dismiss];
-                                
-                                TFNMenuSheetViewController *alert2 = [BHTManager newFFmpegDownloadSheet:mediaInfo downloadingURL:[NSURL URLWithString:video.url] progressView:self.hud];
-                                [alert2 tfnPresentedCustomPresentFromViewController:topMostController() animated:YES completion:nil];
-                            });
-                        });
-                    }];
-                    
-                    [actions addObject:option];
-                }
-            }
-        }
-    }
-    
-    TFNMenuSheetViewController *alert = [[objc_getClass("TFNMenuSheetViewController") alloc] initWithActionItems:[NSArray arrayWithArray:actions]];
-    [alert tfnPresentedCustomPresentFromViewController:topMostController() animated:YES completion:nil];
+
+- (void)_bh_commonInitWithInlineType:(NSUInteger)type {
+    self.inlineActionType = type;
+    self.tintColor        = [UIColor colorFromHexString:@"6D6E70"];
+    [self setImage:[UIImage systemImageNamed:@"arrow.down"] forState:UIControlStateNormal];
+    [self addTarget:self action:@selector(DownloadHandler:) forControlEvents:UIControlEventTouchUpInside];
 }
 
+// Twitter asks subclasses (+ class) for a custom glyph via this selector.
+- (id)_t1_imageNamed:(id)name fitSize:(CGSize)size fillColor:(id)fill { return nil; }
++ (id)_t1_imageNamed:(id)name fitSize:(CGSize)size fillColor:(id)fill { return nil; }
 
-
-- (void)setTouchInsets:(UIEdgeInsets)arg1 {
+#pragma mark ••• Hit‑testing tweaks
+- (void)setTouchInsets:(UIEdgeInsets)insets {
     if ([self.delegate.delegate isKindOfClass:objc_getClass("T1StandardStatusInlineActionsViewAdapter")]) {
-        [self setImageEdgeInsets:arg1];
-        [self setHitTestEdgeInsets:arg1];
+        self.imageEdgeInsets = insets;
+        [self setHitTestEdgeInsets:insets];
     }
 }
 
-// https://stackoverflow.com/a/13067285
-- (void)setHitTestEdgeInsets:(UIEdgeInsets)hitTestEdgeInsets {
-    NSValue *value = [NSValue value:&hitTestEdgeInsets withObjCType:@encode(UIEdgeInsets)];
-    objc_setAssociatedObject(self, &KEY_HIT_TEST_EDGE_INSETS, value, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+- (void)setHitTestEdgeInsets:(UIEdgeInsets)insets {
+    objc_setAssociatedObject(self, &kHitTestEdgeInsetsKey,
+                             [NSValue value:&insets withObjCType:@encode(UIEdgeInsets)],
+                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
 - (UIEdgeInsets)hitTestEdgeInsets {
-    NSValue *value = objc_getAssociatedObject(self, &KEY_HIT_TEST_EDGE_INSETS);
-    if (value) {
-        UIEdgeInsets edgeInsets; [value getValue:&edgeInsets]; return edgeInsets;
-    } else {
-        return UIEdgeInsetsZero;
+    NSValue *val = objc_getAssociatedObject(self, &kHitTestEdgeInsetsKey);
+    if (val) { UIEdgeInsets e; [val getValue:&e]; return e; }
+    return UIEdgeInsetsZero;
+}
+
+- (BOOL)pointInside:(CGPoint)pt withEvent:(UIEvent *)evt {
+    if (UIEdgeInsetsEqualToEdgeInsets(self.hitTestEdgeInsets, UIEdgeInsetsZero) || !self.enabled || self.isHidden) {
+        return [super pointInside:pt withEvent:evt];
+    }
+    return CGRectContainsPoint(UIEdgeInsetsInsetRect(self.bounds, self.hitTestEdgeInsets), pt);
+}
+
+#pragma mark ••• Inline‑action metrics (instance + class)
+#define BH_METRIC(name, value) \
+    - (typeof(value))name { return value; } \
+    + (typeof(value))name { return value; }
+
+BH_METRIC(extraWidth,                 40.0)
+BH_METRIC(extraWidthWithStyle,        40.0)
+BH_METRIC(trailingEdgeInset,          6.0)
+BH_METRIC(visibility,                 1)
+BH_METRIC(alternateInlineActionType,  6)
+BH_METRIC(touchInsetPriority,         2)
+BH_METRIC(shouldShowCount,            NO)
+BH_METRIC(displayType,                0)
+
+#undef BH_METRIC
+
+#pragma mark ••• Download handler
+- (void)DownloadHandler:(UIButton *)sender {
+    @try {
+        NSAttributedString *titleString = [[NSAttributedString alloc] initWithString:[[BHTBundle sharedBundle] localizedStringForKey:@"DOWNLOAD_MENU_TITLE"]
+                                                                         attributes:@{ NSFontAttributeName : [[objc_getClass("TAEStandardFontGroup") sharedFontGroup] headline2BoldFont],
+                                                                                       NSForegroundColorAttributeName : UIColor.labelColor }];
+        TFNActiveTextItem *title = [[objc_getClass("TFNActiveTextItem") alloc] initWithTextModel:[[objc_getClass("TFNAttributedTextModel") alloc] initWithAttributedString:titleString] activeRanges:nil];
+
+        NSMutableArray *actions      = [NSMutableArray arrayWithObject:title];
+        NSMutableArray *innerActions = [NSMutableArray arrayWithObject:title];
+
+        // HUD helpers
+        void (^startHUD)(NSString *) = ^(NSString *key) {
+            if ([BHTManager DirectSave]) return;
+            self.hud = [JGProgressHUD progressHUDWithStyle:JGProgressHUDStyleDark];
+            self.hud.textLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:key];
+            [self.hud showInView:BHTopMostController().view];
+        };
+        void (^dismissHUD)(void) = ^{ [self.hud dismiss]; };
+
+        // Variant builders
+        TFNActionItem* (^makeMP4Item)(NSURL *) = ^TFNActionItem*(NSURL *url) {
+            return [objc_getClass("TFNActionItem") actionItemWithTitle:[BHTManager getVideoQuality:url.absoluteString]
+                                                               imageName:@"arrow_down_circle_stroke" action:^{
+                BHDownload *dwManager = [[BHDownload alloc] init];
+                [dwManager setDelegate:self];
+                [dwManager downloadFileWithURL:url];
+                startHUD(@"PROGRESS_DOWNLOADING_STATUS_TITLE");
+            }];
+        };
+
+        TFNActionItem* (^makeM3U8Item)(NSURL *) = ^TFNActionItem*(NSURL *url) {
+            return [objc_getClass("TFNActionItem") actionItemWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FFMPEG_DOWNLOAD_OPTION_TITLE"]
+                                                               imageName:@"arrow_down_circle_stroke" action:^{
+                startHUD(@"FETCHING_PROGRESS_TITLE");
+                dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+                    MediaInformation *info = [BHTManager getM3U8Information:url];
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        dismissHUD();
+                        TFNMenuSheetViewController *sheet = [BHTManager newFFmpegDownloadSheet:info downloadingURL:url progressView:self.hud];
+                        [sheet tfnPresentedCustomPresentFromViewController:BHTopMostController() animated:YES completion:nil];
+                    });
+                });
+            }];
+        };
+
+        // Media enumeration
+        BOOL isSlideShow = [self.delegate.delegate isKindOfClass:objc_getClass("T1SlideshowStatusView")];
+        if (isSlideShow) {
+            T1SlideshowStatusView *slide = self.delegate.delegate;
+            for (TFSTwitterEntityMediaVideoVariant *variant in slide.media.videoInfo.variants) {
+                if ([variant.contentType isEqualToString:@"video/mp4"])          [actions addObject:makeMP4Item([NSURL URLWithString:variant.url])];
+                if ([variant.contentType isEqualToString:@"application/x-mpegURL"]) [actions addObject:makeM3U8Item([NSURL URLWithString:variant.url])];
+            }
+        } else {
+            NSArray *mediaEntities = self.delegate.viewModel.representedMediaEntities;
+            if (mediaEntities.count > 1) {
+                [mediaEntities enumerateObjectsUsingBlock:^(TFSTwitterEntityMedia *obj, NSUInteger idx, BOOL *stop) {
+                    if (obj.mediaType == 2 || obj.mediaType == 3) {
+                        TFNActionItem *videoGroup = [objc_getClass("TFNActionItem") actionItemWithTitle:[NSString stringWithFormat:@"Video %lu", (unsigned long)idx + 1]
+                                                                                           imageName:@"arrow_down_circle_stroke" action:^{
+                            for (TFSTwitterEntityMediaVideoVariant *variant in obj.videoInfo.variants) {
+                                if ([variant.contentType isEqualToString:@"video/mp4"])          [innerActions addObject:makeMP4Item([NSURL URLWithString:variant.url])];
+                                if ([variant.contentType isEqualToString:@"application/x-mpegURL"]) [innerActions addObject:makeM3U8Item([NSURL URLWithString:variant.url])];
+                            }
+                            TFNMenuSheetViewController *inner = [[objc_getClass("TFNMenuSheetViewController") alloc] initWithActionItems:innerActions.copy];
+                            [inner tfnPresentedCustomPresentFromViewController:BHTopMostController() animated:YES completion:nil];
+                        }];
+                        [actions addObject:videoGroup];
+                    }
+                }];
+            } else if (mediaEntities.firstObject) {
+                TFSTwitterEntityMedia *first = mediaEntities.firstObject;
+                for (TFSTwitterEntityMediaVideoVariant *variant in first.videoInfo.variants) {
+                    if ([variant.contentType isEqualToString:@"video/mp4"])          [actions addObject:makeMP4Item([NSURL URLWithString:variant.url])];
+                    if ([variant.contentType isEqualToString:@"application/x-mpegURL"]) [actions addObject:makeM3U8Item([NSURL URLWithString:variant.url])];
+                }
+            }
+        }
+
+        TFNMenuSheetViewController *sheet = [[objc_getClass("TFNMenuSheetViewController") alloc] initWithActionItems:actions.copy];
+        [sheet tfnPresentedCustomPresentFromViewController:BHTopMostController() animated:YES completion:nil];
+    } @catch (__unused NSException *ex) {
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ERROR_TITLE"]
+                                                                       message:[[BHTBundle sharedBundle] localizedStringForKey:@"UNKNOWN_ERROR"]
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"OK_BUTTON"] style:UIAlertActionStyleDefault handler:nil]];
+        [BHTopMostController() presentViewController:alert animated:YES completion:nil];
     }
 }
 
-- (bool)enabled {
-    return true;
+#pragma mark ••• BHDownloadDelegate
+- (void)downloadProgress:(float)pct {
+    self.hud.detailTextLabel.text = [BHTManager getDownloadingPersent:pct];
 }
 
-- (NSString *)actionSheetTitle {
-    return @"BHDownload";
+- (void)downloadDidFinish:(NSURL *)tmpURL Filename:(NSString *)name {
+    NSString *doc = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
+    NSURL *dst = [[NSURL fileURLWithPath:doc] URLByAppendingPathComponent:[NSString stringWithFormat:@"%@.mp4", NSUUID.UUID.UUIDString]];
+    [[NSFileManager defaultManager] moveItemAtURL:tmpURL toURL:dst error:nil];
+    if (![BHTManager DirectSave]) { [self.hud dismiss]; [BHTManager showSaveVC:dst]; }
+    else                          { [BHTManager save:dst]; }
 }
 
-- (NSUInteger)visibility {
-    return 1;
-}
-
-- (NSUInteger)alternateInlineActionType {
-    return 6;
-}
-
-- (NSUInteger)touchInsetPriority {
-    return 2;
-}
-
-- (double)extraWidth {
-    return 40;
-}
-
-- (CGFloat)trailingEdgeInset {
-    return 6;
-}
-
-- (bool)shouldShowCount {
-    return false;
-}
-
-- (NSUInteger)displayType {
-    return self->_displayType;
-}
-
-- (NSUInteger)inlineActionType {
-    return self->_inlineActionType;
-}
-
-- (T1StatusInlineActionsView *)delegate {
-    return self->_delegate;
-}
-
-- (id)buttonAnimator {
-    return self->_buttonAnimator;
-}
-
-- (id)viewModel {
-    return self->_viewModel;
-}
-
-- (void)downloadProgress:(float)progress {
-    self.hud.detailTextLabel.text = [BHTManager getDownloadingPersent:progress];
-}
-
-- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event {
-    if (UIEdgeInsetsEqualToEdgeInsets(self.hitTestEdgeInsets, UIEdgeInsetsZero) || !self.enabled || self.hidden) {
-        return [super pointInside:point withEvent:event];
-    }
-    
-    CGRect relativeFrame = self.bounds;
-    CGRect hitFrame = UIEdgeInsetsInsetRect(relativeFrame, self.hitTestEdgeInsets);
-    
-    return CGRectContainsPoint(hitFrame, point);
-}
-
-- (void)downloadDidFinish:(NSURL *)filePath Filename:(NSString *)fileName {
-    NSString *DocPath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true).firstObject;
-    NSFileManager *manager = [NSFileManager defaultManager];
-    NSURL *newFilePath = [[NSURL fileURLWithPath:DocPath] URLByAppendingPathComponent:[NSString stringWithFormat:@"%@.mp4", NSUUID.UUID.UUIDString]];
-    [manager moveItemAtURL:filePath toURL:newFilePath error:nil];
-    if (!([BHTManager DirectSave])) {
-        [self.hud dismiss];
-        [BHTManager showSaveVC:newFilePath];
-    } else {
-        [BHTManager save:newFilePath];
-    }
-}
 - (void)downloadDidFailureWithError:(NSError *)error {
-    if (error) {
-        [self.hud dismiss];
-    }
+    [self.hud dismiss]; if (!error) return;
+    UIAlertController *a = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ERROR_TITLE"]
+                                                               message:error.localizedDescription
+                                                        preferredStyle:UIAlertControllerStyleAlert];
+    [a addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"OK_BUTTON"] style:UIAlertActionStyleDefault handler:nil]];
+    [BHTopMostController() presentViewController:a animated:YES completion:nil];
 }
 
+#pragma mark ••• Required by Twitter runtime
+- (BOOL)enabled                { return YES; }
+- (NSString *)actionSheetTitle { return @"BHDownload"; }
+- (NSUInteger)inlineActionType { return self->_inlineActionType; }
 @end
