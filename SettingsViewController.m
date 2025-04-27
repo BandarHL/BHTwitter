@@ -379,7 +379,6 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
             hideTopics,
             hideWhoToFollow,
             hideTopicsToFollow,
-            hidePremiumOffer,
             hideTrendVideos,
             videoLayerCaption,
             directSave,
