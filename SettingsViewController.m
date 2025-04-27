@@ -431,7 +431,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
             bandarHL,
             tipJar,
             buymecoffee,
-            sourceCode
+            sourceCode,
             actuallyaridan,
             timi2506,
             nyathea,
