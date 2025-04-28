@@ -11,7 +11,12 @@
 #import "../BHTBundle/BHTBundle.h"
 #import "Colours/Colours.h" 
 
-// Declare the TwitterChirpFont here (or import it if it already exists)
+typedef NS_ENUM(NSInteger, TwitterFontStyle) {
+    TwitterFontStyleRegular,
+    TwitterFontStyleSemibold,
+    TwitterFontStyleBold
+};
+
 static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     switch (style) {
         case TwitterFontStyleBold:
