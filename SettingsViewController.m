@@ -426,14 +426,16 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
             debug, // 4
             flex,
             
-            developers, // 5
+            developer, // 5
             bandarHL,
             tipJar,
             buymecoffee,
             sourceCode,
+
+            peopleWhoContributed // 6
             actuallyaridan,
             timi2506,
-            nyathea
+            nyathea,
         ]];
         
         [self collectDynamicSpecifiersFromArray:_specifiers];
