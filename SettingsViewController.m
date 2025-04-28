@@ -97,34 +97,27 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 }
 
 
-// Add this method to configure the table view appearance
 - (void)viewDidLoad {
     [super viewDidLoad];
 
-
-    
-    
-    // Set the background color to match system background
     self.view.backgroundColor = [UIColor systemBackgroundColor];
-    
-    // Configure the table view to blend with background
     self.table.backgroundColor = [UIColor systemBackgroundColor];
     self.table.separatorColor = [UIColor separatorColor];
-    
-    // Remove extra separators below content
     self.table.tableFooterView = [UIView new];
     self.table.separatorStyle = UITableViewCellSeparatorStyleNone;
 
     if (@available(iOS 15.0, *)) {
-        self.table.sectionHeaderTopPadding = 8; 
+        self.table.sectionHeaderTopPadding = 8;
     }
-    
-    // These ensure cells align with headers
+
     self.table.separatorInset = UIEdgeInsetsMake(0, 16, 0, 0);
     self.table.layoutMargins = UIEdgeInsetsMake(0, 16, 0, 16);
 
-
+    if (self.twAccount != nil) {
+        self.navigationItem.titleView = [objc_getClass("TFNTitleView") titleViewWithTitle:@"Settings" subtitle:self.twAccount.displayUsername];
+    }
 }
+
 
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
     NSString *title = [self tableView:tableView titleForHeaderInSection:section];
