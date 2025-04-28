@@ -1,41 +1,68 @@
 //
 //  BHCustomTabBarViewController.m
-//  BHTwitter
+//  NeoFeeBird
 //
 //  Created by Bandar Alruwaili on 11/12/2023.
+//  Modified by actuallyaridan on 28/04/2025.
 //
 
 #import "BHCustomTabBarViewController.h"
 #import "BHCustomTabBarUtility.h"
 #import "../BHTBundle/BHTBundle.h"
+#import "Colours/Colours.h" 
+
+// Declare the TwitterChirpFont here (or import it if it already exists)
+static UIFont *TwitterChirpFont(TwitterFontStyle style) {
+    switch (style) {
+        case TwitterFontStyleBold:
+            return [UIFont fontWithName:@"ChirpUIVF_wght3200000_opsz150000" size:17] ?: 
+                   [UIFont systemFontOfSize:17 weight:UIFontWeightBold];
+        case TwitterFontStyleSemibold:
+            return [UIFont fontWithName:@"ChirpUIVF_wght2BC0000_opszE0000" size:14] ?: 
+                   [UIFont systemFontOfSize:14 weight:UIFontWeightSemibold];
+        case TwitterFontStyleRegular:
+        default:
+            return [UIFont fontWithName:@"ChirpUIVF_wght1900000_opszE0000" size:12] ?: 
+                   [UIFont systemFontOfSize:12 weight:UIFontWeightRegular];
+    }
+}
 
 @interface BHCustomTabBarViewController () <UITableViewDelegate, UITableViewDataSource>
 @property (nonatomic, strong) UITableView *tableView;
 @property (nonatomic, strong) NSMutableArray <BHCustomTabBarSection *> *data;
-
 @end
 
 @implementation BHCustomTabBarViewController
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.tableView = [[UITableView alloc] initWithFrame:self.view.frame style:UITableViewStyleInsetGrouped];
+    self.view.backgroundColor = [UIColor systemBackgroundColor];
+
+    self.tableView = [[UITableView alloc] initWithFrame:CGRectZero style:UITableViewStyleInsetGrouped];
     self.tableView.delegate = self;
     self.tableView.dataSource = self;
     self.tableView.dragInteractionEnabled = YES;
     [self.tableView registerClass:[UITableViewCell class] forCellReuseIdentifier:@"cell"];
     self.tableView.translatesAutoresizingMaskIntoConstraints = NO;
     self.tableView.editing = YES;
-    
-    self.data = [NSMutableArray new];
-    
+
+    // Style
+    self.tableView.backgroundColor = [UIColor systemBackgroundColor];
+    self.tableView.separatorColor = [UIColor separatorColor];
+    self.tableView.separatorInset = UIEdgeInsetsMake(0, 16, 0, 0);
+    self.tableView.layoutMargins = UIEdgeInsetsMake(0, 16, 0, 16);
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+
     [self.view addSubview:self.tableView];
+
     [NSLayoutConstraint activateConstraints:@[
         [self.tableView.topAnchor constraintEqualToAnchor:self.view.topAnchor],
         [self.tableView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
         [self.tableView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
         [self.tableView.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor]
     ]];
+
+    self.data = [NSMutableArray new];
     [self getData];
     [self.tableView reloadData];
     [self resetSettingsBarButton];
@@ -65,7 +92,6 @@
                                             handler:nil]];
 
     [self presentViewController:alert animated:YES completion:nil];
-
 }
 
 - (NSArray<BHCustomTabBarItem *> *)getItemsForKey:(NSString *)key {
@@ -95,7 +121,7 @@
                 [[BHCustomTabBarItem alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_OPTION_5"] pageID:@"ntab"],
                 [[BHCustomTabBarItem alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_OPTION_6"] pageID:@"messages"],
                 [[BHCustomTabBarItem alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_OPTION_7"] pageID:@"grok"],
-                [[BHCustomTabBarItem alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_OPTION_8"] pageID:@"media"],
+                [[BHCustomTabBarItem alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_OPTION_8"] pageID:@"media"]
             ]],
             [[BHCustomTabBarSection alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_SECTION_2_TITLE"] items:@[]]
         ] mutableCopy];
@@ -107,7 +133,6 @@
     [self.data[1] saveItemsForKey:@"hidden"];
 }
 
-
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
     return self.data.count;
 }
@@ -117,8 +142,14 @@
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"cell"];
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"cell" forIndexPath:indexPath];
     cell.textLabel.text = self.data[indexPath.section].items[indexPath.row].title;
+
+    // Style each cell properly
+    cell.backgroundColor = [UIColor systemBackgroundColor];
+    cell.textLabel.font = TwitterChirpFont(TwitterFontStyleSemibold);
+    cell.textLabel.textColor = [UIColor labelColor];
+
     return cell;
 }
 
@@ -144,4 +175,5 @@
     }
     [self updateData];
 }
+
 @end
