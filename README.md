@@ -1,108 +1,124 @@
-# BHTwitter
-- Awesome tweak for Twitter
+# NeoFreeBird-BHTwitter
+the ultimate way to tweak your Twitter/X experience
+
+> Forked from [BHTwitter](https://github.com/BandarHL/BHTwitter).
 
 # Features
-- Download Videos (even if account private).
-- Custom Tab Bar
-- No history feature.
-- Hide topics tweet feature.
-- Disable video layer caption.
-- Padlock.
-- Font changer.
-- Enable the new UI of DM search.
-- Auto load photos in highest quality feature.
-- Undo tweet feature.
-- Theme (like Twitter Blue).
-- App icon changer
-- Twitter Circle feature.
-- Copying profile information feature.
-- Save tweet as an image.
-- Hide spaces bar.
-- Disable RTL.
-- Always open in Safari.
-- Translate bio.
-- Disable new tweet style (A.K.A edge to edge tweet)
-- Enable voice tweet and voice message in DM.
-- Hide promoted tweet from the timeline.
-- Confirm alert when hit the tweet button.
-- Confirm alert when hit like button.
-- Confirm alert when hit follow button.
-- FLEX for debugging.
+
+- **Download media**: Save videos and GIFs directly from Tweets.
+- **Custom tab bar**: Personalize your navigation.
+- **No search history**: Keep your searches private.
+- **No topic Tweets**: Remove irrelevant topics from your feed.
+- **No video captions**: Clean up your video player.
+- **Lock Twitter**: Secure the app with Face ID, Touch ID, or a passcode.
+- **Custom fonts**: Change the font to match your style.
+- **Better DM search**: Unlock advanced Direct Message filters.
+- **High-quality media**: Always upload and view in the best quality available.
+- **Undo Tweet**: Add a delay to fix mistakes before posting.
+- **Change theme**: Choose colors to match your mood.
+- **Change app icon**: Fresh icons to suit your theme.
+- **Twitter Circles**: Full support included.
+- **Copy profile details**: Easily copy bios, usernames, and more.
+- **Save Tweets as images**: Long-press to export Tweets cleanly.
+- **Hide Spaces bar**: Make your timeline cleaner.
+- **Left-to-right layout**: Force LTR layout even for RTL languages.
+- **Open links externally**: Use Safari or your default browser.
+- **Translate bios**: View bios in your preferred language.
+- **Original Tweet layout**: Revert to the classic Tweet style.
+- **Voice Tweets & DMs**: Enable hidden voice features.
+- **Block promoted Tweets**: Remove ads from your feed.
+- **Confirm likes, Tweets, and follows**: Add confirmation prompts to avoid mistakes.
+- **FLEX debug tool**: Tools for developers to debug easily.
 
 | | | |
 |:-------------------------:|:-------------------------:|:-------------------------:|
-|<img width="1604" alt="screen shot 2017-08-07 at 12 18 15 pm" src="1.png"> |  <img width="1604" alt="screen shot 2017-08-07 at 12 18 15 pm" src="2.png">|<img width="1604" alt="screen shot 2017-08-07 at 12 18 15 pm" src="3.png">|
-|<img width="1604" alt="screen shot 2017-08-07 at 12 18 15 pm" src="4.png">  |
+|<img width="1604" alt="Screenshot 1" src="1.png">|<img width="1604" alt="Screenshot 2" src="2.png">|<img width="1604" alt="Screenshot 3" src="3.png">|
+|<img width="1604" alt="Screenshot 4" src="4.png">|
 
-# How to build the project
+# How to Build
 
-## Local
+## Build Locally
 
-- install [Theos](https://github.com/theos/theos)
-- install [cyan](https://github.com/asdfzxcvbn/pyzule-rw) if you want to build for sideload or TrollStore
+1. Install [Theos](https://github.com/theos/theos).
+2. Install [cyan](https://github.com/asdfzxcvbn/pyzule-rw) if you want sideload or TrollStore builds.
+3. Clone the NeoFreeBird-BHTwitter repository:
 
-- Clone the BHTwitter project repository:
 ```bash
-git clone --recursive https://github.com/BandarHL/BHTwitter
-cd BHTwitter
+git clone --recursive https://github.com/actuallyaridan/NeoFreeBird-BHTwitter
+cd NeoFreeBird-BHTwitter
 ```
-- Make the script executable:
+
+4. Make the build script executable:
+
 ```bash
 chmod +x ./build.sh
 ```
-- Run the script with the desired options:
+
+5. Run the script with your preferred option:
+
 ```bash
 ./build.sh [OPTIONS]
 ```
-- Replace [OPTIONS] with one of the following:
 
+Available options:
 ```
---sideloaded: Build BHTwitter project for sideloaded deployment.
---rootless: Build BHTwitter project for rootless deployment.
---trollstore: Build BHTwitter project for TrollStore deployment.
-No option: Build BHTwitter project for rootfull deployment.
+--sideloaded: For sideloading.
+--rootless: For rootless jailbreaks.
+--trollstore: For TrollStore users.
+(no option): For rootful jailbreaks.
 ```
 
-## Using GitHub Actions
+## Build via GitHub Actions
 
-- Fork this repository.
-- Open "Actions" tab on your fork, and press "I understand my workflows, go ahead and enable them" to proceed.
-- Select "Build and Release BHTwitter" workflow.
-- Press "Run workflow" menu, and enter parameters in the popup that appears.
-  - Don't forget to choose deployment format (`rootfull`, `rootless`, `sideloaded`, `trollstore`).
-  - For `sideloaded` and `trollstore` builds, a valid URL of decrypted IPA is required. For `rootfull` and `rootless` builds, enter any value (it won't be used).
-  - For other parameters, defaults are usually sufficient.
-- Press "Run workflow" button, and after a while you should see build artifacts on "Releases" page.
+1. Fork this repository.
+2. Open the "Actions" tab and enable workflows.
+3. Choose "Build and Release NeoFreeBird-BHTwitter."
+4. Click "Run workflow" and provide:
+   - Deployment format: `rootful`, `rootless`, `sideloaded`, or `trollstore`.
+   - A decrypted IPA URL for sideloaded/TrollStore builds.
+   - Any value for rootful/rootless builds.
+5. Check the "Releases" tab once the build completes.
 
-# Example Usages
-## Build for Sideloaded Deployment
-- Download an IPA file for X or Twitter from AppDB or decrypt it by your self.
-- Then rename the IPA file to `com.atebits.Tweetie2.ipa` and move it to `packages` folder.
+# Build Examples
+
+## Build for Sideloading
+
+1. Get a decrypted IPA for Twitter/X.
+2. Rename it to `com.atebits.Tweetie2.ipa` and move it to the `packages` folder.
+
 ```bash
 ./build.sh --sideloaded
 ```
-- After the build we'll find `BHTwitter-sideloaded.ipa` inside `packages` folder.
 
-## Build for TrollStore Deployment
-- Download an IPA file for X or Twitter from AppDB or decrypt it by your self.
-- Then rename the IPA file to `com.atebits.Tweetie2.ipa` and move it to `packages` folder.
+Result: `NeoFreeBird-BHTwitter-sideloaded.ipa` inside `packages`.
+
+## Build for TrollStore
+
+Follow the same steps as sideloading, then run:
+
 ```bash
 ./build.sh --trollstore
 ```
-- After the build we'll find `BHTwitter-trollstore.tipa` inside `packages` folder.
 
+Result: `NeoFreeBird-BHTwitter-trollstore.tipa` inside `packages`.
 
-## Build for Rootless Deployment
-- Just run the build command with rootless flag.
+## Build for Rootless Jailbreaks
+
+Simply run:
+
 ```bash
 ./build.sh --rootless
 ```
-- After the build we'll find `com.bandarhl.bhtwitter_4.2_iphoneos-arm64.deb` inside `packages` folder.
 
+Result: `com.bandarhl.bhtwitter_4.2_iphoneos-arm64.deb` inside `packages`.
 
-## Build for Rootfull Deployment
-- Just run the build command without any flag.
+## Build for Rootful Jailbreaks
+
+Just run the script without any flags:
+
 ```bash
 ./build.sh
 ```
-- After the build we'll find `com.bandarhl.bhtwitter_4.2_iphoneos-arm.deb` inside `packages` folder.
+
+Result: `com.bandarhl.bhtwitter_4.2_iphoneos-arm.deb` inside `packages`.
+
