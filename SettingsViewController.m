@@ -101,22 +101,47 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     [super viewDidLoad];
 
     self.view.backgroundColor = [UIColor systemBackgroundColor];
+
+    // Customize navigation bar to match Twitter
+    UINavigationBar *navBar = self.navigationController.navigationBar;
+    navBar.prefersLargeTitles = NO;
+    navBar.translucent = NO;
+    navBar.backgroundColor = [UIColor systemBackgroundColor];
+    navBar.tintColor = [UIColor labelColor];
+    navBar.shadowImage = [UIImage new]; // Remove bottom separator line
+
+    // Set the Twitter style title (name + handle)
+    if (self.twAccount != nil) {
+        self.navigationItem.titleView = [objc_getClass("TFNTitleView") titleViewWithTitle:@"Settings" subtitle:self.twAccount.displayUsername];
+    } else {
+        self.navigationItem.title = @"Settings";
+    }
+
+    // Set Twitter style back button
+    UIImage *backImage = [UIImage imageNamed:@"arrow_left"]; 
+    UIBarButtonItem *backButton = [[UIBarButtonItem alloc] initWithImage:backImage
+                                                                   style:UIBarButtonItemStylePlain
+                                                                  target:self
+                                                                  action:@selector(backButtonPressed)];
+    self.navigationItem.leftBarButtonItem = backButton;
+
+    // Configure table view
     self.table.backgroundColor = [UIColor systemBackgroundColor];
     self.table.separatorColor = [UIColor separatorColor];
-    self.table.tableFooterView = [UIView new];
     self.table.separatorStyle = UITableViewCellSeparatorStyleNone;
-
+    self.table.tableFooterView = [UIView new];
     if (@available(iOS 15.0, *)) {
         self.table.sectionHeaderTopPadding = 8;
     }
-
     self.table.separatorInset = UIEdgeInsetsMake(0, 16, 0, 0);
     self.table.layoutMargins = UIEdgeInsetsMake(0, 16, 0, 16);
-
-    if (self.twAccount != nil) {
-        self.navigationItem.titleView = [objc_getClass("TFNTitleView") titleViewWithTitle:@"Settings" subtitle:self.twAccount.displayUsername];
-    }
 }
+
+// Handle back button tap
+- (void)backButtonPressed {
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
 
 
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
