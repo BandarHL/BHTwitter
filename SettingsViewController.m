@@ -389,6 +389,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
             copyProfileInfo,
             tweetToImage,
             disableRTL,
+            restoreTweetLabels,
             alwaysOpenSafari,
             stripTrackingParams,
             urlHost,
