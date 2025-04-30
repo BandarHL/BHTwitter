@@ -256,6 +256,10 @@
 + (BOOL)customVoice {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"custom_voice_upload"];
 }
+
++ (BOOL)RestoreTweetLabels {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"restore_tweet_labels"];
+}
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount {
     SettingsViewController *pref = [[SettingsViewController alloc] initWithTwitterAccount:twAccount];
     [pref.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:@"NeoFreeBird" subtitle:twAccount.displayUsername]];
@@ -277,12 +281,6 @@
     BOOL containsNonDigitsOnly = [string rangeOfCharacterFromSet:digits].location == NSNotFound;
 
     return containsNonDigitsOnly;
-}
-
-+ (BOOL)RestoreTweetLabels {
-    if (![[NSUserDefaults standardUserDefaults] objectForKey:@"restore_tweet_labels"])
-        return YES;
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"restore_tweet_labels"];
 }
 
 @end
