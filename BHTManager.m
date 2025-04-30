@@ -279,5 +279,11 @@
     return containsNonDigitsOnly;
 }
 
++ (BOOL)RestoreTweetLabels {
+    if (![[NSUserDefaults standardUserDefaults] objectForKey:@"restore_tweet_labels"])
+        return YES;
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"restore_tweet_labels"];
+}
+
 @end
 
