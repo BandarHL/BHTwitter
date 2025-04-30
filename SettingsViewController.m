@@ -155,7 +155,7 @@
 
         PSSpecifier *hidePremiumOffer = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_PREMIUM_OFFER_OPTION"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_PREMIUM_OFFER_OPTION_DETAIL_TITLE"] key:@"hide_premium_offer" defaultValue:false changeAction:nil];
 
-        PSSpecifier *hideTrendVideos = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_TREND_VIDEOS_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_TREND_VIDEOS_OPTION_DETAIL_TITLE"] key:@"hide_trend_videos" defaultValue:false changeAction:nil];
+        PSSpecifier *hideTrendVideos = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_TREND_VIDEOS_OPTION"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_TREND_VIDEOS_OPTION_DETAIL_TITLE"] key:@"hide_trend_videos" defaultValue:false changeAction:nil];
         
         PSSpecifier *videoLayerCaption = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE"] detailTitle:nil key:@"dis_VODCaptions" defaultValue:false changeAction:nil];
         
@@ -503,7 +503,7 @@
     UITableViewCell *specifierCell = [specifier propertyForKey:PSTableCellKey];
     PSSpecifier *selectionSpecifier = [self specifierForID:@"Select URL host"];
 
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"BHTwitter" message:@"plaese select what host you prefre" preferredStyle:UIAlertControllerStyleActionSheet];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"BHTwitter" message:@"Please select what host you prefer" preferredStyle:UIAlertControllerStyleActionSheet];
 
     if (alert.popoverPresentationController != nil) {
         CGFloat midX = CGRectGetMidX(specifierCell.frame);
