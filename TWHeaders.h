@@ -1,8 +1,8 @@
 //
 //  TWHeaders.h
-//  BHT
+//  BHTwitter
 //
-//  Created by BandarHelal on 23/12/1441 AH.
+//  Created by BandarHelal
 //
 
 #import <objc/runtime.h>
@@ -162,7 +162,12 @@ static NSString *_lastCopiedURL;
 @end
 
 @interface TFNAttributedTextModel : NSObject
+@property(copy, nonatomic) NSAttributedString *attributedString;
 - (instancetype)initWithAttributedString:(NSMutableAttributedString *)arg;
+@end
+
+@interface TFNAttributedTextView : UIView
+- (void)setTextModel:(id)model;
 @end
 
 @interface TFNActiveTextItem : NSObject
@@ -299,7 +304,15 @@ static NSString *_lastCopiedURL;
 
 @interface T1ConversationFocalStatusView : UIView
 @property(nonatomic) __weak id <TTACoreStatusViewEventHandler> eventHandler;
+- (void)layoutSubviews;
+@property(nonatomic, readonly) id viewModel;
 @end
+
+@interface TTACoreStatusViewModel : NSObject
+@property(nonatomic, readonly) id tweet;
+@end
+
+
 
 @interface TFNButtonBarView : UIView
 @property(nonatomic) double trailingViewsSpacing;
@@ -384,6 +397,9 @@ static NSString *_lastCopiedURL;
 @property(readonly, nonatomic) NSDictionary *scribeParameters;
 @property(readonly, nonatomic) _Bool isPromoted;
 @property(readonly, nonatomic) NSString *mediaScribeContentID;
+@property(nonatomic, copy) NSString *fromUserName;
+@property(nonatomic, assign) NSInteger statusID;
+- (id)init;
 @end
 
 @interface TFSTwitterEntityURL : NSObject
