@@ -1345,28 +1345,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 
 // WARNING: This is still pretty experimental and may break. This restores Tweet Source Labels by using an Legacy API. by: @nyaathea
-@interface TFNAttributedTextModel : NSObject
-@property(copy, nonatomic) NSAttributedString *attributedString;
-@end
-
-@interface TFNAttributedTextView : UIView
-- (void)setTextModel:(id)model;
-@end
-
-@interface T1ConversationFocalStatusView : UIView
-- (void)layoutSubviews;
-@property(nonatomic, readonly) id viewModel;
-@end
-
-@interface TTACoreStatusViewModel : NSObject
-@property(nonatomic, readonly) id tweet;
-@end
-
-@interface TFNTwitterStatus : NSObject
-@property(nonatomic, copy) NSString *fromUserName;
-@property(nonatomic, assign) NSInteger statusID;
-- (id)init;
-@end
 
 static NSMutableDictionary *tweetSources = nil;
 static NSMutableDictionary *viewToTweetID = nil;
@@ -1759,7 +1737,7 @@ static NSMutableDictionary *updateCompleted = nil;
                         NSAttributedString *sourcePart = [[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttributes];
                         [appendedString appendAttributedString:sourcePart];
                         [newString appendAttributedString:appendedString];
-                        model.attributedString = newString;
+                        [model setValue:newString forKey:@"attributedString"];
                         if (!updateCompleted) updateCompleted = [NSMutableDictionary dictionary];
                         updateCompleted[mappedTweetID] = @(YES);
                     }
