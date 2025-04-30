@@ -317,7 +317,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         
         PSSpecifier *disableRTL = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_RTL_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_RTL_OPTION_DETAIL_TITLE"] key:@"dis_rtl" defaultValue:false changeAction:nil];
 
-        PSSpecifier *restoreTweetLabels = [self newSwitchCellWithTitle:@"Restore Tweet Labels" detailTitle:@"Show the original app/source label under tweets (e.g. Twitter for iPhone)" key:@"restore_tweet_labels" defaultValue:false changeAction:nil];
+        PSSpecifier *restoreTweetLabels = [self newSwitchCellWithTitle:@"Restore Tweet Labels" detailTitle:@"Show the Tweet Source Labels under tweets (e.g. Twitter for iPhone)" key:@"restore_tweet_labels" defaultValue:false changeAction:nil];
         
         PSSpecifier *alwaysOpenSafari = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ALWAYS_OPEN_SAFARI_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE"] key:@"openInBrowser" defaultValue:false changeAction:nil];
         
