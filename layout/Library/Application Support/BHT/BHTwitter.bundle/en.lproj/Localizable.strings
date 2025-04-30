@@ -104,6 +104,9 @@
 "DISABLE_RTL_OPTION_TITLE" = "Use left-to-right layout";
 "DISABLE_RTL_OPTION_DETAIL_TITLE" = "Force a LTR layout, even for RTL languages.";
 
+"ENABLE_TWEET_LABELS_OPTION_TITLE" = "Restore Tweet Labels (EXPERIMENTAL)";
+"ENABLE_TWEET_LABELS_OPTION_DETAIL_TITLE" = "This shows the client the user is tweeting from. (e.g. Twitter for iPhone)";
+
 "ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "Use external browser";
 "ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "Open links in Safari or your default browser.";
 
