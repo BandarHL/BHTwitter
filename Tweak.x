@@ -1344,7 +1344,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     %init;
 }
 
-#pragma mark - Accent colour helper
+// MARK: Accent colour helper
 
 /// Returns the accent (tint) colour chosen by the user in either BHTwitter’s own
 /// theme picker or Twitter Blue’s colour settings. Falls back to systemBlue.
@@ -1372,9 +1372,8 @@ static inline UIColor *BHTCurrentAccentColor(void) {
     return [UIColor systemBlueColor];
 }
 
-#pragma mark - Original code (restored & unmodified unless noted)
 // WARNING: This is still pretty experimental and may break. This restores Tweet Source Labels by using an Legacy API. by: @nyaathea
-
+// LAST UPDATED 05:57PM 2025-05-01
 
 static NSMutableDictionary *tweetSources      = nil;
 static NSMutableDictionary *viewToTweetID     = nil;
@@ -1711,7 +1710,7 @@ static NSMutableDictionary *updateCompleted   = nil;
 
 - (void)setTextModel:(TFNAttributedTextModel *)model {
     // --- BHTwitter style: Only run if toggle is ON ---
-    if (![objc_getClass("BHTManager") RestoreTweetLabels]) {
+    if (![BHTManager RestoreTweetLabels]) {
         %orig;
         return;
     }
@@ -1783,20 +1782,36 @@ static NSMutableDictionary *updateCompleted   = nil;
                         }
 
                         // Separator inherits timestamp colour
-                        UIColor *separatorColor = [newString attribute:NSForegroundColorAttributeName atIndex:0 effectiveRange:NULL];
-                        UIFont  *metadataFont   = [newString attribute:NSFontAttributeName atIndex:0 effectiveRange:NULL];
+                        UIColor *separatorColor = nil;
+                        UIFont  *metadataFont   = nil;
+                        if (newString.length > 0) {
+                            id colorAttr = [newString attribute:NSForegroundColorAttributeName atIndex:0 effectiveRange:NULL];
+                            if ([colorAttr isKindOfClass:[UIColor class]]) {
+                                separatorColor = colorAttr;
+                            }
+                            id fontAttr = [newString attribute:NSFontAttributeName atIndex:0 effectiveRange:NULL];
+                            if ([fontAttr isKindOfClass:[UIFont class]]) {
+                                metadataFont = fontAttr;
+                            }
+                        }
+                        if (!separatorColor) {
+                            separatorColor = [UIColor grayColor];
+                        }
+                        if (!metadataFont) {
+                            metadataFont = [UIFont systemFontOfSize:12.0];
+                        }
 
                         // --- NEW: use current accent colour ---
                         UIColor *sourceColor = BHTCurrentAccentColor();
 
                         NSMutableAttributedString *appended = [[NSMutableAttributedString alloc] init];
                         NSDictionary *separatorAttrs = separatorColor ? @{ NSFontAttributeName : metadataFont,
-                                                                             NSForegroundColorAttributeName : separatorColor }
-                                                                     : @{ NSFontAttributeName : metadataFont };
+                                                                         NSForegroundColorAttributeName : separatorColor }
+                                                             : @{ NSFontAttributeName : metadataFont };
                         [appended appendAttributedString:[[NSAttributedString alloc] initWithString:@" · " attributes:separatorAttrs]];
 
                         NSDictionary *sourceAttrs = @{ NSFontAttributeName : metadataFont,
-                                                        NSForegroundColorAttributeName : sourceColor };
+                                                      NSForegroundColorAttributeName : sourceColor };
                         [appended appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttrs]];
 
                         [newString appendAttributedString:appended];
