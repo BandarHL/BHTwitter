@@ -278,6 +278,8 @@ PSSpecifier *searchSection   = [self newSectionWithTitle:[[BHTBundle sharedBundl
                                localizedStringForKey:@"SEARCH_SECTION_HEADER_TITLE"]
                                                   footer:nil];
 
+PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"PHOTOS_VIDEOS_SECTION_HEADER_TITLE"] footer:nil];
+
         PSSpecifier *mainSection = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"MAIN_SECTION_HEADER_TITLE"] footer:nil];
         PSSpecifier *twitterBlueSection = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TWITTER_BLUE_SECTION_HEADER_TITLE"] footer:[[BHTBundle sharedBundle] localizedStringForKey:@"TWITTER_BLUE_SECTION_FOOTER_TITLE"]];
         PSSpecifier *layoutSection = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"LAYOUT_CUS_SECTION_HEADER_TITLE"] footer:[[BHTBundle sharedBundle] localizedStringForKey:@"LAYOUT_CUS_SECTION_FOOTER_TITLE"]];
@@ -386,19 +388,19 @@ PSSpecifier *searchSection   = [self newSectionWithTitle:[[BHTBundle sharedBundl
             customVoice,
             hideTopics,
             hideTopicsToFollow,
-            hideSpace,
-            videoLayerCaption,
             padLock,
-            autoHighestLoad,
             alwaysOpenSafari,
             stripTrackingParams,
             urlHost,
             
             tweetsSection, // 1
+            origTweetStyle,
             tweetToImage,
             restoreTweetLabels,
             likeConfrim,
             tweetConfirm,
+            hideViewCount,
+            hideBookmarkButton,
             disableSensitiveTweetWarnings,
 
             profilesSection, // 2
@@ -411,7 +413,12 @@ PSSpecifier *searchSection   = [self newSectionWithTitle:[[BHTBundle sharedBundl
             noHistory,
             hideTrendVideos,
 
-            twitterBlueSection, // 4
+            photosVideosSection, // 4
+            videoLayerCaption,
+            autoHighestLoad,
+            forceFullFrame,
+
+            twitterBlueSection, // 5
             undoTweet,
             download,
             directSave,
@@ -421,26 +428,23 @@ PSSpecifier *searchSection   = [self newSectionWithTitle:[[BHTBundle sharedBundl
             appIcon,
             customTabBarVC,
             
-            layoutSection, // 5
+            layoutSection, // 6
             customDirectBackgroundView,
-            origTweetStyle,
+            hideSpace,
             stopHidingTabBar,
             disableRTL,
-            hideViewCount,
-            hideBookmarkButton,
-            forceFullFrame,
             showScrollIndicator,
             font,
             regularFontsPicker,
             boldFontsPicker,
             
-            legalSection, // 6
+            legalSection, // 7
             acknowledgements,
             
-            debug, // 7
+            debug, // 8
             flex,
             
-            developer, // 8
+            developer, // 9
             actuallyaridan,
             timi2506,
             nyathea,
