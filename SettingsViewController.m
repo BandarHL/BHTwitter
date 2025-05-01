@@ -266,6 +266,18 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 - (NSArray *)specifiers {
     if (!_specifiers) {
         
+PSSpecifier *tweetsSection   = [self newSectionWithTitle:[[BHTBundle sharedBundle]
+                               localizedStringForKey:@"TWEETS_SECTION_HEADER_TITLE"]
+                                                  footer:nil];
+
+PSSpecifier *profilesSection = [self newSectionWithTitle:[[BHTBundle sharedBundle]
+                               localizedStringForKey:@"PROFILES_SECTION_HEADER_TITLE"]
+                                                  footer:nil];
+
+PSSpecifier *searchSection   = [self newSectionWithTitle:[[BHTBundle sharedBundle]
+                               localizedStringForKey:@"SEARCH_SECTION_HEADER_TITLE"]
+                                                  footer:nil];
+
         PSSpecifier *mainSection = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"MAIN_SECTION_HEADER_TITLE"] footer:nil];
         PSSpecifier *twitterBlueSection = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TWITTER_BLUE_SECTION_HEADER_TITLE"] footer:[[BHTBundle sharedBundle] localizedStringForKey:@"TWITTER_BLUE_SECTION_FOOTER_TITLE"]];
         PSSpecifier *layoutSection = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"LAYOUT_CUS_SECTION_HEADER_TITLE"] footer:[[BHTBundle sharedBundle] localizedStringForKey:@"LAYOUT_CUS_SECTION_FOOTER_TITLE"]];
@@ -373,28 +385,33 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
             mainSection, // 0
             customVoice,
             hideTopics,
-            hideWhoToFollow,
             hideTopicsToFollow,
-            hideTrendVideos,
             hideSpace,
             videoLayerCaption,
-            noHistory,
-            bioTranslate,
-            likeConfrim,
-            tweetConfirm,
-            followConfirm,
             padLock,
             autoHighestLoad,
-            disableSensitiveTweetWarnings,
-            copyProfileInfo,
-            tweetToImage,
-            disableRTL,
-            restoreTweetLabels,
             alwaysOpenSafari,
             stripTrackingParams,
             urlHost,
             
-            twitterBlueSection, // 1
+            tweetsSection, // 1
+            tweetToImage,
+            restoreTweetLabels,
+            likeConfrim,
+            tweetConfirm,
+            disableSensitiveTweetWarnings,
+
+            profilesSection, // 2
+            followConfirm,
+            copyProfileInfo,
+            bioTranslate,
+            hideWhoToFollow,
+
+            searchSection, // 3
+            noHistory,
+            hideTrendVideos,
+
+            twitterBlueSection, // 4
             undoTweet,
             download,
             directSave,
@@ -404,10 +421,11 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
             appIcon,
             customTabBarVC,
             
-            layoutSection, // 2
+            layoutSection, // 5
             customDirectBackgroundView,
             origTweetStyle,
             stopHidingTabBar,
+            disableRTL,
             hideViewCount,
             hideBookmarkButton,
             forceFullFrame,
@@ -416,13 +434,13 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
             regularFontsPicker,
             boldFontsPicker,
             
-            legalSection, // 3
+            legalSection, // 6
             acknowledgements,
             
-            debug, // 4
+            debug, // 7
             flex,
             
-            developer, // 5
+            developer, // 8
             actuallyaridan,
             timi2506,
             nyathea,

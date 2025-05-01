@@ -23,7 +23,7 @@
 "CUSTOM_FONTS_NAVIGATION_BUTTON_TITLE" = "Custom fonts";
 "CUSTOM_FONTS_NAVIGATION_TITLE" = "Choose a font";
 "THEME_SETTINGS_NAVIGATION_TITLE" = "Change theme";
-"CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE" = "Tab bar settings";
+"CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE" = "Customize the tab bar";
 "ACKNOWLEDGEMENTS_SETTINGS_NAVIGATION_TITLE" = "Legal notices";
 
 "COPY_PROFILE_INFO_MENU_OPTION_1" = "Copy bio";
@@ -32,7 +32,10 @@
 "COPY_PROFILE_INFO_MENU_OPTION_4" = "Copy bio link";
 "COPY_PROFILE_INFO_MENU_OPTION_5" = "Copy location";
 
-"MAIN_SECTION_HEADER_TITLE" = "Tweaks";
+"MAIN_SECTION_HEADER_TITLE" = "General"
+"TWEETS_SECTION_HEADER_TITLE" = "Tweets";
+"SEARCH_SECTION_HEADER_TITLE" = "Search";
+"PROFILES_SECTION_HEADER_TITLE" = "Profiles";
 "DOWNLOAD_VIDEOS_OPTION_TITLE" = "Download media";
 "DOWNLOAD_VIDEOS_OPTION_DETAIL_TITLE" = "Save videos or GIFs right from Tweets.";
 
@@ -104,14 +107,14 @@
 "DISABLE_RTL_OPTION_TITLE" = "Use left-to-right layout";
 "DISABLE_RTL_OPTION_DETAIL_TITLE" = "Force a LTR layout, even for RTL languages.";
 
-"ENABLE_TWEET_LABELS_OPTION_TITLE" = "Restore Tweet Labels";
-"ENABLE_TWEET_LABELS_OPTION_DETAIL_TITLE" = "This shows the client the user is tweeting from. (EXPERIMENTAL)";
+"ENABLE_TWEET_LABELS_OPTION_TITLE" = "Show Tweet soruce labels (beta)";
+"ENABLE_TWEET_LABELS_OPTION_DETAIL_TITLE" = "Show what Twitter client was used when a Tweet was posted. (by nyathea)";
 
 "ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "Use external browser";
 "ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "Open links in Safari or your default browser.";
 
-"STRIP_URL_TRACKING_PARAMETERS_TITLE" = "Clean Tweet links";
-"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE" = "Copy clean URLs, without tracking.";
+"STRIP_URL_TRACKING_PARAMETERS_TITLE" = "Customize links";
+"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE" = "Choose a custom URL for links, and remove tracking.";
 
 "TWITTER_BLUE_SECTION_HEADER_TITLE" = "Twitter Blue";
 "UNDO_TWEET_OPTION_TITLE" = "Undo Tweet";
