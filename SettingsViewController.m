@@ -1,8 +1,9 @@
 //
 //  SettingsViewController.m
-//  BHTwitter
+//  NeoFreeBird
 //
 //  Created by BandarHelal
+//  Modified by actuallyaridan & nyaathea
 //
 
 
