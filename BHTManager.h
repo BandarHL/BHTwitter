@@ -57,5 +57,6 @@
 + (bool)backgroundImage;
 + (BOOL)hideBookmarkButton;
 + (BOOL)customVoice;
++ (BOOL)RestoreTweetLabels;
 @end
 
