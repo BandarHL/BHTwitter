@@ -32,7 +32,7 @@
 "COPY_PROFILE_INFO_MENU_OPTION_4" = "Copy bio link";
 "COPY_PROFILE_INFO_MENU_OPTION_5" = "Copy location";
 
-"MAIN_SECTION_HEADER_TITLE" = "General"
+"MAIN_SECTION_HEADER_TITLE" = "General";
 "TWEETS_SECTION_HEADER_TITLE" = "Tweets";
 "SEARCH_SECTION_HEADER_TITLE" = "Search";
 "PROFILES_SECTION_HEADER_TITLE" = "Profiles";
@@ -163,7 +163,7 @@
 
 "SHOW_SCOLL_INDICATOR_OPTION_TITLE" = "Always show the scroll bar";
 
-"ALWAYS_FOLLOWING_PAGE_OPTION_TITLE" = "Disbale the For you tab";
+"ALWAYS_FOLLOWING_PAGE_OPTION_TITLE" = "Disable the For you tab";
 "ALWAYS_FOLLOWING_PAGE_OPTION_DETAIL_TITLE" = "Open Twitter on the Following tab.";
 
 "FONT_OPTION_TITLE" = "Custom fonts";
