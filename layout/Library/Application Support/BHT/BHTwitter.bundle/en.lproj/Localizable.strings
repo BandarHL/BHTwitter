@@ -108,8 +108,8 @@
 "DISABLE_RTL_OPTION_TITLE" = "Use left-to-right layout";
 "DISABLE_RTL_OPTION_DETAIL_TITLE" = "Force a LTR layout, even for RTL languages.";
 
-"ENABLE_TWEET_LABELS_OPTION_TITLE" = "Show Tweet soruce labels (beta)";
-"ENABLE_TWEET_LABELS_OPTION_DETAIL_TITLE" = "Show what Twitter client was used when a Tweet was posted. (by nyathea)";
+"ENABLE_TWEET_LABELS_OPTION_TITLE" = "Show Tweet Source labels (beta)";
+"ENABLE_TWEET_LABELS_OPTION_DETAIL_TITLE" = "This shows where the tweet was made from just like old twitter. (by @nyaathea)";
 
 "ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "Use external browser";
 "ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "Open links in Safari or your default browser.";
