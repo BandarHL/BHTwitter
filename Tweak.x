@@ -1,4 +1,5 @@
 #import <UIKit/UIKit.h>
+#import <math.h>
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
 #import "SAMKeychain/AuthViewController.h"
