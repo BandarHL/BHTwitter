@@ -2152,35 +2152,18 @@ static void SafeSetLastCookieRefresh(NSDate *date) {
 
 // Initialize everything
 %ctor {
+    if (!tweetSources)      tweetSources      = [NSMutableDictionary dictionary];
+    if (!viewToTweetID)     viewToTweetID     = [NSMutableDictionary dictionary];
+    if (!fetchTimeouts)     fetchTimeouts     = [NSMutableDictionary dictionary];
+    if (!viewInstances)     viewInstances     = [NSMutableDictionary dictionary];
+    if (!fetchRetries)      fetchRetries      = [NSMutableDictionary dictionary];
+    if (!updateRetries)     updateRetries     = [NSMutableDictionary dictionary];
+    if (!updateCompleted)   updateCompleted   = [NSMutableDictionary dictionary];
+    if (!fetchPending)      fetchPending      = [NSMutableDictionary dictionary];
+    if (!cookieCache)       cookieCache       = [NSMutableDictionary dictionary];
     // Load cached cookies at initialization
     [TweetSourceHelper loadCachedCookies];
 }
-
-// Declare TFNNavigationBar as a subclass of UIView
-@interface TFNNavigationBar : UIView
-- (UIViewController *)_viewControllerForAncestor;
-- (BOOL)isTimelineViewController;
-@end
-
-// Forward declarations for Twitter's view controllers
-@interface TFSTimelineViewController : UIViewController
-@end
-
-// Forward declarations for Twitter's TAEColorSettings and related classes
-@interface TAEColorSettings : NSObject
-+ (id)sharedSettings;
-- (id)currentColorPalette;
-@end
-
-@interface TAEColorPalette : NSObject
-- (id)colorPalette;
-- (UIColor *)primaryColorForOption:(NSInteger)option;
-@end
-
-// Add a category to UIImageView to track if we've applied the tint
-@interface UIImageView (Themerestoretwt)
-@property (nonatomic, assign) BOOL hasAppliedTint;
-@end
 
 @implementation UIImageView (Themerestoretwt)
 
