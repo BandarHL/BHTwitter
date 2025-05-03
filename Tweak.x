@@ -4,6 +4,7 @@
 #import "SAMKeychain/AuthViewController.h"
 #import "Colours/Colours.h"
 #import "BHTManager.h"
+#import <math.h>
 #import "BHTBundle/BHTBundle.h"
 
 static UIFont * _Nullable TAEStandardFontGroupReplacement(UIFont *self, SEL _cmd, CGFloat arg1, CGFloat arg2) {
@@ -1984,3 +1985,78 @@ static NSDate *lastCookieRefresh              = nil;
     // Load cached cookies at initialization
     [TweetSourceHelper loadCachedCookies];
 }
+
+// Dirty hax for making the Nav Icon themeable again.
+
+%hook TFNNavigationBar
+
+%new
+- (BOOL)isTimelineViewController {
+    UIViewController *ancestor = [self _viewControllerForAncestor];
+    if (!ancestor) return NO;
+    
+    // Get the navigation controller if it exists
+    UINavigationController *navController = ancestor.navigationController ?: (UINavigationController *)ancestor;
+    if (!navController) return NO;
+    
+    // Get the top view controller
+    UIViewController *topViewController = navController.topViewController;
+    if (!topViewController) return NO;
+    
+    // Get the top view controller class name
+    NSString *topViewControllerClassName = NSStringFromClass([topViewController class]);
+    
+    // Check for Settings or Voice tab with exact class names
+    if ([topViewControllerClassName isEqualToString:@"T1GenericSettingsViewController"] ||
+        [topViewControllerClassName isEqualToString:@"T1VoiceTabViewController"]) {
+        return NO;
+    }
+    
+    // Check if we're in the main timeline navigation controller and at root level
+    return [NSStringFromClass([navController class]) isEqualToString:@"T1TimelineNavigationController"] && 
+           navController.viewControllers.count <= 1;
+}
+
+- (void)layoutSubviews {
+    %orig;
+    
+    // Check if we're in a Timeline view
+    BOOL isTimeline = [self isTimelineViewController];
+    
+    // Find and theme/hide the Twitter icon
+    for (UIView *subview in self.subviews) {
+        if ([subview isKindOfClass:[UIImageView class]]) {
+            UIImageView *imageView = (UIImageView *)subview;
+            
+            // Check if this is our target image view - only check width, height, and x position
+            BOOL isTargetFrame = (fabs(imageView.frame.size.width - 29.0) < 1.0 && 
+                                fabs(imageView.frame.size.height - 29.0) < 1.0 && 
+                                fabs(imageView.frame.origin.x - 173.0) < 1.0);
+            
+            if (isTargetFrame) {
+                if (isTimeline) {
+                    // Theme the icon with the current accent color
+                    imageView.tintColor = BHTCurrentAccentColor();
+                    
+                    // Ensure alwaysTemplate mode persists
+                    if (imageView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
+                        imageView.image = [imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+                    }
+                    
+                    // Show and theme the image view
+                    imageView.hidden = NO;
+                    imageView.alpha = 1.0;
+                    
+                    // Force a redraw
+                    [imageView setNeedsDisplay];
+                } else {
+                    // Hide the icon completely when not in timeline
+                    imageView.hidden = YES;
+                    imageView.alpha = 0.0;
+                }
+            }
+        }
+    }
+}
+
+%end

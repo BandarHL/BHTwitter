@@ -508,6 +508,7 @@ typedef FLEXAlertAction * _Nonnull (^FLEXAlertActionHandler)(void(^handler)(NSAr
 @end
 
 @protocol TAEColorPalette
+- (id)colorPalette;
 - (UIColor *)primaryColorForOption:(NSUInteger)colorOption;
 @end
 
@@ -586,3 +587,31 @@ static UIViewController * _Nonnull topMostController() {
     }
     return topController;
 }
+
+// Declare TFNNavigationBar as a subclass of UIView
+@interface TFNNavigationBar : UIView
+- (UIViewController *)_viewControllerForAncestor;
+- (BOOL)isTimelineViewController;
+@end
+
+// Forward declarations for Twitter's view controllers
+@interface TFSTimelineViewController : UIViewController
+@end
+
+// Add a category to UIImageView to track if we've applied the tint
+@interface UIImageView (Themerestoretwt)
+@property (nonatomic, assign) BOOL hasAppliedTint;
+@end
+
+
+@implementation UIImageView (Themerestoretwt)
+
+- (void)setHasAppliedTint:(BOOL)hasAppliedTint {
+    objc_setAssociatedObject(self, @selector(hasAppliedTint), @(hasAppliedTint), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+- (BOOL)hasAppliedTint {
+    return [objc_getAssociatedObject(self, @selector(hasAppliedTint)) boolValue];
+}
+
+@end
