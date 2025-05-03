@@ -1988,75 +1988,111 @@ static NSDate *lastCookieRefresh              = nil;
 
 // Dirty hax for making the Nav Icon themeable again.
 
+%hook UIImageView
+
+- (id)initWithImage:(UIImage *)image {
+    self = %orig;
+    if (self) {
+        if (image && CGSizeEqualToSize(image.size, CGSizeMake(29, 29))) {
+            self.image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+            self.tintColor = BHTCurrentAccentColor();
+        }
+    }
+    return self;
+}
+
+- (void)setImage:(UIImage *)image {
+    if (image && CGSizeEqualToSize(image.size, CGSizeMake(29, 29))) {
+        image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+        self.tintColor = BHTCurrentAccentColor();
+    }
+    %orig(image);
+}
+
+%end
+
 %hook TFNNavigationBar
 
 %new
-- (BOOL)isTimelineViewController {
+- (BOOL)shouldThemeIcon {
     UIViewController *ancestor = [self _viewControllerForAncestor];
-    if (!ancestor) return NO;
-    
-    // Get the navigation controller if it exists
-    UINavigationController *navController = ancestor.navigationController ?: (UINavigationController *)ancestor;
-    if (!navController) return NO;
-    
-    // Get the top view controller
-    UIViewController *topViewController = navController.topViewController;
-    if (!topViewController) return NO;
-    
-    // Get the top view controller class name
-    NSString *topViewControllerClassName = NSStringFromClass([topViewController class]);
-    
-    // Check for Settings or Voice tab with exact class names
-    if ([topViewControllerClassName isEqualToString:@"T1GenericSettingsViewController"] ||
-        [topViewControllerClassName isEqualToString:@"T1VoiceTabViewController"]) {
+    if (!ancestor) {
         return NO;
     }
     
-    // Check if we're in the main timeline navigation controller and at root level
-    return [NSStringFromClass([navController class]) isEqualToString:@"T1TimelineNavigationController"] && 
-           navController.viewControllers.count <= 1;
+    // Always allow onboarding
+    if ([ancestor isKindOfClass:NSClassFromString(@"ONBSignedOutViewController")]) {
+        return YES;
+    }
+    
+    // Get navigation controller
+    UINavigationController *navController = nil;
+    if ([ancestor isKindOfClass:[UINavigationController class]]) {
+        navController = (UINavigationController *)ancestor;
+    } else {
+        navController = ancestor.navigationController;
+    }
+    
+    // Check if we're on a detail view
+    if (navController && navController.viewControllers.count > 1) {
+        return NO;
+    }
+    
+    // Show on timeline navigation controller with single view
+    if ([NSStringFromClass([ancestor class]) containsString:@"TimelineNavigationController"]) {
+        return YES;
+    }
+    
+    // Show on home timeline views
+    if ([NSStringFromClass([ancestor class]) containsString:@"HomeTimelineViewController"] || 
+        [NSStringFromClass([ancestor class]) containsString:@"FeedTimelineViewController"]) {
+        return YES;
+    }
+    
+    return NO;
 }
 
 - (void)layoutSubviews {
     %orig;
     
-    // Check if we're in a Timeline view
-    BOOL isTimeline = [self isTimelineViewController];
+    BOOL shouldTheme = [self shouldThemeIcon];
     
-    // Find and theme/hide the Twitter icon
+    // ONLY look at DIRECT subviews of the navigation bar
     for (UIView *subview in self.subviews) {
         if ([subview isKindOfClass:[UIImageView class]]) {
             UIImageView *imageView = (UIImageView *)subview;
             
-            // Check if this is our target image view - only check width, height, and x position
-            BOOL isTargetFrame = (fabs(imageView.frame.size.width - 29.0) < 1.0 && 
-                                fabs(imageView.frame.size.height - 29.0) < 1.0 && 
-                                fabs(imageView.frame.origin.x - 173.0) < 1.0);
+            // VERY specific size check to only match Twitter logo
+            CGFloat width = imageView.frame.size.width;
+            CGFloat height = imageView.frame.size.height;
             
-            if (isTargetFrame) {
-                if (isTimeline) {
-                    // Theme the icon with the current accent color
-                    imageView.tintColor = BHTCurrentAccentColor();
-                    
-                    // Ensure alwaysTemplate mode persists
-                    if (imageView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
-                        imageView.image = [imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+            // Twitter logo is EXACTLY 29x29 with minimal tolerance
+            BOOL isTwitterLogo = fabs(width - 29.0) < 0.1 && fabs(height - 29.0) < 0.1;
+            
+            if (isTwitterLogo) {
+                if (shouldTheme) {
+                    // Get the original image
+                    UIImage *originalImage = imageView.image;
+                    if (originalImage && originalImage.renderingMode != UIImageRenderingModeAlwaysTemplate) {
+                        // Create template image from original
+                        UIImage *templateImage = [originalImage imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+                        imageView.image = templateImage;
+                        imageView.tintColor = BHTCurrentAccentColor();
                     }
-                    
-                    // Show and theme the image view
-                    imageView.hidden = NO;
-                    imageView.alpha = 1.0;
-                    
-                    // Force a redraw
-                    [imageView setNeedsDisplay];
-                } else {
-                    // Hide the icon completely when not in timeline
-                    imageView.hidden = YES;
-                    imageView.alpha = 0.0;
                 }
             }
         }
     }
+}
+
+%end
+
+// Hook the ONBSignedOutViewController to ensure we can theme its logo
+%hook ONBSignedOutViewController
+
+- (void)viewWillAppear:(BOOL)animated {
+    %orig;
+    [self.navigationController.navigationBar setNeedsLayout];
 }
 
 %end
