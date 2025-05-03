@@ -1986,17 +1986,7 @@ static NSDate *lastCookieRefresh              = nil;
     [TweetSourceHelper loadCachedCookies];
 }
 
-@implementation UIImageView (Themerestoretwt)
-
-- (void)setHasAppliedTint:(BOOL)hasAppliedTint {
-    objc_setAssociatedObject(self, @selector(hasAppliedTint), @(hasAppliedTint), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-}
-
-- (BOOL)hasAppliedTint {
-    return [objc_getAssociatedObject(self, @selector(hasAppliedTint)) boolValue];
-}
-
-@end
+// Dirty hax for making the Nav Icon themeable again.
 
 %hook TFNNavigationBar
 
