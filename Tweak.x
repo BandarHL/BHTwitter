@@ -2122,16 +2122,15 @@ static NSDate *lastCookieRefresh              = nil;
     self = %orig;
     if (self) {
         if (image && CGSizeEqualToSize(image.size, CGSizeMake(29, 29))) {
-            // Check if we're in a navigation bar context
-            UIView *superview = self.superview;
-            while (superview) {
-                if ([superview isKindOfClass:%c(TFNNavigationBar)]) {
-                    // This is likely the bird icon in the nav bar
-                    self.image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-                    self.tintColor = BHTCurrentAccentColor();
-                    break;
-                }
-                superview = superview.superview;
+            // Check if this is the Twitter bird icon by examining its traits
+            CGFloat scale = image.scale;
+            CGSize pixelSize = CGSizeMake(image.size.width * scale, image.size.height * scale);
+            
+            // Twitter bird icon is typically 29x29 points at various scales (2x, 3x)
+            // and is usually loaded from the main bundle
+            if (pixelSize.width >= 58 && pixelSize.height >= 58) {  // At least @2x
+                self.image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+                self.tintColor = BHTCurrentAccentColor();
             }
         }
     }
@@ -2140,9 +2139,13 @@ static NSDate *lastCookieRefresh              = nil;
 
 - (void)setImage:(UIImage *)image {
     if (image && CGSizeEqualToSize(image.size, CGSizeMake(29, 29))) {
-        NSString *imageName = [image.imageAsset valueForKey:@"assetName"];
-        if ([imageName containsString:@"twitter"] || [imageName containsString:@"bird"] || 
-            [imageName containsString:@"logo"] || image.renderingMode == UIImageRenderingModeAlwaysTemplate) {
+        // Check if this is the Twitter bird icon by examining its traits
+        CGFloat scale = image.scale;
+        CGSize pixelSize = CGSizeMake(image.size.width * scale, image.size.height * scale);
+        
+        // Twitter bird icon is typically 29x29 points at various scales (2x, 3x)
+        // and is usually loaded from the main bundle
+        if (pixelSize.width >= 58 && pixelSize.height >= 58) {  // At least @2x
             image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
             self.tintColor = BHTCurrentAccentColor();
         }
