@@ -732,25 +732,29 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)updateLogoTheme {
     BOOL shouldTheme = [self shouldThemeIcon];
     
-    // ONLY look at DIRECT subviews of the navigation bar
+    // Only look for the Twitter logo in the direct subviews of the navigation bar
     for (UIView *subview in self.subviews) {
         if ([subview isKindOfClass:[UIImageView class]]) {
             UIImageView *imageView = (UIImageView *)subview;
             
-            // VERY specific size check to only match Twitter logo
+            // Check if this is the Twitter logo by checking its exact size and position
             CGFloat width = imageView.frame.size.width;
             CGFloat height = imageView.frame.size.height;
             
-            // Twitter logo is EXACTLY 29x29 with minimal tolerance
-            BOOL isTwitterLogo = fabs(width - 29.0) < 0.1 && fabs(height - 29.0) < 0.1;
-            
-            if (isTwitterLogo) {
-                if (shouldTheme) {
-                    // Get the original image
-                    UIImage *originalImage = imageView.image;
-                    if (originalImage && originalImage.renderingMode != UIImageRenderingModeAlwaysTemplate) {
+            // Twitter logo is EXACTLY 29x29 and positioned in the center of the nav bar
+            if (fabs(width - 29.0) < 0.1 && fabs(height - 29.0) < 0.1 && 
+                imageView.center.y == self.center.y) {
+                
+                // Get the image name to verify it's the Twitter logo
+                NSString *imageName = [imageView.image valueForKey:@"_name"];
+                if (imageName && ([imageName containsString:@"twitter"] || 
+                                [imageName containsString:@"Twitter"] || 
+                                [imageName containsString:@"bird"] || 
+                                [imageName containsString:@"Bird"])) {
+                    
+                    if (shouldTheme) {
                         // Create template image from original
-                        UIImage *templateImage = [originalImage imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+                        UIImage *templateImage = [imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
                         imageView.image = templateImage;
                         imageView.tintColor = BHTCurrentAccentColor();
                     }
