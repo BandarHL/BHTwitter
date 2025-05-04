@@ -591,27 +591,16 @@ static UIViewController * _Nonnull topMostController() {
 // Declare TFNNavigationBar as a subclass of UIView
 @interface TFNNavigationBar : UIView
 - (UIViewController *)_viewControllerForAncestor;
-- (BOOL)isTimelineViewController;
+- (BOOL)shouldThemeIcon;
 @end
 
-// Forward declarations for Twitter's view controllers
 @interface TFSTimelineViewController : UIViewController
 @end
 
-// Add a category to UIImageView to track if we've applied the tint
-@interface UIImageView (Themerestoretwt)
-@property (nonatomic, assign) BOOL hasAppliedTint;
+@interface UIImageView (TwitterLogo)
+- (id)initWithImage:(UIImage *)image;
+- (void)setImage:(UIImage *)image;
 @end
 
-
-@implementation UIImageView (Themerestoretwt)
-
-- (void)setHasAppliedTint:(BOOL)hasAppliedTint {
-    objc_setAssociatedObject(self, @selector(hasAppliedTint), @(hasAppliedTint), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-}
-
-- (BOOL)hasAppliedTint {
-    return [objc_getAssociatedObject(self, @selector(hasAppliedTint)) boolValue];
-}
-
+@interface ONBSignedOutViewController : UIViewController
 @end
