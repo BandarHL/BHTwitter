@@ -2121,36 +2121,52 @@ static NSDate *lastCookieRefresh              = nil;
 - (id)initWithImage:(UIImage *)image {
     self = %orig;
     if (self) {
-        if (image && CGSizeEqualToSize(image.size, CGSizeMake(29, 29))) {
-            // Check if this is the Twitter bird icon by examining its traits
-            CGFloat scale = image.scale;
-            CGSize pixelSize = CGSizeMake(image.size.width * scale, image.size.height * scale);
-            
-            // Twitter bird icon is typically 29x29 points at various scales (2x, 3x)
-            // and is usually loaded from the main bundle
-            if (pixelSize.width >= 58 && pixelSize.height >= 58) {  // At least @2x
-                self.image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-                self.tintColor = BHTCurrentAccentColor();
-            }
+        if (image && [self isTwitterBirdIcon:image]) {
+            self.image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+            self.tintColor = BHTCurrentAccentColor();
         }
     }
     return self;
 }
 
 - (void)setImage:(UIImage *)image {
-    if (image && CGSizeEqualToSize(image.size, CGSizeMake(29, 29))) {
-        // Check if this is the Twitter bird icon by examining its traits
-        CGFloat scale = image.scale;
-        CGSize pixelSize = CGSizeMake(image.size.width * scale, image.size.height * scale);
-        
-        // Twitter bird icon is typically 29x29 points at various scales (2x, 3x)
-        // and is usually loaded from the main bundle
-        if (pixelSize.width >= 58 && pixelSize.height >= 58) {  // At least @2x
-            image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-            self.tintColor = BHTCurrentAccentColor();
-        }
+    if (image && [self isTwitterBirdIcon:image]) {
+        image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+        self.tintColor = BHTCurrentAccentColor();
     }
     %orig(image);
+}
+
+%new
+- (BOOL)isTwitterBirdIcon:(UIImage *)image {
+    if (!image) return NO;
+    
+    // Check if image is exactly 29x29
+    if (!CGSizeEqualToSize(image.size, CGSizeMake(29, 29))) return NO;
+    
+    // Get the image name if available
+    NSString *imageName = [image valueForKey:@"_name"];
+    if (!imageName) return NO;
+    
+    // Check for common Twitter bird icon names
+    NSArray *twitterIconNames = @[
+        @"twitter",
+        @"Twitter",
+        @"bird",
+        @"Bird",
+        @"twitter-logo",
+        @"Twitter-logo",
+        @"twitter_logo",
+        @"Twitter_logo"
+    ];
+    
+    for (NSString *name in twitterIconNames) {
+        if ([imageName containsString:name]) {
+            return YES;
+        }
+    }
+    
+    return NO;
 }
 
 %end
