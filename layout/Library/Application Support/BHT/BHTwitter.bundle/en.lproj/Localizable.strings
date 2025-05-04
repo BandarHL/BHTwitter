@@ -111,8 +111,8 @@
 "ENABLE_TWEET_LABELS_OPTION_TITLE" = "Show Tweet Source labels (beta)";
 "ENABLE_TWEET_LABELS_OPTION_DETAIL_TITLE" = "Shows the client the tweet was made from (by @nyaathea)";
 
-"DISABLE_CONVERSATION_MINIMAL_OPTION_TITLE" = "Disable Minimal Conversation Controls":
-"DISABLE_CONVERSATION_MINIMAL_OPTION_DETAIL_TITLE" = "This displays the like, quote tweet, and retweet counts above the action buttons like before"
+"DISABLE_CONVERSATION_MINIMAL_OPTION_TITLE" = "Disable Minimal Conversation Controls";
+"DISABLE_CONVERSATION_MINIMAL_OPTION_DETAIL_TITLE" = "This displays the like, quote tweet, and retweet counts above the action buttons like before";
 
 "ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "Use external browser";
 "ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "Open links in Safari or your default browser.";
