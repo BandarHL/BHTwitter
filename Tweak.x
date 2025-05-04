@@ -2121,7 +2121,7 @@ static NSDate *lastCookieRefresh              = nil;
 - (id)initWithImage:(UIImage *)image {
     self = %orig;
     if (self) {
-        if (image && image.imageAsset && [image.imageAsset.assetName isEqualToString:@"twitter"]) {
+        if (self.accessibilityIdentifier && [self.accessibilityIdentifier isEqualToString:@"twitter"]) {
             self.image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
             self.tintColor = BHTCurrentAccentColor();
         }
@@ -2130,7 +2130,7 @@ static NSDate *lastCookieRefresh              = nil;
 }
 
 - (void)setImage:(UIImage *)image {
-    if (image && image.imageAsset && [image.imageAsset.assetName isEqualToString:@"twitter"]) {
+    if (self.accessibilityIdentifier && [self.accessibilityIdentifier isEqualToString:@"twitter"]) {
         image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
         self.tintColor = BHTCurrentAccentColor();
     }
