@@ -2107,3 +2107,121 @@ static NSDate *lastCookieRefresh              = nil;
 }
 
 %end
+
+%hook T1ConversationFooterTextView
+
+- (void)setViewModel:(id)viewModel {
+    %orig;
+    @try {
+        if (viewModel) {
+            id status = nil;
+            @try { status = [viewModel valueForKey:@"tweet"]; } @catch (__unused NSException *e) {}
+            if (status) {
+                NSInteger statusID = 0;
+                @try {
+                    statusID = [[status valueForKey:@"statusID"] integerValue];
+                    if (statusID > 0) {
+                        if (!tweetSources)   tweetSources   = [NSMutableDictionary dictionary];
+                        if (!viewToTweetID)  viewToTweetID  = [NSMutableDictionary dictionary];
+                        if (!viewInstances)  viewInstances  = [NSMutableDictionary dictionary];
+
+                        NSString *tweetIDStr = @(statusID).stringValue;
+                        viewToTweetID[@((uintptr_t)self)] = tweetIDStr;
+                        viewInstances[tweetIDStr] = [NSValue valueWithNonretainedObject:self];
+
+                        if (!tweetSources[tweetIDStr]) {
+                            tweetSources[tweetIDStr] = @"";
+                            [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
+                        } else if (tweetSources[tweetIDStr] && ![tweetSources[tweetIDStr] isEqualToString:@""] &&
+                                   (!updateCompleted[tweetIDStr] || ![updateCompleted[tweetIDStr] boolValue])) {
+                            [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetIDStr}];
+                        }
+                    }
+                } @catch (__unused NSException *e) {}
+
+                if (statusID <= 0) {
+                    @try {
+                        NSString *altID = [status valueForKey:@"rest_id"] ?: [status valueForKey:@"id_str"] ?: [status valueForKey:@"id"];
+                        if (altID) {
+                            if (!tweetSources)   tweetSources   = [NSMutableDictionary dictionary];
+                            if (!viewToTweetID)  viewToTweetID  = [NSMutableDictionary dictionary];
+                            if (!viewInstances)  viewInstances  = [NSMutableDictionary dictionary];
+
+                            viewToTweetID[@((uintptr_t)self)] = altID;
+                            viewInstances[altID]              = [NSValue valueWithNonretainedObject:self];
+
+                            if (!tweetSources[altID]) {
+                                tweetSources[altID] = @"";
+                                [TweetSourceHelper fetchSourceForTweetID:altID];
+                            } else if (tweetSources[altID] && ![tweetSources[altID] isEqualToString:@""] &&
+                                       (!updateCompleted[altID] || ![updateCompleted[altID] boolValue])) {
+                                [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": altID}];
+                            }
+                        }
+                    } @catch (__unused NSException *e) {}
+                }
+            }
+        }
+    } @catch (__unused NSException *e) {}
+}
+
+- (void)dealloc {
+    @try {
+        NSString *tweetID = viewToTweetID[@((uintptr_t)self)];
+        if (tweetID) {
+            [viewToTweetID removeObjectForKey:@((uintptr_t)self)];
+            if (viewInstances[tweetID]) {
+                NSValue *viewValue = viewInstances[tweetID];
+                UIView *storedView = [viewValue nonretainedObjectValue];
+                if (storedView == self) {
+                    [viewInstances removeObjectForKey:tweetID];
+                }
+            }
+        }
+    } @catch (__unused NSException *e) {}
+    %orig;
+}
+
+- (void)handleTweetSourceUpdated:(NSNotification *)notification {
+    @try {
+        NSDictionary *userInfo = notification.userInfo;
+        NSString *tweetID      = userInfo[@"tweetID"];
+        if (tweetID && tweetSources[tweetID] && ![tweetSources[tweetID] isEqualToString:@""]) {
+            NSValue *viewValue = viewInstances[tweetID];
+            UIView  *target    = viewValue ? [viewValue nonretainedObjectValue] : nil;
+            if (target && [target isKindOfClass:%c(TFNAttributedTextView)]) {
+                NSString *currentTweetID = viewToTweetID[@((uintptr_t)target)];
+                if (currentTweetID && [currentTweetID isEqualToString:tweetID]) {
+                    TFNAttributedTextView *textView = (TFNAttributedTextView *)target;
+                    TFNAttributedTextModel *model = [textView valueForKey:@"_textModel"];
+                    if (model && model.attributedString.string) {
+                        NSString *text = model.attributedString.string;
+                        if ([text containsString:@"PM"] || [text containsString:@"AM"] ||
+                            [text rangeOfString:@"\\d{1,2}[:.]\\d{1,2}" options:NSRegularExpressionSearch].location != NSNotFound) {
+                            // Force a refresh of the text model
+                            [textView setTextModel:nil];
+                            [textView setTextModel:model];
+                        }
+                    }
+                }
+            }
+        }
+    } @catch (__unused NSException *e) {}
+}
+
++ (void)load {
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:@selector(handleTweetSourceUpdated:)
+                                                     name:@"TweetSourceUpdated"
+                                                   object:nil];
+        [TweetSourceHelper performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:3.0];
+        [[NSNotificationCenter defaultCenter] addObserver:[TweetSourceHelper class]
+                                                 selector:@selector(handleAppForeground:)
+                                                     name:@"UIApplicationDidBecomeActiveNotification"
+                                                   object:nil];
+    });
+}
+
+%end

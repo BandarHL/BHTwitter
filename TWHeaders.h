@@ -606,3 +606,7 @@ static UIViewController * _Nonnull topMostController() {
 
 @interface ONBSignedOutViewController : UIViewController
 @end
+
+@interface T1ConversationFooterTextView : TFNAttributedTextView
+@property(nonatomic, readonly) id viewModel;
+@end
