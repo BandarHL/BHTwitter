@@ -2140,16 +2140,11 @@ static NSDate *lastCookieRefresh              = nil;
 
 - (void)setImage:(UIImage *)image {
     if (image && CGSizeEqualToSize(image.size, CGSizeMake(29, 29))) {
-        // Check if we're in a navigation bar context
-        UIView *superview = self.superview;
-        while (superview) {
-            if ([superview isKindOfClass:%c(TFNNavigationBar)]) {
-                // This is likely the bird icon in the nav bar
-                image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-                self.tintColor = BHTCurrentAccentColor();
-                break;
-            }
-            superview = superview.superview;
+        NSString *imageName = [image.imageAsset valueForKey:@"assetName"];
+        if ([imageName containsString:@"twitter"] || [imageName containsString:@"bird"] || 
+            [imageName containsString:@"logo"] || image.renderingMode == UIImageRenderingModeAlwaysTemplate) {
+            image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+            self.tintColor = BHTCurrentAccentColor();
         }
     }
     %orig(image);
