@@ -2121,18 +2121,24 @@ static NSDate *lastCookieRefresh              = nil;
 - (id)initWithImage:(UIImage *)image {
     self = %orig;
     if (self) {
-        if (self.accessibilityIdentifier && [self.accessibilityIdentifier isEqualToString:@"twitter"]) {
-            self.image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-            self.tintColor = BHTCurrentAccentColor();
+        if ([self respondsToSelector:@selector(tfn_dynamicColorImageName)]) {
+            NSString *imageName = [self performSelector:@selector(tfn_dynamicColorImageName)];
+            if ([imageName containsString:@"twitter"]) {
+                self.image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+                self.tintColor = BHTCurrentAccentColor();
+            }
         }
     }
     return self;
 }
 
 - (void)setImage:(UIImage *)image {
-    if (self.accessibilityIdentifier && [self.accessibilityIdentifier isEqualToString:@"twitter"]) {
-        image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-        self.tintColor = BHTCurrentAccentColor();
+    if ([self respondsToSelector:@selector(tfn_dynamicColorImageName)]) {
+        NSString *imageName = [self performSelector:@selector(tfn_dynamicColorImageName)];
+        if ([imageName containsString:@"twitter"]) {
+            image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+            self.tintColor = BHTCurrentAccentColor();
+        }
     }
     %orig(image);
 }
