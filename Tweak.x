@@ -2118,24 +2118,46 @@ static NSDate *lastCookieRefresh              = nil;
 
 %hook UIImageView
 
-- (id)initWithImage:(UIImage *)image {
-    self = %orig;
-    if (self) {
-        if ([self respondsToSelector:@selector(tfn_dynamicColorImageName)]) {
-            NSString *imageName = [self performSelector:@selector(tfn_dynamicColorImageName)];
-            if ([imageName containsString:@"twitter"]) {
-                self.image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-                self.tintColor = BHTCurrentAccentColor();
-            }
+- (void)didMoveToWindow {
+    %orig;
+    if (!self.window) return;
+    
+    // Check if this is the Twitter bird logo by examining view hierarchy
+    UIView *view = self;
+    BOOL isNavBar = NO;
+    BOOL isCorrectSize = CGSizeEqualToSize(self.frame.size, CGSizeMake(29, 29));
+    
+    while (view && !isNavBar) {
+        if ([view isKindOfClass:%c(TFNNavigationBar)] || 
+            [NSStringFromClass([view class]) containsString:@"NavigationBar"]) {
+            isNavBar = YES;
+            break;
         }
+        view = view.superview;
     }
-    return self;
+    
+    if (isNavBar && isCorrectSize) {
+        self.image = [self.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+        self.tintColor = BHTCurrentAccentColor();
+    }
 }
 
 - (void)setImage:(UIImage *)image {
-    if ([self respondsToSelector:@selector(tfn_dynamicColorImageName)]) {
-        NSString *imageName = [self performSelector:@selector(tfn_dynamicColorImageName)];
-        if ([imageName containsString:@"twitter"]) {
+    if (image && [self.superview isKindOfClass:%c(TFNNavigationBar)]) {
+        UIView *view = self;
+        BOOL isNavBar = NO;
+        BOOL isCorrectSize = CGSizeEqualToSize(self.frame.size, CGSizeMake(29, 29));
+        
+        while (view && !isNavBar) {
+            if ([view isKindOfClass:%c(TFNNavigationBar)] || 
+                [NSStringFromClass([view class]) containsString:@"NavigationBar"]) {
+                isNavBar = YES;
+                break;
+            }
+            view = view.superview;
+        }
+        
+        if (isNavBar && isCorrectSize) {
             image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
             self.tintColor = BHTCurrentAccentColor();
         }
