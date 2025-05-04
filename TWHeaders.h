@@ -306,6 +306,7 @@ static NSString *_lastCopiedURL;
 @property(nonatomic) __weak id <TTACoreStatusViewEventHandler> eventHandler;
 - (void)layoutSubviews;
 @property(nonatomic, readonly) id viewModel;
+- (void)enumerateSubviewsRecursively:(void (^)(UIView *))block;
 @end
 
 @interface TTACoreStatusViewModel : NSObject
