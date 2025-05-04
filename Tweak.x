@@ -2133,15 +2133,3 @@ static NSDate *lastCookieRefresh              = nil;
 }
 
 %end
-
-// MARK: Disable Conversation Minimal Detail
-%hook TPSTwitterFeatureSwitches
-
-- (BOOL)boolForKey:(NSString *)key {
-    if ([key isEqualToString:@"conversational_replies_ios_minimal_detail_enabled"]) {
-        return false;
-    }
-    
-    return %orig;
-}
-%end
