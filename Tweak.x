@@ -1914,7 +1914,6 @@ static NSDate *lastCookieRefresh              = nil;
             if (target) {
                 NSString *currentTweetID = viewToTweetID[@((uintptr_t)target)];
                 if (currentTweetID && [currentTweetID isEqualToString:tweetID]) {
-                    // Instead of triggering layout, find and update the timestamp view directly
                     [self enumerateSubviewsRecursively:^(UIView *subview) {
                         if ([subview isKindOfClass:%c(TFNAttributedTextView)]) {
                             TFNAttributedTextView *textView = (TFNAttributedTextView *)subview;
@@ -1923,6 +1922,8 @@ static NSDate *lastCookieRefresh              = nil;
                                 NSString *text = model.attributedString.string;
                                 if ([text containsString:@"PM"] || [text containsString:@"AM"] ||
                                     [text rangeOfString:@"\\d{1,2}[:.]\\d{1,2}" options:NSRegularExpressionSearch].location != NSNotFound) {
+                                    // Force a refresh of the text model
+                                    [textView setTextModel:nil];
                                     [textView setTextModel:model];
                                 }
                             }
@@ -1938,8 +1939,8 @@ static NSDate *lastCookieRefresh              = nil;
 - (void)enumerateSubviewsRecursively:(void (^)(UIView *))block {
     block(self);
     for (UIView *subview in self.subviews) {
-        if ([subview isKindOfClass:%c(T1ConversationFocalStatusView)]) {
-            [((T1ConversationFocalStatusView *)subview) enumerateSubviewsRecursively:block];
+        if ([subview isKindOfClass:%c(UIView)]) {
+            [self enumerateSubviewsRecursively:block];
         }
     }
 }
@@ -2036,39 +2037,21 @@ static NSDate *lastCookieRefresh              = nil;
                             [newString deleteCharactersInRange:removalRange];
                         }
 
-                        // Separator inherits timestamp colour with validation
-                        UIColor *separatorColor = nil;
-                        UIFont  *metadataFont   = nil;
+                        // Get existing attributes from the timestamp
+                        NSDictionary *existingAttributes = nil;
                         if (newString.length > 0) {
-                            id colorAttr = [newString attribute:NSForegroundColorAttributeName atIndex:0 effectiveRange:NULL];
-                            if ([colorAttr isKindOfClass:[UIColor class]]) {
-                                separatorColor = colorAttr;
-                            }
-                            id fontAttr = [newString attribute:NSFontAttributeName atIndex:0 effectiveRange:NULL];
-                            if ([fontAttr isKindOfClass:[UIFont class]]) {
-                                metadataFont = fontAttr;
-                            }
-                        }
-                        if (!separatorColor) {
-                            separatorColor = [UIColor grayColor];
-                        }
-                        if (!metadataFont) {
-                            metadataFont = [UIFont systemFontOfSize:12.0];
+                            existingAttributes = [newString attributesAtIndex:0 effectiveRange:NULL];
                         }
 
-                        // Use current accent colour
-                        UIColor *sourceColor = BHTCurrentAccentColor();
-
+                        // Add separator and source text
                         NSMutableAttributedString *appended = [[NSMutableAttributedString alloc] init];
-                        NSDictionary *separatorAttrs = separatorColor ? @{ NSFontAttributeName : metadataFont,
-                                                                         NSForegroundColorAttributeName : separatorColor }
-                                                             : @{ NSFontAttributeName : metadataFont };
-                        [appended appendAttributedString:[[NSAttributedString alloc] initWithString:@" · " attributes:separatorAttrs]];
-
-                        NSDictionary *sourceAttrs = @{ NSFontAttributeName : metadataFont,
-                                                      NSForegroundColorAttributeName : sourceColor };
-                        [appended appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttrs]];
-
+                        [appended appendAttributedString:[[NSAttributedString alloc] initWithString:@" · " attributes:existingAttributes]];
+                        
+                        // Use current accent color for source text
+                        NSMutableDictionary *sourceAttributes = [existingAttributes mutableCopy];
+                        [sourceAttributes setObject:BHTCurrentAccentColor() forKey:NSForegroundColorAttributeName];
+                        [appended appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttributes]];
+                        
                         [newString appendAttributedString:appended];
                         [model setValue:newString forKey:@"attributedString"];
 
