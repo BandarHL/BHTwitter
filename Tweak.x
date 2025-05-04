@@ -2013,48 +2013,18 @@ static NSDate *lastCookieRefresh              = nil;
 
 %hook TFNNavigationBar
 
-%new
-- (BOOL)shouldThemeIcon {
-    UIViewController *ancestor = [self _viewControllerForAncestor];
-    if (!ancestor) {
-        return NO;
-    }
-    
-    // Always allow onboarding
-    if ([ancestor isKindOfClass:NSClassFromString(@"ONBSignedOutViewController")]) {
-        return YES;
-    }
-    
-    // Get navigation controller
-    UINavigationController *navController = nil;
-    if ([ancestor isKindOfClass:[UINavigationController class]]) {
-        navController = (UINavigationController *)ancestor;
-    } else {
-        navController = ancestor.navigationController;
-    }
-    
-    // Check if we're on a detail view
-    if (navController && navController.viewControllers.count > 1) {
-        return NO;
-    }
-    
-    // Show on timeline navigation controller with single view
-    if ([NSStringFromClass([ancestor class]) containsString:@"TimelineNavigationController"]) {
-        return YES;
-    }
-    
-    // Show on home timeline views
-    if ([NSStringFromClass([ancestor class]) containsString:@"HomeTimelineViewController"] || 
-        [NSStringFromClass([ancestor class]) containsString:@"FeedTimelineViewController"]) {
-        return YES;
-    }
-    
-    return NO;
+- (void)didMoveToWindow {
+    %orig;
+    [self updateLogoTheme];
 }
 
-- (void)layoutSubviews {
+- (void)didMoveToSuperview {
     %orig;
-    
+    [self updateLogoTheme];
+}
+
+%new
+- (void)updateLogoTheme {
     BOOL shouldTheme = [self shouldThemeIcon];
     
     // ONLY look at DIRECT subviews of the navigation bar
@@ -2083,16 +2053,6 @@ static NSDate *lastCookieRefresh              = nil;
             }
         }
     }
-}
-
-%end
-
-// Hook the ONBSignedOutViewController to ensure we can theme its logo
-%hook ONBSignedOutViewController
-
-- (void)viewWillAppear:(BOOL)animated {
-    %orig;
-    [self.navigationController.navigationBar setNeedsLayout];
 }
 
 %end
