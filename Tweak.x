@@ -1832,10 +1832,9 @@ static NSDate *lastCookieRefresh              = nil;
 
 %hook T1ConversationFocalStatusView
 
-- (void)layoutSubviews {
+- (void)setViewModel:(id)viewModel {
     %orig;
     @try {
-        id viewModel = self.viewModel;
         if (viewModel) {
             id status = nil;
             @try { status = [viewModel valueForKey:@"tweet"]; } @catch (__unused NSException *e) {}
@@ -1888,6 +1887,23 @@ static NSDate *lastCookieRefresh              = nil;
     } @catch (__unused NSException *e) {}
 }
 
+- (void)dealloc {
+    @try {
+        NSString *tweetID = viewToTweetID[@((uintptr_t)self)];
+        if (tweetID) {
+            [viewToTweetID removeObjectForKey:@((uintptr_t)self)];
+            if (viewInstances[tweetID]) {
+                NSValue *viewValue = viewInstances[tweetID];
+                UIView *storedView = [viewValue nonretainedObjectValue];
+                if (storedView == self) {
+                    [viewInstances removeObjectForKey:tweetID];
+                }
+            }
+        }
+    } @catch (__unused NSException *e) {}
+    %orig;
+}
+
 - (void)handleTweetSourceUpdated:(NSNotification *)notification {
     @try {
         NSDictionary *userInfo = notification.userInfo;
@@ -1898,18 +1914,34 @@ static NSDate *lastCookieRefresh              = nil;
             if (target) {
                 NSString *currentTweetID = viewToTweetID[@((uintptr_t)target)];
                 if (currentTweetID && [currentTweetID isEqualToString:tweetID]) {
-                    [target setNeedsLayout];
-                    [target layoutIfNeeded];
-                    UIView *current = target;
-                    while (current) {
-                        [current setNeedsLayout];
-                        [current layoutIfNeeded];
-                        current = current.superview;
-                    }
+                    // Instead of triggering layout, find and update the timestamp view directly
+                    [self enumerateSubviewsRecursively:^(UIView *subview) {
+                        if ([subview isKindOfClass:%c(TFNAttributedTextView)]) {
+                            TFNAttributedTextView *textView = (TFNAttributedTextView *)subview;
+                            TFNAttributedTextModel *model = [textView valueForKey:@"_textModel"];
+                            if (model && model.attributedString.string) {
+                                NSString *text = model.attributedString.string;
+                                if ([text containsString:@"PM"] || [text containsString:@"AM"] ||
+                                    [text rangeOfString:@"\\d{1,2}[:.]\\d{1,2}" options:NSRegularExpressionSearch].location != NSNotFound) {
+                                    [textView setTextModel:model];
+                                }
+                            }
+                        }
+                    }];
                 }
             }
         }
     } @catch (__unused NSException *e) {}
+}
+
+%new
+- (void)enumerateSubviewsRecursively:(void (^)(UIView *))block {
+    block(self);
+    for (UIView *subview in self.subviews) {
+        if ([subview isKindOfClass:%c(T1ConversationFocalStatusView)]) {
+            [((T1ConversationFocalStatusView *)subview) enumerateSubviewsRecursively:block];
+        }
+    }
 }
 
 + (void)load {
