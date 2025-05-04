@@ -1222,19 +1222,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
-// MARK: Old tweet style
-%hook TTACoreAnatomyFeatures
-- (BOOL)isUnifiedCardEnabled {
-    return [BHTManager OldStyle] ? false : %orig;
-}
-- (BOOL)isModernStatusViewsQuoteTweetEnabled {
-    return [BHTManager OldStyle] ? false : %orig;
-}
-- (BOOL)isEdgeToEdgeContentEnabled {
-    return [BHTManager OldStyle] ? false : %orig;
-}
-%end
-
 // MARK: BHTwitter settings
 %hook TFNActionItem
 %new + (instancetype)actionItemWithTitle:(NSString *)arg1 systemImageName:(NSString *)arg2 action:(void (^)(void))arg3 {
