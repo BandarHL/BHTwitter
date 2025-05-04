@@ -409,16 +409,15 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             hideViewCount,
             hideBookmarkButton,
             disableSensitiveTweetWarnings,
-            disableConversationMinimal,
-            disableMediaTab,
-            disableArticles,
-            disableHighlights,
 
             profilesSection, // 2
             followConfirm,
             copyProfileInfo,
             bioTranslate,
             hideWhoToFollow,
+            disableMediaTab,
+            disableArticles,
+            disableHighlights,
 
             searchSection, // 3
             noHistory,
