@@ -954,8 +954,24 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         return true;
     }
     
-    if ([key isEqualToString:@"conversational_replies_ios_pinned_replies_consumption_enabled"] || [key isEqualToString:@"conversational_replies_ios_pinned_replies_creation_enabled"]) {
-        return true;
+    if ([key isEqualToString:@"articles_timeline_profile_tab_enabled"]) {
+        return ![BHTManager disableArticles];
+    }
+
+    if ([key isEqualToString:@"highlights_tweets_tab_ui_enabled"]) {
+        return ![BHTManager disableHighlights];
+    }
+
+    if ([key isEqualToString:@"media_tab_profile_videos_tab_enabled"] || [key isEqualToString:@"media_tab_profile_photos_tab_enabled"]) {
+        return ![BHTManager disableMediaTab];
+    }
+
+    if ([key isEqualToString:@"dash_items_download_grok_enabled"]) {
+        return false;
+    }
+    
+    if ([key isEqualToString:@"conversational_replies_ios_minimal_detail_enabled"]) {
+        return ![BHTManager OldStyle];
     }
     
     return %orig;
@@ -1206,19 +1222,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
-// MARK: Old tweet style
-%hook TTACoreAnatomyFeatures
-- (BOOL)isUnifiedCardEnabled {
-    return [BHTManager OldStyle] ? false : %orig;
-}
-- (BOOL)isModernStatusViewsQuoteTweetEnabled {
-    return [BHTManager OldStyle] ? false : %orig;
-}
-- (BOOL)isEdgeToEdgeContentEnabled {
-    return [BHTManager OldStyle] ? false : %orig;
-}
-%end
-
 // MARK: BHTwitter settings
 %hook TFNActionItem
 %new + (instancetype)actionItemWithTitle:(NSString *)arg1 systemImageName:(NSString *)arg2 action:(void (^)(void))arg3 {
@@ -1453,7 +1456,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     %init;
 }
 
-// WARNING: This is still pretty experimental and may break. This restores Tweet Source Labels by using an Legacy API. by: @nyaathea
+// MARK: Restore Source Labels - This is still pretty experimental and may break. This restores Tweet Source Labels by using an Legacy API. by: @nyaathea
 
 static NSMutableDictionary *tweetSources      = nil;
 static NSMutableDictionary *viewToTweetID     = nil;
@@ -2097,7 +2100,7 @@ static NSDate *lastCookieRefresh              = nil;
     [TweetSourceHelper loadCachedCookies];
 }
 
-// Dirty hax for making the Nav Bird Icon themeable again.
+// MARK: Bird Icon Theming - Dirty hax for making the Nav Bird Icon themeable again.
 
 %hook UIImageView
 

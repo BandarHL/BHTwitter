@@ -58,5 +58,8 @@
 + (BOOL)hideBookmarkButton;
 + (BOOL)customVoice;
 + (BOOL)RestoreTweetLabels;
++ (BOOL)disableMediaTab;
++ (BOOL)disableArticles;
++ (BOOL)disableHighlights;
 @end
 
