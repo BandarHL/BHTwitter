@@ -7,6 +7,32 @@
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
 
+// Add this before the hooks, after the imports
+
+UIColor *BHTCurrentAccentColor(void) {
+    Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
+    if (!TAEColorSettingsCls) {
+        return [UIColor systemBlueColor];
+    }
+
+    id settings = [TAEColorSettingsCls sharedSettings];
+    id current = [settings currentColorPalette];
+    id palette = [current colorPalette];
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
+    }
+
+    if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
+        NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+        return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
+    }
+
+    return [UIColor systemBlueColor];
+}
+
 static UIFont * _Nullable TAEStandardFontGroupReplacement(UIFont *self, SEL _cmd, CGFloat arg1, CGFloat arg2) {
     BH_BaseImp orig  = originalFontsIMP[NSStringFromSelector(_cmd)].pointerValue;
     NSUInteger nArgs = [[self class] instanceMethodSignatureForSelector:_cmd].numberOfArguments;
@@ -652,6 +678,88 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     largeTitles = false;
     return %orig(largeTitles);
 }
+
+%new
+- (BOOL)shouldThemeIcon {
+    UIViewController *ancestor = [self _viewControllerForAncestor];
+    if (!ancestor) {
+        return NO;
+    }
+    
+    // Always allow onboarding
+    if ([ancestor isKindOfClass:NSClassFromString(@"ONBSignedOutViewController")]) {
+        return YES;
+    }
+    
+    // Get navigation controller
+    UINavigationController *navController = nil;
+    if ([ancestor isKindOfClass:[UINavigationController class]]) {
+        navController = (UINavigationController *)ancestor;
+    } else {
+        navController = ancestor.navigationController;
+    }
+    
+    // Check if we're on a detail view
+    if (navController && navController.viewControllers.count > 1) {
+        return NO;
+    }
+    
+    // Show on timeline navigation controller with single view
+    if ([NSStringFromClass([ancestor class]) containsString:@"TimelineNavigationController"]) {
+        return YES;
+    }
+    
+    // Show on home timeline views
+    if ([NSStringFromClass([ancestor class]) containsString:@"HomeTimelineViewController"] || 
+        [NSStringFromClass([ancestor class]) containsString:@"FeedTimelineViewController"]) {
+        return YES;
+    }
+    
+    return NO;
+}
+
+- (void)didMoveToWindow {
+    %orig;
+    [self updateLogoTheme];
+}
+
+- (void)didMoveToSuperview {
+    %orig;
+    [self updateLogoTheme];
+}
+
+%new
+- (void)updateLogoTheme {
+    BOOL shouldTheme = [self shouldThemeIcon];
+    
+    // ONLY look at DIRECT subviews of the navigation bar
+    for (UIView *subview in self.subviews) {
+        if ([subview isKindOfClass:[UIImageView class]]) {
+            UIImageView *imageView = (UIImageView *)subview;
+            
+            // VERY specific size check to only match Twitter logo
+            CGFloat width = imageView.frame.size.width;
+            CGFloat height = imageView.frame.size.height;
+            
+            // Twitter logo is EXACTLY 29x29 with minimal tolerance
+            BOOL isTwitterLogo = fabs(width - 29.0) < 0.1 && fabs(height - 29.0) < 0.1;
+            
+            if (isTwitterLogo) {
+                if (shouldTheme) {
+                    // Get the original image
+                    UIImage *originalImage = imageView.image;
+                    if (originalImage && originalImage.renderingMode != UIImageRenderingModeAlwaysTemplate) {
+                        // Create template image from original
+                        UIImage *templateImage = [originalImage imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+                        imageView.image = templateImage;
+                        imageView.tintColor = BHTCurrentAccentColor();
+                    }
+                }
+            }
+        }
+    }
+}
+
 %end
 
 // MARK: Save tweet as an image
@@ -1345,32 +1453,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     %init;
 }
 
-/// Returns the accent (tint) colour chosen by the user in either BHTwitter’s own
-/// theme picker or Twitter Blue’s colour settings. Falls back to systemBlue.
-static inline UIColor *BHTCurrentAccentColor(void) {
-    Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
-    if (!TAEColorSettingsCls) {
-        return [UIColor systemBlueColor];
-    }
-
-    id settings     = [TAEColorSettingsCls sharedSettings];
-    id current      = [settings currentColorPalette];
-    id palette      = [current colorPalette];
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
-    }
-
-    if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
-        NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-        return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
-    }
-
-    return [UIColor systemBlueColor];
-}
-
 // WARNING: This is still pretty experimental and may break. This restores Tweet Source Labels by using an Legacy API. by: @nyaathea
 
 static NSMutableDictionary *tweetSources      = nil;
@@ -1750,10 +1832,9 @@ static NSDate *lastCookieRefresh              = nil;
 
 %hook T1ConversationFocalStatusView
 
-- (void)layoutSubviews {
+- (void)setViewModel:(id)viewModel {
     %orig;
     @try {
-        id viewModel = self.viewModel;
         if (viewModel) {
             id status = nil;
             @try { status = [viewModel valueForKey:@"tweet"]; } @catch (__unused NSException *e) {}
@@ -1806,6 +1887,23 @@ static NSDate *lastCookieRefresh              = nil;
     } @catch (__unused NSException *e) {}
 }
 
+- (void)dealloc {
+    @try {
+        NSString *tweetID = viewToTweetID[@((uintptr_t)self)];
+        if (tweetID) {
+            [viewToTweetID removeObjectForKey:@((uintptr_t)self)];
+            if (viewInstances[tweetID]) {
+                NSValue *viewValue = viewInstances[tweetID];
+                UIView *storedView = [viewValue nonretainedObjectValue];
+                if (storedView == self) {
+                    [viewInstances removeObjectForKey:tweetID];
+                }
+            }
+        }
+    } @catch (__unused NSException *e) {}
+    %orig;
+}
+
 - (void)handleTweetSourceUpdated:(NSNotification *)notification {
     @try {
         NSDictionary *userInfo = notification.userInfo;
@@ -1816,18 +1914,35 @@ static NSDate *lastCookieRefresh              = nil;
             if (target) {
                 NSString *currentTweetID = viewToTweetID[@((uintptr_t)target)];
                 if (currentTweetID && [currentTweetID isEqualToString:tweetID]) {
-                    [target setNeedsLayout];
-                    [target layoutIfNeeded];
-                    UIView *current = target;
-                    while (current) {
-                        [current setNeedsLayout];
-                        [current layoutIfNeeded];
-                        current = current.superview;
-                    }
+                    [self enumerateSubviewsRecursively:^(UIView *subview) {
+                        if ([subview isKindOfClass:%c(TFNAttributedTextView)]) {
+                            TFNAttributedTextView *textView = (TFNAttributedTextView *)subview;
+                            TFNAttributedTextModel *model = [textView valueForKey:@"_textModel"];
+                            if (model && model.attributedString.string) {
+                                NSString *text = model.attributedString.string;
+                                if ([text containsString:@"PM"] || [text containsString:@"AM"] ||
+                                    [text rangeOfString:@"\\d{1,2}[:.]\\d{1,2}" options:NSRegularExpressionSearch].location != NSNotFound) {
+                                    // Force a refresh of the text model
+                                    [textView setTextModel:nil];
+                                    [textView setTextModel:model];
+                                }
+                            }
+                        }
+                    }];
                 }
             }
         }
     } @catch (__unused NSException *e) {}
+}
+
+%new
+- (void)enumerateSubviewsRecursively:(void (^)(UIView *))block {
+    block(self);
+    for (UIView *subview in self.subviews) {
+        if ([subview isKindOfClass:%c(UIView)]) {
+            [self enumerateSubviewsRecursively:block];
+        }
+    }
 }
 
 + (void)load {
@@ -1875,93 +1990,89 @@ static NSDate *lastCookieRefresh              = nil;
     if (isTimestamp) {
         @try {
             UIView *view = self;
-            UIView *containerView = nil;
-            while (view && !containerView) {
-                if ([view isKindOfClass:%c(T1ConversationFocalStatusView)]) {
-                    containerView = view;
-                    break;
+            id tweetViewModel = nil;
+            
+            // Walk up the view hierarchy to find the tweet view model
+            while (view && !tweetViewModel) {
+                if ([view respondsToSelector:@selector(viewModel)]) {
+                    tweetViewModel = [view performSelector:@selector(viewModel)];
+                    if ([tweetViewModel respondsToSelector:@selector(tweet)]) {
+                        id tweet = [tweetViewModel performSelector:@selector(tweet)];
+                        if (tweet) {
+                            NSInteger statusID = 0;
+                            @try {
+                                statusID = [[tweet valueForKey:@"statusID"] integerValue];
+                            } @catch (__unused NSException *e) {
+                                // Try alternative IDs if statusID fails
+                                NSString *altID = [tweet valueForKey:@"rest_id"] ?: [tweet valueForKey:@"id_str"] ?: [tweet valueForKey:@"id"];
+                                if (altID) {
+                                    if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
+                                    if (!tweetSources[altID]) {
+                                        tweetSources[altID] = @"";
+                                        [TweetSourceHelper fetchSourceForTweetID:altID];
+                                    }
+                                    
+                                    if (tweetSources[altID] && ![tweetSources[altID] isEqualToString:@""]) {
+                                        NSString *sourceText = tweetSources[altID];
+                                        NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
+                                        
+                                        // Get existing attributes from the timestamp
+                                        NSDictionary *existingAttributes = nil;
+                                        if (newString.length > 0) {
+                                            existingAttributes = [newString attributesAtIndex:0 effectiveRange:NULL];
+                                        }
+                                        
+                                        // Add separator and source text
+                                        NSMutableAttributedString *appended = [[NSMutableAttributedString alloc] init];
+                                        [appended appendAttributedString:[[NSAttributedString alloc] initWithString:@" · " attributes:existingAttributes]];
+                                        
+                                        // Use current accent color for source text
+                                        NSMutableDictionary *sourceAttributes = [existingAttributes mutableCopy];
+                                        [sourceAttributes setObject:BHTCurrentAccentColor() forKey:NSForegroundColorAttributeName];
+                                        [appended appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttributes]];
+                                        
+                                        [newString appendAttributedString:appended];
+                                        [model setValue:newString forKey:@"attributedString"];
+                                    }
+                                }
+                            }
+                            
+                            if (statusID > 0) {
+                                NSString *tweetIDStr = @(statusID).stringValue;
+                                if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
+                                if (!tweetSources[tweetIDStr]) {
+                                    tweetSources[tweetIDStr] = @"";
+                                    [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
+                                }
+                                
+                                if (tweetSources[tweetIDStr] && ![tweetSources[tweetIDStr] isEqualToString:@""]) {
+                                    NSString *sourceText = tweetSources[tweetIDStr];
+                                    NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
+                                    
+                                    // Get existing attributes from the timestamp
+                                    NSDictionary *existingAttributes = nil;
+                                    if (newString.length > 0) {
+                                        existingAttributes = [newString attributesAtIndex:0 effectiveRange:NULL];
+                                    }
+                                    
+                                    // Add separator and source text
+                                    NSMutableAttributedString *appended = [[NSMutableAttributedString alloc] init];
+                                    [appended appendAttributedString:[[NSAttributedString alloc] initWithString:@" · " attributes:existingAttributes]];
+                                    
+                                    // Use current accent color for source text
+                                    NSMutableDictionary *sourceAttributes = [existingAttributes mutableCopy];
+                                    [sourceAttributes setObject:BHTCurrentAccentColor() forKey:NSForegroundColorAttributeName];
+                                    [appended appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttributes]];
+                                    
+                                    [newString appendAttributedString:appended];
+                                    [model setValue:newString forKey:@"attributedString"];
+                                }
+                            }
+                            break;
+                        }
+                    }
                 }
                 view = view.superview;
-            }
-            if (containerView && viewToTweetID) {
-                NSString *mappedTweetID = viewToTweetID[@((uintptr_t)containerView)];
-                if (mappedTweetID && tweetSources[mappedTweetID] && ![tweetSources[mappedTweetID] isEqualToString:@""]) {
-                    BOOL isValidMapping = YES;
-                    if (viewInstances[mappedTweetID]) {
-                        NSValue *viewValue = viewInstances[mappedTweetID];
-                        UIView *storedView = [viewValue nonretainedObjectValue];
-                        if (storedView && storedView == containerView) {
-                            isValidMapping = YES;
-                        } else {
-                            isValidMapping = NO;
-                            if (!storedView) [viewInstances removeObjectForKey:mappedTweetID];
-                        }
-                    }
-                    if (isValidMapping) {
-                        NSString *sourceText = tweetSources[mappedTweetID];
-                        NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
-
-                        // Remove "from Earth" if present (Twitter Blue planet badge)
-                        NSString *textToModify = newString.string;
-                        NSRange earthRange = [textToModify rangeOfString:@"from Earth" options:NSCaseInsensitiveSearch];
-                        if (earthRange.location != NSNotFound) {
-                            NSRange separatorRange = NSMakeRange(NSNotFound, 0);
-                            if (earthRange.location > 0) {
-                                NSInteger startPos = earthRange.location - 1;
-                                while (startPos >= 0 && ([textToModify characterAtIndex:startPos] == ' ' || [textToModify characterAtIndex:startPos] == 0x00B7)) {
-                                    startPos--;
-                                }
-                                if (startPos < earthRange.location - 1) {
-                                    separatorRange = NSMakeRange(startPos + 1, earthRange.location - startPos - 1);
-                                }
-                            }
-                            NSRange removalRange = earthRange;
-                            if (separatorRange.location != NSNotFound) {
-                                removalRange = NSMakeRange(separatorRange.location, earthRange.location + earthRange.length - separatorRange.location);
-                            }
-                            [newString deleteCharactersInRange:removalRange];
-                        }
-
-                        // Separator inherits timestamp colour with validation
-                        UIColor *separatorColor = nil;
-                        UIFont  *metadataFont   = nil;
-                        if (newString.length > 0) {
-                            id colorAttr = [newString attribute:NSForegroundColorAttributeName atIndex:0 effectiveRange:NULL];
-                            if ([colorAttr isKindOfClass:[UIColor class]]) {
-                                separatorColor = colorAttr;
-                            }
-                            id fontAttr = [newString attribute:NSFontAttributeName atIndex:0 effectiveRange:NULL];
-                            if ([fontAttr isKindOfClass:[UIFont class]]) {
-                                metadataFont = fontAttr;
-                            }
-                        }
-                        if (!separatorColor) {
-                            separatorColor = [UIColor grayColor];
-                        }
-                        if (!metadataFont) {
-                            metadataFont = [UIFont systemFontOfSize:12.0];
-                        }
-
-                        // Use current accent colour
-                        UIColor *sourceColor = BHTCurrentAccentColor();
-
-                        NSMutableAttributedString *appended = [[NSMutableAttributedString alloc] init];
-                        NSDictionary *separatorAttrs = separatorColor ? @{ NSFontAttributeName : metadataFont,
-                                                                         NSForegroundColorAttributeName : separatorColor }
-                                                             : @{ NSFontAttributeName : metadataFont };
-                        [appended appendAttributedString:[[NSAttributedString alloc] initWithString:@" · " attributes:separatorAttrs]];
-
-                        NSDictionary *sourceAttrs = @{ NSFontAttributeName : metadataFont,
-                                                      NSForegroundColorAttributeName : sourceColor };
-                        [appended appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttrs]];
-
-                        [newString appendAttributedString:appended];
-                        [model setValue:newString forKey:@"attributedString"];
-
-                        if (!updateCompleted) updateCompleted = [NSMutableDictionary dictionary];
-                        updateCompleted[mappedTweetID] = @(YES);
-                    }
-                }
             }
         } @catch (__unused NSException *e) {}
     }
@@ -1986,7 +2097,7 @@ static NSDate *lastCookieRefresh              = nil;
     [TweetSourceHelper loadCachedCookies];
 }
 
-// Dirty hax for making the Nav Icon themeable again.
+// Dirty hax for making the Nav Bird Icon themeable again.
 
 %hook UIImageView
 
@@ -2007,92 +2118,6 @@ static NSDate *lastCookieRefresh              = nil;
         self.tintColor = BHTCurrentAccentColor();
     }
     %orig(image);
-}
-
-%end
-
-%hook TFNNavigationBar
-
-%new
-- (BOOL)shouldThemeIcon {
-    UIViewController *ancestor = [self _viewControllerForAncestor];
-    if (!ancestor) {
-        return NO;
-    }
-    
-    // Always allow onboarding
-    if ([ancestor isKindOfClass:NSClassFromString(@"ONBSignedOutViewController")]) {
-        return YES;
-    }
-    
-    // Get navigation controller
-    UINavigationController *navController = nil;
-    if ([ancestor isKindOfClass:[UINavigationController class]]) {
-        navController = (UINavigationController *)ancestor;
-    } else {
-        navController = ancestor.navigationController;
-    }
-    
-    // Check if we're on a detail view
-    if (navController && navController.viewControllers.count > 1) {
-        return NO;
-    }
-    
-    // Show on timeline navigation controller with single view
-    if ([NSStringFromClass([ancestor class]) containsString:@"TimelineNavigationController"]) {
-        return YES;
-    }
-    
-    // Show on home timeline views
-    if ([NSStringFromClass([ancestor class]) containsString:@"HomeTimelineViewController"] || 
-        [NSStringFromClass([ancestor class]) containsString:@"FeedTimelineViewController"]) {
-        return YES;
-    }
-    
-    return NO;
-}
-
-- (void)layoutSubviews {
-    %orig;
-    
-    BOOL shouldTheme = [self shouldThemeIcon];
-    
-    // ONLY look at DIRECT subviews of the navigation bar
-    for (UIView *subview in self.subviews) {
-        if ([subview isKindOfClass:[UIImageView class]]) {
-            UIImageView *imageView = (UIImageView *)subview;
-            
-            // VERY specific size check to only match Twitter logo
-            CGFloat width = imageView.frame.size.width;
-            CGFloat height = imageView.frame.size.height;
-            
-            // Twitter logo is EXACTLY 29x29 with minimal tolerance
-            BOOL isTwitterLogo = fabs(width - 29.0) < 0.1 && fabs(height - 29.0) < 0.1;
-            
-            if (isTwitterLogo) {
-                if (shouldTheme) {
-                    // Get the original image
-                    UIImage *originalImage = imageView.image;
-                    if (originalImage && originalImage.renderingMode != UIImageRenderingModeAlwaysTemplate) {
-                        // Create template image from original
-                        UIImage *templateImage = [originalImage imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-                        imageView.image = templateImage;
-                        imageView.tintColor = BHTCurrentAccentColor();
-                    }
-                }
-            }
-        }
-    }
-}
-
-%end
-
-// Hook the ONBSignedOutViewController to ensure we can theme its logo
-%hook ONBSignedOutViewController
-
-- (void)viewWillAppear:(BOOL)animated {
-    %orig;
-    [self.navigationController.navigationBar setNeedsLayout];
 }
 
 %end

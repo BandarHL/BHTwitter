@@ -306,6 +306,7 @@ static NSString *_lastCopiedURL;
 @property(nonatomic) __weak id <TTACoreStatusViewEventHandler> eventHandler;
 - (void)layoutSubviews;
 @property(nonatomic, readonly) id viewModel;
+- (void)enumerateSubviewsRecursively:(void (^)(UIView *))block;
 @end
 
 @interface TTACoreStatusViewModel : NSObject
@@ -592,6 +593,7 @@ static UIViewController * _Nonnull topMostController() {
 @interface TFNNavigationBar : UIView
 - (UIViewController *)_viewControllerForAncestor;
 - (BOOL)shouldThemeIcon;
+- (void)updateLogoTheme;
 @end
 
 @interface TFSTimelineViewController : UIViewController
@@ -603,4 +605,8 @@ static UIViewController * _Nonnull topMostController() {
 @end
 
 @interface ONBSignedOutViewController : UIViewController
+@end
+
+@interface T1ConversationFooterTextView : TFNAttributedTextView
+@property(nonatomic, readonly) id viewModel;
 @end
