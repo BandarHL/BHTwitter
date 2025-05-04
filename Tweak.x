@@ -732,29 +732,25 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)updateLogoTheme {
     BOOL shouldTheme = [self shouldThemeIcon];
     
-    // Only look for the Twitter logo in the direct subviews of the navigation bar
+    // ONLY look at DIRECT subviews of the navigation bar
     for (UIView *subview in self.subviews) {
         if ([subview isKindOfClass:[UIImageView class]]) {
             UIImageView *imageView = (UIImageView *)subview;
             
-            // Check if this is the Twitter logo by checking its exact size and position
+            // VERY specific size check to only match Twitter logo
             CGFloat width = imageView.frame.size.width;
             CGFloat height = imageView.frame.size.height;
             
-            // Twitter logo is EXACTLY 29x29 and positioned in the center of the nav bar
-            if (fabs(width - 29.0) < 0.1 && fabs(height - 29.0) < 0.1 && 
-                imageView.center.y == self.center.y) {
-                
-                // Get the image name to verify it's the Twitter logo
-                NSString *imageName = [imageView.image valueForKey:@"_name"];
-                if (imageName && ([imageName containsString:@"twitter"] || 
-                                [imageName containsString:@"Twitter"] || 
-                                [imageName containsString:@"bird"] || 
-                                [imageName containsString:@"Bird"])) {
-                    
-                    if (shouldTheme) {
+            // Twitter logo is EXACTLY 29x29 with minimal tolerance
+            BOOL isTwitterLogo = fabs(width - 29.0) < 0.1 && fabs(height - 29.0) < 0.1;
+            
+            if (isTwitterLogo) {
+                if (shouldTheme) {
+                    // Get the original image
+                    UIImage *originalImage = imageView.image;
+                    if (originalImage && originalImage.renderingMode != UIImageRenderingModeAlwaysTemplate) {
                         // Create template image from original
-                        UIImage *templateImage = [imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+                        UIImage *templateImage = [originalImage imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
                         imageView.image = templateImage;
                         imageView.tintColor = BHTCurrentAccentColor();
                     }
@@ -2120,16 +2116,12 @@ static NSDate *lastCookieRefresh              = nil;
 
 // MARK: Bird Icon Theming - Dirty hax for making the Nav Bird Icon themeable again.
 
-@interface UIImageView (BHTTwitter)
-- (BOOL)isTwitterBirdIcon:(UIImage *)image;
-@end
-
 %hook UIImageView
 
 - (id)initWithImage:(UIImage *)image {
     self = %orig;
     if (self) {
-        if (image && [self isTwitterBirdIcon:image]) {
+        if (image && image.imageAsset && [image.imageAsset.assetName isEqualToString:@"twitter"]) {
             self.image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
             self.tintColor = BHTCurrentAccentColor();
         }
@@ -2138,43 +2130,11 @@ static NSDate *lastCookieRefresh              = nil;
 }
 
 - (void)setImage:(UIImage *)image {
-    if (image && [self isTwitterBirdIcon:image]) {
+    if (image && image.imageAsset && [image.imageAsset.assetName isEqualToString:@"twitter"]) {
         image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
         self.tintColor = BHTCurrentAccentColor();
     }
     %orig(image);
-}
-
-%new
-- (BOOL)isTwitterBirdIcon:(UIImage *)image {
-    if (!image) return NO;
-    
-    // Check if image is exactly 29x29
-    if (!CGSizeEqualToSize(image.size, CGSizeMake(29, 29))) return NO;
-    
-    // Get the image name if available
-    NSString *imageName = [image valueForKey:@"_name"];
-    if (!imageName) return NO;
-    
-    // Check for common Twitter bird icon names
-    NSArray *twitterIconNames = @[
-        @"twitter",
-        @"Twitter",
-        @"bird",
-        @"Bird",
-        @"twitter-logo",
-        @"Twitter-logo",
-        @"twitter_logo",
-        @"Twitter_logo"
-    ];
-    
-    for (NSString *name in twitterIconNames) {
-        if ([imageName containsString:name]) {
-            return YES;
-        }
-    }
-    
-    return NO;
 }
 
 %end
