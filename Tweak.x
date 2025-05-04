@@ -1461,15 +1461,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     self = %orig;
     if (self) {
         if (image && CGSizeEqualToSize(image.size, CGSizeMake(29, 29))) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                if ([self.superview isKindOfClass:%c(TFNNavigationBar)]) {
-                    TFNNavigationBar *navBar = (TFNNavigationBar *)self.superview;
-                    if ([navBar respondsToSelector:@selector(shouldThemeIcon)] && [navBar shouldThemeIcon]) {
-                        self.image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-                        self.tintColor = BHTCurrentAccentColor();
-                    }
-                }
-            });
+            self.image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+            self.tintColor = BHTCurrentAccentColor();
         }
     }
     return self;
@@ -1477,13 +1470,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 - (void)setImage:(UIImage *)image {
     if (image && CGSizeEqualToSize(image.size, CGSizeMake(29, 29))) {
-        if ([self.superview isKindOfClass:%c(TFNNavigationBar)]) {
-            TFNNavigationBar *navBar = (TFNNavigationBar *)self.superview;
-            if ([navBar respondsToSelector:@selector(shouldThemeIcon)] && [navBar shouldThemeIcon]) {
-                image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-                self.tintColor = BHTCurrentAccentColor();
-            }
-        }
+        image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+        self.tintColor = BHTCurrentAccentColor();
     }
     %orig(image);
 }
