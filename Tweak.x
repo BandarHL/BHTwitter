@@ -1460,30 +1460,29 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (id)initWithImage:(UIImage *)image {
     self = %orig;
     if (self) {
-        // Only theme if we're inside a navigation bar
-        if ([self.superview isKindOfClass:%c(TFNNavigationBar)]) {
-            TFNNavigationBar *navBar = (TFNNavigationBar *)self.superview;
-            if ([navBar respondsToSelector:@selector(shouldThemeIcon)] && 
-                [navBar shouldThemeIcon] && 
-                image && 
-                CGSizeEqualToSize(image.size, CGSizeMake(29, 29))) {
-                self.image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-                self.tintColor = BHTCurrentAccentColor();
-            }
+        if (image && CGSizeEqualToSize(image.size, CGSizeMake(29, 29))) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if ([self.superview isKindOfClass:%c(TFNNavigationBar)]) {
+                    TFNNavigationBar *navBar = (TFNNavigationBar *)self.superview;
+                    if ([navBar respondsToSelector:@selector(shouldThemeIcon)] && [navBar shouldThemeIcon]) {
+                        self.image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+                        self.tintColor = BHTCurrentAccentColor();
+                    }
+                }
+            });
         }
     }
     return self;
 }
 
 - (void)setImage:(UIImage *)image {
-    if ([self.superview isKindOfClass:%c(TFNNavigationBar)]) {
-        TFNNavigationBar *navBar = (TFNNavigationBar *)self.superview;
-        if ([navBar respondsToSelector:@selector(shouldThemeIcon)] && 
-            [navBar shouldThemeIcon] && 
-            image && 
-            CGSizeEqualToSize(image.size, CGSizeMake(29, 29))) {
-            image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-            self.tintColor = BHTCurrentAccentColor();
+    if (image && CGSizeEqualToSize(image.size, CGSizeMake(29, 29))) {
+        if ([self.superview isKindOfClass:%c(TFNNavigationBar)]) {
+            TFNNavigationBar *navBar = (TFNNavigationBar *)self.superview;
+            if ([navBar respondsToSelector:@selector(shouldThemeIcon)] && [navBar shouldThemeIcon]) {
+                image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+                self.tintColor = BHTCurrentAccentColor();
+            }
         }
     }
     %orig(image);
