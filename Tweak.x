@@ -2122,8 +2122,17 @@ static NSDate *lastCookieRefresh              = nil;
     self = %orig;
     if (self) {
         if (image && CGSizeEqualToSize(image.size, CGSizeMake(29, 29))) {
-            self.image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-            self.tintColor = BHTCurrentAccentColor();
+            // Check if we're in a navigation bar context
+            UIView *superview = self.superview;
+            while (superview) {
+                if ([superview isKindOfClass:%c(TFNNavigationBar)]) {
+                    // This is likely the bird icon in the nav bar
+                    self.image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+                    self.tintColor = BHTCurrentAccentColor();
+                    break;
+                }
+                superview = superview.superview;
+            }
         }
     }
     return self;
@@ -2131,8 +2140,17 @@ static NSDate *lastCookieRefresh              = nil;
 
 - (void)setImage:(UIImage *)image {
     if (image && CGSizeEqualToSize(image.size, CGSizeMake(29, 29))) {
-        image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-        self.tintColor = BHTCurrentAccentColor();
+        // Check if we're in a navigation bar context
+        UIView *superview = self.superview;
+        while (superview) {
+            if ([superview isKindOfClass:%c(TFNNavigationBar)]) {
+                // This is likely the bird icon in the nav bar
+                image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+                self.tintColor = BHTCurrentAccentColor();
+                break;
+            }
+            superview = superview.superview;
+        }
     }
     %orig(image);
 }
