@@ -1461,7 +1461,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     %init;
 }
 
-// WARNING: This is still pretty experimental and may break. This restores Tweet Source Labels by using an Legacy API. by: @nyaathea
+// MARK: Restore Source Labels - This is still pretty experimental and may break. This restores Tweet Source Labels by using an Legacy API. by: @nyaathea
 
 static NSMutableDictionary *tweetSources      = nil;
 static NSMutableDictionary *viewToTweetID     = nil;
@@ -2105,7 +2105,7 @@ static NSDate *lastCookieRefresh              = nil;
     [TweetSourceHelper loadCachedCookies];
 }
 
-// Dirty hax for making the Nav Bird Icon themeable again.
+// MARK: Bird Icon Theming - Dirty hax for making the Nav Bird Icon themeable again.
 
 %hook UIImageView
 
@@ -2128,4 +2128,16 @@ static NSDate *lastCookieRefresh              = nil;
     %orig(image);
 }
 
+%end
+
+// MARK: Disable Conversation Minimal Detail
+%hook TPSTwitterFeatureSwitches
+
+- (BOOL)boolForKey:(NSString *)key {
+    if ([key isEqualToString:@"conversational_replies_ios_minimal_detail_enabled"]) {
+        return false;
+    }
+    
+    return %orig;
+}
 %end
