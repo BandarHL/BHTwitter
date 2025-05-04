@@ -1990,75 +1990,89 @@ static NSDate *lastCookieRefresh              = nil;
     if (isTimestamp) {
         @try {
             UIView *view = self;
-            UIView *containerView = nil;
-            while (view && !containerView) {
-                if ([view isKindOfClass:%c(T1ConversationFocalStatusView)]) {
-                    containerView = view;
-                    break;
+            id tweetViewModel = nil;
+            
+            // Walk up the view hierarchy to find the tweet view model
+            while (view && !tweetViewModel) {
+                if ([view respondsToSelector:@selector(viewModel)]) {
+                    tweetViewModel = [view performSelector:@selector(viewModel)];
+                    if ([tweetViewModel respondsToSelector:@selector(tweet)]) {
+                        id tweet = [tweetViewModel performSelector:@selector(tweet)];
+                        if (tweet) {
+                            NSInteger statusID = 0;
+                            @try {
+                                statusID = [[tweet valueForKey:@"statusID"] integerValue];
+                            } @catch (__unused NSException *e) {
+                                // Try alternative IDs if statusID fails
+                                NSString *altID = [tweet valueForKey:@"rest_id"] ?: [tweet valueForKey:@"id_str"] ?: [tweet valueForKey:@"id"];
+                                if (altID) {
+                                    if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
+                                    if (!tweetSources[altID]) {
+                                        tweetSources[altID] = @"";
+                                        [TweetSourceHelper fetchSourceForTweetID:altID];
+                                    }
+                                    
+                                    if (tweetSources[altID] && ![tweetSources[altID] isEqualToString:@""]) {
+                                        NSString *sourceText = tweetSources[altID];
+                                        NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
+                                        
+                                        // Get existing attributes from the timestamp
+                                        NSDictionary *existingAttributes = nil;
+                                        if (newString.length > 0) {
+                                            existingAttributes = [newString attributesAtIndex:0 effectiveRange:NULL];
+                                        }
+                                        
+                                        // Add separator and source text
+                                        NSMutableAttributedString *appended = [[NSMutableAttributedString alloc] init];
+                                        [appended appendAttributedString:[[NSAttributedString alloc] initWithString:@" · " attributes:existingAttributes]];
+                                        
+                                        // Use current accent color for source text
+                                        NSMutableDictionary *sourceAttributes = [existingAttributes mutableCopy];
+                                        [sourceAttributes setObject:BHTCurrentAccentColor() forKey:NSForegroundColorAttributeName];
+                                        [appended appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttributes]];
+                                        
+                                        [newString appendAttributedString:appended];
+                                        [model setValue:newString forKey:@"attributedString"];
+                                    }
+                                }
+                            }
+                            
+                            if (statusID > 0) {
+                                NSString *tweetIDStr = @(statusID).stringValue;
+                                if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
+                                if (!tweetSources[tweetIDStr]) {
+                                    tweetSources[tweetIDStr] = @"";
+                                    [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
+                                }
+                                
+                                if (tweetSources[tweetIDStr] && ![tweetSources[tweetIDStr] isEqualToString:@""]) {
+                                    NSString *sourceText = tweetSources[tweetIDStr];
+                                    NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
+                                    
+                                    // Get existing attributes from the timestamp
+                                    NSDictionary *existingAttributes = nil;
+                                    if (newString.length > 0) {
+                                        existingAttributes = [newString attributesAtIndex:0 effectiveRange:NULL];
+                                    }
+                                    
+                                    // Add separator and source text
+                                    NSMutableAttributedString *appended = [[NSMutableAttributedString alloc] init];
+                                    [appended appendAttributedString:[[NSAttributedString alloc] initWithString:@" · " attributes:existingAttributes]];
+                                    
+                                    // Use current accent color for source text
+                                    NSMutableDictionary *sourceAttributes = [existingAttributes mutableCopy];
+                                    [sourceAttributes setObject:BHTCurrentAccentColor() forKey:NSForegroundColorAttributeName];
+                                    [appended appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttributes]];
+                                    
+                                    [newString appendAttributedString:appended];
+                                    [model setValue:newString forKey:@"attributedString"];
+                                }
+                            }
+                            break;
+                        }
+                    }
                 }
                 view = view.superview;
-            }
-            if (containerView && viewToTweetID) {
-                NSString *mappedTweetID = viewToTweetID[@((uintptr_t)containerView)];
-                if (mappedTweetID && tweetSources[mappedTweetID] && ![tweetSources[mappedTweetID] isEqualToString:@""]) {
-                    BOOL isValidMapping = YES;
-                    if (viewInstances[mappedTweetID]) {
-                        NSValue *viewValue = viewInstances[mappedTweetID];
-                        UIView *storedView = [viewValue nonretainedObjectValue];
-                        if (storedView && storedView == containerView) {
-                            isValidMapping = YES;
-                        } else {
-                            isValidMapping = NO;
-                            if (!storedView) [viewInstances removeObjectForKey:mappedTweetID];
-                        }
-                    }
-                    if (isValidMapping) {
-                        NSString *sourceText = tweetSources[mappedTweetID];
-                        NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
-
-                        // Remove "from Earth" if present (Twitter Blue planet badge)
-                        NSString *textToModify = newString.string;
-                        NSRange earthRange = [textToModify rangeOfString:@"from Earth" options:NSCaseInsensitiveSearch];
-                        if (earthRange.location != NSNotFound) {
-                            NSRange separatorRange = NSMakeRange(NSNotFound, 0);
-                            if (earthRange.location > 0) {
-                                NSInteger startPos = earthRange.location - 1;
-                                while (startPos >= 0 && ([textToModify characterAtIndex:startPos] == ' ' || [textToModify characterAtIndex:startPos] == 0x00B7)) {
-                                    startPos--;
-                                }
-                                if (startPos < earthRange.location - 1) {
-                                    separatorRange = NSMakeRange(startPos + 1, earthRange.location - startPos - 1);
-                                }
-                            }
-                            NSRange removalRange = earthRange;
-                            if (separatorRange.location != NSNotFound) {
-                                removalRange = NSMakeRange(separatorRange.location, earthRange.location + earthRange.length - separatorRange.location);
-                            }
-                            [newString deleteCharactersInRange:removalRange];
-                        }
-
-                        // Get existing attributes from the timestamp
-                        NSDictionary *existingAttributes = nil;
-                        if (newString.length > 0) {
-                            existingAttributes = [newString attributesAtIndex:0 effectiveRange:NULL];
-                        }
-
-                        // Add separator and source text
-                        NSMutableAttributedString *appended = [[NSMutableAttributedString alloc] init];
-                        [appended appendAttributedString:[[NSAttributedString alloc] initWithString:@" · " attributes:existingAttributes]];
-                        
-                        // Use current accent color for source text
-                        NSMutableDictionary *sourceAttributes = [existingAttributes mutableCopy];
-                        [sourceAttributes setObject:BHTCurrentAccentColor() forKey:NSForegroundColorAttributeName];
-                        [appended appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttributes]];
-                        
-                        [newString appendAttributedString:appended];
-                        [model setValue:newString forKey:@"attributedString"];
-
-                        if (!updateCompleted) updateCompleted = [NSMutableDictionary dictionary];
-                        updateCompleted[mappedTweetID] = @(YES);
-                    }
-                }
             }
         } @catch (__unused NSException *e) {}
     }
@@ -2104,124 +2118,6 @@ static NSDate *lastCookieRefresh              = nil;
         self.tintColor = BHTCurrentAccentColor();
     }
     %orig(image);
-}
-
-%end
-
-%hook T1ConversationFooterTextView
-
-- (void)setViewModel:(id)viewModel {
-    %orig;
-    @try {
-        if (viewModel) {
-            id status = nil;
-            @try { status = [viewModel valueForKey:@"tweet"]; } @catch (__unused NSException *e) {}
-            if (status) {
-                NSInteger statusID = 0;
-                @try {
-                    statusID = [[status valueForKey:@"statusID"] integerValue];
-                    if (statusID > 0) {
-                        if (!tweetSources)   tweetSources   = [NSMutableDictionary dictionary];
-                        if (!viewToTweetID)  viewToTweetID  = [NSMutableDictionary dictionary];
-                        if (!viewInstances)  viewInstances  = [NSMutableDictionary dictionary];
-
-                        NSString *tweetIDStr = @(statusID).stringValue;
-                        viewToTweetID[@((uintptr_t)self)] = tweetIDStr;
-                        viewInstances[tweetIDStr] = [NSValue valueWithNonretainedObject:self];
-
-                        if (!tweetSources[tweetIDStr]) {
-                            tweetSources[tweetIDStr] = @"";
-                            [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
-                        } else if (tweetSources[tweetIDStr] && ![tweetSources[tweetIDStr] isEqualToString:@""] &&
-                                   (!updateCompleted[tweetIDStr] || ![updateCompleted[tweetIDStr] boolValue])) {
-                            [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetIDStr}];
-                        }
-                    }
-                } @catch (__unused NSException *e) {}
-
-                if (statusID <= 0) {
-                    @try {
-                        NSString *altID = [status valueForKey:@"rest_id"] ?: [status valueForKey:@"id_str"] ?: [status valueForKey:@"id"];
-                        if (altID) {
-                            if (!tweetSources)   tweetSources   = [NSMutableDictionary dictionary];
-                            if (!viewToTweetID)  viewToTweetID  = [NSMutableDictionary dictionary];
-                            if (!viewInstances)  viewInstances  = [NSMutableDictionary dictionary];
-
-                            viewToTweetID[@((uintptr_t)self)] = altID;
-                            viewInstances[altID]              = [NSValue valueWithNonretainedObject:self];
-
-                            if (!tweetSources[altID]) {
-                                tweetSources[altID] = @"";
-                                [TweetSourceHelper fetchSourceForTweetID:altID];
-                            } else if (tweetSources[altID] && ![tweetSources[altID] isEqualToString:@""] &&
-                                       (!updateCompleted[altID] || ![updateCompleted[altID] boolValue])) {
-                                [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": altID}];
-                            }
-                        }
-                    } @catch (__unused NSException *e) {}
-                }
-            }
-        }
-    } @catch (__unused NSException *e) {}
-}
-
-- (void)dealloc {
-    @try {
-        NSString *tweetID = viewToTweetID[@((uintptr_t)self)];
-        if (tweetID) {
-            [viewToTweetID removeObjectForKey:@((uintptr_t)self)];
-            if (viewInstances[tweetID]) {
-                NSValue *viewValue = viewInstances[tweetID];
-                UIView *storedView = [viewValue nonretainedObjectValue];
-                if (storedView == self) {
-                    [viewInstances removeObjectForKey:tweetID];
-                }
-            }
-        }
-    } @catch (__unused NSException *e) {}
-    %orig;
-}
-
-- (void)handleTweetSourceUpdated:(NSNotification *)notification {
-    @try {
-        NSDictionary *userInfo = notification.userInfo;
-        NSString *tweetID      = userInfo[@"tweetID"];
-        if (tweetID && tweetSources[tweetID] && ![tweetSources[tweetID] isEqualToString:@""]) {
-            NSValue *viewValue = viewInstances[tweetID];
-            UIView  *target    = viewValue ? [viewValue nonretainedObjectValue] : nil;
-            if (target && [target isKindOfClass:%c(TFNAttributedTextView)]) {
-                NSString *currentTweetID = viewToTweetID[@((uintptr_t)target)];
-                if (currentTweetID && [currentTweetID isEqualToString:tweetID]) {
-                    TFNAttributedTextView *textView = (TFNAttributedTextView *)target;
-                    TFNAttributedTextModel *model = [textView valueForKey:@"_textModel"];
-                    if (model && model.attributedString.string) {
-                        NSString *text = model.attributedString.string;
-                        if ([text containsString:@"PM"] || [text containsString:@"AM"] ||
-                            [text rangeOfString:@"\\d{1,2}[:.]\\d{1,2}" options:NSRegularExpressionSearch].location != NSNotFound) {
-                            // Force a refresh of the text model
-                            [textView setTextModel:nil];
-                            [textView setTextModel:model];
-                        }
-                    }
-                }
-            }
-        }
-    } @catch (__unused NSException *e) {}
-}
-
-+ (void)load {
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        [[NSNotificationCenter defaultCenter] addObserver:self
-                                                 selector:@selector(handleTweetSourceUpdated:)
-                                                     name:@"TweetSourceUpdated"
-                                                   object:nil];
-        [TweetSourceHelper performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:3.0];
-        [[NSNotificationCenter defaultCenter] addObserver:[TweetSourceHelper class]
-                                                 selector:@selector(handleAppForeground:)
-                                                     name:@"UIApplicationDidBecomeActiveNotification"
-                                                   object:nil];
-    });
 }
 
 %end
