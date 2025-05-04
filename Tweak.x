@@ -2116,6 +2116,10 @@ static NSDate *lastCookieRefresh              = nil;
 
 // MARK: Bird Icon Theming - Dirty hax for making the Nav Bird Icon themeable again.
 
+@interface UIImageView (BHTTwitter)
+- (BOOL)isTwitterBirdIcon:(UIImage *)image;
+@end
+
 %hook UIImageView
 
 - (id)initWithImage:(UIImage *)image {
