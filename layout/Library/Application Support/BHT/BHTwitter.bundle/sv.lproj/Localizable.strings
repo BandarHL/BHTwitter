@@ -1,149 +1,64 @@
 /*
-  sv
+  Language: sv
   NeoFreeBird
 */
 
 "BHTWITTER_SETTINGS_TITLE" = "NeoFreeBird";
-"BHTWITTER_SETTINGS_DETAIL" = "Finjustera Twitter. Dölj annonser, aktivera Blue-funktioner med mera.";
+"BHTWITTER_SETTINGS_DETAIL" = "Tweaka din Twitter. Dölj annonser, aktivera Blue-funktioner och mer.";
 "SETTINGS_HEADER_TITLE" = "Anpassa din Twitter-upplevelse med dessa inställningar";
 
-"DOWNLOAD_MENU_TITLE" = "\nVälj videokvalitet";
-"CUSTOM_FONTS_MENU_TITLE" = "\nVälj ett typsnitt";
-"CUSTOM_FONTS_TUT_ALERT_MESSAGE" = "Inga anpassade typsnitt ännu. Installera några med appen iFont från App Store.";
-
-"OK_BUTTON_TITLE" = "OK";
+"CONFIRM_ALERT_MESSAGE" = "Säker på att du menade det?";
 "YES_BUTTON_TITLE" = "Ja";
 "NO_BUTTON_TITLE" = "Nej";
-"CONFIRM_ALERT_MESSAGE" = "Är du säker på att du vill göra det?";
+"OK_BUTTON_TITLE" = "OK";
 "CANCEL_BUTTON_TITLE" = "Avbryt";
 
-"PROGRESS_DOWNLOADING_STATUS_TITLE" = "Hämtar…";
-"FETCHING_PROGRESS_TITLE" = "Hämtar medieinformation…";
 
-"CUSTOM_FONTS_NAVIGATION_BUTTON_TITLE" = "Anpassade typsnitt";
-"CUSTOM_FONTS_NAVIGATION_TITLE" = "Välj ett typsnitt";
-"THEME_SETTINGS_NAVIGATION_TITLE" = "Byt tema";
-"CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE" = "Inställningar för flikfält";
-"ACKNOWLEDGEMENTS_SETTINGS_NAVIGATION_TITLE" = "Juridiska meddelanden";
+/*Main menu start*/
 
-"COPY_PROFILE_INFO_MENU_OPTION_1" = "Kopiera bio";
-"COPY_PROFILE_INFO_MENU_OPTION_2" = "Kopiera användarnamn";
-"COPY_PROFILE_INFO_MENU_OPTION_3" = "Kopiera fullt användarnamn";
-"COPY_PROFILE_INFO_MENU_OPTION_4" = "Kopiera biolänk";
-"COPY_PROFILE_INFO_MENU_OPTION_5" = "Kopiera plats";
+/*General*/
+"MAIN_SECTION_HEADER_TITLE" = "Allmänt";
 
-"MAIN_SECTION_HEADER_TITLE" = "Justeringar";
-"DOWNLOAD_VIDEOS_OPTION_TITLE" = "Ladda ned media";
-"DOWNLOAD_VIDEOS_OPTION_DETAIL_TITLE" = "Spara videor eller GIF:ar direkt från Tweets.";
+"VOICE_OPTION_TITLE" = "Röst-Tweets";
+"VOICE_OPTION_DETAIL_TITLE" = "Aktivera eller inaktivera röst-Tweets (endast iOS).";
 
-"DIRECT_SAVE_OPTION_TITLE" = "Spara i Bilder";
-"DIRECT_SAVE_OPTION_DETAIL_TITLE" = "Videor du sparar hamnar direkt i appen Bilder.";
+"UPLOAD_CUSTOM_VOICE_OPTION_TITLE" = "Röst-Tweets";
+"UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE" = "Aktivera eller inaktivera röst-Tweets (endast iOS).";
 
-"HIDE_ADS_OPTION_TITLE" = "Inga annonser";
-"HIDE_ADS_OPTION_DETAIL_TITLE" = "Ta bort alla annonser.";
-
-"HIDE_TOPICS_OPTION_TITLE" = "Inga ämnestweets";
+"HIDE_TOPICS_OPTION_TITLE" = "Inga ämnes-Tweets";
 "HIDE_TOPICS_OPTION_DETAIL_TITLE" = "Ta bort Tweets kopplade till föreslagna ämnen.";
-
-"HIDE_WHO_FOLLOW_OPTION" = "Ingen 'Vem du kan följa'";
-"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE" = "Ta bort förslag på vem du kan följa från profiler.";
 
 "HIDE_TOPICS_TO_FOLLOW_OPTION" = "Inga 'Ämnen att följa'";
 "HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "Ta bort föreslagna ämnen.";
 
-"HIDE_PREMIUM_OFFER_OPTION" = "Inga Twitter Blue-uppmaningar";
-"HIDE_PREMIUM_OFFER_OPTION_DETAIL_TITLE" = "Ta bort knapparna 'Bli verifierad' och 'Uppgradera'.";
+"PADLOCK_OPTION_TITLE" = "Lås Twitter";
+"PADLOCK_OPTION_DETAIL_TITLE" = "Kräv Face ID eller en lösenkod för att öppna Twitter.";
 
-"HIDE_TREND_VIDEOS_OPTION_TITLE" = "Inga trendande videor";
-"HIDE_TREND_VIDEOS_OPTION_DETAIL_TITLE" = "Ta bort trendande videor från sökmenyn.";
+"ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "Använd extern webbläsare";
+"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "Öppna länkar i Safari eller din standardwebbläsare.";
 
-"DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "Inga videoundertexter";
+"STRIP_URL_TRACKING_PARAMETERS_TITLE" = "Anpassa länkar";
+"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE" = "Välj en anpassad URL och ta bort spårning.";
+"SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE" = "Välj anpassad URL";
 
-"VOICE_OPTION_TITLE" = "Rösttweets";
-"VOICE_OPTION_DETAIL_TITLE" = "Aktivera eller inaktivera rösttweets (endast iOS).";
 
-"VIDEO_ZOOM_OPTION_TITLE" = "Zooma i videor";
-"VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "Dubbeltryck för att zooma in eller ut.";
+/*Tweets*/
+"TWEETS_SECTION_HEADER_TITLE" = "Tweets";
 
-"NO_HISTORY_OPTION_TITLE" = "Ingen sökhistorik";
-"NO_HISTORY_OPTION_DETAIL_TITLE" = "Twitter sparar inte längre dina sökningar.";
+"ORIG_TWEET_STYLE_OPTION_TITLE" = "Inaktivera kompakt Tweet-stil";
+"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "Visa gilla-markeringar, retweets och svar på en separat rad.";
 
-"BIO_TRANSALTE_OPTION_TITLE" = "Översätt bios";
-"BIO_TRANSALTE_OPTION_DETAIL_TITLE" = "Visa bios på ditt språk.";
+"TWEET_TO_IMAGE_OPTION_TITLE" = "Spara Tweet som bild";
+"TWEET_TO_IMAGE_OPTION_DETAIL_TITLE" = "Tryck länge på dela för att exportera Tweets som bilder.";
 
-"LIKE_CONFIRM_OPTION_TITLE" = "Bekräfta gillningar";
+"ENABLE_TWEET_LABELS_OPTION_TITLE" = "Visa Tweet-källor (beta)";
+"ENABLE_TWEET_LABELS_OPTION_DETAIL_TITLE" = "Visar vilken klient Tweeten gjordes från (av @nyaathea).";
+
+"LIKE_CONFIRM_OPTION_TITLE" = "Bekräfta gilla-markeringar";
 "LIKE_CONFIRM_OPTION_DETAIL_TITLE" = "Fråga innan du gillar en Tweet.";
 
 "TWEET_CONFIRM_OPTION_TITLE" = "Bekräfta Tweets";
-"TWEET_CONFIRM_OPTION_DETAIL_TITLE" = "Fråga innan du publicerar en Tweet.";
-
-"FOLLOW_CONFIRM_OPTION_TITLE" = "Bekräfta följningar";
-"FOLLOW_CONFIRM_OPTION_DETAIL_TITLE" = "Fråga innan du följer någon.";
-
-"PADLOCK_OPTION_TITLE" = "Lås Twitter";
-"PADLOCK_OPTION_DETAIL_TITLE" = "Kräv Face ID eller lösenkod för att öppna Twitter.";
-
-"DN_MODULAR_SEARCH_OPTION_TITLE" = "Bättre sökning i Meddelanden";
-"DN_MODULAR_SEARCH_OPTION_DETAIL_TITLE" = "Sök i dina direktmeddelanden med avancerade filter.";
-
-"AUTO_HIGHEST_LOAD_OPTION_TITLE" = "Media i hög kvalitet";
-"AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE" = "Ladda upp och visa media i bästa möjliga kvalitet.";
-
-"DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE" = "Inga varningar för känsligt innehåll";
-
-"TRUSTED_FRIENSS_OPTION_TITLE" = "Twitter-cirklar";
-
-"COPY_PROFILE_INFO_OPTION_TITLE" = "Kopiera profildetaljer";
-"COPY_PROFILE_INFO_OPTION_DETAIL_TITLE" = "Kopiera användarnamn, bios m.m. med ett tryck.";
-
-"TWEET_TO_IMAGE_OPTION_TITLE" = "Spara Tweet som bild";
-"TWEET_TO_IMAGE_OPTION_DETAIL_TITLE" = "Håll ned Dela för att exportera Tweets som bilder.";
-
-"HIDE_SPACE_OPTION_TITLE" = "Dölj Spaces-fältet";
-
-"DISABLE_RTL_OPTION_TITLE" = "Använd vänster-till-höger-layout";
-"DISABLE_RTL_OPTION_DETAIL_TITLE" = "Tvinga LTR-layout även för RTL-språk.";
-
-"ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "Öppna i extern webbläsare";
-"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "Öppna länkar i Safari eller din standardwebbläsare.";
-
-"STRIP_URL_TRACKING_PARAMETERS_TITLE" = "Rensa Tweet-länkar";
-"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE" = "Kopiera rena URL:er utan spårning.";
-
-"TWITTER_BLUE_SECTION_HEADER_TITLE" = "Twitter Blue";
-"UNDO_TWEET_OPTION_TITLE" = "Ångra Tweet";
-"UNDO_TWEET_OPTION_DETAIL_TITLE" = "Lägg till en kort fördröjning innan Tweets skickas så att du kan ångra dem.";
-
-"READER_MODE_OPTION_TITLE" = "Läsläge";
-"READER_MODE_OPTION_DETAIL_TITLE" = "Läs långa trådar utan distraktioner.";
-
-"THEME_OPTION_TITLE" = "Byt tema";
-"THEME_OPTION_DETAIL_TITLE" = "Välj ett tema. Endast du ser det.";
-"THEME_OPTION_1" = "Blå";
-"THEME_OPTION_2" = "Gul";
-"THEME_OPTION_3" = "Röd";
-"THEME_OPTION_4" = "Lila";
-"THEME_OPTION_5" = "Orange";
-"THEME_OPTION_6" = "Grön";
-
-"CUSTOM_TAB_BAR_OPTION_TITLE" = "Anpassa flikfältet";
-"CUSTOM_TAB_BAR_REST_MESSAGE" = "Vill du återställa flikfältet?";
-"CUSTOM_TAB_BAR_SECTION_1_TITLE" = "Aktiverade";
-"CUSTOM_TAB_BAR_SECTION_2_TITLE" = "Avaktiverade";
-"CUSTOM_TAB_BAR_OPTION_1" = "Hem";
-"CUSTOM_TAB_BAR_OPTION_2" = "Utforska";
-"CUSTOM_TAB_BAR_OPTION_3" = "Spaces";
-"CUSTOM_TAB_BAR_OPTION_4" = "Communitys";
-"CUSTOM_TAB_BAR_OPTION_5" = "Notiser";
-"CUSTOM_TAB_BAR_OPTION_6" = "Meddelanden";
-"CUSTOM_TAB_BAR_OPTION_7" = "Grok";
-"CUSTOM_TAB_BAR_OPTION_8" = "Video";
-
-"TWITTER_BLUE_SECTION_FOOTER_TITLE" = "Starta om Twitter för att tillämpa ändringarna.";
-
-"LAYOUT_CUS_SECTION_HEADER_TITLE" = "Layout";
-"ORIG_TWEET_STYLE_OPTION_TITLE" = "Originaltweet-layout";
-"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "Använd Twitters klassiska tweetstil.";
+"TWEET_CONFIRM_OPTION_DETAIL_TITLE" = "Fråga innan du postar en Tweet.";
 
 "HIDE_VIEW_COUNT_OPTION_TITLE" = "Dölj visningar";
 "HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE" = "Visa inte visningar under Tweets.";
@@ -151,52 +66,199 @@
 "HIDE_MARKBOOK_BUTTON_OPTION_TITLE" = "Dölj bokmärken";
 "HIDE_MARKBOOK_BUTTON_OPTION_DETAIL_TITLE" = "Ta bort bokmärkesknappen från Tweets.";
 
+"DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE" = "Inga varningar för känsligt innehåll";
+
+
+/*Profiles*/
+"PROFILES_SECTION_HEADER_TITLE" = "Profiler";
+
+"FOLLOW_CONFIRM_OPTION_TITLE" = "Bekräfta följningar";
+"FOLLOW_CONFIRM_OPTION_DETAIL_TITLE" = "Fråga innan du följer någon.";
+
+"COPY_PROFILE_INFO_OPTION_TITLE" = "Kopiera profilinfo";
+"COPY_PROFILE_INFO_OPTION_DETAIL_TITLE" = "Kopiera användarnamn, bios och mer med ett tryck.";
+
+"BIO_TRANSALTE_OPTION_TITLE" = "Översätt biografier";
+"BIO_TRANSALTE_OPTION_DETAIL_TITLE" = "Se bios på ditt språk.";
+
+"HIDE_WHO_FOLLOW_OPTION" = "Inga 'Vem att följa'";
+"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE" = "Ta bort följsförslag från profiler.";
+
+"DISABLE_MEDIA_TAB_OPTION_TITLE" = "Inga separata Medieflikar";
+"DISABLE_MEDIA_TAB_OPTION_DETAIL_TITLE" = "Slår ihop Foto- och Videoflikarna.";
+
+"DISABLE_ARTICLES_OPTION_TITLE" = "Ingen Artiklar-flik";
+"DISABLE_ARTICLES_OPTION_DETAIL_TITLE" = "Dölj Artiklar-fliken i profiler.";
+
+"DISABLE_HIGHLIGHTS_OPTION_TITLE" = "Ingen Höjdpunkter-flik";
+"DISABLE_HIGHLIGHTS_OPTION_DETAIL_TITLE" = "Dölj Höjdpunkter-fliken i profiler.";
+
+
+/*Search*/
+"SEARCH_SECTION_HEADER_TITLE" = "Sök";
+
+"NO_HISTORY_OPTION_TITLE" = "Ingen sökhistorik";
+"NO_HISTORY_OPTION_DETAIL_TITLE" = "Twitter kommer inte längre att spara dina sökningar.";
+
+"HIDE_TREND_VIDEOS_OPTION_TITLE" = "Inga trendande videor";
+"HIDE_TREND_VIDEOS_OPTION_DETAIL_TITLE" = "Ta bort trendande videor från sökmenyn.";
+
+
+/*Photos & Videos*/
+"PHOTOS_VIDEOS_SECTION_HEADER_TITLE" = "Foton och videor";
+
+"AUTO_HIGHEST_LOAD_OPTION_TITLE" = "Högkvalitativ media";
+"AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE" = "Ladda upp och visa media i bästa möjliga kvalitet.";
+
+"DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "Inga videoundertexter";
+
 "FORCE_TWEET_FULL_FRAME_TITLE" = "Stora bilder";
 
 "DISABLE_IMMERSIVE_PLAYER_TITLE" = "Stäng av uppslukande spelare";
 
-"SHOW_SCOLL_INDICATOR_OPTION_TITLE" = "Visa alltid rullningslisten";
 
-"ALWAYS_FOLLOWING_PAGE_OPTION_TITLE" = "Inaktivera fliken För dig";
-"ALWAYS_FOLLOWING_PAGE_OPTION_DETAIL_TITLE" = "Öppna Twitter på fliken Följer.";
+/*Twitter Blue*/
+"TWITTER_BLUE_SECTION_HEADER_TITLE" = "Twitter Blue";
+"TWITTER_BLUE_SECTION_FOOTER_TITLE" = "Starta om Twitter för att tillämpa ändringar.";
+
+"HIDE_ADS_OPTION_TITLE" = "Inga annonser";
+"HIDE_ADS_OPTION_DETAIL_TITLE" = "Ta bort alla annonser.";
+
+"UNDO_TWEET_OPTION_TITLE" = "Ångra Tweet";
+"UNDO_TWEET_OPTION_DETAIL_TITLE" = "Lägg till en kort fördröjning så att du kan ångra Tweets innan de skickas.";
+
+"READER_MODE_OPTION_TITLE" = "Läsläge";
+"READER_MODE_OPTION_DETAIL_TITLE" = "Läs långa trådar utan störande element.";
+
+"DOWNLOAD_VIDEOS_OPTION_TITLE" = "Ladda ner media";
+"DOWNLOAD_VIDEOS_OPTION_DETAIL_TITLE" = "Spara videor eller GIFs direkt från Tweets.";
+
+"DIRECT_SAVE_OPTION_TITLE" = "Spara till Bilder";
+"DIRECT_SAVE_OPTION_DETAIL_TITLE" = "Videor du sparar hamnar direkt i Bilder.";
+
+"HIDE_PREMIUM_OFFER_OPTION" = "Inga Twitter Blue-promptar";
+"HIDE_PREMIUM_OFFER_OPTION_DETAIL_TITLE" = "Ta bort 'Bli verifierad' och 'Uppgradera'-knappar.";
+
+"THEME_OPTION_TITLE" = "Ändra tema";
+"THEME_OPTION_DETAIL_TITLE" = "Välj ett tema. Endast du ser det.";
+
+"APP_ICON_TITLE" = "Ändra appikon";
+"APP_ICON_DETAIL_TITLE" = "Välj en annan ikon för appen.";
+
+"CUSTOM_TAB_BAR_OPTION_TITLE" = "Redigera flikfältet";
+
+
+/*Layout*/
+"LAYOUT_CUS_SECTION_HEADER_TITLE" = "Layout";
+"LAYOUT_CUS_SECTION_FOOTER_TITLE" = "Starta om Twitter för att tillämpa ändringar.";
+
+"CUSTOM_DIRECT_BACKGROUND_VIEW_TITLE" = "Anpassad bakgrund i Meddelanden";
+"CUSTOM_DIRECT_BACKGROUND_VIEW_DETAIL_TITLE" = "Välj en egen bakgrund för dina direktmeddelanden.";
+
+"HIDE_SPACE_OPTION_TITLE" = "Dölj Spaces-fältet";
+
+"STOP_HIDING_TAB_BAR_TITLE" = "Behåll flikfältet synligt";
+"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "Dölj inte flikfältet vid scrollning (kan orsaka problem).";
+
+"DISABLE_RTL_OPTION_TITLE" = "Använd vänster-till-höger-layout";
+"DISABLE_RTL_OPTION_DETAIL_TITLE" = "Tvinga VTH-layout även för HVT-språk.";
+
+"SHOW_SCOLL_INDICATOR_OPTION_TITLE" = "Visa alltid scrollfält";
 
 "FONT_OPTION_TITLE" = "Anpassade typsnitt";
 "FONT_OPTION_DETAIL_TITLE" = "Välj ett anpassat typsnitt för Twitter.";
 
-"REQULAR_FONTS_PICKER_OPTION_TITLE" = "Välj ett typsnitt";
-"BOLD_FONTS_PICKER_OPTION_TITLE" = "Välj ett fetstilat typsnitt";
-"LAYOUT_CUS_SECTION_FOOTER_TITLE" = "Starta om Twitter för att tillämpa ändringarna.";
+"REQULAR_FONTS_PICKER_OPTION_TITLE" = "Välj typsnitt";
 
+"BOLD_FONTS_PICKER_OPTION_TITLE" = "Välj fetstil";
+
+
+/*Legal*/
+"LEGAL_SECTION_HEADER_TITLE" = "Juridiskt";
+
+"ACKNOWLEDGEMENTS_SETTINGS_NAVIGATION_TITLE" = "Juridiska meddelanden";
+
+
+/*Debug*/
 "DEBUG_SECTION_HEADER_TITLE" = "Felsökning";
+
 "FLEX_OPTION_TITLE" = "FLEX-felsökningsläge";
 "FLEX_OPTION_DETAIL_TITLE" = "Använd FLEX för att felsöka Twitter.";
 
-"LEGAL_SECTION_HEADER_TITLE" = "Juridiskt";
-"LEGAL_BUTTON_TITLE" = "Juridiska meddelanden";
 
+/*Developers*/
 "DEVELOPER_SECTION_HEADER_TITLE" = "Utvecklare";
 
-"ADVANCED_SEARCH_TITLE" = "Avancerad sökning";
-"ADVANCED_SEARCH_DETAIL_TITLE" = "Lås upp fler sökfilter.";
 
-"STOP_HIDING_TAB_BAR_TITLE" = "Håll flikfältet synligt";
-"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "Göm inte flikfältet när du scrollar.";
+/*Custom fonts*/
+"CUSTOM_FONTS_NAVIGATION_BUTTON_TITLE" = "Anpassade typsnitt";
+"CUSTOM_FONTS_NAVIGATION_TITLE" = "Välj ett typsnitt";
+"CUSTOM_FONTS_MENU_TITLE" = "\nVälj ett typsnitt";
+"CUSTOM_FONTS_TUT_ALERT_MESSAGE" = "Inga anpassade typsnitt ännu. Installera några med iFont-appen från App Store.";
 
-"CUSTOM_DIRECT_BACKGROUND_VIEW_TITLE" = "Anpassad bakgrund i Meddelanden";
-"CUSTOM_DIRECT_BACKGROUND_VIEW_DETAIL_TITLE" = "Välj en anpassad bakgrund för dina direktmeddelanden.";
 
+/*Dwonload*/
+"DOWNLOAD_MENU_TITLE" = "\nVälj videokvalitet";
+"PROGRESS_DOWNLOADING_STATUS_TITLE" = "Laddar ner...";
+"FETCHING_PROGRESS_TITLE" = "Ett ögonblick...";
+"FFMPEG_DOWNLOAD_OPTION_TITLE" = "Ladda ner med FFmpeg";
+
+
+/*App icon*/
+"APP_ICON_NAV_TITLE" = "Ändra appikon";
+"APP_ICON_HEADER_TITLE" = "Välj en ny ikon eller ett tema för Twitter.";
+
+
+/*Copy profile info*/
+"COPY_PROFILE_INFO_MENU_OPTION_1" = "Kopiera bio";
+"COPY_PROFILE_INFO_MENU_OPTION_2" = "Kopiera användarnamn";
+"COPY_PROFILE_INFO_MENU_OPTION_3" = "Kopiera fullständigt användarnamn";
+"COPY_PROFILE_INFO_MENU_OPTION_4" = "Kopiera biolänk";
+"COPY_PROFILE_INFO_MENU_OPTION_5" = "Kopiera plats";
+
+
+/*Theme*/
+"THEME_SETTINGS_NAVIGATION_TITLE" = "Ändra tema";
+"THEME_OPTION_1" = "Blå";
+"THEME_OPTION_2" = "Gul";
+"THEME_OPTION_3" = "Röd";
+"THEME_OPTION_4" = "Lila";
+"THEME_OPTION_5" = "Orange";
+"THEME_OPTION_6" = "Grön";
+
+
+/*Tab bar*/
+"CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE" = "Redigera flikfältet";
+"CUSTOM_TAB_BAR_REST_MESSAGE" = "Är du säker på att du vill återställa flikfältet?";
+"CUSTOM_TAB_BAR_SECTION_1_TITLE" = "Aktiverade";
+"CUSTOM_TAB_BAR_SECTION_2_TITLE" = "Avaktiverade";
+"CUSTOM_TAB_BAR_OPTION_1" = "Hem";
+"CUSTOM_TAB_BAR_OPTION_2" = "Utforska";
+"CUSTOM_TAB_BAR_OPTION_3" = "Områden";
+"CUSTOM_TAB_BAR_OPTION_4" = "Communitys";
+"CUSTOM_TAB_BAR_OPTION_5" = "Notiser";
+"CUSTOM_TAB_BAR_OPTION_6" = "Meddelanden";
+"CUSTOM_TAB_BAR_OPTION_7" = "Grok";
+"CUSTOM_TAB_BAR_OPTION_8" = "Video";
+
+
+/*Message customization*/
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_1" = "Använd en bild";
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_2" = "Använd en färg";
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_3" = "Återställ till standard";
 
-"APP_ICON_TITLE" = "Byt appikon";
-"APP_ICON_DETAIL_TITLE" = "Välj en annan appikon.";
-"APP_ICON_NAV_TITLE" = "Byt appikon";
-"APP_ICON_HEADER_TITLE" = "Välj en ny ikon eller ett tema för Twitter.";
 
-"FFMPEG_DOWNLOAD_OPTION_TITLE" = "Ladda ned med FFmpeg";
+/*Deprecated*/
+"TRUSTED_FRIENSS_OPTION_TITLE" = "Twitter-cirklar";
 
-"SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE" = "Välj en anpassad URL";
+"ALWAYS_FOLLOWING_PAGE_OPTION_TITLE" = "Inaktivera fliken För dig";
+"ALWAYS_FOLLOWING_PAGE_OPTION_DETAIL_TITLE" = "Öppna Twitter på fliken Följer.";
 
-"UPLOAD_CUSTOM_VOICE_OPTION_TITLE" = "Rösttweets";
-"UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE" = "Aktivera eller inaktivera rösttweets (endast iOS).";
+"DN_MODULAR_SEARCH_OPTION_TITLE" = "Bättre meddelandesök";
+"DN_MODULAR_SEARCH_OPTION_DETAIL_TITLE" = "Sök i dina direktmeddelanden med avancerade filter.";
+
+"ADVANCED_SEARCH_TITLE" = "Avancerad sökning";
+"ADVANCED_SEARCH_DETAIL_TITLE" = "Lås upp fler sökfilter.";
+
+"VIDEO_ZOOM_OPTION_TITLE" = "Zooma på videor";
+"VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "Dubbeltrycka för att zooma in och ut.";

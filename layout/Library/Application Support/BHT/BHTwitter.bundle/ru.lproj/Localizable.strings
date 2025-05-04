@@ -1,129 +1,237 @@
+/*
+  Language: ru
+  NeoFreeBird
+*/
+
 "BHTWITTER_SETTINGS_TITLE" = "NeoFreeBird";
-"BHTWITTER_SETTINGS_DETAIL" = "Настройте параметры для NeoFreeBird, удалите рекламу, разблокируйте функции Twitter Blue и многое другое.";
+"BHTWITTER_SETTINGS_DETAIL" = "Настрой Twitter: убери рекламу, включи Blue-функции и многое другое.";
+"SETTINGS_HEADER_TITLE" = "Настрой свой Twitter с помощью этих опций";
 
-"DOWNLOAD_MENU_TITLE" = "\nВыберите качество видео";
-"CUSTOM_FONTS_MENU_TITLE" = "\nВыберите шрифт";
-"CUSTOM_FONTS_TUT_ALERT_MESSAGE" = "Не найдено пользовательских шрифтов. Установите шрифты с помощью приложения iFont из App Store.";
-
-"OK_BUTTON_TITLE" = "ОК";
+"CONFIRM_ALERT_MESSAGE" = "Ты точно этого хотел?";
 "YES_BUTTON_TITLE" = "Да";
 "NO_BUTTON_TITLE" = "Нет";
-"CONFIRM_ALERT_MESSAGE" = "Вы уверены?";
+"OK_BUTTON_TITLE" = "ОК";
 "CANCEL_BUTTON_TITLE" = "Отмена";
 
-"PROGRESS_DOWNLOADING_STATUS_TITLE" = "Загрузка...";
-"FETCHING_PROGRESS_TITLE" = "Получение информации о медиа...";
 
-"CUSTOM_FONTS_NAVIGATION_BUTTON_TITLE" = "Пользовательские шрифты";
-"CUSTOM_FONTS_NAVIGATION_TITLE" = "Выберите шрифт";
-"THEME_SETTINGS_NAVIGATION_TITLE" = "Настройки темы";
-"CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE" = "Настройка панели вкладок";
-"ACKNOWLEDGEMENTS_SETTINGS_NAVIGATION_TITLE" = "Благодарности";
+/*Main menu start*/
 
-"COPY_PROFILE_INFO_MENU_OPTION_1" = "Копировать биографию";
-"COPY_PROFILE_INFO_MENU_OPTION_2" = "Копировать имя пользователя";
-"COPY_PROFILE_INFO_MENU_OPTION_3" = "Копировать полное имя пользователя";
-"COPY_PROFILE_INFO_MENU_OPTION_4" = "Копировать ссылку на биографию";
-"COPY_PROFILE_INFO_MENU_OPTION_5" = "Копировать местоположение из биографии";
+/*General*/
+"MAIN_SECTION_HEADER_TITLE" = "Общие";
 
-"MAIN_SECTION_HEADER_TITLE" = "Настройки";
-"DOWNLOAD_VIDEOS_OPTION_TITLE" = "Загрузить медиа";
-"DOWNLOAD_VIDEOS_OPTION_DETAIL_TITLE" = "Сохраняйте видео или GIF, нажимая кнопку загрузки на твитах.";
+"VOICE_OPTION_TITLE" = "Голосовые Твиты";
+"VOICE_OPTION_DETAIL_TITLE" = "Включить или отключить голосовые твиты (только iOS).";
 
-"DIRECT_SAVE_OPTION_TITLE" = "Автосохранение";
-"DIRECT_SAVE_OPTION_DETAIL_TITLE" = "Автоматически сохранять видео после загрузки.";
+"UPLOAD_CUSTOM_VOICE_OPTION_TITLE" = "Голосовые Твиты";
+"UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE" = "Включить или отключить голосовые твиты (только iOS).";
 
-"HIDE_ADS_OPTION_TITLE" = "Удалить рекламу";
-"HIDE_ADS_OPTION_DETAIL_TITLE" = "Блокировать всю рекламу в Twitter для более чистого интерфейса.";
+"HIDE_TOPICS_OPTION_TITLE" = "Без твитов по темам";
+"HIDE_TOPICS_OPTION_DETAIL_TITLE" = "Удалить твиты, связанные с предложенными темами.";
 
-"HIDE_TOPICS_OPTION_TITLE" = "Скрыть темы";
-"HIDE_TOPICS_OPTION_DETAIL_TITLE" = "Прекратить показывать твиты, связанные с рекомендованными темами.";
+"HIDE_TOPICS_TO_FOLLOW_OPTION" = "Без «Тем для подписки»";
+"HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "Убрать рекомендации тем.";
 
-"HIDE_WHO_FOLLOW_OPTION" = "Скрыть 'Кого следовать'";
-"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE" = "Удалить раздел 'Кого следовать' из профилей.";
+"PADLOCK_OPTION_TITLE" = "Заблокировать Twitter";
+"PADLOCK_OPTION_DETAIL_TITLE" = "Требуется Face ID или пароль для входа.";
 
-"HIDE_TOPICS_TO_FOLLOW_OPTION" = "Скрыть 'Темы для следования'";
-"HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "Удалить раздел 'Темы для следования' из профилей.";
+"ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "Открывать во внешнем браузере";
+"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "Открывать ссылки в Safari или браузере по умолчанию.";
 
-"HIDE_PREMIUM_OFFER_OPTION" = "Удалить предложения Twitter Blue";
-"HIDE_PREMIUM_OFFER_OPTION_DETAIL_TITLE" = "Скрыть кнопки 'Получить верификацию' и 'Обновить' в профилях и меню.";
+"STRIP_URL_TRACKING_PARAMETERS_TITLE" = "Настроить ссылки";
+"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE" = "Убрать параметры отслеживания и задать свой URL.";
+"SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE" = "Выбрать свой URL";
 
-"HIDE_TREND_VIDEOS_OPTION_TITLE" = "Скрыть трендовые видео";
-"HIDE_TREND_VIDEOS_OPTION_DETAIL_TITLE" = "Удалить трендовые видео с вкладки поиска.";
+
+/*Tweets*/
+"TWEETS_SECTION_HEADER_TITLE" = "Твиты";
+
+"ORIG_TWEET_STYLE_OPTION_TITLE" = "Отключить компактный стиль";
+"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "Показывать лайки, ретвиты и ответы отдельной строкой.";
+
+"TWEET_TO_IMAGE_OPTION_TITLE" = "Сохранять твит как изображение";
+"TWEET_TO_IMAGE_OPTION_DETAIL_TITLE" = "Удерживай кнопку «Поделиться», чтобы сохранить как картинку.";
+
+"ENABLE_TWEET_LABELS_OPTION_TITLE" = "Показать источник твита (бета)";
+"ENABLE_TWEET_LABELS_OPTION_DETAIL_TITLE" = "Показывает, через какое приложение сделан твит (от @nyaathea).";
+
+"LIKE_CONFIRM_OPTION_TITLE" = "Подтверждение лайка";
+"LIKE_CONFIRM_OPTION_DETAIL_TITLE" = "Запрашивать подтверждение перед лайком.";
+
+"TWEET_CONFIRM_OPTION_TITLE" = "Подтверждение твита";
+"TWEET_CONFIRM_OPTION_DETAIL_TITLE" = "Спрашивать перед публикацией твита.";
+
+"HIDE_VIEW_COUNT_OPTION_TITLE" = "Скрыть просмотры";
+"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE" = "Не показывать количество просмотров под твитами.";
+
+"HIDE_MARKBOOK_BUTTON_OPTION_TITLE" = "Скрыть закладки";
+"HIDE_MARKBOOK_BUTTON_OPTION_DETAIL_TITLE" = "Убрать кнопку закладки с твитов.";
+
+"DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE" = "Без предупреждений о чувствительном контенте";
+
+
+/*Profiles*/
+"PROFILES_SECTION_HEADER_TITLE" = "Профили";
+
+"FOLLOW_CONFIRM_OPTION_TITLE" = "Подтверждение подписки";
+"FOLLOW_CONFIRM_OPTION_DETAIL_TITLE" = "Спрашивать перед подпиской.";
+
+"COPY_PROFILE_INFO_OPTION_TITLE" = "Копировать информацию профиля";
+"COPY_PROFILE_INFO_OPTION_DETAIL_TITLE" = "Копировать имя, био и другое одним нажатием.";
+
+"BIO_TRANSALTE_OPTION_TITLE" = "Переводить био";
+"BIO_TRANSALTE_OPTION_DETAIL_TITLE" = "Показывать биографии на твоём языке.";
+
+"HIDE_WHO_FOLLOW_OPTION" = "Без «Кого читать»";
+"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE" = "Убрать рекомендации из профилей.";
+
+"DISABLE_MEDIA_TAB_OPTION_TITLE" = "Объединить вкладки Медиа";
+"DISABLE_MEDIA_TAB_OPTION_DETAIL_TITLE" = "Фото и видео будут в одной вкладке.";
+
+"DISABLE_ARTICLES_OPTION_TITLE" = "Скрыть вкладку Статьи";
+"DISABLE_ARTICLES_OPTION_DETAIL_TITLE" = "Спрятать вкладку «Статьи» в профилях.";
+
+"DISABLE_HIGHLIGHTS_OPTION_TITLE" = "Скрыть вкладку Избранное";
+"DISABLE_HIGHLIGHTS_OPTION_DETAIL_TITLE" = "Спрятать вкладку «Избранное» в профилях.";
+
+
+/*Search*/
+"SEARCH_SECTION_HEADER_TITLE" = "Поиск";
+
+"NO_HISTORY_OPTION_TITLE" = "Без истории поиска";
+"NO_HISTORY_OPTION_DETAIL_TITLE" = "Twitter больше не будет сохранять твои запросы.";
+
+"HIDE_TREND_VIDEOS_OPTION_TITLE" = "Скрыть популярные видео";
+"HIDE_TREND_VIDEOS_OPTION_DETAIL_TITLE" = "Убрать видео из раздела поиска.";
+
+
+/*Photos & Videos*/
+"PHOTOS_VIDEOS_SECTION_HEADER_TITLE" = "Фото и видео";
+
+"AUTO_HIGHEST_LOAD_OPTION_TITLE" = "Высокое качество медиа";
+"AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE" = "Загружать и показывать медиа в лучшем качестве.";
 
 "DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "Отключить субтитры видео";
 
-"VOICE_OPTION_TITLE" = "Включить голосовые твиты";
-"VOICE_OPTION_DETAIL_TITLE" = "Разрешить голосовые записи в твитах и прямых сообщениях.";
+"FORCE_TWEET_FULL_FRAME_TITLE" = "Показывать большие изображения";
 
-"VIDEO_ZOOM_OPTION_TITLE" = "Масштабировать видео";
-"VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "Дважды коснитесь видео, чтобы увеличить или уменьшить его.";
+"DISABLE_IMMERSIVE_PLAYER_TITLE" = "Отключить полноэкранный плеер";
 
-"NO_HISTORY_OPTION_TITLE" = "Отключить историю поиска";
-"NO_HISTORY_OPTION_DETAIL_TITLE" = "Остановить сохранение поисковых запросов в Twitter.";
 
-"BIO_TRANSALTE_OPTION_TITLE" = "Добавить кнопку перевода";
-"BIO_TRANSALTE_OPTION_DETAIL_TITLE" = "Добавить кнопку перевода в биографиях пользователей для легкого перевода.";
+/*Twitter Blue*/
+"TWITTER_BLUE_SECTION_HEADER_TITLE" = "Twitter Blue";
+"TWITTER_BLUE_SECTION_FOOTER_TITLE" = "Перезапусти Twitter для применения изменений.";
 
-"LIKE_CONFIRM_OPTION_TITLE" = "Подтвердить лайки";
-"LIKE_CONFIRM_OPTION_DETAIL_TITLE" = "Запрашивать подтверждение перед ставлением лайка на твит.";
+"HIDE_ADS_OPTION_TITLE" = "Убрать рекламу";
+"HIDE_ADS_OPTION_DETAIL_TITLE" = "Удалить всю рекламу из ленты.";
 
-"TWEET_CONFIRM_OPTION_TITLE" = "Подтвердить твиты";
-"TWEET_CONFIRM_OPTION_DETAIL_TITLE" = "Запрашивать подтверждение перед отправкой твита.";
+"UNDO_TWEET_OPTION_TITLE" = "Отменить твит";
+"UNDO_TWEET_OPTION_DETAIL_TITLE" = "Добавить короткую задержку перед публикацией.";
 
-"FOLLOW_CONFIRM_OPTION_TITLE" = "Подтвердить подписку";
-"FOLLOW_CONFIRM_OPTION_DETAIL_TITLE" = "Запрашивать подтверждение перед подпиской на кого-то.";
+"READER_MODE_OPTION_TITLE" = "Режим чтения";
+"READER_MODE_OPTION_DETAIL_TITLE" = "Чтение длинных тредов без лишнего.";
 
-"PADLOCK_OPTION_TITLE" = "Заблокировать Twitter";
-"PADLOCK_OPTION_DETAIL_TITLE" = "Защитить доступ к Twitter с помощью пароля или Face ID.";
+"DOWNLOAD_VIDEOS_OPTION_TITLE" = "Скачать медиа";
+"DOWNLOAD_VIDEOS_OPTION_DETAIL_TITLE" = "Сохранять видео и GIF прямо из твита.";
 
-"DN_MODULAR_SEARCH_OPTION_TITLE" = "Расширенный поиск в DM";
-"DN_MODULAR_SEARCH_OPTION_DETAIL_TITLE" = "Включить более расширенный поиск в прямых сообщениях.";
+"DIRECT_SAVE_OPTION_TITLE" = "Сохранять в Фото";
+"DIRECT_SAVE_OPTION_DETAIL_TITLE" = "Сохранённые видео будут в приложении Фото.";
 
-"AUTO_HIGHEST_LOAD_OPTION_TITLE" = "Фото высокого качества";
-"AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE" = "Всегда загружать и отображать фото в наивысшем доступном качестве.";
+"HIDE_PREMIUM_OFFER_OPTION" = "Скрыть предложения Blue";
+"HIDE_PREMIUM_OFFER_OPTION_DETAIL_TITLE" = "Убрать кнопки «Подтвердить» и «Улучшить».";
 
-"DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE" = "Скрыть предупреждения о чувствительном контенте";
+"THEME_OPTION_TITLE" = "Изменить тему";
+"THEME_OPTION_DETAIL_TITLE" = "Выбери тему (видна только тебе).";
 
-"TRUSTED_FRIENSS_OPTION_TITLE" = "Включить Twitter Circle";
+"APP_ICON_TITLE" = "Сменить иконку";
+"APP_ICON_DETAIL_TITLE" = "Выбери другую иконку приложения.";
 
-"COPY_PROFILE_INFO_OPTION_TITLE" = "Копировать информацию о профиле";
-"COPY_PROFILE_INFO_OPTION_DETAIL_TITLE" = "Добавить кнопку для копирования информации о профиле.";
+"CUSTOM_TAB_BAR_OPTION_TITLE" = "Настроить нижнюю панель";
 
-"TWEET_TO_IMAGE_OPTION_TITLE" = "Сохранить твит как изображение";
-"TWEET_TO_IMAGE_OPTION_DETAIL_TITLE" = "Экспортировать твиты как изображения, удерживая кнопку шаринга.";
+
+/*Layout*/
+"LAYOUT_CUS_SECTION_HEADER_TITLE" = "Макет";
+"LAYOUT_CUS_SECTION_FOOTER_TITLE" = "Перезапусти Twitter для применения изменений.";
+
+"CUSTOM_DIRECT_BACKGROUND_VIEW_TITLE" = "Фон для сообщений";
+"CUSTOM_DIRECT_BACKGROUND_VIEW_DETAIL_TITLE" = "Установи фон для личных сообщений.";
 
 "HIDE_SPACE_OPTION_TITLE" = "Скрыть панель Spaces";
 
-"DISABLE_RTL_OPTION_TITLE" = "Принудительное использование левого направления";
-"DISABLE_RTL_OPTION_DETAIL_TITLE" = "Использовать левостороннее расположение даже для языков с правым направлением. Требуется перезапуск.";
+"STOP_HIDING_TAB_BAR_TITLE" = "Всегда показывать панель вкладок";
+"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "Не скрывать нижнюю панель при прокрутке.";
 
-"ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "Всегда открывать в браузере";
-"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "Открывать ссылки в Safari или вашем стандартном браузере.";
+"DISABLE_RTL_OPTION_TITLE" = "Левостороннее отображение";
+"DISABLE_RTL_OPTION_DETAIL_TITLE" = "Принудительно слева-направо, даже для RTL-языков.";
 
-"STRIP_URL_TRACKING_PARAMETERS_TITLE" = "Удалить отслеживание ссылок";
-"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE" = "Удалить отслеживающие параметры при копировании ссылок на твиты.";
+"SHOW_SCOLL_INDICATOR_OPTION_TITLE" = "Показывать полосу прокрутки";
 
-"TWITTER_BLUE_SECTION_HEADER_TITLE" = "Функции Twitter Blue";
-"UNDO_TWEET_OPTION_TITLE" = "Отменить твит";
-"UNDO_TWEET_OPTION_DETAIL_TITLE" = "Добавить задержку перед отправкой твита, чтобы его можно было отменить.";
+"FONT_OPTION_TITLE" = "Пользовательские шрифты";
+"FONT_OPTION_DETAIL_TITLE" = "Выбери свой шрифт для Twitter.";
 
-"READER_MODE_OPTION_TITLE" = "Режим чтения";
-"READER_MODE_OPTION_DETAIL_TITLE" = "Включить режим чтения для удобства восприятия тредов.";
+"REQULAR_FONTS_PICKER_OPTION_TITLE" = "Выбери шрифт";
 
-"THEME_OPTION_TITLE" = "Изменить тему";
-"THEME_OPTION_DETAIL_TITLE" = "Выберите цвет темы для вашего приложения Twitter. Видно только вам.";
+"BOLD_FONTS_PICKER_OPTION_TITLE" = "Выбери жирный шрифт";
+
+
+/*Legal*/
+"LEGAL_SECTION_HEADER_TITLE" = "Юридическое";
+
+"ACKNOWLEDGEMENTS_SETTINGS_NAVIGATION_TITLE" = "Правовая информация";
+
+
+/*Debug*/
+"DEBUG_SECTION_HEADER_TITLE" = "Отладка";
+
+"FLEX_OPTION_TITLE" = "Режим отладки FLEX";
+"FLEX_OPTION_DETAIL_TITLE" = "Использовать FLEX для отладки Twitter.";
+
+
+/*Developers*/
+"DEVELOPER_SECTION_HEADER_TITLE" = "Разработчикам";
+
+
+/*Custom fonts*/
+"CUSTOM_FONTS_NAVIGATION_BUTTON_TITLE" = "Пользовательские шрифты";
+"CUSTOM_FONTS_NAVIGATION_TITLE" = "Выбор шрифта";
+"CUSTOM_FONTS_MENU_TITLE" = "\nВыбор шрифта";
+"CUSTOM_FONTS_TUT_ALERT_MESSAGE" = "Пока нет пользовательских шрифтов. Установи приложение iFont из App Store.";
+
+
+/*Download*/
+"DOWNLOAD_MENU_TITLE" = "\nВыбери качество видео";
+"PROGRESS_DOWNLOADING_STATUS_TITLE" = "Скачивание...";
+"FETCHING_PROGRESS_TITLE" = "Секундочку...";
+"FFMPEG_DOWNLOAD_OPTION_TITLE" = "Скачать через FFmpeg";
+
+
+/*App icon*/
+"APP_ICON_NAV_TITLE" = "Сменить иконку";
+"APP_ICON_HEADER_TITLE" = "Выбери новую иконку или тему для Twitter.";
+
+
+/*Copy profile info*/
+"COPY_PROFILE_INFO_MENU_OPTION_1" = "Скопировать био";
+"COPY_PROFILE_INFO_MENU_OPTION_2" = "Скопировать имя пользователя";
+"COPY_PROFILE_INFO_MENU_OPTION_3" = "Скопировать полное имя";
+"COPY_PROFILE_INFO_MENU_OPTION_4" = "Скопировать ссылку из био";
+"COPY_PROFILE_INFO_MENU_OPTION_5" = "Скопировать местоположение";
+
+
+/*Theme*/
+"THEME_SETTINGS_NAVIGATION_TITLE" = "Сменить тему";
 "THEME_OPTION_1" = "Синий";
-"THEME_OPTION_2" = "Желтый";
+"THEME_OPTION_2" = "Жёлтый";
 "THEME_OPTION_3" = "Красный";
 "THEME_OPTION_4" = "Фиолетовый";
 "THEME_OPTION_5" = "Оранжевый";
-"THEME_OPTION_6" = "Зеленый";
+"THEME_OPTION_6" = "Зелёный";
 
-"CUSTOM_TAB_BAR_OPTION_TITLE" = "Настроить панель вкладок";
-"CUSTOM_TAB_BAR_REST_MESSAGE" = "Сбросить настройки панели вкладок к умолчанию?";
-"CUSTOM_TAB_BAR_SECTION_1_TITLE" = "Активные вкладки";
-"CUSTOM_TAB_BAR_SECTION_2_TITLE" = "Скрытые вкладки";
+
+/*Tab bar*/
+"CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE" = "Настройка вкладок";
+"CUSTOM_TAB_BAR_REST_MESSAGE" = "Точно сбросить панель вкладок?";
+"CUSTOM_TAB_BAR_SECTION_1_TITLE" = "Включено";
+"CUSTOM_TAB_BAR_SECTION_2_TITLE" = "Выключено";
 "CUSTOM_TAB_BAR_OPTION_1" = "Главная";
 "CUSTOM_TAB_BAR_OPTION_2" = "Обзор";
 "CUSTOM_TAB_BAR_OPTION_3" = "Spaces";
@@ -131,66 +239,26 @@
 "CUSTOM_TAB_BAR_OPTION_5" = "Уведомления";
 "CUSTOM_TAB_BAR_OPTION_6" = "Сообщения";
 "CUSTOM_TAB_BAR_OPTION_7" = "Grok";
-"CUSTOM_TAB_BAR_OPTION_8" = "Video";
+"CUSTOM_TAB_BAR_OPTION_8" = "Видео";
 
-"TWITTER_BLUE_SECTION_FOOTER_TITLE" = "Перезапустите Twitter для применения изменений.";
 
-"LAYOUT_CUS_SECTION_HEADER_TITLE" = "Настройки макета";
-"ORIG_TWEET_STYLE_OPTION_TITLE" = "Оригинальный стиль твита";
-"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "Вернуться к исходному дизайну твитов Twitter.";
-
-"HIDE_VIEW_COUNT_OPTION_TITLE" = "Скрыть счетчик просмотров";
-"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE" = "Удалить счетчик просмотров из твитов.";
-
-"HIDE_MARKBOOK_BUTTON_OPTION_TITLE" = "Скрыть кнопку закладки";
-"HIDE_MARKBOOK_BUTTON_OPTION_DETAIL_TITLE" = "Удалить кнопку закладки из твитов.";
-
-"FORCE_TWEET_FULL_FRAME_TITLE" = "Показывать полноформатные изображения твитов";
-
-"DISABLE_IMMERSIVE_PLAYER_TITLE" = "Выключить иммерсивный видеоплеер";
-
-"SHOW_SCOLL_INDICATOR_OPTION_TITLE" = "Всегда показывать полосу прокрутки";
-
-"ALWAYS_FOLLOWING_PAGE_OPTION_TITLE" = "Начать с вкладки 'Following'";
-"ALWAYS_FOLLOWING_PAGE_OPTION_DETAIL_TITLE" = "Открывать Twitter на вкладке 'Following' по умолчанию.";
-
-"FONT_OPTION_TITLE" = "Настройка шрифта";
-"FONT_OPTION_DETAIL_TITLE" = "Измените стиль шрифта приложения и выберите новый шрифт.";
-
-"REQULAR_FONTS_PICKER_OPTION_TITLE" = "Шрифт";
-"BOLD_FONTS_PICKER_OPTION_TITLE" = "Жирный шрифт";
-"LAYOUT_CUS_SECTION_FOOTER_TITLE" = "Перезапустите Twitter для применения изменений.";
-
-"DEBUG_SECTION_HEADER_TITLE" = "Инструменты для отладки";
-"FLEX_OPTION_TITLE" = "Включить режим отладки FLEX";
-"FLEX_OPTION_DETAIL_TITLE" = "Показать параметры отладки в приложении.";
-
-"LEGAL_SECTION_HEADER_TITLE" = "Юридическая информация";
-"LEGAL_BUTTON_TITLE" = "Кредиты";
-
-"DEVELOPER_SECTION_HEADER_TITLE" = "Кредиты BHTwitter";
-
-"ADVANCED_SEARCH_TITLE" = "Расширенный поиск";
-"ADVANCED_SEARCH_DETAIL_TITLE" = "Включить более детализированные параметры поиска.";
-
-"STOP_HIDING_TAB_BAR_TITLE" = "Оставить панель вкладок видимой";
-"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "Предотвратить исчезновение панели вкладок при прокрутке.";
-
-"CUSTOM_DIRECT_BACKGROUND_VIEW_TITLE" = "Установить фон чата";
-"CUSTOM_DIRECT_BACKGROUND_VIEW_DETAIL_TITLE" = "Используйте изображение или цвет в качестве фона для чатов.";
-
+/*Message customization*/
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_1" = "Использовать изображение";
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_2" = "Использовать цвет";
-"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_3" = "Сбросить к умолчанию";
+"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_3" = "Сбросить по умолчанию";
 
-"APP_ICON_TITLE" = "Иконка приложения";
-"APP_ICON_DETAIL_TITLE" = "Выберите пользовательскую иконку для приложения. Все иконки имеют логотип птицы.";
-"APP_ICON_NAV_TITLE" = "Выберите иконку приложения";
-"APP_ICON_HEADER_TITLE" = "Выберите новую иконку приложения или тему для Twitter. Вы можете изменить это в любой момент.";
 
-"FFMPEG_DOWNLOAD_OPTION_TITLE" = "Загрузить с помощью FFmpeg";
+/*Deprecated*/
+"TRUSTED_FRIENSS_OPTION_TITLE" = "Круги Twitter";
 
-"SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE" = "URL для ссылок для обмена";
+"ALWAYS_FOLLOWING_PAGE_OPTION_TITLE" = "Отключить вкладку «Для тебя»";
+"ALWAYS_FOLLOWING_PAGE_OPTION_DETAIL_TITLE" = "Открывать Twitter во вкладке «Подписки».";
 
-"UPLOAD_CUSTOM_VOICE_OPTION_TITLE" = "Загрузить кастомное голосовое сообщение";
-"UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE" = "Запишите и загрузите пользовательские голосовые сообщения для ваших постов.";
+"DN_MODULAR_SEARCH_OPTION_TITLE" = "Улучшенный поиск в сообщениях";
+"DN_MODULAR_SEARCH_OPTION_DETAIL_TITLE" = "Поиск в ЛС с расширенными фильтрами.";
+
+"ADVANCED_SEARCH_TITLE" = "Расширенный поиск";
+"ADVANCED_SEARCH_DETAIL_TITLE" = "Открывает больше фильтров поиска.";
+
+"VIDEO_ZOOM_OPTION_TITLE" = "Масштаб видео";
+"VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "Двойной тап для увеличения.";

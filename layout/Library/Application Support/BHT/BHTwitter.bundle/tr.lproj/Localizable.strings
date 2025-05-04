@@ -1,118 +1,224 @@
+/*
+  Language: tr
+  NeoFreeBird
+*/
+
 "BHTWITTER_SETTINGS_TITLE" = "NeoFreeBird";
-"BHTWITTER_SETTINGS_DETAIL" = "NeoFreeBird için ayarları kişiselleştirin, reklamları kaldırın, Twitter Blue özelliklerini açın ve daha fazlası.";
+"BHTWITTER_SETTINGS_DETAIL" = "Twitter’ı kişiselleştir: reklamları gizle, Blue özelliklerini aç, daha fazlası.";
+"SETTINGS_HEADER_TITLE" = "Bu ayarlarla Twitter deneyimini özelleştir";
 
-"DOWNLOAD_MENU_TITLE" = "\nVideo kalitesini seçin";
-"CUSTOM_FONTS_MENU_TITLE" = "\nBir yazı tipi seçin";
-"CUSTOM_FONTS_TUT_ALERT_MESSAGE" = "Özel yazı tipi bulunamadı. Yazı tiplerini App Store'dan iFont uygulaması ile yükleyin.";
-
-"OK_BUTTON_TITLE" = "Tamam";
+"CONFIRM_ALERT_MESSAGE" = "Bunu yapmak istediğine emin misin?";
 "YES_BUTTON_TITLE" = "Evet";
 "NO_BUTTON_TITLE" = "Hayır";
-"CONFIRM_ALERT_MESSAGE" = "Emin misiniz?";
+"OK_BUTTON_TITLE" = "Tamam";
 "CANCEL_BUTTON_TITLE" = "İptal";
 
-"PROGRESS_DOWNLOADING_STATUS_TITLE" = "İndiriliyor...";
-"FETCHING_PROGRESS_TITLE" = "Medya detayları alınıyor...";
 
-"CUSTOM_FONTS_NAVIGATION_BUTTON_TITLE" = "Özel yazı tipleri";
-"CUSTOM_FONTS_NAVIGATION_TITLE" = "Yazı tipi seçin";
-"THEME_SETTINGS_NAVIGATION_TITLE" = "Tema ayarları";
-"CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE" = "Sekme çubuğu özelleştirme";
-"ACKNOWLEDGEMENTS_SETTINGS_NAVIGATION_TITLE" = "Teşekkürler";
+/*Main menu start*/
 
-"COPY_PROFILE_INFO_MENU_OPTION_1" = "Biyografiyi kopyala";
-"COPY_PROFILE_INFO_MENU_OPTION_2" = "Kullanıcı adını kopyala";
-"COPY_PROFILE_INFO_MENU_OPTION_3" = "Tam kullanıcı adını kopyala";
-"COPY_PROFILE_INFO_MENU_OPTION_4" = "Biyografi linkini kopyala";
-"COPY_PROFILE_INFO_MENU_OPTION_5" = "Biyografi konumunu kopyala";
+/*General*/
+"MAIN_SECTION_HEADER_TITLE" = "Genel";
 
-"MAIN_SECTION_HEADER_TITLE" = "Ayarlar";
-"DOWNLOAD_VIDEOS_OPTION_TITLE" = "Medya indir";
-"DOWNLOAD_VIDEOS_OPTION_DETAIL_TITLE" = "Videoları veya GIF'leri, tweetlerin üzerine dokunarak indirin.";
+"VOICE_OPTION_TITLE" = "Sesli Tweetler";
+"VOICE_OPTION_DETAIL_TITLE" = "Sesli Tweetleri aç veya kapat (sadece iOS).";
 
-"DIRECT_SAVE_OPTION_TITLE" = "Otomatik kaydet";
-"DIRECT_SAVE_OPTION_DETAIL_TITLE" = "Videoları indirdikten sonra otomatik olarak kaydedin.";
+"UPLOAD_CUSTOM_VOICE_OPTION_TITLE" = "Sesli Tweetler";
+"UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE" = "Sesli Tweetleri aç veya kapat (sadece iOS).";
 
-"HIDE_ADS_OPTION_TITLE" = "Reklamları kaldır";
-"HIDE_ADS_OPTION_DETAIL_TITLE" = "Daha temiz bir deneyim için Twitter'daki tüm reklamlara engel olun.";
+"HIDE_TOPICS_OPTION_TITLE" = "Konu Tweetleri yok";
+"HIDE_TOPICS_OPTION_DETAIL_TITLE" = "Önerilen konulara ait Tweetleri kaldır.";
 
-"HIDE_TOPICS_OPTION_TITLE" = "Konuları gizle";
-"HIDE_TOPICS_OPTION_DETAIL_TITLE" = "Önerilen konularla ilgili tweetleri görmeyi durdurun.";
+"HIDE_TOPICS_TO_FOLLOW_OPTION" = "‘Takip edilecek konular’ yok";
+"HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "Konu önerilerini kaldır.";
 
-"HIDE_WHO_FOLLOW_OPTION" = "'Kimi takip etmeli'yi gizle";
-"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE" = "'Kimi takip etmeli' bölümünü profillerden kaldırın.";
+"PADLOCK_OPTION_TITLE" = "Twitter’ı kilitle";
+"PADLOCK_OPTION_DETAIL_TITLE" = "Açmak için Face ID veya şifre iste.";
 
-"HIDE_TOPICS_TO_FOLLOW_OPTION" = "'Takip edilecek konuları' gizle";
-"HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "'Takip edilecek konuları' bölümünü profillerden kaldırın.";
+"ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "Harici tarayıcı kullan";
+"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "Linkleri Safari veya varsayılan tarayıcıda aç.";
 
-"HIDE_PREMIUM_OFFER_OPTION" = "Twitter Blue tekliflerini gizle";
-"HIDE_PREMIUM_OFFER_OPTION_DETAIL_TITLE" = "'Doğrulama al' ve 'Yükselt' butonlarını profillerden ve menülerden gizleyin.";
+"STRIP_URL_TRACKING_PARAMETERS_TITLE" = "Bağlantıları özelleştir";
+"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE" = "Takip parametrelerini kaldır ve özel URL seç.";
+"SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE" = "Özel bir URL seç";
 
-"HIDE_TREND_VIDEOS_OPTION_TITLE" = "Trend videoları gizle";
-"HIDE_TREND_VIDEOS_OPTION_DETAIL_TITLE" = "Arama sekmesinden trend videolarını kaldırın.";
 
-"DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "Video altyazılarını devre dışı bırak";
+/*Tweets*/
+"TWEETS_SECTION_HEADER_TITLE" = "Tweetler";
 
-"VOICE_OPTION_TITLE" = "Sesli tweetleri etkinleştir";
-"VOICE_OPTION_DETAIL_TITLE" = "Tweetlerde ve doğrudan mesajlarda sesli kayıt yapmayı etkinleştirin.";
+"ORIG_TWEET_STYLE_OPTION_TITLE" = "Kompakt tweet stilini kapat";
+"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "Beğeni, retweet ve cevapları ayrı satırda göster.";
 
-"VIDEO_ZOOM_OPTION_TITLE" = "Videoları yakınlaştır";
-"VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "Bir videoya çift tıklayarak yakınlaştırın veya uzaklaştırın.";
+"TWEET_TO_IMAGE_OPTION_TITLE" = "Tweet’i görsel olarak kaydet";
+"TWEET_TO_IMAGE_OPTION_DETAIL_TITLE" = "Paylaş’a uzun basarak tweet’i görsel olarak dışa aktar.";
 
-"NO_HISTORY_OPTION_TITLE" = "Arama geçmişini devre dışı bırak";
-"NO_HISTORY_OPTION_DETAIL_TITLE" = "Twitter'ın arama geçmişini kaydetmesini durdurun.";
-
-"BIO_TRANSALTE_OPTION_TITLE" = "Çeviri butonu ekle";
-"BIO_TRANSALTE_OPTION_DETAIL_TITLE" = "Kullanıcı biyografilerine kolayca çeviri yapmak için çeviri butonu ekleyin.";
+"ENABLE_TWEET_LABELS_OPTION_TITLE" = "Tweet kaynağını göster (beta)";
+"ENABLE_TWEET_LABELS_OPTION_DETAIL_TITLE" = "Tweet’in hangi uygulamayla atıldığını gösterir (@nyaathea tarafından).";
 
 "LIKE_CONFIRM_OPTION_TITLE" = "Beğenileri onayla";
-"LIKE_CONFIRM_OPTION_DETAIL_TITLE" = "Bir tweeti beğenmeden önce onay isteyin.";
+"LIKE_CONFIRM_OPTION_DETAIL_TITLE" = "Tweet’i beğenmeden önce onay iste.";
 
-"TWEET_CONFIRM_OPTION_TITLE" = "Tweetleri onayla";
-"TWEET_CONFIRM_OPTION_DETAIL_TITLE" = "Bir tweet göndermeden önce onay isteyin.";
+"TWEET_CONFIRM_OPTION_TITLE" = "Tweet atarken sor";
+"TWEET_CONFIRM_OPTION_DETAIL_TITLE" = "Tweet atmadan önce onay sor.";
 
-"FOLLOW_CONFIRM_OPTION_TITLE" = "Takipleri onayla";
-"FOLLOW_CONFIRM_OPTION_DETAIL_TITLE" = "Birini takip etmeden önce onay isteyin.";
+"HIDE_VIEW_COUNT_OPTION_TITLE" = "Görüntüleme sayısını gizle";
+"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE" = "Tweet altındaki görüntüleme sayılarını gösterme.";
 
-"PADLOCK_OPTION_TITLE" = "Twitter'ı kilitle";
-"PADLOCK_OPTION_DETAIL_TITLE" = "Twitter'a erişimi bir şifre veya Face ID ile koruyun.";
+"HIDE_MARKBOOK_BUTTON_OPTION_TITLE" = "Yer imlerini gizle";
+"HIDE_MARKBOOK_BUTTON_OPTION_DETAIL_TITLE" = "Tweet’lerden yer imi butonunu kaldır.";
 
-"DN_MODULAR_SEARCH_OPTION_TITLE" = "Gelişmiş DM araması";
-"DN_MODULAR_SEARCH_OPTION_DETAIL_TITLE" = "Doğrudan mesajlarda daha gelişmiş bir arama etkinleştirin.";
+"DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE" = "Hassas içerik uyarısı yok";
 
-"AUTO_HIGHEST_LOAD_OPTION_TITLE" = "Yüksek kaliteli fotoğraflar";
-"AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE" = "Fotoğrafları her zaman en yüksek kalitede yükleyin ve görüntüleyin.";
 
-"DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE" = "Hassas içerik uyarılarını gizle";
+/*Profiles*/
+"PROFILES_SECTION_HEADER_TITLE" = "Profiller";
 
-"TRUSTED_FRIENSS_OPTION_TITLE" = "Twitter Circle'ı etkinleştir";
+"FOLLOW_CONFIRM_OPTION_TITLE" = "Takip onayı";
+"FOLLOW_CONFIRM_OPTION_DETAIL_TITLE" = "Birini takip etmeden önce onay iste.";
 
 "COPY_PROFILE_INFO_OPTION_TITLE" = "Profil bilgilerini kopyala";
-"COPY_PROFILE_INFO_OPTION_DETAIL_TITLE" = "Profil bilgilerini kopyalamak için bir buton ekleyin.";
+"COPY_PROFILE_INFO_OPTION_DETAIL_TITLE" = "Kullanıcı adı, bio ve daha fazlasını tek dokunuşla kopyala.";
 
-"TWEET_TO_IMAGE_OPTION_TITLE" = "Tweeti resim olarak kaydet";
-"TWEET_TO_IMAGE_OPTION_DETAIL_TITLE" = "Tweetleri, paylaşım butonuna basarak resim olarak dışa aktarın.";
+"BIO_TRANSALTE_OPTION_TITLE" = "Biyografileri çevir";
+"BIO_TRANSALTE_OPTION_DETAIL_TITLE" = "Biyografileri kendi dilinde gör.";
+
+"HIDE_WHO_FOLLOW_OPTION" = "‘Kimi takip etmeli’ yok";
+"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE" = "Profildeki takip önerilerini kaldır.";
+
+"DISABLE_MEDIA_TAB_OPTION_TITLE" = "Ayrı Medya sekmesi olmasın";
+"DISABLE_MEDIA_TAB_OPTION_DETAIL_TITLE" = "Fotoğraflar ve Videolar sekmelerini birleştir.";
+
+"DISABLE_ARTICLES_OPTION_TITLE" = "Makale sekmesini gizle";
+"DISABLE_ARTICLES_OPTION_DETAIL_TITLE" = "Profildeki ‘Makaleler’ sekmesini gizle.";
+
+"DISABLE_HIGHLIGHTS_OPTION_TITLE" = "Öne çıkanlar sekmesini gizle";
+"DISABLE_HIGHLIGHTS_OPTION_DETAIL_TITLE" = "Profildeki ‘Öne çıkanlar’ sekmesini gizle.";
+
+
+/*Search*/
+"SEARCH_SECTION_HEADER_TITLE" = "Arama";
+
+"NO_HISTORY_OPTION_TITLE" = "Arama geçmişi yok";
+"NO_HISTORY_OPTION_DETAIL_TITLE" = "Twitter artık aramalarını kaydetmeyecek.";
+
+"HIDE_TREND_VIDEOS_OPTION_TITLE" = "Trend videolar yok";
+"HIDE_TREND_VIDEOS_OPTION_DETAIL_TITLE" = "Arama menüsünden trend videoları kaldır.";
+
+
+/*Photos & Videos*/
+"PHOTOS_VIDEOS_SECTION_HEADER_TITLE" = "Fotoğraf ve video";
+
+"AUTO_HIGHEST_LOAD_OPTION_TITLE" = "Yüksek kaliteli medya";
+"AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE" = "Medya dosyalarını en iyi kalitede yükle ve görüntüle.";
+
+"DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "Video altyazıları kapalı";
+
+"FORCE_TWEET_FULL_FRAME_TITLE" = "Büyük görseller";
+
+"DISABLE_IMMERSIVE_PLAYER_TITLE" = "Tam ekran oynatıcıyı kapat";
+
+
+/*Twitter Blue*/
+"TWITTER_BLUE_SECTION_HEADER_TITLE" = "Twitter Blue";
+"TWITTER_BLUE_SECTION_FOOTER_TITLE" = "Değişikliklerin uygulanması için Twitter’ı yeniden başlat.";
+
+"HIDE_ADS_OPTION_TITLE" = "Reklam yok";
+"HIDE_ADS_OPTION_DETAIL_TITLE" = "Tüm reklamları kaldır.";
+
+"UNDO_TWEET_OPTION_TITLE" = "Tweet’i geri al";
+"UNDO_TWEET_OPTION_DETAIL_TITLE" = "Göndermeden önce kısa bir geri alma süresi ekle.";
+
+"READER_MODE_OPTION_TITLE" = "Okuma modu";
+"READER_MODE_OPTION_DETAIL_TITLE" = "Uzun tweet dizilerini sade bir görünümle oku.";
+
+"DOWNLOAD_VIDEOS_OPTION_TITLE" = "Medya indir";
+"DOWNLOAD_VIDEOS_OPTION_DETAIL_TITLE" = "Tweet’ten video veya GIF indir.";
+
+"DIRECT_SAVE_OPTION_TITLE" = "Fotoğraflara kaydet";
+"DIRECT_SAVE_OPTION_DETAIL_TITLE" = "Kaydedilen videolar Fotoğraflar uygulamasına gider.";
+
+"HIDE_PREMIUM_OFFER_OPTION" = "Twitter Blue promosu yok";
+"HIDE_PREMIUM_OFFER_OPTION_DETAIL_TITLE" = "‘Doğrulan’ ve ‘Yükselt’ butonlarını gizle.";
+
+"THEME_OPTION_TITLE" = "Temayı değiştir";
+"THEME_OPTION_DETAIL_TITLE" = "Bir tema seç, sadece sen göreceksin.";
+
+"APP_ICON_TITLE" = "Uygulama ikonunu değiştir";
+"APP_ICON_DETAIL_TITLE" = "Farklı bir uygulama ikonu seç.";
+
+"CUSTOM_TAB_BAR_OPTION_TITLE" = "Sekme çubuğunu düzenle";
+
+
+/*Layout*/
+"LAYOUT_CUS_SECTION_HEADER_TITLE" = "Düzen";
+"LAYOUT_CUS_SECTION_FOOTER_TITLE" = "Değişiklikler için Twitter’ı yeniden başlat.";
+
+"CUSTOM_DIRECT_BACKGROUND_VIEW_TITLE" = "Mesaj arka planını özelleştir";
+"CUSTOM_DIRECT_BACKGROUND_VIEW_DETAIL_TITLE" = "DM için özel bir arka plan seç.";
 
 "HIDE_SPACE_OPTION_TITLE" = "Spaces çubuğunu gizle";
 
-"DISABLE_RTL_OPTION_TITLE" = "Sola doğru yönü zorla";
-"DISABLE_RTL_OPTION_DETAIL_TITLE" = "Sağdan sola yazılan diller için bile sola doğru düzeni kullanın. Yeniden başlatma gerekir.";
+"STOP_HIDING_TAB_BAR_TITLE" = "Sekme çubuğu hep görünsün";
+"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "Kaydırınca çubuğu gizleme.";
 
-"ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "Her zaman tarayıcıda aç";
-"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "Bağlantıları Safari veya varsayılan tarayıcınızda açın.";
+"DISABLE_RTL_OPTION_TITLE" = "Soldan sağa düzen";
+"DISABLE_RTL_OPTION_DETAIL_TITLE" = "RTL dillerde bile LTR düzenini zorla.";
 
-"STRIP_URL_TRACKING_PARAMETERS_TITLE" = "Bağlantılardaki izlemeyi kaldır";
-"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE" = "Tweet bağlantıları kopyalanırken izleme parametrelerini kaldırın.";
+"SHOW_SCOLL_INDICATOR_OPTION_TITLE" = "Kaydırma çubuğunu her zaman göster";
 
-"TWITTER_BLUE_SECTION_HEADER_TITLE" = "Twitter Blue özellikleri";
-"UNDO_TWEET_OPTION_TITLE" = "Tweeti geri al";
-"UNDO_TWEET_OPTION_DETAIL_TITLE" = "Tweeti göndermeden önce bir gecikme ekleyin, böylece geri alabilirsiniz.";
+"FONT_OPTION_TITLE" = "Özel yazı tipleri";
+"FONT_OPTION_DETAIL_TITLE" = "Twitter için özel bir yazı tipi seç.";
 
-"READER_MODE_OPTION_TITLE" = "Okuyucu modu";
-"READER_MODE_OPTION_DETAIL_TITLE" = "Thread okumayı kolaylaştırmak için okuyucu modunu etkinleştirin.";
+"REQULAR_FONTS_PICKER_OPTION_TITLE" = "Yazı tipi seç";
 
-"THEME_OPTION_TITLE" = "Temayı değiştir";
-"THEME_OPTION_DETAIL_TITLE" = "Twitter uygulamanız için bir tema rengi seçin. Sadece size görünür.";
+"BOLD_FONTS_PICKER_OPTION_TITLE" = "Kalın yazı tipi seç";
+
+
+/*Legal*/
+"LEGAL_SECTION_HEADER_TITLE" = "Yasal";
+
+"ACKNOWLEDGEMENTS_SETTINGS_NAVIGATION_TITLE" = "Yasal bildirimler";
+
+
+/*Debug*/
+"DEBUG_SECTION_HEADER_TITLE" = "Hata ayıklama";
+
+"FLEX_OPTION_TITLE" = "FLEX hata ayıklama modu";
+"FLEX_OPTION_DETAIL_TITLE" = "Twitter’ı FLEX ile debug et.";
+
+
+/*Developers*/
+"DEVELOPER_SECTION_HEADER_TITLE" = "Geliştiriciler";
+
+
+/*Custom fonts*/
+"CUSTOM_FONTS_NAVIGATION_BUTTON_TITLE" = "Özel yazı tipleri";
+"CUSTOM_FONTS_NAVIGATION_TITLE" = "Yazı tipi seç";
+"CUSTOM_FONTS_MENU_TITLE" = "\nYazı tipi seç";
+"CUSTOM_FONTS_TUT_ALERT_MESSAGE" = "Henüz özel yazı tipi yok. App Store’dan iFont indir.";
+
+
+/*Download*/
+"DOWNLOAD_MENU_TITLE" = "\nVideo kalitesi seç";
+"PROGRESS_DOWNLOADING_STATUS_TITLE" = "İndiriliyor...";
+"FETCHING_PROGRESS_TITLE" = "Bir saniye...";
+"FFMPEG_DOWNLOAD_OPTION_TITLE" = "FFmpeg ile indir";
+
+
+/*App icon*/
+"APP_ICON_NAV_TITLE" = "İkonu değiştir";
+"APP_ICON_HEADER_TITLE" = "Twitter için yeni bir ikon veya tema seç.";
+
+
+/*Copy profile info*/
+"COPY_PROFILE_INFO_MENU_OPTION_1" = "Biyografiyi kopyala";
+"COPY_PROFILE_INFO_MENU_OPTION_2" = "Kullanıcı adını kopyala";
+"COPY_PROFILE_INFO_MENU_OPTION_3" = "Tam kullanıcı adını kopyala";
+"COPY_PROFILE_INFO_MENU_OPTION_4" = "Biyo linkini kopyala";
+"COPY_PROFILE_INFO_MENU_OPTION_5" = "Konumu kopyala";
+
+
+/*Theme*/
+"THEME_SETTINGS_NAVIGATION_TITLE" = "Temayı değiştir";
 "THEME_OPTION_1" = "Mavi";
 "THEME_OPTION_2" = "Sarı";
 "THEME_OPTION_3" = "Kırmızı";
@@ -120,11 +226,13 @@
 "THEME_OPTION_5" = "Turuncu";
 "THEME_OPTION_6" = "Yeşil";
 
-"CUSTOM_TAB_BAR_OPTION_TITLE" = "Sekme çubuğunu özelleştir";
-"CUSTOM_TAB_BAR_REST_MESSAGE" = "Sekme çubuğu ayarlarını varsayılan hale getirecek misiniz?";
-"CUSTOM_TAB_BAR_SECTION_1_TITLE" = "Aktif sekmeler";
-"CUSTOM_TAB_BAR_SECTION_2_TITLE" = "Gizli sekmeler";
-"CUSTOM_TAB_BAR_OPTION_1" = "Ana Sayfa";
+
+/*Tab bar*/
+"CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE" = "Sekmeleri düzenle";
+"CUSTOM_TAB_BAR_REST_MESSAGE" = "Sekmeleri sıfırlamak istediğine emin misin?";
+"CUSTOM_TAB_BAR_SECTION_1_TITLE" = "Aktif";
+"CUSTOM_TAB_BAR_SECTION_2_TITLE" = "Pasif";
+"CUSTOM_TAB_BAR_OPTION_1" = "Ana sayfa";
 "CUSTOM_TAB_BAR_OPTION_2" = "Keşfet";
 "CUSTOM_TAB_BAR_OPTION_3" = "Spaces";
 "CUSTOM_TAB_BAR_OPTION_4" = "Topluluklar";
@@ -133,64 +241,24 @@
 "CUSTOM_TAB_BAR_OPTION_7" = "Grok";
 "CUSTOM_TAB_BAR_OPTION_8" = "Video";
 
-"TWITTER_BLUE_SECTION_FOOTER_TITLE" = "Değişikliklerin uygulanabilmesi için Twitter'ı yeniden başlatın.";
 
-"LAYOUT_CUS_SECTION_HEADER_TITLE" = "Düzen seçenekleri";
-"ORIG_TWEET_STYLE_OPTION_TITLE" = "Orijinal tweet düzeni";
-"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "Twitter'ın orijinal tweet tasarımına geri dönün.";
+/*Message customization*/
+"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_1" = "Görsel kullan";
+"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_2" = "Renk kullan";
+"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_3" = "Varsayılana sıfırla";
 
-"HIDE_VIEW_COUNT_OPTION_TITLE" = "Görüntülenme sayısını gizle";
-"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE" = "Tweetlerden görüntülenme sayısını kaldırın.";
 
-"HIDE_MARKBOOK_BUTTON_OPTION_TITLE" = "Yer imi butonunu gizle";
-"HIDE_MARKBOOK_BUTTON_OPTION_DETAIL_TITLE" = "Tweetlerden yer imi butonunu kaldırın.";
+/*Deprecated*/
+"TRUSTED_FRIENSS_OPTION_TITLE" = "Twitter Çevreleri";
 
-"FORCE_TWEET_FULL_FRAME_TITLE" = "Tweet resimlerini tam çerçevede göster";
+"ALWAYS_FOLLOWING_PAGE_OPTION_TITLE" = "‘Senin için’ sekmesini devre dışı bırak";
+"ALWAYS_FOLLOWING_PAGE_OPTION_DETAIL_TITLE" = "Twitter’ı ‘Takip Edilenler’ sekmesinde aç.";
 
-"DISABLE_IMMERSIVE_PLAYER_TITLE" = "Sinematik video oynatıcıyı kapat";
-
-"SHOW_SCOLL_INDICATOR_OPTION_TITLE" = "Her zaman kaydırma çubuğunu göster";
-
-"ALWAYS_FOLLOWING_PAGE_OPTION_TITLE" = "Her zaman 'Takip Edilenler' sekmesinde başla";
-"ALWAYS_FOLLOWING_PAGE_OPTION_DETAIL_TITLE" = "Twitter'ı varsayılan olarak 'Takip Edilenler' sekmesinde açın.";
-
-"FONT_OPTION_TITLE" = "Yazı tipi ayarları";
-"FONT_OPTION_DETAIL_TITLE" = "Uygulamanın yazı tipi stilini değiştirin ve yeni bir yazı tipi seçin.";
-
-"REQULAR_FONTS_PICKER_OPTION_TITLE" = "Yazı tipi";
-"BOLD_FONTS_PICKER_OPTION_TITLE" = "Kalın yazı tipi";
-"LAYOUT_CUS_SECTION_FOOTER_TITLE" = "Değişikliklerin uygulanabilmesi için Twitter'ı yeniden başlatın.";
-
-"DEBUG_SECTION_HEADER_TITLE" = "Hata ayıklama araçları";
-"FLEX_OPTION_TITLE" = "FLEX hata ayıklama modunu etkinleştir";
-"FLEX_OPTION_DETAIL_TITLE" = "Uygulama içinde hata ayıklama seçeneklerini göster.";
-
-"LEGAL_SECTION_HEADER_TITLE" = "Hukuki bilgiler";
-"LEGAL_BUTTON_TITLE" = "Krediler";
-
-"DEVELOPER_SECTION_HEADER_TITLE" = "BHTwitter Kredileri";
+"DN_MODULAR_SEARCH_OPTION_TITLE" = "Gelişmiş DM araması";
+"DN_MODULAR_SEARCH_OPTION_DETAIL_TITLE" = "DM’lerinde gelişmiş filtrelerle ara.";
 
 "ADVANCED_SEARCH_TITLE" = "Gelişmiş arama";
-"ADVANCED_SEARCH_DETAIL_TITLE" = "Daha ayrıntılı arama seçeneklerini etkinleştirin.";
+"ADVANCED_SEARCH_DETAIL_TITLE" = "Daha fazla arama filtresi aç.";
 
-"STOP_HIDING_TAB_BAR_TITLE" = "Sekme çubuğunun görünmesini engellemeyin";
-"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "Sekme çubuğunun kaybolmasını engelleyin.";
-
-"CUSTOM_DIRECT_BACKGROUND_VIEW_TITLE" = "Sohbet arka planını ayarlayın";
-"CUSTOM_DIRECT_BACKGROUND_VIEW_DETAIL_TITLE" = "Sohbetler için bir resim veya renk arka planı kullanın.";
-
-"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_1" = "Resim kullan";
-"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_2" = "Renk kullan";
-"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_3" = "Varsayılanı sıfırla";
-
-"APP_ICON_TITLE" = "Uygulama simgesi";
-"APP_ICON_DETAIL_TITLE" = "Uygulama için özel bir simge seçin. Tüm simgeler kuş logosuna sahiptir.";
-"APP_ICON_NAV_TITLE" = "Uygulama simgesi seçin";
-"APP_ICON_HEADER_TITLE" = "Yeni bir uygulama simgesi veya Twitter teması seçin. Her zaman değiştirebilirsiniz.";
-
-"FFMPEG_DOWNLOAD_OPTION_TITLE" = "FFmpeg ile indirin";
-
-"SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE" = "Paylaşılacak bağlantılar için URL";
-
-"UPLOAD_CUSTOM_VOICE_OPTION_TITLE" = "Özel ses kaydınızı yükleyin";
-"UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE" = "Tweetleriniz için özel sesli mesajlar kaydedip yükleyin.";
+"VIDEO_ZOOM_OPTION_TITLE" = "Video yakınlaştırma";
+"VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "Yakınlaştırmak için çift tıkla.";
