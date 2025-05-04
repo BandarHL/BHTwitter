@@ -954,8 +954,16 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         return true;
     }
     
-    if ([key isEqualToString:@"conversational_replies_ios_pinned_replies_consumption_enabled"] || [key isEqualToString:@"conversational_replies_ios_pinned_replies_creation_enabled"]) {
-        return true;
+    if ([key isEqualToString:@"articles_timeline_profile_tab_enabled"] || [key isEqualToString:@"highlights_tweets_tab_ui_enabled"]) {
+        return false;
+    }
+
+    if ([key isEqualToString:@"media_tab_profile_videos_tab_enabled"] || [key isEqualToString:@"media_tab_profile_photos_tab_enabled"]) {
+        return false;
+    }
+
+    if ([key isEqualToString:@"dash_items_download_grok_enabled"]) {
+        return false;
     }
     
     return %orig;
