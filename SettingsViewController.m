@@ -717,7 +717,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 - (void)showCustomBackgroundViewViewController:(PSSpecifier *)specifier {
     UITableViewCell *specifierCell = [specifier propertyForKey:PSTableCellKey];
     
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"BHTwitter" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"NeoFreeBird" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
     
     if (alert.popoverPresentationController != nil) {
         CGFloat midX = CGRectGetMidX(specifierCell.frame);

@@ -1,8 +1,9 @@
 //
 //  BHDownloadInlineButton.h
-//  BHTwitter
+//  NeoFreeBird, fixed for Twitter 10.94 / 10.94.1
 //
-//  Created by BandarHelal on 09/04/2022.
+//  Original author: BandarHelal at 09/04/2022
+//  Modified by: actuallyaridan at 27/04/2025
 //
 
 @import UIKit;
