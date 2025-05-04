@@ -111,9 +111,6 @@
 "ENABLE_TWEET_LABELS_OPTION_TITLE" = "Show Tweet Source labels (beta)";
 "ENABLE_TWEET_LABELS_OPTION_DETAIL_TITLE" = "Shows the client the tweet was made from (by @nyaathea)";
 
-"DISABLE_CONVERSATION_MINIMAL_OPTION_TITLE" = "Disable Minimal Conversation Controls";
-"DISABLE_CONVERSATION_MINIMAL_OPTION_DETAIL_TITLE" = "This displays the like, quote tweet, and retweet counts above the action buttons like before";
-
 "ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "Use external browser";
 "ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "Open links in Safari or your default browser.";
 
@@ -153,7 +150,7 @@
 
 "LAYOUT_CUS_SECTION_HEADER_TITLE" = "Layout";
 "ORIG_TWEET_STYLE_OPTION_TITLE" = "Original Tweet layout";
-"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "Use Twitter’s old-school Tweet style.";
+"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "Use Twitter’s old Tweet style.";
 
 "HIDE_VIEW_COUNT_OPTION_TITLE" = "Hide views";
 "HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE" = "Don’t show views under Tweets.";
@@ -211,11 +208,11 @@
 "UPLOAD_CUSTOM_VOICE_OPTION_TITLE" = "Voice Tweets";
 "UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE" = "Turn Voice Tweets on or off (iOS only).";
 
-"DISABLE_MEDIA_TAB_OPTION_TITLE" = "Disable Media Tab";
-"DISABLE_MEDIA_TAB_OPTION_DETAIL_TITLE" = "Hide the media tab in profiles.";
+"DISABLE_MEDIA_TAB_OPTION_TITLE" = "Disable Seprate Media Tabs";
+"DISABLE_MEDIA_TAB_OPTION_DETAIL_TITLE" = "Merges Photos & Videos into one tab like how it was before";
 
-"DISABLE_ARTICLES_OPTION_TITLE" = "Disable Articles";
-"DISABLE_ARTICLES_OPTION_DETAIL_TITLE" = "Hide the articles tab in profiles.";
+"DISABLE_ARTICLES_OPTION_TITLE" = "Disable Articles Tab";
+"DISABLE_ARTICLES_OPTION_DETAIL_TITLE" = "Hide the articles tab in profiles";
 
-"DISABLE_HIGHLIGHTS_OPTION_TITLE" = "Disable Highlights";
-"DISABLE_HIGHLIGHTS_OPTION_DETAIL_TITLE" = "Hide the highlights tab in profiles.";
+"DISABLE_HIGHLIGHTS_OPTION_TITLE" = "Disable Highlights Tab";
+"DISABLE_HIGHLIGHTS_OPTION_DETAIL_TITLE" = "Hide the highlights tab in profiles";
