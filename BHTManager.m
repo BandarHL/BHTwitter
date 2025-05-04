@@ -261,10 +261,6 @@
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"restore_tweet_labels"];
 }
 
-+ (BOOL)disableConversationMinimal {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"disableConversationMinimal"];
-}
-
 + (BOOL)disableMediaTab {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"disableMediaTab"];
 }
