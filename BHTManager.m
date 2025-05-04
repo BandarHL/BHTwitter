@@ -260,6 +260,11 @@
 + (BOOL)RestoreTweetLabels {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"restore_tweet_labels"];
 }
+
++ (BOOL)disableConversationMinimal {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"disableConversationMinimal"];
+}
+
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount {
     SettingsViewController *pref = [[SettingsViewController alloc] initWithTwitterAccount:twAccount];
     [pref.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:@"NeoFreeBird" subtitle:twAccount.displayUsername]];

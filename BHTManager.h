@@ -58,5 +58,6 @@
 + (BOOL)hideBookmarkButton;
 + (BOOL)customVoice;
 + (BOOL)RestoreTweetLabels;
++ (BOOL)disableConversationMinimal;
 @end
 
