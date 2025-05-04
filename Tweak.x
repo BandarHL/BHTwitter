@@ -954,12 +954,16 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         return true;
     }
     
-    if ([key isEqualToString:@"articles_timeline_profile_tab_enabled"] || [key isEqualToString:@"highlights_tweets_tab_ui_enabled"]) {
-        return false;
+    if ([key isEqualToString:@"articles_timeline_profile_tab_enabled"]) {
+        return ![BHTManager disableArticles];
+    }
+
+    if ([key isEqualToString:@"highlights_tweets_tab_ui_enabled"]) {
+        return ![BHTManager disableHighlights];
     }
 
     if ([key isEqualToString:@"media_tab_profile_videos_tab_enabled"] || [key isEqualToString:@"media_tab_profile_photos_tab_enabled"]) {
-        return false;
+        return ![BHTManager disableMediaTab];
     }
 
     if ([key isEqualToString:@"dash_items_download_grok_enabled"]) {

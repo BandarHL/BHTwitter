@@ -210,3 +210,12 @@
 
 "UPLOAD_CUSTOM_VOICE_OPTION_TITLE" = "Voice Tweets";
 "UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE" = "Turn Voice Tweets on or off (iOS only).";
+
+"DISABLE_MEDIA_TAB_OPTION_TITLE" = "Disable Media Tab";
+"DISABLE_MEDIA_TAB_OPTION_DETAIL_TITLE" = "Hide the media tab in profiles.";
+
+"DISABLE_ARTICLES_OPTION_TITLE" = "Disable Articles";
+"DISABLE_ARTICLES_OPTION_DETAIL_TITLE" = "Hide the articles tab in profiles.";
+
+"DISABLE_HIGHLIGHTS_OPTION_TITLE" = "Disable Highlights";
+"DISABLE_HIGHLIGHTS_OPTION_DETAIL_TITLE" = "Hide the highlights tab in profiles.";

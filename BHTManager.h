@@ -59,5 +59,8 @@
 + (BOOL)customVoice;
 + (BOOL)RestoreTweetLabels;
 + (BOOL)disableConversationMinimal;
++ (BOOL)disableMediaTab;
++ (BOOL)disableArticles;
++ (BOOL)disableHighlights;
 @end
 

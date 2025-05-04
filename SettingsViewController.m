@@ -372,6 +372,12 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 
         PSSpecifier *disableConversationMinimal = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_CONVERSATION_MINIMAL_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_CONVERSATION_MINIMAL_OPTION_DETAIL_TITLE"] key:@"disableConversationMinimal" defaultValue:false changeAction:nil];
         
+        PSSpecifier *disableMediaTab = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_MEDIA_TAB_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_MEDIA_TAB_OPTION_DETAIL_TITLE"] key:@"disableMediaTab" defaultValue:false changeAction:nil];
+
+        PSSpecifier *disableArticles = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_ARTICLES_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_ARTICLES_OPTION_DETAIL_TITLE"] key:@"disableArticles" defaultValue:false changeAction:nil];
+
+        PSSpecifier *disableHighlights = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_HIGHLIGHTS_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_HIGHLIGHTS_OPTION_DETAIL_TITLE"] key:@"disableHighlights" defaultValue:false changeAction:nil];
+
         // debug section
         PSSpecifier *flex = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_DETAIL_TITLE"] key:@"flex_twitter" defaultValue:false changeAction:@selector(FLEXAction:)];
         
@@ -406,6 +412,9 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             hideBookmarkButton,
             disableSensitiveTweetWarnings,
             disableConversationMinimal,
+            disableMediaTab,
+            disableArticles,
+            disableHighlights,
 
             profilesSection, // 2
             followConfirm,

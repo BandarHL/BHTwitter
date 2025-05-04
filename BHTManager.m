@@ -265,6 +265,18 @@
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"disableConversationMinimal"];
 }
 
++ (BOOL)disableMediaTab {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"disableMediaTab"];
+}
+
++ (BOOL)disableArticles {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"disableArticles"];
+}
+
++ (BOOL)disableHighlights {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"disableHighlights"];
+}
+
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount {
     SettingsViewController *pref = [[SettingsViewController alloc] initWithTwitterAccount:twAccount];
     [pref.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:@"NeoFreeBird" subtitle:twAccount.displayUsername]];
