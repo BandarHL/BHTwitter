@@ -403,7 +403,6 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
             
             twitterBlueSection, // 1
             undoTweet,
-            download,
             directSave,
             hideAds,
             hidePremiumOffer,
