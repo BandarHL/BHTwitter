@@ -967,7 +967,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     }
     
     if ([key isEqualToString:@"conversational_replies_ios_minimal_detail_enabled"]) {
-        return [BHTManager disableConversationMinimal] ? false : %orig;
+        return ![BHTManager disableConversationMinimal];
     }
     
     return %orig;
