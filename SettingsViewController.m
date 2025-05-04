@@ -401,7 +401,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             urlHost,
             
             tweetsSection, // 1
-            origTweetStyle,
+            OldStyle,
             tweetToImage,
             restoreTweetLabels,
             likeConfrim,
