@@ -1966,7 +1966,6 @@ static NSDate *lastCookieRefresh              = nil;
 %end
 
 %hook TFNAttributedTextView
-
 - (void)setTextModel:(TFNAttributedTextModel *)model {
     // --- BHTwitter style: Only run if toggle is ON ---
     if (![BHTManager RestoreTweetLabels]) {
@@ -1992,6 +1991,7 @@ static NSDate *lastCookieRefresh              = nil;
         if (range.location != NSNotFound) isTimestamp = YES;
     }
 
+    // Handle source labels
     if (isTimestamp) {
         @try {
             UIView *view = self;
@@ -2093,9 +2093,42 @@ static NSDate *lastCookieRefresh              = nil;
             }
         } @catch (__unused NSException *e) {}
     }
+    // Handle post to tweet replacement
+    else if ([currentText containsString:@"your post"]) {
+        @try {
+            UIView *view = self;
+            BOOL isNotificationView = NO;
+            
+            // Walk up the view hierarchy to find notification context
+            while (view && !isNotificationView) {
+                if ([NSStringFromClass([view class]) containsString:@"Notification"] ||
+                    [NSStringFromClass([view class]) containsString:@"T1NotificationsTimeline"]) {
+                    isNotificationView = YES;
+                }
+                view = view.superview;
+            }
+            
+            // Only proceed if we're in a notification view
+            if (isNotificationView) {
+                NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
+                NSRange range = [currentText rangeOfString:@"your post"];
+                if (range.location != NSNotFound) {
+                    // Get existing attributes from the text
+                    NSDictionary *existingAttributes = [newString attributesAtIndex:range.location effectiveRange:NULL];
+                    
+                    // Replace the text while preserving attributes
+                    [newString replaceCharactersInRange:range withString:@"your tweet"];
+                    [newString setAttributes:existingAttributes range:NSMakeRange(range.location, [@"your tweet" length])];
+                    
+                    // Update the model with our modified string
+                    [model setValue:newString forKey:@"attributedString"];
+                }
+            }
+        } @catch (__unused NSException *e) {}
+    }
+    
     %orig(model);
 }
-
 %end
 
 // --- Initialisation ---
@@ -2168,46 +2201,30 @@ static NSDate *lastCookieRefresh              = nil;
 %end
 
 // MARK: Replace "your post" with "your tweet" in notifications
-%hook TFNAttributedTextView
-- (void)setTextModel:(TFNAttributedTextModel *)model {
-    if (!model || !model.attributedString) {
-        %orig;
-        return;
+%hook TFNAttributedTextModel
+- (NSAttributedString *)attributedString {
+    NSAttributedString *original = %orig;
+    if (!original) return original;
+    
+    NSString *originalString = original.string;
+    if ([originalString containsString:@"your post"]) {
+        // Check if we're in a notification context by looking at the view hierarchy
+        UIViewController *topVC = topMostController();
+        if ([NSStringFromClass([topVC class]) containsString:@"Notification"] ||
+            [NSStringFromClass([topVC class]) containsString:@"T1NotificationsTimeline"]) {
+            
+            NSMutableAttributedString *modified = [[NSMutableAttributedString alloc] initWithAttributedString:original];
+            NSRange range = [originalString rangeOfString:@"your post"];
+            if (range.location != NSNotFound) {
+                [modified replaceCharactersInRange:range withString:@"your tweet"];
+                // Preserve the original attributes
+                NSDictionary *attributes = [original attributesAtIndex:range.location effectiveRange:NULL];
+                [modified setAttributes:attributes range:NSMakeRange(range.location, [@"your tweet" length])];
+                return modified;
+            }
+        }
     }
     
-    NSString *currentText = model.attributedString.string;
-    if ([currentText containsString:@"your post"]) {
-        @try {
-            UIView *view = self;
-            BOOL isNotificationView = NO;
-            
-            // Walk up the view hierarchy to find if we're in a notification view
-            while (view && !isNotificationView) {
-                if ([NSStringFromClass([view class]) containsString:@"Notification"] ||
-                    [NSStringFromClass([view class]) containsString:@"T1NotificationsTimeline"]) {
-                    isNotificationView = YES;
-                }
-                view = view.superview;
-            }
-            
-            // Only proceed if we're in a notification view
-            if (isNotificationView) {
-                NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
-                NSRange range = [currentText rangeOfString:@"your post"];
-                if (range.location != NSNotFound) {
-                    // Get existing attributes from the text
-                    NSDictionary *existingAttributes = [newString attributesAtIndex:range.location effectiveRange:NULL];
-                    
-                    // Replace "your post" with "your tweet"
-                    [newString replaceCharactersInRange:range withString:@"your tweet"];
-                    [newString setAttributes:existingAttributes range:NSMakeRange(range.location, [@"your tweet" length])];
-                    
-                    // Update the model with our modified string
-                    [model setValue:newString forKey:@"attributedString"];
-                }
-            }
-        } @catch (__unused NSException *e) {}
-    }
-    %orig(model);
+    return original;
 }
 %end
