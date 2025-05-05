@@ -2093,8 +2093,11 @@ static NSDate *lastCookieRefresh              = nil;
             }
         } @catch (__unused NSException *e) {}
     }
-    // Handle post to tweet replacement
-    else if ([currentText containsString:@"your post"]) {
+    // Handle post/tweet text replacements
+    else if ([currentText containsString:@"your post"] || 
+             [currentText containsString:@"your Post"] ||
+             [currentText containsString:@"reposted"] ||
+             [currentText containsString:@"Reposted"]) {
         @try {
             UIView *view = self;
             BOOL isNotificationView = NO;
@@ -2111,18 +2114,41 @@ static NSDate *lastCookieRefresh              = nil;
             // Only proceed if we're in a notification view
             if (isNotificationView) {
                 NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
-                NSRange range = [currentText rangeOfString:@"your post"];
-                if (range.location != NSNotFound) {
-                    // Get existing attributes from the text
-                    NSDictionary *existingAttributes = [newString attributesAtIndex:range.location effectiveRange:NULL];
-                    
-                    // Replace the text while preserving attributes
-                    [newString replaceCharactersInRange:range withString:@"your tweet"];
-                    [newString setAttributes:existingAttributes range:NSMakeRange(range.location, [@"your tweet" length])];
-                    
-                    // Update the model with our modified string
-                    [model setValue:newString forKey:@"attributedString"];
+                
+                // Replace "your post" with "your Tweet"
+                NSRange postRange = [currentText rangeOfString:@"your post"];
+                if (postRange.location != NSNotFound) {
+                    NSDictionary *existingAttributes = [newString attributesAtIndex:postRange.location effectiveRange:NULL];
+                    [newString replaceCharactersInRange:postRange withString:@"your Tweet"];
+                    [newString setAttributes:existingAttributes range:NSMakeRange(postRange.location, [@"your Tweet" length])];
                 }
+                
+                // Also check for capitalized "Post"
+                postRange = [currentText rangeOfString:@"your Post"];
+                if (postRange.location != NSNotFound) {
+                    NSDictionary *existingAttributes = [newString attributesAtIndex:postRange.location effectiveRange:NULL];
+                    [newString replaceCharactersInRange:postRange withString:@"your Tweet"];
+                    [newString setAttributes:existingAttributes range:NSMakeRange(postRange.location, [@"your Tweet" length])];
+                }
+                
+                // Replace "reposted" with "Retweeted"
+                NSRange repostRange = [currentText rangeOfString:@"reposted"];
+                if (repostRange.location != NSNotFound) {
+                    NSDictionary *existingAttributes = [newString attributesAtIndex:repostRange.location effectiveRange:NULL];
+                    [newString replaceCharactersInRange:repostRange withString:@"Retweeted"];
+                    [newString setAttributes:existingAttributes range:NSMakeRange(repostRange.location, [@"Retweeted" length])];
+                }
+                
+                // Also check for capitalized "Reposted"
+                repostRange = [currentText rangeOfString:@"Reposted"];
+                if (repostRange.location != NSNotFound) {
+                    NSDictionary *existingAttributes = [newString attributesAtIndex:repostRange.location effectiveRange:NULL];
+                    [newString replaceCharactersInRange:repostRange withString:@"Retweeted"];
+                    [newString setAttributes:existingAttributes range:NSMakeRange(repostRange.location, [@"Retweeted" length])];
+                }
+                
+                // Update the model with our modified string
+                [model setValue:newString forKey:@"attributedString"];
             }
         } @catch (__unused NSException *e) {}
     }
