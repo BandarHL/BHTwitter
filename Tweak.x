@@ -2169,65 +2169,103 @@ static NSDate *lastCookieRefresh              = nil;
 
 // MARK: Square Profile Pictures
 %hook TUIAvatarImageView
-
-- (void)willMoveToWindow:(UIWindow *)window {
-    %orig;
-    if (window) {
-        self.layer.cornerRadius = 0;
-        self.layer.masksToBounds = YES;
-        self.clipsToBounds = YES;
-    }
-}
-
-- (void)didMoveToSuperview {
+- (void)layoutIfNeeded {
     %orig;
     self.layer.cornerRadius = 0;
     self.layer.masksToBounds = YES;
-    self.clipsToBounds = YES;
 }
 
-- (void)setCornerRadius:(double)cornerRadius {
-    %orig(0);
+- (void)setImage:(UIImage *)image {
+    %orig;
+    self.layer.cornerRadius = 0;
+    self.layer.masksToBounds = YES;
 }
 
-- (void)setMasksToBounds:(_Bool)masksToBounds {
-    %orig(YES);
++ (void)load {
+    Class class = objc_getClass("TUIAvatarImageView");
+    if (class) {
+        Method m1 = class_getInstanceMethod(class, @selector(layer));
+        if (m1) {
+            CALayer *(*original)(id, SEL) = (CALayer *(*)(id, SEL))method_getImplementation(m1);
+            method_setImplementation(m1, imp_implementationWithBlock(^CALayer *(id self, SEL _cmd) {
+                CALayer *layer = original(self, _cmd);
+                layer.cornerRadius = 0;
+                layer.masksToBounds = YES;
+                return layer;
+            }));
+        }
+    }
 }
-
-- (void)setClipsToBounds:(_Bool)clipsToBounds {
-    %orig(YES);
-}
-
 %end
 
 %hook TFNAvatarHeaderView
-
-- (void)willMoveToWindow:(UIWindow *)window {
-    %orig;
-    if (window) {
-        self.layer.cornerRadius = 0;
-        self.layer.masksToBounds = YES;
-        self.clipsToBounds = YES;
-    }
-}
-
-- (void)didMoveToSuperview {
+- (void)layoutIfNeeded {
     %orig;
     self.layer.cornerRadius = 0;
     self.layer.masksToBounds = YES;
-    self.clipsToBounds = YES;
 }
 
-- (void)setCornerRadius:(double)cornerRadius {
-    %orig(0);
++ (void)load {
+    Class class = objc_getClass("TFNAvatarHeaderView");
+    if (class) {
+        Method m1 = class_getInstanceMethod(class, @selector(layer));
+        if (m1) {
+            CALayer *(*original)(id, SEL) = (CALayer *(*)(id, SEL))method_getImplementation(m1);
+            method_setImplementation(m1, imp_implementationWithBlock(^CALayer *(id self, SEL _cmd) {
+                CALayer *layer = original(self, _cmd);
+                layer.cornerRadius = 0;
+                layer.masksToBounds = YES;
+                return layer;
+            }));
+        }
+    }
+}
+%end
+
+%hook T1AvatarPresenceView
+- (void)layoutIfNeeded {
+    %orig;
+    self.layer.cornerRadius = 0;
+    self.layer.masksToBounds = YES;
 }
 
-- (void)setMasksToBounds:(_Bool)masksToBounds {
-    %orig(YES);
++ (void)load {
+    Class class = objc_getClass("T1AvatarPresenceView");
+    if (class) {
+        Method m1 = class_getInstanceMethod(class, @selector(layer));
+        if (m1) {
+            CALayer *(*original)(id, SEL) = (CALayer *(*)(id, SEL))method_getImplementation(m1);
+            method_setImplementation(m1, imp_implementationWithBlock(^CALayer *(id self, SEL _cmd) {
+                CALayer *layer = original(self, _cmd);
+                layer.cornerRadius = 0;
+                layer.masksToBounds = YES;
+                return layer;
+            }));
+        }
+    }
+}
+%end
+
+%hook T1ProfileHeaderUserPresenceView
+- (void)layoutIfNeeded {
+    %orig;
+    self.layer.cornerRadius = 0;
+    self.layer.masksToBounds = YES;
 }
 
-- (void)setClipsToBounds:(_Bool)clipsToBounds {
-    %orig(YES);
++ (void)load {
+    Class class = objc_getClass("T1ProfileHeaderUserPresenceView");
+    if (class) {
+        Method m1 = class_getInstanceMethod(class, @selector(layer));
+        if (m1) {
+            CALayer *(*original)(id, SEL) = (CALayer *(*)(id, SEL))method_getImplementation(m1);
+            method_setImplementation(m1, imp_implementationWithBlock(^CALayer *(id self, SEL _cmd) {
+                CALayer *layer = original(self, _cmd);
+                layer.cornerRadius = 0;
+                layer.masksToBounds = YES;
+                return layer;
+            }));
+        }
+    }
 }
-
 %end

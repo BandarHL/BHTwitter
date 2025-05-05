@@ -27,11 +27,15 @@
 
 // Forward declarations
 @interface TUIAvatarImageView : UIImageView
-- (void)setCornerRadius:(double)cornerRadius;
 @end
 
 @interface TFNAvatarHeaderView : UIView
-- (void)setCornerRadius:(double)cornerRadius;
+@end
+
+@interface T1AvatarPresenceView : UIView
+@end
+
+@interface T1ProfileHeaderUserPresenceView : UIView
 @end
 
 typedef UIFont *(*BH_BaseImp)(id,SEL,...);
