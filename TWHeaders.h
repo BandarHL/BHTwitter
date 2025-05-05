@@ -164,6 +164,7 @@ static NSString *_lastCopiedURL;
 @interface TFNAttributedTextModel : NSObject
 @property(copy, nonatomic) NSAttributedString *attributedString;
 - (instancetype)initWithAttributedString:(NSMutableAttributedString *)arg;
+- (UIView *)_findNotificationView;
 @end
 
 @interface TFNAttributedTextView : UIView

@@ -2173,41 +2173,25 @@ static NSDate *lastCookieRefresh              = nil;
     NSAttributedString *original = %orig;
     if (!original) return original;
     
-    // Only proceed if we're in a notification context
-    UIView *view = [self _findNotificationView];
-    if (!view) return original;
-    
     NSString *originalString = original.string;
     if ([originalString containsString:@"your post"]) {
-        NSMutableAttributedString *modified = [[NSMutableAttributedString alloc] initWithAttributedString:original];
-        NSRange range = [originalString rangeOfString:@"your post"];
-        if (range.location != NSNotFound) {
-            [modified replaceCharactersInRange:range withString:@"your tweet"];
-            // Preserve the original attributes
-            NSDictionary *attributes = [original attributesAtIndex:range.location effectiveRange:NULL];
-            [modified setAttributes:attributes range:NSMakeRange(range.location, [@"your tweet" length])];
-            return modified;
+        // Check if we're in a notification context by looking at the view hierarchy
+        UIViewController *topVC = topMostController();
+        if ([NSStringFromClass([topVC class]) containsString:@"Notification"] ||
+            [NSStringFromClass([topVC class]) containsString:@"T1NotificationsTimeline"]) {
+            
+            NSMutableAttributedString *modified = [[NSMutableAttributedString alloc] initWithAttributedString:original];
+            NSRange range = [originalString rangeOfString:@"your post"];
+            if (range.location != NSNotFound) {
+                [modified replaceCharactersInRange:range withString:@"your tweet"];
+                // Preserve the original attributes
+                NSDictionary *attributes = [original attributesAtIndex:range.location effectiveRange:NULL];
+                [modified setAttributes:attributes range:NSMakeRange(range.location, [@"your tweet" length])];
+                return modified;
+            }
         }
     }
     
     return original;
-}
-
-%new
-- (UIView *)_findNotificationView {
-    // Find the first responder
-    UIWindow *window = [UIApplication sharedApplication].keyWindow;
-    UIViewController *topController = window.rootViewController;
-    while (topController.presentedViewController) {
-        topController = topController.presentedViewController;
-    }
-    
-    // Check if we're in a notification view controller
-    if ([NSStringFromClass([topController class]) containsString:@"Notification"] ||
-        [NSStringFromClass([topController class]) containsString:@"T1NotificationsTimeline"]) {
-        return topController.view;
-    }
-    
-    return nil;
 }
 %end
