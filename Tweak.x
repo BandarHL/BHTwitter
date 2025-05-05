@@ -2166,3 +2166,24 @@ static NSDate *lastCookieRefresh              = nil;
 }
 
 %end
+
+// MARK: Square Profile Pictures
+%hook TUIAvatarImageView
+- (id)initWithFrame:(CGRect)frame {
+    id orig = %orig;
+    [(UIView *)self layer].cornerRadius = 0;
+    [(UIView *)self layer].masksToBounds = YES;
+    return orig;
+}
+
+- (id)initWithCoder:(NSCoder *)coder {
+    id orig = %orig;
+    [(UIView *)self layer].cornerRadius = 0;
+    [(UIView *)self layer].masksToBounds = YES;
+    return orig;
+}
+
+- (void)setCornerRadius:(double)cornerRadius {
+    %orig(0);
+}
+%end

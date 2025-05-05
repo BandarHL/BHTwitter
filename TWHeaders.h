@@ -25,6 +25,10 @@
 #import "ffmpeg/MediaInformationSession.h"
 #import "ffmpeg/MediaInformation.h"
 
+// Forward declarations
+@interface TUIAvatarImageView : UIImageView
+- (void)setCornerRadius:(double)cornerRadius;
+@end
 
 typedef UIFont *(*BH_BaseImp)(id,SEL,...);
 static NSMutableDictionary<NSString*, NSValue*>* originalFontsIMP;
