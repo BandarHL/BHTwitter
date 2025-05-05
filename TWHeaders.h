@@ -30,6 +30,10 @@
 - (void)setCornerRadius:(double)cornerRadius;
 @end
 
+@interface TFNAvatarHeaderView : UIView
+- (void)setCornerRadius:(double)cornerRadius;
+@end
+
 typedef UIFont *(*BH_BaseImp)(id,SEL,...);
 static NSMutableDictionary<NSString*, NSValue*>* originalFontsIMP;
 static id _PasteboardChangeObserver;

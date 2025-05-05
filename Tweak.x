@@ -2199,3 +2199,35 @@ static NSDate *lastCookieRefresh              = nil;
 }
 
 %end
+
+%hook TFNAvatarHeaderView
+
+- (void)willMoveToWindow:(UIWindow *)window {
+    %orig;
+    if (window) {
+        self.layer.cornerRadius = 0;
+        self.layer.masksToBounds = YES;
+        self.clipsToBounds = YES;
+    }
+}
+
+- (void)didMoveToSuperview {
+    %orig;
+    self.layer.cornerRadius = 0;
+    self.layer.masksToBounds = YES;
+    self.clipsToBounds = YES;
+}
+
+- (void)setCornerRadius:(double)cornerRadius {
+    %orig(0);
+}
+
+- (void)setMasksToBounds:(_Bool)masksToBounds {
+    %orig(YES);
+}
+
+- (void)setClipsToBounds:(_Bool)clipsToBounds {
+    %orig(YES);
+}
+
+%end
