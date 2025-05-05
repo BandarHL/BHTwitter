@@ -25,18 +25,6 @@
 #import "ffmpeg/MediaInformationSession.h"
 #import "ffmpeg/MediaInformation.h"
 
-// Forward declarations
-@interface TUIAvatarImageView : UIImageView
-@end
-
-@interface TFNAvatarHeaderView : UIView
-@end
-
-@interface T1AvatarPresenceView : UIView
-@end
-
-@interface T1ProfileHeaderUserPresenceView : UIView
-@end
 
 typedef UIFont *(*BH_BaseImp)(id,SEL,...);
 static NSMutableDictionary<NSString*, NSValue*>* originalFontsIMP;

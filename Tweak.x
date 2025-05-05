@@ -2167,182 +2167,47 @@ static NSDate *lastCookieRefresh              = nil;
 
 %end
 
-// MARK: Square Profile Pictures
-%hook TUIAvatarImageView
-- (void)layoutIfNeeded {
-    %orig;
-    self.layer.cornerRadius = 0;
-    self.layer.masksToBounds = YES;
-}
-
-- (void)setImage:(UIImage *)image {
-    %orig;
-    self.layer.cornerRadius = 0;
-    self.layer.masksToBounds = YES;
-}
-
-+ (void)load {
-    Class class = objc_getClass("TUIAvatarImageView");
-    if (class) {
-        Method m1 = class_getInstanceMethod(class, @selector(layer));
-        if (m1) {
-            CALayer *(*original)(id, SEL) = (CALayer *(*)(id, SEL))method_getImplementation(m1);
-            method_setImplementation(m1, imp_implementationWithBlock(^CALayer *(id self, SEL _cmd) {
-                CALayer *layer = original(self, _cmd);
-                layer.cornerRadius = 0;
-                layer.masksToBounds = YES;
-                return layer;
-            }));
+// MARK: Replace "your post" with "your tweet" in notifications
+%hook TFNAttributedTextModel
+- (NSAttributedString *)attributedString {
+    NSAttributedString *original = %orig;
+    if (!original) return original;
+    
+    // Only proceed if we're in a notification context
+    UIView *view = [self _findNotificationView];
+    if (!view) return original;
+    
+    NSString *originalString = original.string;
+    if ([originalString containsString:@"your post"]) {
+        NSMutableAttributedString *modified = [[NSMutableAttributedString alloc] initWithAttributedString:original];
+        NSRange range = [originalString rangeOfString:@"your post"];
+        if (range.location != NSNotFound) {
+            [modified replaceCharactersInRange:range withString:@"your tweet"];
+            // Preserve the original attributes
+            NSDictionary *attributes = [original attributesAtIndex:range.location effectiveRange:NULL];
+            [modified setAttributes:attributes range:NSMakeRange(range.location, [@"your tweet" length])];
+            return modified;
         }
     }
-}
-%end
-
-%hook TFNAvatarHeaderView
-- (void)layoutIfNeeded {
-    %orig;
-    self.layer.cornerRadius = 0;
-    self.layer.masksToBounds = YES;
+    
+    return original;
 }
 
-+ (void)load {
-    Class class = objc_getClass("TFNAvatarHeaderView");
-    if (class) {
-        Method m1 = class_getInstanceMethod(class, @selector(layer));
-        if (m1) {
-            CALayer *(*original)(id, SEL) = (CALayer *(*)(id, SEL))method_getImplementation(m1);
-            method_setImplementation(m1, imp_implementationWithBlock(^CALayer *(id self, SEL _cmd) {
-                CALayer *layer = original(self, _cmd);
-                layer.cornerRadius = 0;
-                layer.masksToBounds = YES;
-                return layer;
-            }));
-        }
+%new
+- (UIView *)_findNotificationView {
+    // Find the first responder
+    UIWindow *window = [UIApplication sharedApplication].keyWindow;
+    UIViewController *topController = window.rootViewController;
+    while (topController.presentedViewController) {
+        topController = topController.presentedViewController;
     }
-}
-%end
-
-%hook T1AvatarPresenceView
-- (void)layoutIfNeeded {
-    %orig;
-    self.layer.cornerRadius = 0;
-    self.layer.masksToBounds = YES;
-}
-
-+ (void)load {
-    Class class = objc_getClass("T1AvatarPresenceView");
-    if (class) {
-        Method m1 = class_getInstanceMethod(class, @selector(layer));
-        if (m1) {
-            CALayer *(*original)(id, SEL) = (CALayer *(*)(id, SEL))method_getImplementation(m1);
-            method_setImplementation(m1, imp_implementationWithBlock(^CALayer *(id self, SEL _cmd) {
-                CALayer *layer = original(self, _cmd);
-                layer.cornerRadius = 0;
-                layer.masksToBounds = YES;
-                return layer;
-            }));
-        }
+    
+    // Check if we're in a notification view controller
+    if ([NSStringFromClass([topController class]) containsString:@"Notification"] ||
+        [NSStringFromClass([topController class]) containsString:@"T1NotificationsTimeline"]) {
+        return topController.view;
     }
+    
+    return nil;
 }
-%end
-
-%hook T1ProfileHeaderUserPresenceView
-- (void)layoutIfNeeded {
-    %orig;
-    self.layer.cornerRadius = 0;
-    self.layer.masksToBounds = YES;
-}
-
-+ (void)load {
-    Class class = objc_getClass("T1ProfileHeaderUserPresenceView");
-    if (class) {
-        Method m1 = class_getInstanceMethod(class, @selector(layer));
-        if (m1) {
-            CALayer *(*original)(id, SEL) = (CALayer *(*)(id, SEL))method_getImplementation(m1);
-            method_setImplementation(m1, imp_implementationWithBlock(^CALayer *(id self, SEL _cmd) {
-                CALayer *layer = original(self, _cmd);
-                layer.cornerRadius = 0;
-                layer.masksToBounds = YES;
-                return layer;
-            }));
-        }
-    }
-}
-%end
-
-// MARK: Square Profile Pictures
-%hook UIView
-
-- (void)setFrame:(CGRect)frame {
-    %orig;
-    NSString *className = NSStringFromClass([self class]);
-    if ([className containsString:@"Avatar"] || 
-        [className containsString:@"ProfileImage"] || 
-        [className containsString:@"ProfilePhoto"]) {
-        self.layer.cornerRadius = 0;
-        self.layer.masksToBounds = YES;
-        self.clipsToBounds = YES;
-        
-        // Force all subviews to be square too
-        for (UIView *subview in self.subviews) {
-            subview.layer.cornerRadius = 0;
-            subview.layer.masksToBounds = YES;
-            subview.clipsToBounds = YES;
-        }
-    }
-}
-
-- (void)layoutSubviews {
-    %orig;
-    NSString *className = NSStringFromClass([self class]);
-    if ([className containsString:@"Avatar"] || 
-        [className containsString:@"ProfileImage"] || 
-        [className containsString:@"ProfilePhoto"]) {
-        self.layer.cornerRadius = 0;
-        self.layer.masksToBounds = YES;
-        self.clipsToBounds = YES;
-        
-        // Force all subviews to be square too
-        for (UIView *subview in self.subviews) {
-            subview.layer.cornerRadius = 0;
-            subview.layer.masksToBounds = YES;
-            subview.clipsToBounds = YES;
-        }
-    }
-}
-
-%end
-
-%hook CALayer
-
-- (void)setCornerRadius:(CGFloat)cornerRadius {
-    UIView *view = (UIView *)self.delegate;
-    if ([view isKindOfClass:[UIView class]]) {
-        NSString *className = NSStringFromClass([view class]);
-        if ([className containsString:@"Avatar"] || 
-            [className containsString:@"ProfileImage"] || 
-            [className containsString:@"ProfilePhoto"]) {
-            %orig(0);
-            return;
-        }
-    }
-    %orig;
-}
-
-%end
-
-%hook UIImageView
-
-- (void)setImage:(UIImage *)image {
-    %orig;
-    NSString *className = NSStringFromClass([self class]);
-    if ([className containsString:@"Avatar"] || 
-        [className containsString:@"ProfileImage"] || 
-        [className containsString:@"ProfilePhoto"]) {
-        self.layer.cornerRadius = 0;
-        self.layer.masksToBounds = YES;
-        self.clipsToBounds = YES;
-    }
-}
-
 %end
