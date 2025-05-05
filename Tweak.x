@@ -2269,3 +2269,80 @@ static NSDate *lastCookieRefresh              = nil;
     }
 }
 %end
+
+// MARK: Square Profile Pictures
+%hook UIView
+
+- (void)setFrame:(CGRect)frame {
+    %orig;
+    NSString *className = NSStringFromClass([self class]);
+    if ([className containsString:@"Avatar"] || 
+        [className containsString:@"ProfileImage"] || 
+        [className containsString:@"ProfilePhoto"]) {
+        self.layer.cornerRadius = 0;
+        self.layer.masksToBounds = YES;
+        self.clipsToBounds = YES;
+        
+        // Force all subviews to be square too
+        for (UIView *subview in self.subviews) {
+            subview.layer.cornerRadius = 0;
+            subview.layer.masksToBounds = YES;
+            subview.clipsToBounds = YES;
+        }
+    }
+}
+
+- (void)layoutSubviews {
+    %orig;
+    NSString *className = NSStringFromClass([self class]);
+    if ([className containsString:@"Avatar"] || 
+        [className containsString:@"ProfileImage"] || 
+        [className containsString:@"ProfilePhoto"]) {
+        self.layer.cornerRadius = 0;
+        self.layer.masksToBounds = YES;
+        self.clipsToBounds = YES;
+        
+        // Force all subviews to be square too
+        for (UIView *subview in self.subviews) {
+            subview.layer.cornerRadius = 0;
+            subview.layer.masksToBounds = YES;
+            subview.clipsToBounds = YES;
+        }
+    }
+}
+
+%end
+
+%hook CALayer
+
+- (void)setCornerRadius:(CGFloat)cornerRadius {
+    UIView *view = (UIView *)self.delegate;
+    if ([view isKindOfClass:[UIView class]]) {
+        NSString *className = NSStringFromClass([view class]);
+        if ([className containsString:@"Avatar"] || 
+            [className containsString:@"ProfileImage"] || 
+            [className containsString:@"ProfilePhoto"]) {
+            %orig(0);
+            return;
+        }
+    }
+    %orig;
+}
+
+%end
+
+%hook UIImageView
+
+- (void)setImage:(UIImage *)image {
+    %orig;
+    NSString *className = NSStringFromClass([self class]);
+    if ([className containsString:@"Avatar"] || 
+        [className containsString:@"ProfileImage"] || 
+        [className containsString:@"ProfilePhoto"]) {
+        self.layer.cornerRadius = 0;
+        self.layer.masksToBounds = YES;
+        self.clipsToBounds = YES;
+    }
+}
+
+%end
