@@ -2169,21 +2169,33 @@ static NSDate *lastCookieRefresh              = nil;
 
 // MARK: Square Profile Pictures
 %hook TUIAvatarImageView
-- (id)initWithFrame:(CGRect)frame {
-    id orig = %orig;
-    [(UIView *)self layer].cornerRadius = 0;
-    [(UIView *)self layer].masksToBounds = YES;
-    return orig;
+
+- (void)willMoveToWindow:(UIWindow *)window {
+    %orig;
+    if (window) {
+        self.layer.cornerRadius = 0;
+        self.layer.masksToBounds = YES;
+        self.clipsToBounds = YES;
+    }
 }
 
-- (id)initWithCoder:(NSCoder *)coder {
-    id orig = %orig;
-    [(UIView *)self layer].cornerRadius = 0;
-    [(UIView *)self layer].masksToBounds = YES;
-    return orig;
+- (void)didMoveToSuperview {
+    %orig;
+    self.layer.cornerRadius = 0;
+    self.layer.masksToBounds = YES;
+    self.clipsToBounds = YES;
 }
 
 - (void)setCornerRadius:(double)cornerRadius {
     %orig(0);
 }
+
+- (void)setMasksToBounds:(_Bool)masksToBounds {
+    %orig(YES);
+}
+
+- (void)setClipsToBounds:(_Bool)clipsToBounds {
+    %orig(YES);
+}
+
 %end
