@@ -1966,7 +1966,6 @@ static NSDate *lastCookieRefresh              = nil;
 %end
 
 %hook TFNAttributedTextView
-
 - (void)setTextModel:(TFNAttributedTextModel *)model {
     // --- BHTwitter style: Only run if toggle is ON ---
     if (![BHTManager RestoreTweetLabels]) {
@@ -1992,6 +1991,7 @@ static NSDate *lastCookieRefresh              = nil;
         if (range.location != NSNotFound) isTimestamp = YES;
     }
 
+    // Handle source labels
     if (isTimestamp) {
         @try {
             UIView *view = self;
@@ -2093,9 +2093,68 @@ static NSDate *lastCookieRefresh              = nil;
             }
         } @catch (__unused NSException *e) {}
     }
+    // Handle post/tweet text replacements
+    else if ([currentText containsString:@"your post"] || 
+             [currentText containsString:@"your Post"] ||
+             [currentText containsString:@"reposted"] ||
+             [currentText containsString:@"Reposted"]) {
+        @try {
+            UIView *view = self;
+            BOOL isNotificationView = NO;
+            
+            // Walk up the view hierarchy to find notification context
+            while (view && !isNotificationView) {
+                if ([NSStringFromClass([view class]) containsString:@"Notification"] ||
+                    [NSStringFromClass([view class]) containsString:@"T1NotificationsTimeline"]) {
+                    isNotificationView = YES;
+                }
+                view = view.superview;
+            }
+            
+            // Only proceed if we're in a notification view
+            if (isNotificationView) {
+                NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
+                
+                // Replace "your post" with "your Tweet"
+                NSRange postRange = [currentText rangeOfString:@"your post"];
+                if (postRange.location != NSNotFound) {
+                    NSDictionary *existingAttributes = [newString attributesAtIndex:postRange.location effectiveRange:NULL];
+                    [newString replaceCharactersInRange:postRange withString:@"your Tweet"];
+                    [newString setAttributes:existingAttributes range:NSMakeRange(postRange.location, [@"your Tweet" length])];
+                }
+                
+                // Also check for capitalized "Post"
+                postRange = [currentText rangeOfString:@"your Post"];
+                if (postRange.location != NSNotFound) {
+                    NSDictionary *existingAttributes = [newString attributesAtIndex:postRange.location effectiveRange:NULL];
+                    [newString replaceCharactersInRange:postRange withString:@"your Tweet"];
+                    [newString setAttributes:existingAttributes range:NSMakeRange(postRange.location, [@"your Tweet" length])];
+                }
+                
+                // Replace "reposted" with "Retweeted"
+                NSRange repostRange = [currentText rangeOfString:@"reposted"];
+                if (repostRange.location != NSNotFound) {
+                    NSDictionary *existingAttributes = [newString attributesAtIndex:repostRange.location effectiveRange:NULL];
+                    [newString replaceCharactersInRange:repostRange withString:@"Retweeted"];
+                    [newString setAttributes:existingAttributes range:NSMakeRange(repostRange.location, [@"Retweeted" length])];
+                }
+                
+                // Also check for capitalized "Reposted"
+                repostRange = [currentText rangeOfString:@"Reposted"];
+                if (repostRange.location != NSNotFound) {
+                    NSDictionary *existingAttributes = [newString attributesAtIndex:repostRange.location effectiveRange:NULL];
+                    [newString replaceCharactersInRange:repostRange withString:@"Retweeted"];
+                    [newString setAttributes:existingAttributes range:NSMakeRange(repostRange.location, [@"Retweeted" length])];
+                }
+                
+                // Update the model with our modified string
+                [model setValue:newString forKey:@"attributedString"];
+            }
+        } @catch (__unused NSException *e) {}
+    }
+    
     %orig(model);
 }
-
 %end
 
 // --- Initialisation ---
@@ -2165,4 +2224,33 @@ static NSDate *lastCookieRefresh              = nil;
     %orig(image);
 }
 
+%end
+
+// MARK: Replace "your post" with "your tweet" in notifications
+%hook TFNAttributedTextModel
+- (NSAttributedString *)attributedString {
+    NSAttributedString *original = %orig;
+    if (!original) return original;
+    
+    NSString *originalString = original.string;
+    if ([originalString containsString:@"your post"]) {
+        // Check if we're in a notification context by looking at the view hierarchy
+        UIViewController *topVC = topMostController();
+        if ([NSStringFromClass([topVC class]) containsString:@"Notification"] ||
+            [NSStringFromClass([topVC class]) containsString:@"T1NotificationsTimeline"]) {
+            
+            NSMutableAttributedString *modified = [[NSMutableAttributedString alloc] initWithAttributedString:original];
+            NSRange range = [originalString rangeOfString:@"your post"];
+            if (range.location != NSNotFound) {
+                [modified replaceCharactersInRange:range withString:@"your tweet"];
+                // Preserve the original attributes
+                NSDictionary *attributes = [original attributesAtIndex:range.location effectiveRange:NULL];
+                [modified setAttributes:attributes range:NSMakeRange(range.location, [@"your tweet" length])];
+                return modified;
+            }
+        }
+    }
+    
+    return original;
+}
 %end
