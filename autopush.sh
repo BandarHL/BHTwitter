@@ -3,7 +3,7 @@
 # Configuration
 REPO="nyathea/NeoFreeBird-BHTwitter"
 RUN_ID="14766098921"
-BRANCH="main"
+BRANCH="master"
 CURRENT_DATE=$(date -u "+%Y-%m-%d %H:%M:%S")
 
 # Set default repository
