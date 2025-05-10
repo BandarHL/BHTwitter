@@ -3,7 +3,7 @@
 # Configuration
 REPO="nyathea/NeoFreeBird-BHTwitter"
 BRANCH="master"
-WORKFLOW_ID="14766098921"
+RUN_ID="14766098921"
 
 # default repository
 gh repo set-default $REPO
