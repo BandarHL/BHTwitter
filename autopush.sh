@@ -18,37 +18,30 @@ git push origin $BRANCH
 echo "Rerunning workflow..."
 gh run rerun $RUN_ID
 
-# Function to get and filter build logs
+# Function to get build logs
 get_build_logs() {
     local run_id=$1
-    local logs
-    
-    # Get all logs
-    logs=$(gh run view $run_id --log 2>/dev/null)
-    if [ $? -eq 0 ] && [ ! -z "$logs" ]; then
-        # Print section between "Build Package" and next job, excluding empty lines
-        echo "$logs" | awk '
-            /^Build Package/ {p=1; print; next}
-            p==1 {
-                if (/^Job / && !/Build Package/) {p=0; next}
-                if (NF > 0) print
-            }
-        '
-        return 0
+    # Get job ID for Build Package job
+    local job_info=$(gh run view $run_id --json jobs -q '.jobs[] | select(.name=="Build Package")')
+    if [ ! -z "$job_info" ]; then
+        local job_id=$(echo "$job_info" | jq -r '.databaseId')
+        if [ ! -z "$job_id" ] && [ "$job_id" != "null" ]; then
+            # Get logs specifically for this job
+            gh run view --job $job_id --log
+            return 0
+        fi
     fi
     return 1
 }
 
-echo "Waiting for logs..."
+echo "Waiting for Build Package job to start..."
 
 # Main loop to check status and logs
 while true; do
     status=$(gh run view $RUN_ID --json status -q .status 2>/dev/null)
     
-    # Debug output
-    echo "Current status: $status" >&2
-    
     if [ "$status" = "completed" ]; then
+        echo "Workflow completed, getting final logs..."
         get_build_logs $RUN_ID
         
         conclusion=$(gh run view $RUN_ID --json conclusion -q .conclusion)
@@ -64,9 +57,10 @@ while true; do
         break
     elif [ "$status" = "in_progress" ]; then
         logs=$(get_build_logs $RUN_ID)
-        if [ ! -z "$logs" ]; then
+        if [ $? -eq 0 ] && [ ! -z "$logs" ]; then
             echo "$logs"
-            break
+            # Keep monitoring until completion
+            continue
         fi
     fi
     
