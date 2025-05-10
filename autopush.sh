@@ -36,9 +36,26 @@ fi
 
 conclusion=$(gh run view "$RUN_ID" --json conclusion -q .conclusion 2>/dev/null)
 if [ "$conclusion" = "success" ]; then
+    # Wait for .deb to become available and big enough
+    echo "Waiting for .deb asset to become available..."
+    while true; do
+        size=$(curl -sI "$DEB_URL" | awk '/Content-Length/ {print $2}' | tr -d '\r')
+        if curl -sI "$DEB_URL" | grep -q "200 OK" && [ "$size" -gt 1000000 ]; then
+            echo "Asset found and size is $size bytes."
+            break
+        fi
+        sleep 5
+    done
+
     # Download the .deb
     echo "Downloading .deb package..."
     curl -L -o "$DEB_LOCAL" "$DEB_URL"
+
+    # Verify download
+    if [ ! -s "$DEB_LOCAL" ] || [ $(stat -c%s "$DEB_LOCAL") -lt 1000000 ]; then
+        echo "Downloaded .deb is missing or too small. Aborting."
+        exit 1
+    fi
 
     # Copy .deb to device
     echo "Copying .deb to device..."
