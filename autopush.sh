@@ -18,5 +18,6 @@ git commit -m "Update: $DATETIME"
 # Push to remote repository
 git push origin $BRANCH
 
-# Trigger the workflow using the same workflow as the previous run
-gh workflow run $(gh api /repos/$REPO/actions/runs/$WORKFLOW_ID --jq .workflow_id)
+
+# Trigger the workflow with the required input parameter
+gh workflow run $WORKFLOW_ID -f decrypted_ipa_url="https://github.com/actuallyaridan/NeoFreeBird/releases/download/1.0/NeoFreeBird-1.0-Twitter-10.94-rev3.ipa"
