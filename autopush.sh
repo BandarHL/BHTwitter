@@ -41,12 +41,24 @@ check_status() {
         
         if [ "$conclusion" = "success" ]; then
             echo "Workflow succeeded! Checking for draft release..."
-            # Get the latest draft release
-            latest_draft=$(gh release list --limit 1 --exclude-pre-releases --draft)
+            # Get all releases and filter for drafts using jq
+            latest_draft=$(gh api /repos/$REPO/releases --jq '[.[] | select(.draft==true)] | first')
+            
             if [ ! -z "$latest_draft" ]; then
-                echo "Found draft release:"
-                echo "$latest_draft"
-                # You can add more actions here for the draft release
+                echo "Found draft release!"
+                # Extract useful information from the draft release
+                release_name=$(echo $latest_draft | jq -r '.name')
+                release_tag=$(echo $latest_draft | jq -r '.tag_name')
+                release_url=$(echo $latest_draft | jq -r '.html_url')
+                assets_url=$(echo $latest_draft | jq -r '.assets_url')
+                
+                echo "Release Name: $release_name"
+                echo "Tag: $release_tag"
+                echo "URL: $release_url"
+                
+                # List assets if any
+                echo "Assets:"
+                echo $latest_draft | jq -r '.assets[] | "- \(.name): \(.browser_download_url)"'
             else
                 echo "No draft release found"
             fi
@@ -58,4 +70,3 @@ check_status() {
 
 # Monitor the workflow
 check_status
-
