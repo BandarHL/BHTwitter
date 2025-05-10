@@ -2,10 +2,10 @@
 
 # Configuration
 REPO="nyathea/NeoFreeBird-BHTwitter"
-BRANCH="master"  # Change this if you're using a different default branch
-WORKFLOW_NAME="build.yml"  # Replace this with your actual workflow filename
+BRANCH="master"
+WORKFLOW_ID="14766098921"
 
-# First, set the default repository
+# default repository
 gh repo set-default $REPO
 
 # Add all changes
@@ -18,5 +18,5 @@ git commit -m "Update: $DATETIME"
 # Push to remote repository
 git push origin $BRANCH
 
-# Trigger the workflow
-gh workflow run $WORKFLOW_NAME
+# Trigger the workflow using the same workflow as the previous run
+gh workflow run $(gh api /repos/$REPO/actions/runs/$WORKFLOW_ID --jq .workflow_id)
