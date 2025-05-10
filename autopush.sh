@@ -24,7 +24,7 @@ while true; do
 done
 
 # Get the job ID for "Build Package"
-job_id=$(gh run view "$RUN_ID" --json jobs -q '.jobs[] | select(.name=="Build Package") | .databaseId' 2>/dev/null)
+job_id=$(gh run view "$RUN_ID" --json jobs -q '.jobs[] | select(.name=="Build BHTwitter") | .databaseId' 2>/dev/null)
 
 if [ -n "$job_id" ]; then
     gh run view --job "$job_id" --log
