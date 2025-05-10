@@ -22,23 +22,35 @@ gh run rerun $RUN_ID
 get_build_logs() {
     local run_id=$1
     local logs
+    
+    # Get all logs
     logs=$(gh run view $run_id --log 2>/dev/null)
     if [ $? -eq 0 ] && [ ! -z "$logs" ]; then
-        echo "$logs" | awk '/^Build Package/,/^Job / { if (!/^Job / || /^Job.*Build Package/) print }'
+        # Print section between "Build Package" and next job, excluding empty lines
+        echo "$logs" | awk '
+            /^Build Package/ {p=1; print; next}
+            p==1 {
+                if (/^Job / && !/Build Package/) {p=0; next}
+                if (NF > 0) print
+            }
+        '
         return 0
     fi
     return 1
 }
 
+echo "Waiting for logs..."
+
 # Main loop to check status and logs
 while true; do
     status=$(gh run view $RUN_ID --json status -q .status 2>/dev/null)
     
+    # Debug output
+    echo "Current status: $status" >&2
+    
     if [ "$status" = "completed" ]; then
-        # Get final logs
         get_build_logs $RUN_ID
         
-        # Check for draft release if successful
         conclusion=$(gh run view $RUN_ID --json conclusion -q .conclusion)
         if [ "$conclusion" = "success" ]; then
             latest_draft=$(gh api /repos/$REPO/releases --jq '[.[] | select(.draft==true)] | first')
@@ -51,8 +63,9 @@ while true; do
         fi
         break
     elif [ "$status" = "in_progress" ]; then
-        # Try to get logs if they're available
-        if get_build_logs $RUN_ID; then
+        logs=$(get_build_logs $RUN_ID)
+        if [ ! -z "$logs" ]; then
+            echo "$logs"
             break
         fi
     fi
