@@ -14,6 +14,10 @@ git add .
 git commit -m "Update: $CURRENT_DATE UTC"
 git push origin $BRANCH
 
+# Rerun the workflow first!
+echo "Rerunning workflow..."
+gh run rerun $RUN_ID
+
 # Function to get and filter build logs
 get_build_logs() {
     local run_id=$1
