@@ -24,20 +24,19 @@ stream_build_logs() {
     echo "Streaming Build Package logs..."
     echo "----------------------------------------"
     
-    # Get job ID for the Build Package job
-    job_id=$(gh run view $run_id --json jobs -q '.jobs[] | select(.name=="Build Package") | .databaseId')
-    
-    if [ ! -z "$job_id" ]; then
-        # Stream the specific job logs
-        gh run view --job $job_id --log | grep -v "^$" | while IFS= read -r line; do
-            if [[ $line == *"Build Package"* ]] || [ "$printing" = true ]; then
-                printing=true
+    # Direct log streaming with filtering
+    gh run view $run_id --log | while IFS= read -r line; do
+        if [[ "$line" == *"Build Package"* ]]; then
+            in_build_package=true
+            echo "$line"
+        elif [[ "$in_build_package" == true ]]; then
+            if [[ "$line" == *"Job "* && "$line" != *"Build Package"* ]]; then
+                in_build_package=false
+            else
                 echo "$line"
             fi
-        done
-    else
-        echo "Waiting for Build Package job to start..."
-    fi
+        fi
+    done
 }
 
 # Rerun the workflow
@@ -53,7 +52,7 @@ check_status() {
         if [ "$status" = "in_progress" ]; then
             stream_build_logs $RUN_ID
         fi
-        sleep 15  # Increased to 15 seconds to reduce spam
+        sleep 15
         status=$(gh run view $RUN_ID --json status -q .status)
         echo -e "\nCurrent status: $status"
     done
