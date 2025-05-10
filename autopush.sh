@@ -19,5 +19,5 @@ git commit -m "Update: $DATETIME"
 git push origin $BRANCH
 
 
-# Trigger the workflow with the required input parameter
-gh workflow run $WORKFLOW_ID -f decrypted_ipa_url="https://github.com/actuallyaridan/NeoFreeBird/releases/download/1.0/NeoFreeBird-1.0-Twitter-10.94-rev3.ipa"
+# Rerun the workflow
+gh run rerun $WORKFLOW_ID
