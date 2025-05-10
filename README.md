@@ -1,5 +1,5 @@
 # NeoFreeBird-BHTwitter
-the ultimate way to tweak your Twitter/X experience
+the ultimate way to tweak your Twitter/X experience.
 
 > Forked from [BHTwitter](https://github.com/BandarHL/BHTwitter).
 
