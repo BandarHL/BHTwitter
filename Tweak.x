@@ -2018,66 +2018,123 @@ static NSDate *lastCookieRefresh              = nil;
 
     NSString *currentText = model.attributedString.string;
     BOOL isTimestamp = NO;
+    BOOL isLikelyTimestampForSourceLabel = NO;
     
-    if ([currentText containsString:@"PM"] || [currentText containsString:@"AM"]) {
-        isTimestamp = YES;
-    } else {
-        NSRegularExpression *timeRegex = [NSRegularExpression regularExpressionWithPattern:@"\\\\d{1,2}[:.]\\\\d{1,2}"
-                                                                                   options:0
-                                                                                     error:nil];
-        if (timeRegex) { // Ensure regex was created
+    // More specific regex pattern to identify genuine timestamps in the correct format
+    NSRegularExpression *timeRegex = [NSRegularExpression regularExpressionWithPattern:@"^\\d{1,2}:\\d{2}(\\s(AM|PM))?\\s·\\s" options:0 error:nil];
+    if (timeRegex) {
         NSRange range = [timeRegex rangeOfFirstMatchInString:currentText options:0 range:NSMakeRange(0, currentText.length)];
-        if (range.location != NSNotFound) isTimestamp = YES;
+        if (range.location != NSNotFound) {
+            isTimestamp = YES;
+            isLikelyTimestampForSourceLabel = YES;
+        }
+    }
+    
+    // Check for date formats like "May 11, 2023 · "
+    NSRegularExpression *dateRegex = [NSRegularExpression regularExpressionWithPattern:@"^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s\\d{1,2}(,\\s\\d{4})?\\s·\\s" options:0 error:nil];
+    if (dateRegex && !isTimestamp) {
+        NSRange range = [dateRegex rangeOfFirstMatchInString:currentText options:0 range:NSMakeRange(0, currentText.length)];
+        if (range.location != NSNotFound) {
+            isTimestamp = YES;
+            isLikelyTimestampForSourceLabel = YES;
         }
     }
 
-    if (isTimestamp) {
+    // More general check but less certain
+    if (!isTimestamp && ([currentText containsString:@"PM"] || [currentText containsString:@"AM"])) {
+        isTimestamp = YES;
+        // Double check for correct format with dot separator
+        if ([currentText containsString:@" · "]) {
+            isLikelyTimestampForSourceLabel = YES;
+        }
+    }
+
+    // Only proceed if we believe this is a proper timestamp header
+    if (isTimestamp && isLikelyTimestampForSourceLabel) {
         @try {
             BOOL isInQuotedStatusView = NO;
             id mainTweetObject = nil; // The actual tweet model (e.g., TFNTwitterStatus)
-            UIView *responsibleAncestor = nil; // Keep track of which ancestor provided the model
 
+            // Get ancestor hierarchy to determine if this is in a valid location
             UIView *ancestorView = self;
+            BOOL isInValidContainer = NO;
+            
+            while (ancestorView) {
+                NSString *className = NSStringFromClass([ancestorView class]);
+                
+                // Skip source labels in quoted tweets
+                if ([className isEqualToString:@"T1QuotedStatusView"]) {
+                    isInQuotedStatusView = YES;
+                    break;
+                }
+                
+                // Check if this is inside a reply container
+                if ([className containsString:@"ReplyView"] || 
+                    [className containsString:@"CommentView"] ||
+                    [className containsString:@"RepliesTableView"]) {
+                    // This is likely a reply timestamp, not the main tweet timestamp
+                    isInValidContainer = NO;
+                    break;
+                }
+                
+                // These are the main valid containers for tweet headers
+                if ([className containsString:@"TweetDetailsFocalStatusView"] ||
+                    [className containsString:@"ConversationFocalStatusView"] ||
+                    [className containsString:@"T1StandardStatusView"] ||
+                    [className containsString:@"StatusHeaderView"]) {
+                    isInValidContainer = YES;
+                    break;
+                }
+                
+                ancestorView = ancestorView.superview;
+            }
+            
+            // Exit if this is not in a valid container or is in a quoted tweet
+            if (isInQuotedStatusView || !isInValidContainer) {
+                %orig(model);
+                return;
+            }
+
+            // Continue with existing code to find mainTweetObject...
+            ancestorView = self;
             while (ancestorView) {
                 if ([NSStringFromClass([ancestorView class]) isEqualToString:@"T1QuotedStatusView"]) {
                     isInQuotedStatusView = YES;
                     break; 
                 }
-                
-                // Only consider these specific focal/detail view types for sourcing the tweet model
-                if ([NSStringFromClass([ancestorView class]) containsString:@"TweetDetailsFocalStatusView"] ||
-                    [NSStringFromClass([ancestorView class]) containsString:@"ConversationFocalStatusView"]) {
-
+                // Check if this ancestor is the main tweet container and can provide the tweet model
+                // T1ConversationFocalStatusView, T1TweetDetailsFocalStatusView often hold the primary view model
+                if ([NSStringFromClass([ancestorView class]) containsString:@"ConversationFocalStatusView"] ||
+                    [NSStringFromClass([ancestorView class]) containsString:@"TweetDetailsFocalStatusView"] ||
+                    [NSStringFromClass([ancestorView class]) isEqualToString:@"T1StandardStatusView"]) { // Also check T1StandardStatusView which might be the top-level in some contexts
+                    
                     id hostViewModel = nil;
                     if ([ancestorView respondsToSelector:@selector(viewModel)]) {
                          hostViewModel = [ancestorView performSelector:@selector(viewModel)];
                     } else if ([ancestorView respondsToSelector:@selector(statusViewModel)]) { // Some views use statusViewModel
                          hostViewModel = [ancestorView performSelector:@selector(statusViewModel)];
-                    }
+                }
 
                     if ([hostViewModel respondsToSelector:@selector(tweet)]) {
                         mainTweetObject = [hostViewModel performSelector:@selector(tweet)];
                     } else if ([hostViewModel respondsToSelector:@selector(status)]) { // Some view models have a 'status' property
                          mainTweetObject = [hostViewModel performSelector:@selector(status)];
-                    }
+            }
             
                     if (mainTweetObject) {
-                        responsibleAncestor = ancestorView; // Found our provider
-                        break; 
+                        break;
                     }
                 }
                 ancestorView = ancestorView.superview;
             }
 
-            if (isInQuotedStatusView || !mainTweetObject || !responsibleAncestor) {
-                // If in a quote, or no model found from the *right type* of ancestor, or no responsible ancestor
+            if (isInQuotedStatusView) {
                 %orig(model);
                 return;
             }
-            
-            // Now, mainTweetObject comes from a TweetDetailsFocalStatusView or ConversationFocalStatusView
-            // Proceed with existing logic using mainTweetObject:
-            NSString *tweetIDStr = nil;
+
+            if (mainTweetObject) {
+                NSString *tweetIDStr = nil;
                     @try {
                     id statusIDVal = [mainTweetObject valueForKey:@"statusID"];
                     if (statusIDVal && [statusIDVal respondsToSelector:@selector(longLongValue)] && [statusIDVal longLongValue] > 0) {
@@ -2352,7 +2409,7 @@ static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString 
             %orig(variant);
         }
     } else {
-        %orig(variant);
+        %orig;
     }
 }
 
