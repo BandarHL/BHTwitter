@@ -2117,7 +2117,7 @@ static NSDate *lastCookieRefresh              = nil;
                             NSString *originalContentForRegex = newString.string;
 
                             // Remove " · X Views" before appending source label
-                            NSRegularExpression *viewCountRegex = [NSRegularExpression regularExpressionWithPattern:@"\s·\s*\d{1,3}(?:,\d{3})*(?:\.\d+)?[KMGT]?\s*View(s)?"
+                            NSRegularExpression *viewCountRegex = [NSRegularExpression regularExpressionWithPattern:@"\\s·\\s*\\d{1,3}(?:,\\d{3})*(?:\\.\\d+)?[KMGT]?\\s*View(s)?"
                                                                                                            options:NSRegularExpressionCaseInsensitive
                                                                                                              error:nil];
                             if (viewCountRegex) {
