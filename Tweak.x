@@ -2881,3 +2881,96 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     return %orig;
 }
 %end
+
+// MARK: - DM Avatar Images
+// Instead of trying to modify the view model, let's try to modify the cell directly
+%hook T1DirectMessageEntryBaseCell
+- (void)layoutSubviews {
+    %orig;
+    
+    // After original layout, find and modify the avatar view
+    UIImageView *avatarView = [self valueForKey:@"_avatarImageView"];
+    if (!avatarView) {
+        // Try alternative property names
+        avatarView = [self valueForKey:@"avatarImageView"];
+    }
+    
+    if (avatarView) {
+        BOOL isIncoming = NO;
+        BOOL isLastInGroup = NO;
+        
+        // Try to determine if the message is incoming from another user
+        if ([self respondsToSelector:@selector(isIncoming)]) {
+            isIncoming = [[self valueForKey:@"isIncoming"] boolValue];
+        } else if ([self respondsToSelector:@selector(isOutgoing)]) {
+            isIncoming = ![[self valueForKey:@"isOutgoing"] boolValue];
+        } else if ([self.superview respondsToSelector:@selector(isIncoming)]) {
+            isIncoming = [[self.superview valueForKey:@"isIncoming"] boolValue];
+        }
+        
+        // Try to determine if the message is the last in a group
+        if ([self respondsToSelector:@selector(isLastInGroup)]) {
+            isLastInGroup = [[self valueForKey:@"isLastInGroup"] boolValue];
+        } else if ([self respondsToSelector:@selector(isLastMessageInSequence)]) {
+            isLastInGroup = [[self valueForKey:@"isLastMessageInSequence"] boolValue];
+        } else if ([self respondsToSelector:@selector(isLastEntryInGroup)]) {
+            isLastInGroup = [[self valueForKey:@"isLastEntryInGroup"] boolValue];
+        }
+        
+        // Show avatar only for incoming messages that are the last in a group
+        if (isIncoming && isLastInGroup) {
+            avatarView.hidden = NO;
+            avatarView.alpha = 1.0;
+        } else {
+            avatarView.hidden = YES;
+            avatarView.alpha = 0.0;
+        }
+    }
+}
+%end
+
+// Also try the T1DirectMessageEntryMediaCell which might have a different structure
+%hook T1DirectMessageEntryMediaCell
+- (void)layoutSubviews {
+    %orig;
+    
+    // After original layout, find and modify the avatar view
+    UIImageView *avatarView = [self valueForKey:@"_avatarImageView"];
+    if (!avatarView) {
+        // Try alternative property names
+        avatarView = [self valueForKey:@"avatarImageView"];
+    }
+    
+    if (avatarView) {
+        BOOL isIncoming = NO;
+        BOOL isLastInGroup = NO;
+        
+        // Try to determine if the message is incoming from another user
+        if ([self respondsToSelector:@selector(isIncoming)]) {
+            isIncoming = [[self valueForKey:@"isIncoming"] boolValue];
+        } else if ([self respondsToSelector:@selector(isOutgoing)]) {
+            isIncoming = ![[self valueForKey:@"isOutgoing"] boolValue];
+        } else if ([self.superview respondsToSelector:@selector(isIncoming)]) {
+            isIncoming = [[self.superview valueForKey:@"isIncoming"] boolValue];
+        }
+        
+        // Try to determine if the message is the last in a group
+        if ([self respondsToSelector:@selector(isLastInGroup)]) {
+            isLastInGroup = [[self valueForKey:@"isLastInGroup"] boolValue];
+        } else if ([self respondsToSelector:@selector(isLastMessageInSequence)]) {
+            isLastInGroup = [[self valueForKey:@"isLastMessageInSequence"] boolValue];
+        } else if ([self respondsToSelector:@selector(isLastEntryInGroup)]) {
+            isLastInGroup = [[self valueForKey:@"isLastEntryInGroup"] boolValue];
+        }
+        
+        // Show avatar only for incoming messages that are the last in a group
+        if (isIncoming && isLastInGroup) {
+            avatarView.hidden = NO;
+            avatarView.alpha = 1.0;
+        } else {
+            avatarView.hidden = YES;
+            avatarView.alpha = 0.0;
+        }
+    }
+}
+%end
