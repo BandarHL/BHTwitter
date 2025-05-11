@@ -386,7 +386,9 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         PSSpecifier *restoreFollowButton = [self newSwitchCellWithTitle:@"Restore Follow Button" detailTitle:@"Restores the normal Follow button instead of Subscribe" key:@"restore_follow_button" defaultValue:false changeAction:nil];
         
         PSSpecifier *squareAvatars = [self newButtonCellWithTitle:@"Square Avatars" 
-                                                      detailTitle:[[NSUserDefaults standardUserDefaults] boolForKey:@"square_avatars"] ? @"Enabled (Restart Required)" : @"Disabled" 
+                                                      detailTitle:[[NSUserDefaults standardUserDefaults] boolForKey:@"square_avatars"] ? 
+                                                                 @"Enabled (Requires Restart)" : 
+                                                                 @"Disabled (Requires Restart)" 
                                                      dynamicRule:nil 
                                                           action:@selector(showSquareAvatarsOptions:)];
         
@@ -837,7 +839,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             [[NSUserDefaults standardUserDefaults] synchronize];
             
             // Update the button subtitle
-            [specifier setProperty:@"Enabled (Restart Required)" forKey:@"subtitle"];
+            [specifier setProperty:@"Enabled (Requires Restart)" forKey:@"subtitle"];
             [self reloadSpecifier:specifier animated:YES];
             
             // Restart the app
@@ -852,7 +854,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             [[NSUserDefaults standardUserDefaults] synchronize];
             
             // Update the button subtitle
-            [specifier setProperty:@"Enabled (Restart Required)" forKey:@"subtitle"];
+            [specifier setProperty:@"Enabled (Requires Restart)" forKey:@"subtitle"];
             [self reloadSpecifier:specifier animated:YES];
         }]];
     } 
@@ -864,7 +866,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             [[NSUserDefaults standardUserDefaults] synchronize];
             
             // Update the button subtitle
-            [specifier setProperty:@"Disabled" forKey:@"subtitle"];
+            [specifier setProperty:@"Disabled (Requires Restart)" forKey:@"subtitle"];
             [self reloadSpecifier:specifier animated:YES];
             
             // Restart the app
@@ -873,15 +875,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             });
         }]];
         
-        [alert addAction:[UIAlertAction actionWithTitle:@"Disable Without Restart" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-            // Save the preference
-            [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"square_avatars"];
-            [[NSUserDefaults standardUserDefaults] synchronize];
-            
-            // Update the button subtitle
-            [specifier setProperty:@"Disabled" forKey:@"subtitle"];
-            [self reloadSpecifier:specifier animated:YES];
-        }]];
+        // Remove the "Disable Without Restart" option
     }
     
     // Cancel action
