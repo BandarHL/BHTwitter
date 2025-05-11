@@ -2810,3 +2810,14 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 //        BH_EnumerateSubviewsRecursively(subview, block);
 //    }
 // }
+
+// MARK: - DM Avatar Images
+%hook T1DirectMessageEntryViewModel
+- (BOOL)shouldShowAvatarImage {
+    return YES;
+}
+
+- (BOOL)isAvatarImageEnabled {
+    return YES;
+}
+%end
