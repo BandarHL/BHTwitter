@@ -2173,7 +2173,7 @@ static NSDate *lastCookieRefresh              = nil;
                             NSString *originalContentForRegex = newString.string;
 
                             // Remove " · X Views" before appending source label
-                            NSRegularExpression *viewCountRegex = [NSRegularExpression regularExpressionWithPattern:@"\\s·\\s*\\d{1,3}(?:,\\d{3})*(?:\\.\\d+)?[KMGT]?\\s*View(s)?"
+                            NSRegularExpression *viewCountRegex = [NSRegularExpression regularExpressionWithPattern:@"\\\\s·\\\\s*\\\\d{1,3}(?:,\\\\d{3})*(?:\\\\.\\\\d+)?[KMGT]?\\\\s*View(s)?"
                                                                                                            options:NSRegularExpressionCaseInsensitive
                                                                                                              error:nil];
                             if (viewCountRegex) {
@@ -2314,24 +2314,6 @@ static NSDate *lastCookieRefresh              = nil;
     
     return original;
 }
-%end
-
-// MARK: - Hide Grok Analyze Button (TTAStatusAuthorView)
-
-@interface TTAStatusAuthorView : UIView
-- (id)grokAnalyzeButton;
-@end
-
-%hook TTAStatusAuthorView
-
-- (id)grokAnalyzeButton {
-    UIView *button = %orig;
-    if (button && [BHTManager hideGrokAnalyze]) {
-        button.hidden = YES;
-    }
-    return button;
-}
-
 %end
 
 // MARK: - Hide Grok Analyze & Subscribe Buttons on Detail View (UIControl)
@@ -2802,70 +2784,56 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 }
 
 // Static helper function for recursive view traversal - ENSURE THIS IS THE ONLY DEFINITION (AT THE TOP)
-// // Static helper function for recursive view traversal
-// static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
-//    if (!view || !block) return;
-//    block(view);
-//    for (UIView *subview in view.subviews) {
-//        BH_EnumerateSubviewsRecursively(subview, block);
-//    }
-// }
+static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
+    if (!view || !block) return;
+    block(view);
+    for (UIView *subview in view.subviews) {
+        BH_EnumerateSubviewsRecursively(subview, block);
+    }
+}
 
 // MARK: - DM Avatar Images
 %hook T1DirectMessageEntryViewModel
 - (BOOL)shouldShowAvatarImage {
     if (self.isOutgoingMessage) {
-        return NO; // Don't show avatar (or its space) for your own messages
+        return NO; // Don't show avatar for your own messages
     }
-    // For incoming messages, always tell the cell that an avatar *could* be shown,
-    // so space is allocated. The cell will handle actual image visibility.
-    return YES;
+    // For incoming messages, only show avatar if it's the last message in a group from that sender
+    return [[self valueForKey:@"lastEntryInGroup"] boolValue]; // Use KVC to call the isLastEntryInGroup method
 }
 
 - (BOOL)isAvatarImageEnabled {
-    // Mirror the logic of shouldShowAvatarImage
+    // Duplicated logic from shouldShowAvatarImage
     if (self.isOutgoingMessage) {
         return NO;
     }
-    return YES;
+    return [[self valueForKey:@"lastEntryInGroup"] boolValue]; // Use KVC to call the isLastEntryInGroup method
 }
 %end
 
-@class T1DirectMessageEntryBaseCell; // Forward declaration
-
+// Add layout alignment fix for DM messages
 %hook T1DirectMessageEntryBaseCell
-- (void)setEntryViewModel:(T1DirectMessageAbstractConversationEntryViewModel *)entryViewModel {
-    %orig(entryViewModel);
-
-    if (!self.entryViewModel || ![self.entryViewModel isKindOfClass:%c(T1DirectMessageEntryViewModel)]) {
-        return;
-    }
-
-    T1DirectMessageEntryViewModel *messageVM = (T1DirectMessageEntryViewModel *)self.entryViewModel;
+- (void)layoutSubviews {
+    %orig;
     
-    // Assuming 'avatarImageView' is the correct property for the avatar view.
-    // If not, this might need to be [self valueForKey:@"avatarImageView"];
-    UIImageView *avatarView = self.avatarImageView; 
-
-    if (!avatarView) {
-        return; // Safety check if avatarView is nil
+    // Get the message view model
+    T1DirectMessageEntryViewModel *viewModel = self.messageEntryViewModel;
+    if (!viewModel) return;
+    
+    // Calculate proper left inset based on avatar visibility
+    CGFloat leftInset = 16.0; // Default inset
+    
+    // For incoming messages that aren't the last in a group, align with the last message that has an avatar
+    if (!viewModel.isOutgoingMessage && ![[viewModel valueForKey:@"lastEntryInGroup"] boolValue]) {
+        leftInset = 54.0; // Approximate width to align with messages that have avatars
     }
-
-    if (messageVM.isOutgoingMessage) {
-        avatarView.hidden = YES;
-    } else {
-        // For incoming messages, the avatarView itself should be visible (not hidden)
-        // so it participates in layout and reserves space.
-        avatarView.hidden = NO;
-
-        // Control the actual image visibility (alpha) based on whether it's the last in group.
-        BOOL isLastInGroup = [[messageVM valueForKey:@"lastEntryInGroup"] boolValue];
-        if (isLastInGroup) {
-            avatarView.alpha = 1.0;
-            // The cell's original logic should handle loading the image when avatarView is visible.
-        } else {
-            avatarView.alpha = 0.0; // Make it transparent, but it still takes up space.
-        }
-    }
+    
+    // Apply the inset to the content view's layout margins
+    UIEdgeInsets margins = self.contentView.layoutMargins;
+    margins.left = leftInset;
+    self.contentView.layoutMargins = margins;
+    
+    // Force layout update
+    [self.contentView setNeedsLayout];
 }
 %end
