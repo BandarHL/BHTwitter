@@ -2173,7 +2173,7 @@ static NSDate *lastCookieRefresh              = nil;
                             NSString *originalContentForRegex = newString.string;
 
                             // Remove " · X Views" before appending source label
-                            NSRegularExpression *viewCountRegex = [NSRegularExpression regularExpressionWithPattern:@"\\\\s·\\\\s*\\\\d{1,3}(?:,\\\\d{3})*(?:\\\\.\\\\d+)?[KMGT]?\\\\s*View(s)?"
+                            NSRegularExpression *viewCountRegex = [NSRegularExpression regularExpressionWithPattern:@"\\s·\\s*\\d{1,3}(?:,\\d{3})*(?:\\.\\d+)?[KMGT]?\\s*View(s)?"
                                                                                                            options:NSRegularExpressionCaseInsensitive
                                                                                                              error:nil];
                             if (viewCountRegex) {
@@ -2314,6 +2314,24 @@ static NSDate *lastCookieRefresh              = nil;
     
     return original;
 }
+%end
+
+// MARK: - Hide Grok Analyze Button (TTAStatusAuthorView)
+
+@interface TTAStatusAuthorView : UIView
+- (id)grokAnalyzeButton;
+@end
+
+%hook TTAStatusAuthorView
+
+- (id)grokAnalyzeButton {
+    UIView *button = %orig;
+    if (button && [BHTManager hideGrokAnalyze]) {
+        button.hidden = YES;
+    }
+    return button;
+}
+
 %end
 
 // MARK: - Hide Grok Analyze & Subscribe Buttons on Detail View (UIControl)
@@ -2784,13 +2802,14 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 }
 
 // Static helper function for recursive view traversal - ENSURE THIS IS THE ONLY DEFINITION (AT THE TOP)
-static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
-    if (!view || !block) return;
-    block(view);
-    for (UIView *subview in view.subviews) {
-        BH_EnumerateSubviewsRecursively(subview, block);
-    }
-}
+// // Static helper function for recursive view traversal
+// static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
+//    if (!view || !block) return;
+//    block(view);
+//    for (UIView *subview in view.subviews) {
+//        BH_EnumerateSubviewsRecursively(subview, block);
+//    }
+// }
 
 // MARK: - DM Avatar Images
 %hook T1DirectMessageEntryViewModel
@@ -2809,31 +2828,33 @@ static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *
     }
     return [[self valueForKey:@"lastEntryInGroup"] boolValue]; // Use KVC to call the isLastEntryInGroup method
 }
-%end
 
-// Add layout alignment fix for DM messages
-%hook T1DirectMessageEntryBaseCell
-- (void)layoutSubviews {
-    %orig;
+// This method controls the spacing/placement for the avatar 
+// By returning the proper value even when avatar is hidden, we maintain alignment
+- (double)avatarYOffset {
+    // Get the original offset implementation
+    double originalOffset = %orig;
     
-    // Get the message view model
-    T1DirectMessageEntryViewModel *viewModel = self.messageEntryViewModel;
-    if (!viewModel) return;
-    
-    // Calculate proper left inset based on avatar visibility
-    CGFloat leftInset = 16.0; // Default inset
-    
-    // For incoming messages that aren't the last in a group, align with the last message that has an avatar
-    if (!viewModel.isOutgoingMessage && ![[viewModel valueForKey:@"lastEntryInGroup"] boolValue]) {
-        leftInset = 54.0; // Approximate width to align with messages that have avatars
+    // Only modify for incoming messages
+    if (!self.isOutgoingMessage) {
+        // Even if this message doesn't show an avatar (not the last in group),
+        // we still need its content to align with messages that do show avatars
+        return originalOffset;
     }
     
-    // Apply the inset to the content view's layout margins
-    UIEdgeInsets margins = self.contentView.layoutMargins;
-    margins.left = leftInset;
-    self.contentView.layoutMargins = margins;
+    return originalOffset;
+}
+
+// This ensures the space for the avatar is reserved in the layout
+// even when not shown, keeping alignment consistent
+- (struct CGSize)avatarSize {
+    struct CGSize originalSize = %orig;
     
-    // Force layout update
-    [self.contentView setNeedsLayout];
+    // For incoming messages, ensure consistent avatar space
+    if (!self.isOutgoingMessage) {
+        return originalSize;
+    }
+    
+    return originalSize;
 }
 %end
