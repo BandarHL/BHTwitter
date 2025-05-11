@@ -2814,10 +2814,21 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 // MARK: - DM Avatar Images
 %hook T1DirectMessageEntryViewModel
 - (BOOL)shouldShowAvatarImage {
-    return YES;
+    // Don't show avatar on your own messages
+    if ([self isFromRecipient] == NO) {
+        return NO; // Your own messages
+    }
+    
+    // For recipient messages, show avatar only on the last message of a sequence
+    if ([self isLastMessageInSequence]) {
+        return YES;
+    }
+    
+    return NO;
 }
 
 - (BOOL)isAvatarImageEnabled {
-    return YES;
+    // Follow the same logic as shouldShowAvatarImage
+    return [self shouldShowAvatarImage];
 }
 %end
