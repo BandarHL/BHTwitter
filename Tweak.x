@@ -7,6 +7,15 @@
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
 
+// Static helper function for recursive view traversal - DEFINED AT THE TOP
+static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
+    if (!view || !block) return;
+    block(view);
+    for (UIView *subview in view.subviews) {
+        BH_EnumerateSubviewsRecursively(subview, block);
+    }
+}
+
 // Add this before the hooks, after the imports
 
 UIColor *BHTCurrentAccentColor(void) {
