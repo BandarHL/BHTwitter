@@ -2849,7 +2849,32 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 }
 
 - (BOOL)isAvatarImageEnabled {
-    // Use the same logic as shouldShowAvatarImage
-    return [self shouldShowAvatarImage];
+    // Duplicate the same logic here instead of calling shouldShowAvatarImage
+    BOOL isFromMe = NO;
+    
+    @try {
+        if ([self respondsToSelector:@selector(isFromMe)]) {
+            isFromMe = [(NSNumber *)[self valueForKey:@"isFromMe"] boolValue];
+        } else if ([self respondsToSelector:@selector(isMe)]) {
+            isFromMe = [(NSNumber *)[self valueForKey:@"isMe"] boolValue];
+        } else if ([self respondsToSelector:@selector(fromMe)]) {
+            isFromMe = [(NSNumber *)[self valueForKey:@"fromMe"] boolValue];
+        } else if ([self respondsToSelector:@selector(fromSelf)]) {
+            isFromMe = [(NSNumber *)[self valueForKey:@"fromSelf"] boolValue];
+        } else if ([self respondsToSelector:@selector(sender)]) {
+            id sender = [self valueForKey:@"sender"];
+            if ([sender respondsToSelector:@selector(isMe)]) {
+                isFromMe = [(NSNumber *)[sender valueForKey:@"isMe"] boolValue];
+            }
+        }
+    } @catch (NSException *e) {
+        return NO;
+    }
+    
+    if (isFromMe) {
+        return NO;
+    }
+    
+    return YES;
 }
 %end
