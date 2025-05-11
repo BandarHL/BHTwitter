@@ -2818,11 +2818,14 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         return NO; // Don't show avatar for your own messages
     }
     // For incoming messages, only show avatar if it's the last message in a group from that sender
-    return self.isLastEntryInGroup;
+    return [self isLastEntryInGroup]; // Changed from self.isLastEntryInGroup
 }
 
 - (BOOL)isAvatarImageEnabled {
-    // This method can simply defer to the logic in shouldShowAvatarImage
-    return [self shouldShowAvatarImage];
+    // Duplicated logic from shouldShowAvatarImage to avoid selector issues within the hook
+    if (self.isOutgoingMessage) {
+        return NO;
+    }
+    return [self isLastEntryInGroup]; // Changed from self.isLastEntryInGroup
 }
 %end
