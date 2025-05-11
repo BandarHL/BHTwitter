@@ -2035,6 +2035,7 @@ static NSDate *lastCookieRefresh              = nil;
         @try {
             BOOL isInQuotedStatusView = NO;
             id mainTweetObject = nil; // The actual tweet model (e.g., TFNTwitterStatus)
+            UIView *responsibleAncestor = nil; // Keep track of which ancestor provided the model
 
             UIView *ancestorView = self;
             while (ancestorView) {
@@ -2042,43 +2043,41 @@ static NSDate *lastCookieRefresh              = nil;
                     isInQuotedStatusView = YES;
                     break; 
                 }
-                // Check if this ancestor is the main tweet container and can provide the tweet model
-                // T1ConversationFocalStatusView, T1TweetDetailsFocalStatusView often hold the primary view model
-                if ([NSStringFromClass([ancestorView class]) containsString:@"ConversationFocalStatusView"] ||
-                    [NSStringFromClass([ancestorView class]) containsString:@"TweetDetailsFocalStatusView"] ||
-                    [NSStringFromClass([ancestorView class]) isEqualToString:@"T1StandardStatusView"]) { // Also check T1StandardStatusView which might be the top-level in some contexts
-                    
+                
+                // Only consider these specific focal/detail view types for sourcing the tweet model
+                if ([NSStringFromClass([ancestorView class]) containsString:@"TweetDetailsFocalStatusView"] ||
+                    [NSStringFromClass([ancestorView class]) containsString:@"ConversationFocalStatusView"]) {
+
                     id hostViewModel = nil;
                     if ([ancestorView respondsToSelector:@selector(viewModel)]) {
                          hostViewModel = [ancestorView performSelector:@selector(viewModel)];
                     } else if ([ancestorView respondsToSelector:@selector(statusViewModel)]) { // Some views use statusViewModel
                          hostViewModel = [ancestorView performSelector:@selector(statusViewModel)];
-                }
+                    }
 
                     if ([hostViewModel respondsToSelector:@selector(tweet)]) {
                         mainTweetObject = [hostViewModel performSelector:@selector(tweet)];
                     } else if ([hostViewModel respondsToSelector:@selector(status)]) { // Some view models have a 'status' property
                          mainTweetObject = [hostViewModel performSelector:@selector(status)];
-            }
+                    }
             
                     if (mainTweetObject) {
-                        // If we found a tweet object, we need to be sure it's not from a quoted view that we haven't detected yet.
-                        // This means if T1StandardStatusView provided `mainTweetObject`, we must continue up to ensure
-                        // it's not nested within a T1QuotedStatusView. The `isInQuotedStatusView` check handles this.
-                        // If we reach here, and `isInQuotedStatusView` is still NO, this `mainTweetObject` is our candidate.
+                        responsibleAncestor = ancestorView; // Found our provider
                         break; 
                     }
                 }
                 ancestorView = ancestorView.superview;
             }
 
-            if (isInQuotedStatusView) {
-                %orig(model); // Timestamp is for a quoted tweet
+            if (isInQuotedStatusView || !mainTweetObject || !responsibleAncestor) {
+                // If in a quote, or no model found from the *right type* of ancestor, or no responsible ancestor
+                %orig(model);
                 return;
             }
-
-            if (mainTweetObject) {
-                NSString *tweetIDStr = nil;
+            
+            // Now, mainTweetObject comes from a TweetDetailsFocalStatusView or ConversationFocalStatusView
+            // Proceed with existing logic using mainTweetObject:
+            NSString *tweetIDStr = nil;
                     @try {
                     id statusIDVal = [mainTweetObject valueForKey:@"statusID"];
                     if (statusIDVal && [statusIDVal respondsToSelector:@selector(longLongValue)] && [statusIDVal longLongValue] > 0) {
