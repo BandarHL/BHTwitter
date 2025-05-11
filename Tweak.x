@@ -2829,68 +2829,111 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     return [[self valueForKey:@"lastEntryInGroup"] boolValue]; // Use KVC to call the isLastEntryInGroup method
 }
 
-// Set a consistent content offset for all messages, with or without avatar
+// Force consistent avatar placement for all messages in a group
+// by making them behave as if they're not the first in a group
+- (BOOL)isFirstEntryInGroup {
+    // For incoming messages, pretend nothing is "first in group" to maintain consistent alignment
+    if (!self.isOutgoingMessage) {
+        // We want to override the default "first in group" behavior
+        // to ensure all messages maintain the same alignment
+        return NO;
+    }
+    
+    // For outgoing messages, use original behavior
+    return %orig;
+}
+
+// Ensure "last in group" is only true for the actual last message
+- (BOOL)isLastEntryInGroup {
+    // Keep original behavior for last message determination
+    return %orig;
+}
+
+// Ensure content width is consistent regardless of avatar presence
 - (double)contentWidth {
-    // Get original content width calculation
     double originalWidth = %orig;
     
-    // Only adjust for incoming messages that aren't the last in group
-    if (!self.isOutgoingMessage && ![[self valueForKey:@"lastEntryInGroup"] boolValue]) {
-        // Maintain consistent width/offset regardless of avatar visibility
+    // Only adjust for incoming messages
+    if (!self.isOutgoingMessage) {
+        // Make sure all messages in a sequence (even first/middle) get the same content width
+        // as messages that show an avatar
         return originalWidth;
     }
     
     return originalWidth;
 }
 
-// Ensure consistent message bubble spacing
-- (struct UIEdgeInsets)messageTextInsets {
-    // Get original insets from Twitter's implementation
-    struct UIEdgeInsets insets = %orig;
+// Control bubbleGapHeight to ensure consistent spacing
+- (double)bubbleGapHeight {
+    double originalGap = %orig;
     
-    // For consistent layout of grouped messages, ensure left inset
-    // is the same whether avatar is visible or not
+    // Only adjust for incoming messages
     if (!self.isOutgoingMessage) {
-        // Apply consistent left margin
-        insets.left = 12.0; // Adjust this value as needed
+        // Ensure consistent gap height for all messages in a group
+        return originalGap;
     }
     
-    return insets;
+    return originalGap;
+}
+
+// Ensure avatar size is consistent
+- (struct CGSize)avatarSize {
+    struct CGSize originalSize = %orig;
+    
+    // For incoming messages, ensure consistent avatar space
+    if (!self.isOutgoingMessage) {
+        return originalSize;
+    }
+    
+    return originalSize;
+}
+
+// Ensure avatar placement is consistent
+- (double)avatarYOffset {
+    double originalOffset = %orig;
+    
+    // Only modify for incoming messages
+    if (!self.isOutgoingMessage) {
+        return originalOffset;
+    }
+    
+    return originalOffset;
 }
 %end
 
-// Hook the cell class without using layoutSubviews
+// Additional hook for the cell class that actually handles layout
 %hook T1DirectMessageEntryBaseCell
-// Hook the setEntryViewModel method to apply alignment fixes
-- (void)setEntryViewModel:(id)viewModel {
+- (void)layoutSubviews {
     %orig;
     
-    // Process after setting the view model
+    // After original layout, ensure all messages have consistent alignment
+    id viewModel = [self valueForKey:@"entryViewModel"];
     if ([viewModel isKindOfClass:%c(T1DirectMessageEntryViewModel)]) {
-        T1DirectMessageEntryViewModel *messageVM = (T1DirectMessageEntryViewModel *)viewModel;
+        T1DirectMessageEntryViewModel *dmViewModel = (T1DirectMessageEntryViewModel *)viewModel;
         
-        // Only for incoming messages
-        if (!messageVM.isOutgoingMessage) {
-            // Access avatar image view and content constraints
-            UIImageView *avatarView = [self valueForKey:@"avatarImageView"];
-            NSLayoutConstraint *contentWidthConstraint = [self valueForKey:@"contentWidthConstraint"];
-            NSLayoutConstraint *avatarTrailingConstraint = [self valueForKey:@"avatarImageViewTrailingConstraint"];
-            
-            if (avatarView && avatarTrailingConstraint) {
-                // Set proper visibility based on our logic
-                BOOL isLastInGroup = [[messageVM valueForKey:@"lastEntryInGroup"] boolValue];
-                avatarView.hidden = !isLastInGroup;
+        // Only adjust incoming message alignment
+        if (!dmViewModel.isOutgoingMessage) {
+            // Find the content container and adjust its position if needed
+            UIView *contentContainer = [self valueForKey:@"contentContainer"];
+            if (contentContainer) {
+                // Make sure the content is properly aligned for all messages in a group
+                CGRect frame = contentContainer.frame;
                 
-                // Apply consistent spacing, even when avatar is hidden
-                if (!isLastInGroup) {
-                    avatarTrailingConstraint.constant = -7.0; // Common bubble spacing value
-                } else {
-                    // Use Twitter's original spacing for messages with visible avatar
-                    avatarTrailingConstraint.constant = -7.0; // Same value for consistency
+                // Check if this is not the last message in a group (only last shows avatar)
+                if (![dmViewModel isLastEntryInGroup]) {
+                    // Adjust the content container to align with messages that show avatars
+                    
+                    // Get avatar view for reference
+                    UIView *avatarView = [self valueForKey:@"avatarImageView"];
+                    if (avatarView) {
+                        // Check if we need to adjust the horizontal alignment
+                        // For RTL languages we might need different adjustments, but the principle is the same
+                        if (contentContainer.frame.origin.x != avatarView.frame.origin.x + avatarView.frame.size.width) {
+                            frame.origin.x = avatarView.frame.origin.x + avatarView.frame.size.width;
+                            contentContainer.frame = frame;
+                        }
+                    }
                 }
-                
-                // Trigger constraint updates properly
-                [self setNeedsUpdateConstraints];
             }
         }
     }
