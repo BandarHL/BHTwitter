@@ -2352,7 +2352,7 @@ static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString 
             %orig(variant);
         }
     } else {
-        %orig;
+        %orig(variant);
     }
 }
 
