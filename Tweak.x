@@ -2829,70 +2829,68 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     return [[self valueForKey:@"lastEntryInGroup"] boolValue]; // Use KVC to call the isLastEntryInGroup method
 }
 
-// This method controls the spacing/placement for the avatar 
-// By returning the proper value even when avatar is hidden, we maintain alignment
-- (double)avatarYOffset {
-    // Get the original offset implementation
-    double originalOffset = %orig;
+// Set a consistent content offset for all messages, with or without avatar
+- (double)contentWidth {
+    // Get original content width calculation
+    double originalWidth = %orig;
     
-    // Only modify for incoming messages
-    if (!self.isOutgoingMessage) {
-        // Even if this message doesn't show an avatar (not the last in group),
-        // we still need its content to align with messages that do show avatars
-        return originalOffset;
+    // Only adjust for incoming messages that aren't the last in group
+    if (!self.isOutgoingMessage && ![[self valueForKey:@"lastEntryInGroup"] boolValue]) {
+        // Maintain consistent width/offset regardless of avatar visibility
+        return originalWidth;
     }
     
-    return originalOffset;
+    return originalWidth;
 }
 
-// This ensures the space for the avatar is reserved in the layout
-// even when not shown, keeping alignment consistent
-- (struct CGSize)avatarSize {
-    struct CGSize originalSize = %orig;
+// Ensure consistent message bubble spacing
+- (struct UIEdgeInsets)messageTextInsets {
+    // Get original insets from Twitter's implementation
+    struct UIEdgeInsets insets = %orig;
     
-    // For incoming messages, ensure consistent avatar space
+    // For consistent layout of grouped messages, ensure left inset
+    // is the same whether avatar is visible or not
     if (!self.isOutgoingMessage) {
-        return originalSize;
+        // Apply consistent left margin
+        insets.left = 12.0; // Adjust this value as needed
     }
     
-    return originalSize;
+    return insets;
 }
 %end
 
-// Hook the actual cell to fix alignment issues
+// Hook the cell class without using layoutSubviews
 %hook T1DirectMessageEntryBaseCell
-- (void)layoutSubviews {
+// Hook the setEntryViewModel method to apply alignment fixes
+- (void)setEntryViewModel:(id)viewModel {
     %orig;
     
-    // Force the proper alignment for all messages in a group
-    if ([self.entryViewModel isKindOfClass:%c(T1DirectMessageEntryViewModel)]) {
-        T1DirectMessageEntryViewModel *viewModel = (T1DirectMessageEntryViewModel *)self.entryViewModel;
+    // Process after setting the view model
+    if ([viewModel isKindOfClass:%c(T1DirectMessageEntryViewModel)]) {
+        T1DirectMessageEntryViewModel *messageVM = (T1DirectMessageEntryViewModel *)viewModel;
         
-        // Only adjust for incoming messages (not outgoing)
-        if (!viewModel.isOutgoingMessage) {
-            // Make sure the avatar view and content are properly aligned
-            // by forcing avatar to be visible for layout calculations
+        // Only for incoming messages
+        if (!messageVM.isOutgoingMessage) {
+            // Access avatar image view and content constraints
             UIImageView *avatarView = [self valueForKey:@"avatarImageView"];
-            if (avatarView) {
-                // Save the original state
-                BOOL originalHidden = avatarView.hidden;
+            NSLayoutConstraint *contentWidthConstraint = [self valueForKey:@"contentWidthConstraint"];
+            NSLayoutConstraint *avatarTrailingConstraint = [self valueForKey:@"avatarImageViewTrailingConstraint"];
+            
+            if (avatarView && avatarTrailingConstraint) {
+                // Set proper visibility based on our logic
+                BOOL isLastInGroup = [[messageVM valueForKey:@"lastEntryInGroup"] boolValue];
+                avatarView.hidden = !isLastInGroup;
                 
-                // Set proper hidden state based on our logic
-                BOOL shouldBeHidden = ![[viewModel valueForKey:@"lastEntryInGroup"] boolValue];
-                avatarView.hidden = shouldBeHidden;
-                
-                // If the avatar is hidden, make sure all constraints
-                // for non-avatar messages match those with avatars
-                // This ensures all messages in a sequence align properly
-                if (shouldBeHidden) {
-                    // Maintain a consistent trailing constraint value
-                    // This keeps message content properly aligned in a sequence
-                    NSLayoutConstraint *avatarTrailing = [self valueForKey:@"avatarImageViewTrailingConstraint"];
-                    if (avatarTrailing) {
-                        // Ensure the same constraint is applied even when avatar is hidden
-                        avatarTrailing.constant = -7.0; // Common bubble spacing value, adjust if needed
-                    }
+                // Apply consistent spacing, even when avatar is hidden
+                if (!isLastInGroup) {
+                    avatarTrailingConstraint.constant = -7.0; // Common bubble spacing value
+                } else {
+                    // Use Twitter's original spacing for messages with visible avatar
+                    avatarTrailingConstraint.constant = -7.0; // Same value for consistency
                 }
+                
+                // Force immediate constraint updates without using layoutSubviews
+                [avatarTrailingConstraint setNeedsDisplay];
             }
         }
     }
