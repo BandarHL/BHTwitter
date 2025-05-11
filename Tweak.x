@@ -2920,7 +2920,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
                 CGRect frame = contentContainer.frame;
                 
                 // Check if this is not the last message in a group (only last shows avatar)
-                if (![dmViewModel isLastEntryInGroup]) {
+                if (![[dmViewModel valueForKey:@"lastEntryInGroup"] boolValue]) {
                     // Adjust the content container to align with messages that show avatars
                     
                     // Get avatar view for reference
