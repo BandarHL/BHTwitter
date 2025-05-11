@@ -2600,7 +2600,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 %end
 
-}
 
 // MARK: - Combined constructor to initialize all hooks and features
 %ctor {
