@@ -13,6 +13,7 @@
 #import "AppIcon/BHAppIconViewController.h"
 #import "ThemeColor/BHColorThemeViewController.h"
 #import "CustomTabBar/BHCustomTabBarViewController.h"
+#import "BHTManager.h"
 
 typedef NS_ENUM(NSInteger, TwitterFontWeight) {
     TwitterFontWeightRegular,
