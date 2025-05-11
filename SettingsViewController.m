@@ -833,7 +833,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
     
     // If currently OFF, add action to enable and restart
     if (!currentlyEnabled) {
-        [alert addAction:[UIAlertAction actionWithTitle:@"Enable & Restart" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [alert addAction:[UIAlertAction actionWithTitle:@"Enable" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
             // Save the preference
             [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"square_avatars"];
             [[NSUserDefaults standardUserDefaults] synchronize];
@@ -848,19 +848,11 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             });
         }]];
         
-        [alert addAction:[UIAlertAction actionWithTitle:@"Enable Without Restart" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-            // Save the preference
-            [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"square_avatars"];
-            [[NSUserDefaults standardUserDefaults] synchronize];
-            
-            // Update the button subtitle
-            [specifier setProperty:@"Enabled (Requires Restart)" forKey:@"subtitle"];
-            [self reloadSpecifier:specifier animated:YES];
-        }]];
+        // Remove "Enable Without Restart" option
     } 
     // If currently ON, add action to disable
     else {
-        [alert addAction:[UIAlertAction actionWithTitle:@"Disable & Restart" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [alert addAction:[UIAlertAction actionWithTitle:@"Disable" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
             // Save the preference
             [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"square_avatars"];
             [[NSUserDefaults standardUserDefaults] synchronize];
