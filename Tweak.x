@@ -1948,11 +1948,11 @@ static NSDate *lastCookieRefresh              = nil;
                                     if (isSafeToUpdate) {
                                         // Force a refresh of the text model.
                                         // This will trigger setTextModel: again, where the source appending logic resides.
-                                        [textView setTextModel:nil]; 
-                                        [textView setTextModel:model];
-                                    }
+                                    [textView setTextModel:nil];
+                                    [textView setTextModel:model];
                                 }
                             }
+                        }
                         }
                     });
                 }
@@ -2026,8 +2026,8 @@ static NSDate *lastCookieRefresh              = nil;
                                                                                    options:0
                                                                                      error:nil];
         if (timeRegex) { // Ensure regex was created
-            NSRange range = [timeRegex rangeOfFirstMatchInString:currentText options:0 range:NSMakeRange(0, currentText.length)];
-            if (range.location != NSNotFound) isTimestamp = YES;
+        NSRange range = [timeRegex rangeOfFirstMatchInString:currentText options:0 range:NSMakeRange(0, currentText.length)];
+        if (range.location != NSNotFound) isTimestamp = YES;
         }
     }
 
@@ -2053,14 +2053,14 @@ static NSDate *lastCookieRefresh              = nil;
                          hostViewModel = [ancestorView performSelector:@selector(viewModel)];
                     } else if ([ancestorView respondsToSelector:@selector(statusViewModel)]) { // Some views use statusViewModel
                          hostViewModel = [ancestorView performSelector:@selector(statusViewModel)];
-                    }
+                }
 
                     if ([hostViewModel respondsToSelector:@selector(tweet)]) {
                         mainTweetObject = [hostViewModel performSelector:@selector(tweet)];
                     } else if ([hostViewModel respondsToSelector:@selector(status)]) { // Some view models have a 'status' property
                          mainTweetObject = [hostViewModel performSelector:@selector(status)];
-                    }
-                    
+            }
+            
                     if (mainTweetObject) {
                         // If we found a tweet object, we need to be sure it's not from a quoted view that we haven't detected yet.
                         // This means if T1StandardStatusView provided `mainTweetObject`, we must continue up to ensure
@@ -2079,56 +2079,72 @@ static NSDate *lastCookieRefresh              = nil;
 
             if (mainTweetObject) {
                 NSString *tweetIDStr = nil;
-                @try {
+                    @try {
                     id statusIDVal = [mainTweetObject valueForKey:@"statusID"];
                     if (statusIDVal && [statusIDVal respondsToSelector:@selector(longLongValue)] && [statusIDVal longLongValue] > 0) {
                         tweetIDStr = [statusIDVal stringValue];
                     }
                 } @catch (NSException *e) { NSLog(@"TweetSourceTweak: Exception getting statusID: %@", e); }
-
+                            
                 if (!tweetIDStr || tweetIDStr.length == 0) {
                     @try {
                         tweetIDStr = [mainTweetObject valueForKey:@"rest_id"];
                         if (!tweetIDStr || tweetIDStr.length == 0) {
                              tweetIDStr = [mainTweetObject valueForKey:@"id_str"];
-                        }
+                                }
                         if (!tweetIDStr || tweetIDStr.length == 0) {
                             id genericID = [mainTweetObject valueForKey:@"id"];
                             if (genericID) tweetIDStr = [genericID description];
                         }
                     } @catch (NSException *e) { NSLog(@"TweetSourceTweak: Exception getting alt tweet ID: %@", e); }
-                }
-
-                if (tweetIDStr && tweetIDStr.length > 0) {
-                    if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
-                    if (!tweetSources[tweetIDStr]) {
-                        tweetSources[tweetIDStr] = @""; // Placeholder
-                        [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
                     }
                     
-                    NSString *sourceText = tweetSources[tweetIDStr];
+                if (tweetIDStr && tweetIDStr.length > 0) {
+                        if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
+                        if (!tweetSources[tweetIDStr]) {
+                        tweetSources[tweetIDStr] = @""; // Placeholder
+                            [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
+                        }
+                        
+                            NSString *sourceText = tweetSources[tweetIDStr];
                     if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@"Source Unavailable"] && ![sourceText isEqualToString:@""]) {
                         NSString *separator = @" · ";
                         NSString *fullSourceStringWithSeparator = [separator stringByAppendingString:sourceText];
-                        
+                            
                         // Check if the source string (with separator) is already part of the current text
                         if ([model.attributedString.string rangeOfString:fullSourceStringWithSeparator].location == NSNotFound) {
                             NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
-                            NSDictionary *existingAttributes = nil;
-                            if (newString.length > 0) {
-                                 existingAttributes = [newString attributesAtIndex:MIN(0, newString.length -1) effectiveRange:NULL]; // Use index 0 or a safe last index
-                            } else {
-                                 existingAttributes = @{NSFontAttributeName: [UIFont systemFontOfSize:12], NSForegroundColorAttributeName: [UIColor grayColor]};
+                            NSString *originalContentForRegex = newString.string;
+
+                            // Remove " · X Views" before appending source label
+                            NSRegularExpression *viewCountRegex = [NSRegularExpression regularExpressionWithPattern:@"\s·\s*\d{1,3}(?:,\d{3})*(?:\.\d+)?[KMGT]?\s*View(s)?"
+                                                                                                           options:NSRegularExpressionCaseInsensitive
+                                                                                                             error:nil];
+                            if (viewCountRegex) {
+                                NSArray<NSTextCheckingResult *> *matches = [viewCountRegex matchesInString:originalContentForRegex
+                                                                                                  options:0
+                                                                                                    range:NSMakeRange(0, originalContentForRegex.length)];
+                                if (matches.count > 0) {
+                                    NSTextCheckingResult *lastMatch = [matches lastObject];
+                                    [newString replaceCharactersInRange:lastMatch.range withString:@""];
+                                }
                             }
                             
-                            NSMutableAttributedString *appended = [[NSMutableAttributedString alloc] init];
-                            [appended appendAttributedString:[[NSAttributedString alloc] initWithString:separator attributes:existingAttributes]];
+                            NSDictionary *baseAttributes;
+                            if (model.attributedString.length > 0) {
+                                 baseAttributes = [model.attributedString attributesAtIndex:0 effectiveRange:NULL];
+                            } else {
+                                 baseAttributes = @{NSFontAttributeName: [UIFont systemFontOfSize:12], NSForegroundColorAttributeName: [UIColor grayColor]};
+                            }
                             
-                            NSMutableDictionary *sourceAttributes = [existingAttributes mutableCopy];
+                            NSMutableAttributedString *sourceSuffix = [[NSMutableAttributedString alloc] init];
+                            [sourceSuffix appendAttributedString:[[NSAttributedString alloc] initWithString:separator attributes:baseAttributes]];
+                            
+                            NSMutableDictionary *sourceAttributes = [baseAttributes mutableCopy];
                             [sourceAttributes setObject:BHTCurrentAccentColor() forKey:NSForegroundColorAttributeName];
-                            [appended appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttributes]];
+                            [sourceSuffix appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttributes]];
                             
-                            [newString appendAttributedString:appended];
+                            [newString appendAttributedString:sourceSuffix];
                            
                             // Use standard initializer and set activeRanges via KVC if available
                             TFNAttributedTextModel *newModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newString];
@@ -2136,7 +2152,7 @@ static NSDate *lastCookieRefresh              = nil;
                                 id originalActiveRanges = [model valueForKey:@"activeRanges"];
                                 if (originalActiveRanges) {
                                     [newModel setValue:originalActiveRanges forKey:@"activeRanges"];
-                                }
+            }
                             } @catch (NSException *exception) {
                                 NSLog(@"TweetSourceTweak: Could not get/set activeRanges via KVC: %@", exception);
                             }
