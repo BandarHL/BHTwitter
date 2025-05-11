@@ -596,7 +596,17 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 
 - (void)setPreferenceValue:(id)value specifier:(PSSpecifier *)specifier {
     NSUserDefaults *Prefs = [NSUserDefaults standardUserDefaults];
-    [Prefs setValue:value forKey:[specifier identifier]];
+    
+    // Get the specifier ID/key
+    NSString *specifierID = [specifier identifier];
+    
+    // Special handling for square_avatars to make sure it's synchronously saved
+    if ([specifierID isEqualToString:@"square_avatars"]) {
+        [Prefs setBool:[value boolValue] forKey:specifierID];
+        [Prefs synchronize]; // Force immediate save
+    } else {
+        [Prefs setValue:value forKey:specifierID];
+    }
     
     if (self.hasDynamicSpecifiers) {
         NSString *specifierID = [specifier propertyForKey:PSIDKey];
@@ -820,24 +830,29 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
     BOOL enabled = [[self readPreferenceValue:specifier] boolValue];
     
     if (enabled) {
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"NeoFreeBird" 
-                                                                       message:@"You will have to restart the app for square avatars to take effect"
-                                                                preferredStyle:UIAlertControllerStyleAlert];
-        
-        UIAlertAction *closeAppAction = [UIAlertAction actionWithTitle:@"Quit App Now"
-                                                                  style:UIAlertActionStyleDestructive
-                                                                handler:^(UIAlertAction * _Nonnull action) {
-            exit(0);
-        }];
-        
-        UIAlertAction *laterAction = [UIAlertAction actionWithTitle:@"Later"
-                                                              style:UIAlertActionStyleCancel
-                                                            handler:nil];
-        
-        [alert addAction:closeAppAction];
-        [alert addAction:laterAction];
-        
-        [self presentViewController:alert animated:YES completion:nil];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"NeoFreeBird" 
+                                                                           message:@"You will have to restart the app for square avatars to take effect"
+                                                                    preferredStyle:UIAlertControllerStyleAlert];
+            
+            UIAlertAction *closeAppAction = [UIAlertAction actionWithTitle:@"Quit App Now"
+                                                                     style:UIAlertActionStyleDestructive
+                                                                   handler:^(UIAlertAction * _Nonnull action) {
+                // Wait a moment before exiting to ensure all UI operations are complete
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                    exit(0);
+                });
+            }];
+            
+            UIAlertAction *laterAction = [UIAlertAction actionWithTitle:@"Later"
+                                                                  style:UIAlertActionStyleCancel
+                                                                handler:nil];
+            
+            [alert addAction:closeAppAction];
+            [alert addAction:laterAction];
+            
+            [self presentViewController:alert animated:YES completion:nil];
+        });
     }
 }
 @end
