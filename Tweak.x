@@ -2817,46 +2817,37 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     if (self.isOutgoingMessage) {
         return NO; // Don't show avatar for your own messages
     }
-    // For incoming messages, only show avatar if it's the last message in a group from that sender
-    return [[self valueForKey:@"lastEntryInGroup"] boolValue]; // Use KVC to call the isLastEntryInGroup method
+    return [[self valueForKey:@"lastEntryInGroup"] boolValue];
 }
 
 - (BOOL)isAvatarImageEnabled {
-    // Duplicated logic from shouldShowAvatarImage
     if (self.isOutgoingMessage) {
         return NO;
     }
-    return [[self valueForKey:@"lastEntryInGroup"] boolValue]; // Use KVC to call the isLastEntryInGroup method
+    return [[self valueForKey:@"lastEntryInGroup"] boolValue];
 }
 
-// This method controls the spacing/placement for the avatar 
-// By returning the proper value even when avatar is hidden, we maintain alignment
 - (double)avatarYOffset {
-    // Get the original offset implementation
     double originalOffset = %orig;
-    
-    // Only modify for incoming messages
-    // For incoming messages, the Y offset should be consistent regardless of avatar visibility
     if (!self.isOutgoingMessage) {
-        return originalOffset; //  This seems correct, Y offset shouldn't change based on visibility within group
+        return originalOffset;
     }
-    
     return originalOffset;
 }
 
-// This ensures the space for the avatar is reserved in the layout
-// even when not shown, keeping alignment consistent for incoming messages.
 - (struct CGSize)avatarSize {
     struct CGSize originalSize = %orig;
     if (!self.isOutgoingMessage) {
-        // For incoming messages, if the original size might be zero (because it's not the last in group according to original logic),
-        // we ensure it returns a consistent, non-zero size so that messageTextInsets can use it.
-        T1DirectMessageEntryMetrics *metrics = self.entryLayoutMetrics;
-        if (metrics && [metrics respondsToSelector:@selector(avatarImageSize)] && metrics.avatarImageSize.width > 0 && metrics.avatarImageSize.height > 0) {
-             return metrics.avatarImageSize;
-        } 
-        // Fallback to a common default if metrics don't provide a valid size or aren't available.
-        // This ensures that messageTextInsets has a valid width to calculate indents.
+        T1DirectMessageEntryMetrics *metrics = self->_entryLayoutMetrics; // Access ivar
+        if (metrics && [metrics respondsToSelector:@selector(avatarImageSize)]) {
+            NSValue* sizeValue = [metrics valueForKey:@"avatarImageSize"];
+            if (sizeValue) {
+                CGSize metricSize = [sizeValue CGSizeValue];
+                if (metricSize.width > 0 && metricSize.height > 0) {
+                    return metricSize;
+                }
+            }
+        }
         return CGSizeMake(32, 32); 
     }
     return originalSize;
@@ -2864,47 +2855,20 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 - (struct UIEdgeInsets)messageTextInsets {
     struct UIEdgeInsets originalInsets = %orig;
-
     if (!self.isOutgoingMessage) {
-        // This is an incoming message.
         BOOL actuallyShowAvatarForThisEntry = [[self valueForKey:@"lastEntryInGroup"] boolValue];
-
-        // If an avatar is NOT being shown for this specific entry (it's not the last in group),
-        // we still need to indent its text as if an avatar *were* there for alignment.
         if (!actuallyShowAvatarForThisEntry) {
-            struct CGSize avSize = [self avatarSize]; // Our hooked avatarSize should give a consistent width for incoming.
-            double standardAvatarMargin = [[self class] avatarMargin];
+            NSValue *selfAvatarSizeValue = [self valueForKey:@"avatarSize"]; // KVC for self avatarSize
+            CGSize avSize = selfAvatarSizeValue ? [selfAvatarSizeValue CGSizeValue] : CGSizeMake(32,32); // Default if KVC fails
+            
+            double standardAvatarMargin = [T1DirectMessageEntryViewModel avatarMargin]; // Call class method directly
             
             CGFloat requiredLeftIndent = 0.0;
             if (avSize.width > 0) {
                 requiredLeftIndent = avSize.width + standardAvatarMargin;
             }
-
-            // We assume the originalInsets.left for a message *with* an avatar is already correct.
-            // For a message *without* an avatar (but in a group that needs alignment),
-            // its originalInsets.left is likely smaller. We need to increase it.
-            // The challenge is not to over-indent if originalInsets.left already has some base padding.
-            // A simpler approach: ensure originalInsets.left is AT LEAST requiredLeftIndent + some base text padding.
-            // Let's use a nominal additional padding for the text itself next to the avatar space.
-            CGFloat baseTextPadding = originalInsets.left; // Capture the original left padding if any.
-            
-            // If the original left inset didn't account for an avatar, it would be small.
-            // We set it to the full avatar space + a typical text margin from that space.
-            // This is tricky. Let's assume `requiredLeftIndent` is the full space needed *before* the text bubble starts.
-            // And `originalInsets.left` (when no avatar is shown by default) is some minimal cell padding.
-
-            // If the avatar is not shown, the originalInsets.left is likely just the basic cell padding.
-            // We need to make it avatar_width + avatar_margin + basic_cell_padding.
-            // However, if an avatar *was* shown, originalInsets.left would already be avatar_width + avatar_margin + basic_cell_padding.
-            
-            // Let's try to be more direct: the final left inset for an incoming message should be 
-            // consistent whether the avatar is visible for *this specific item* or not.
-            // If it's an incoming message, it should *always* be indented for an avatar.
-
-            originalInsets.left = requiredLeftIndent + 8.0; // 8.0 is a guess for padding between avatar area and text start
-                                                          // This effectively overrides the original left inset for non-last incoming messages.
+            originalInsets.left = requiredLeftIndent + 8.0; 
         }
-        // If actuallyShowAvatarForThisEntry is TRUE, we trust %orig already calculated the correct left inset.
     }
     return originalInsets;
 }
