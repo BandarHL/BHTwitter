@@ -825,13 +825,13 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
     // Create alert
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Square Avatars" 
                                                                    message:currentlyEnabled ? 
-                                                                           @"Square Avatars is currently enabled. Would you like to disable it?" : 
+                                                                           @"Square Avatars is currently enabled. Would you like to disable it? This requires restarting the app to take effect." : 
                                                                            @"Would you like to enable Square Avatars? This requires restarting the app to take effect."
                                                             preferredStyle:UIAlertControllerStyleAlert];
     
-    // If currently OFF, add action to enable
+    // If currently OFF, add action to enable and restart
     if (!currentlyEnabled) {
-        [alert addAction:[UIAlertAction actionWithTitle:@"Enable" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [alert addAction:[UIAlertAction actionWithTitle:@"Enable & Restart" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
             // Save the preference
             [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"square_avatars"];
             [[NSUserDefaults standardUserDefaults] synchronize];
@@ -840,26 +840,40 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             [specifier setProperty:@"Enabled (Restart Required)" forKey:@"subtitle"];
             [self reloadSpecifier:specifier animated:YES];
             
-            // Show restart prompt
-            UIAlertController *restartAlert = [UIAlertController alertControllerWithTitle:@"Restart Required" 
-                                                                                 message:@"Do you want to quit the app now to apply changes?"
-                                                                          preferredStyle:UIAlertControllerStyleAlert];
+            // Restart the app
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                exit(0);
+            });
+        }]];
+        
+        [alert addAction:[UIAlertAction actionWithTitle:@"Enable Without Restart" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            // Save the preference
+            [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"square_avatars"];
+            [[NSUserDefaults standardUserDefaults] synchronize];
             
-            [restartAlert addAction:[UIAlertAction actionWithTitle:@"Quit Now" style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
-                // Wait a short time before quitting
-                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                    exit(0);
-                });
-            }]];
-            
-            [restartAlert addAction:[UIAlertAction actionWithTitle:@"Later" style:UIAlertActionStyleCancel handler:nil]];
-            
-            [self presentViewController:restartAlert animated:YES completion:nil];
+            // Update the button subtitle
+            [specifier setProperty:@"Enabled (Restart Required)" forKey:@"subtitle"];
+            [self reloadSpecifier:specifier animated:YES];
         }]];
     } 
     // If currently ON, add action to disable
     else {
-        [alert addAction:[UIAlertAction actionWithTitle:@"Disable" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [alert addAction:[UIAlertAction actionWithTitle:@"Disable & Restart" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            // Save the preference
+            [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"square_avatars"];
+            [[NSUserDefaults standardUserDefaults] synchronize];
+            
+            // Update the button subtitle
+            [specifier setProperty:@"Disabled" forKey:@"subtitle"];
+            [self reloadSpecifier:specifier animated:YES];
+            
+            // Restart the app
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                exit(0);
+            });
+        }]];
+        
+        [alert addAction:[UIAlertAction actionWithTitle:@"Disable Without Restart" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
             // Save the preference
             [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"square_avatars"];
             [[NSUserDefaults standardUserDefaults] synchronize];
