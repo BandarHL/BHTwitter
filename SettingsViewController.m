@@ -385,7 +385,10 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         
         PSSpecifier *restoreFollowButton = [self newSwitchCellWithTitle:@"Restore Follow Button" detailTitle:@"Restores the normal Follow button instead of Subscribe" key:@"restore_follow_button" defaultValue:false changeAction:nil];
         
-        PSSpecifier *squareAvatars = [self newSwitchCellWithTitle:@"Square Avatars" detailTitle:@"Make profile pictures square instead of circular" key:@"square_avatars" defaultValue:false changeAction:@selector(squareAvatarsAction:)];
+        PSSpecifier *squareAvatars = [self newButtonCellWithTitle:@"Square Avatars" 
+                                                      detailTitle:[[NSUserDefaults standardUserDefaults] boolForKey:@"square_avatars"] ? @"Enabled (Restart Required)" : @"Disabled" 
+                                                     dynamicRule:nil 
+                                                          action:@selector(showSquareAvatarsOptions:)];
         
         PSSpecifier *restoreVideoTimestamp = [self newSwitchCellWithTitle:@"Restore Video Timestamp" detailTitle:@"Shows video timestamp that may be hidden in some views" key:@"restore_video_timestamp" defaultValue:false changeAction:nil];
 
@@ -596,12 +599,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 
 - (void)setPreferenceValue:(id)value specifier:(PSSpecifier *)specifier {
     NSUserDefaults *Prefs = [NSUserDefaults standardUserDefaults];
-    
-    // Skip saving for square_avatars since we handle it specially in the action method
-    NSString *specifierID = [specifier identifier];
-    if (![specifierID isEqualToString:@"square_avatars"]) {
-        [Prefs setValue:value forKey:specifierID];
-    }
+    [Prefs setValue:value forKey:[specifier identifier]];
     
     if (self.hasDynamicSpecifiers) {
         NSString *specifierID = [specifier propertyForKey:PSIDKey];
@@ -820,36 +818,32 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
     [picker dismissViewControllerAnimated:true completion:nil];
 }
 
-- (void)squareAvatarsAction:(id)sender {
-    PSSpecifier *specifier = sender;
+- (void)showSquareAvatarsOptions:(PSSpecifier *)specifier {
+    // Get current setting
+    BOOL currentlyEnabled = [[NSUserDefaults standardUserDefaults] boolForKey:@"square_avatars"];
     
-    // Get the current switch value but DO NOT save it yet
-    UISwitch *switchControl = sender;
-    BOOL currentValue = switchControl.on;
+    // Create alert
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Square Avatars" 
+                                                                   message:currentlyEnabled ? 
+                                                                           @"Square Avatars is currently enabled. Would you like to disable it?" : 
+                                                                           @"Would you like to enable Square Avatars? This requires restarting the app to take effect."
+                                                            preferredStyle:UIAlertControllerStyleAlert];
     
-    // If trying to enable the feature, show alert first before saving
-    if (currentValue) {
-        // Set the switch back to OFF temporarily while we show the alert
-        [switchControl setOn:NO animated:YES];
-        
-        // Show confirmation alert using standard UIAlertController
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Enable Square Avatars" 
-                                                                       message:@"This requires restarting the app to take effect. Would you like to proceed?"
-                                                                preferredStyle:UIAlertControllerStyleAlert];
-        
-        // YES - Enable and optionally quit
-        UIAlertAction *enableAction = [UIAlertAction actionWithTitle:@"Yes" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-            // Now we can safely enable the toggle
-            [switchControl setOn:YES animated:YES];
-            
-            // Actually save the preference value
-            [[NSUserDefaults standardUserDefaults] setBool:YES forKey:[specifier propertyForKey:@"key"]];
+    // If currently OFF, add action to enable
+    if (!currentlyEnabled) {
+        [alert addAction:[UIAlertAction actionWithTitle:@"Enable" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            // Save the preference
+            [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"square_avatars"];
             [[NSUserDefaults standardUserDefaults] synchronize];
             
-            // Show second alert with restart options
+            // Update the button subtitle
+            [specifier setProperty:@"Enabled (Restart Required)" forKey:@"subtitle"];
+            [self reloadSpecifier:specifier animated:YES];
+            
+            // Show restart prompt
             UIAlertController *restartAlert = [UIAlertController alertControllerWithTitle:@"Restart Required" 
-                                                                                  message:@"Do you want to quit the app now to apply changes?"
-                                                                           preferredStyle:UIAlertControllerStyleAlert];
+                                                                                 message:@"Do you want to quit the app now to apply changes?"
+                                                                          preferredStyle:UIAlertControllerStyleAlert];
             
             [restartAlert addAction:[UIAlertAction actionWithTitle:@"Quit Now" style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
                 // Wait a short time before quitting
@@ -861,20 +855,59 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             [restartAlert addAction:[UIAlertAction actionWithTitle:@"Later" style:UIAlertActionStyleCancel handler:nil]];
             
             [self presentViewController:restartAlert animated:YES completion:nil];
-        }];
-        
-        // NO - Don't enable
-        UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"No" style:UIAlertActionStyleCancel handler:nil];
-        
-        [alert addAction:enableAction];
-        [alert addAction:cancelAction];
-        
-        [self presentViewController:alert animated:YES completion:nil];
-    } else {
-        // Disabling the feature, just save the value normally
-        [[NSUserDefaults standardUserDefaults] setBool:NO forKey:[specifier propertyForKey:@"key"]];
-        [[NSUserDefaults standardUserDefaults] synchronize];
+        }]];
+    } 
+    // If currently ON, add action to disable
+    else {
+        [alert addAction:[UIAlertAction actionWithTitle:@"Disable" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            // Save the preference
+            [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"square_avatars"];
+            [[NSUserDefaults standardUserDefaults] synchronize];
+            
+            // Update the button subtitle
+            [specifier setProperty:@"Disabled" forKey:@"subtitle"];
+            [self reloadSpecifier:specifier animated:YES];
+        }]];
     }
+    
+    // Cancel action
+    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+    
+    // Present the alert
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)reloadSpecifier:(PSSpecifier *)specifier animated:(BOOL)animated {
+    // Find the index path for the specifier
+    NSIndexPath *indexPath = [self indexPathForSpecifier:specifier];
+    if (indexPath) {
+        // Reload just that specific row
+        [self.table reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:animated ? UITableViewRowAnimationFade : UITableViewRowAnimationNone];
+    }
+}
+
+- (NSIndexPath *)indexPathForSpecifier:(PSSpecifier *)specifier {
+    if (!specifier) return nil;
+    
+    NSArray *specifiers = [self specifiers];
+    NSUInteger sectionIndex = 0;
+    NSUInteger rowIndex = 0;
+    NSUInteger lastRowIndex = 0;
+    
+    for (PSSpecifier *currentSpecifier in specifiers) {
+        if ([currentSpecifier.identifier isEqualToString:@"square_avatars"] || [currentSpecifier propertyForKey:@"id"] == specifier.identifier) {
+            return [NSIndexPath indexPathForRow:rowIndex inSection:sectionIndex];
+        }
+        
+        if (currentSpecifier.cellType == PSGroupCell) {
+            sectionIndex++;
+            lastRowIndex = rowIndex;
+        } else {
+            rowIndex++;
+        }
+    }
+    
+    return nil;
 }
 @end
 
