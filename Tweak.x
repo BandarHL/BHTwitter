@@ -2814,30 +2814,42 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 // MARK: - DM Avatar Images
 %hook T1DirectMessageEntryViewModel
 - (BOOL)shouldShowAvatarImage {
-    // Don't show avatar on your own messages
-    if ([self isSelfSent]) {
-        return NO; // Your own messages
-    }
+    // Use a simpler approach - always show avatars for messages from others
+    // isMe property is a common pattern in chat frameworks to identify self messages
+    BOOL isFromMe = NO;
     
-    // For recipient messages, check if this is the last message in a group
-    // This approach uses the built-in conversation grouping property
-    if ([self isLastEntryInGroup]) {
-        return YES;
-    }
-    
-    return NO;
-}
-
-- (BOOL)isAvatarImageEnabled {
-    // Mirror the implementation above to ensure consistency
-    if ([self isSelfSent]) {
+    // Safely check if "isFromMe" property exists using runtime
+    @try {
+        if ([self respondsToSelector:@selector(isFromMe)]) {
+            isFromMe = [(NSNumber *)[self valueForKey:@"isFromMe"] boolValue];
+        } else if ([self respondsToSelector:@selector(isMe)]) {
+            isFromMe = [(NSNumber *)[self valueForKey:@"isMe"] boolValue];
+        } else if ([self respondsToSelector:@selector(fromMe)]) {
+            isFromMe = [(NSNumber *)[self valueForKey:@"fromMe"] boolValue];
+        } else if ([self respondsToSelector:@selector(fromSelf)]) {
+            isFromMe = [(NSNumber *)[self valueForKey:@"fromSelf"] boolValue];
+        } else if ([self respondsToSelector:@selector(sender)]) {
+            // Assuming sender is an object that might have an isMe property
+            id sender = [self valueForKey:@"sender"];
+            if ([sender respondsToSelector:@selector(isMe)]) {
+                isFromMe = [(NSNumber *)[sender valueForKey:@"isMe"] boolValue];
+            }
+        }
+    } @catch (NSException *e) {
+        // If any exception occurs, default to not showing avatar
         return NO;
     }
     
-    if ([self isLastEntryInGroup]) {
-        return YES;
+    if (isFromMe) {
+        return NO; // Don't show avatar for self messages
     }
     
-    return NO;
+    // For simplicity, always show avatar on messages from others
+    return YES;
+}
+
+- (BOOL)isAvatarImageEnabled {
+    // Use the same logic as shouldShowAvatarImage
+    return [self shouldShowAvatarImage];
 }
 %end
