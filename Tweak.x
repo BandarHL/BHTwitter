@@ -2858,3 +2858,43 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     return originalSize;
 }
 %end
+
+// Hook the actual cell to fix alignment issues
+%hook T1DirectMessageEntryBaseCell
+- (void)layoutSubviews {
+    %orig;
+    
+    // Force the proper alignment for all messages in a group
+    if ([self.entryViewModel isKindOfClass:%c(T1DirectMessageEntryViewModel)]) {
+        T1DirectMessageEntryViewModel *viewModel = (T1DirectMessageEntryViewModel *)self.entryViewModel;
+        
+        // Only adjust for incoming messages (not outgoing)
+        if (!viewModel.isOutgoingMessage) {
+            // Make sure the avatar view and content are properly aligned
+            // by forcing avatar to be visible for layout calculations
+            UIImageView *avatarView = [self valueForKey:@"avatarImageView"];
+            if (avatarView) {
+                // Save the original state
+                BOOL originalHidden = avatarView.hidden;
+                
+                // Set proper hidden state based on our logic
+                BOOL shouldBeHidden = ![[viewModel valueForKey:@"lastEntryInGroup"] boolValue];
+                avatarView.hidden = shouldBeHidden;
+                
+                // If the avatar is hidden, make sure all constraints
+                // for non-avatar messages match those with avatars
+                // This ensures all messages in a sequence align properly
+                if (shouldBeHidden) {
+                    // Maintain a consistent trailing constraint value
+                    // This keeps message content properly aligned in a sequence
+                    NSLayoutConstraint *avatarTrailing = [self valueForKey:@"avatarImageViewTrailingConstraint"];
+                    if (avatarTrailing) {
+                        // Ensure the same constraint is applied even when avatar is hidden
+                        avatarTrailing.constant = -7.0; // Common bubble spacing value, adjust if needed
+                    }
+                }
+            }
+        }
+    }
+}
+%end
