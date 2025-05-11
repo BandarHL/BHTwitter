@@ -2485,11 +2485,14 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         
         BOOL inDashHostingContext = isViewInsideDashHostingController(self);
 
-        if ((isDashAvatar || isDashDrawerAvatar) && inDashHostingContext) {
-            // Specific Dash avatars (regular or drawer) in their hosting context get 8.0f
+        if (isDashDrawerAvatar) {
+            // DashDrawerAvatarImageView always gets 8.0f regardless of context
+            activeCornerRadius = 8.0f;
+        } else if (isDashAvatar && inDashHostingContext) {
+            // Regular DashAvatarImageView in hosting context gets 8.0f
             activeCornerRadius = 8.0f;
         } else if (isViewInsideT1ProfileHeaderViewController(self)) {
-            // Avatars in profile header (that aren't the Dash ones above) get 8.0f
+            // Avatars in profile header get 8.0f
             activeCornerRadius = 8.0f;
         } else {
             // Default for all other avatars is 12.0f
