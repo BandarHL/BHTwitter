@@ -1996,8 +1996,12 @@ static NSDate *lastCookieRefresh              = nil;
         NSValue *viewValue = viewInstances[tweetID]; // viewInstances is a global static
         T1ConversationFocalStatusView *targetInstance = viewValue ? [viewValue nonretainedObjectValue] : nil;
         if (targetInstance && [targetInstance isKindOfClass:[self class]]) { // Check if it's an instance of T1ConversationFocalStatusView
-            // Cast to id to resolve "no visible @interface" for the %new instance method
-            [(id)targetInstance handleTweetSourceUpdated:notification];
+            // Use performSelector for %new instance method from %new class method
+            if ([targetInstance respondsToSelector:@selector(handleTweetSourceUpdated:)]) {
+                [targetInstance performSelector:@selector(handleTweetSourceUpdated:) withObject:notification];
+            } else {
+                NSLog(@"TweetSourceTweak: ERROR - T1ConversationFocalStatusView instance does not respond to handleTweetSourceUpdated:");
+            }
         }
     }
 }
@@ -2725,11 +2729,12 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     %init;
 }
 
-// Static helper function for recursive view traversal
-static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
-    if (!view || !block) return;
-    block(view);
-    for (UIView *subview in view.subviews) {
-        BH_EnumerateSubviewsRecursively(subview, block);
-    }
-}
+// Static helper function for recursive view traversal - ENSURE THIS IS THE ONLY DEFINITION (AT THE TOP)
+// // Static helper function for recursive view traversal
+// static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
+//    if (!view || !block) return;
+//    block(view);
+//    for (UIView *subview in view.subviews) {
+//        BH_EnumerateSubviewsRecursively(subview, block);
+//    }
+// }
