@@ -61,5 +61,13 @@
 + (BOOL)disableMediaTab;
 + (BOOL)disableArticles;
 + (BOOL)disableHighlights;
+
+// New feature toggles
++ (BOOL)hideGrokAnalyze;
++ (BOOL)hideSubscribeButton;
++ (BOOL)hideFollowButton;
++ (BOOL)restoreFollowButton;
++ (BOOL)squareAvatars;
++ (BOOL)restoreVideoTimestamp;
 @end
 

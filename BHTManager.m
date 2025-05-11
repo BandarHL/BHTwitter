@@ -273,6 +273,31 @@
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"disableHighlights"];
 }
 
+// New feature toggles implementation
++ (BOOL)hideGrokAnalyze {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_grok_analyze"];
+}
+
++ (BOOL)hideSubscribeButton {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_subscribe_button"];
+}
+
++ (BOOL)hideFollowButton {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_follow_button"];
+}
+
++ (BOOL)restoreFollowButton {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"restore_follow_button"];
+}
+
++ (BOOL)squareAvatars {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"square_avatars"];
+}
+
++ (BOOL)restoreVideoTimestamp {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"restore_video_timestamp"];
+}
+
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount {
     SettingsViewController *pref = [[SettingsViewController alloc] initWithTwitterAccount:twAccount];
     [pref.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:@"NeoFreeBird" subtitle:twAccount.displayUsername]];

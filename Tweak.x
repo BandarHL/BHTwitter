@@ -2254,3 +2254,437 @@ static NSDate *lastCookieRefresh              = nil;
     return original;
 }
 %end
+
+// MARK: - Hide Grok Analyze Button (TTAStatusAuthorView)
+
+@interface TTAStatusAuthorView : UIView
+- (id)grokAnalyzeButton;
+@end
+
+%hook TTAStatusAuthorView
+
+- (id)grokAnalyzeButton {
+    UIView *button = %orig;
+    if (button && [BHTManager hideGrokAnalyze]) {
+        button.hidden = YES;
+    }
+    return button;
+}
+
+%end
+
+// MARK: - Hide Grok Analyze & Subscribe Buttons on Detail View (UIControl)
+
+// Minimal interface for TFNButton, used by UIControl hook and FollowButton logic
+@interface TFNButton : UIButton
+@end
+
+%hook UIControl
+// Grok Analyze and Subscribe button
+- (void)addTarget:(id)target action:(SEL)action forControlEvents:(UIControlEvents)controlEvents {
+    if (action == @selector(didTapGrokAnalyze)) {
+        if ([self isKindOfClass:NSClassFromString(@"TFNButton")] && [BHTManager hideGrokAnalyze]) {
+            self.hidden = YES;
+        }
+    } else if (action == @selector(_didTapSubscribe)) {
+        if ([self isKindOfClass:NSClassFromString(@"TFNButton")] && [BHTManager hideSubscribeButton]) {
+            self.alpha = 0.0;
+            self.userInteractionEnabled = NO;
+        }
+    }
+    %orig(target, action, controlEvents);
+}
+
+%end
+
+// MARK: - Hide Follow Button (T1ConversationFocalStatusView)
+
+// Minimal interface for T1ConversationFocalStatusView
+@interface T1ConversationFocalStatusView : UIView
+@end
+
+// Helper function to recursively find and hide a TFNButton by accessibilityIdentifier
+static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString *targetAccessibilityId) {
+    if ([viewToSearch isKindOfClass:NSClassFromString(@"TFNButton")]) {
+        TFNButton *button = (TFNButton *)viewToSearch;
+        if ([button.accessibilityIdentifier isEqualToString:targetAccessibilityId]) {
+            button.hidden = YES;
+            return YES;
+        }
+    }
+    for (UIView *subview in viewToSearch.subviews) {
+        if (findAndHideButtonWithAccessibilityId(subview, targetAccessibilityId)) {
+            return YES;
+        }
+    }
+    return NO;
+}
+
+%hook T1ConversationFocalStatusView
+
+- (void)didMoveToWindow {
+    %orig;
+    if ([BHTManager hideFollowButton]) {
+        findAndHideButtonWithAccessibilityId(self, @"FollowButton");
+    }
+}
+
+%end
+
+// MARK: - Restore Follow Button (TUIFollowControl) & Hide SuperFollow (T1SuperFollowControl)
+
+@interface TUIFollowControl : UIControl
+- (void)setVariant:(NSUInteger)variant;
+- (NSUInteger)variant; // Ensure getter is declared
+@end
+
+%hook TUIFollowControl
+
+- (void)setVariant:(NSUInteger)variant {
+    if ([BHTManager restoreFollowButton]) {
+        NSUInteger subscribeVariantID = 1;
+        NSUInteger desiredFollowVariantID = 32;
+        if (variant == subscribeVariantID) {
+            %orig(desiredFollowVariantID);
+        } else {
+            %orig(variant);
+        }
+    } else {
+        %orig;
+    }
+}
+
+// This hook makes the control ALWAYS REPORT its variant as 32
+- (NSUInteger)variant {
+    if ([BHTManager restoreFollowButton]) {
+        // This makes the control ALWAYS REPORT its variant as 32
+        // to influence layout decisions that might cause the ellipsis issue.
+        return 32;
+    }
+    return %orig;
+}
+
+%end
+
+// Forward declare T1SuperFollowControl if its interface is not fully defined yet
+@class T1SuperFollowControl;
+
+// Helper function to recursively find and hide T1SuperFollowControl instances
+static void findAndHideSuperFollowControl(UIView *viewToSearch) {
+    if ([viewToSearch isKindOfClass:NSClassFromString(@"T1SuperFollowControl")]) {
+        viewToSearch.hidden = YES;
+        viewToSearch.alpha = 0.0;
+    }
+    for (UIView *subview in viewToSearch.subviews) {
+        findAndHideSuperFollowControl(subview);
+    }
+}
+
+@interface T1ProfileHeaderViewController : UIViewController // Or appropriate superclass
+@end
+
+// It's good practice to also declare the class we are looking for, even if just minimally
+@interface T1SuperFollowControl : UIView
+@end
+
+// Add global class pointer for T1ProfileHeaderViewController
+static Class gT1ProfileHeaderViewControllerClass = nil;
+// Add global class pointers for Dash specific views
+static Class gDashAvatarImageViewClass = nil;
+static Class gDashDrawerAvatarImageViewClass = nil; 
+static Class gDashHostingControllerClass = nil;
+static Class gGuideContainerVCClass = nil;
+static Class gTombstoneCellClass = nil;
+static Class gExploreHeroCellClass = nil;
+
+// Helper function to find the UIViewController managing a UIView
+static UIViewController* getViewControllerForView(UIView *view) {
+    UIResponder *responder = view;
+    while ((responder = [responder nextResponder])) {
+        if ([responder isKindOfClass:[UIViewController class]]) {
+            return (UIViewController *)responder;
+        }
+        // Stop if we reach top-level objects like UIWindow or UIApplication without finding a VC
+        if ([responder isKindOfClass:[UIWindow class]] || [responder isKindOfClass:[UIApplication class]]) {
+            break;
+        }
+    }
+    return nil;
+}
+
+// Helper function to check if a view is inside T1ProfileHeaderViewController
+static BOOL isViewInsideT1ProfileHeaderViewController(UIView *view) {
+    if (!gT1ProfileHeaderViewControllerClass) {
+        return NO; 
+    }
+    UIViewController *vc = getViewControllerForView(view);
+    if (!vc) return NO;
+
+    UIViewController *parent = vc; // Start with the direct VC
+    while (parent) {
+        if ([parent isKindOfClass:gT1ProfileHeaderViewControllerClass]) return YES;
+        parent = parent.parentViewController;
+    }
+    UIViewController *presenting = vc.presentingViewController; // Check presenting chain from direct VC
+    while(presenting){
+        if([presenting isKindOfClass:gT1ProfileHeaderViewControllerClass]) return YES;
+        if(presenting.presentingViewController){
+            // Check containers in the presenting chain
+            if([presenting isKindOfClass:[UINavigationController class]]){
+                UINavigationController *nav = (UINavigationController*)presenting;
+                for(UIViewController *childVc in nav.viewControllers){
+                    if([childVc isKindOfClass:gT1ProfileHeaderViewControllerClass]) return YES;
+                }
+            }
+            presenting = presenting.presentingViewController;
+        } else {
+            // Final check on the root of the presenting chain for container
+            if([presenting isKindOfClass:[UINavigationController class]]){
+                 UINavigationController *nav = (UINavigationController*)presenting;
+                 for(UIViewController *childVc in nav.viewControllers){
+                     if([childVc isKindOfClass:gT1ProfileHeaderViewControllerClass]) return YES;
+                 }
+            }
+            break; 
+        }
+    }
+    return NO;
+}
+
+// Helper function to check if a view is inside the Dash Hosting Controller
+static BOOL isViewInsideDashHostingController(UIView *view) {
+    if (!gDashHostingControllerClass) {
+        return NO;
+    }
+    UIViewController *vc = getViewControllerForView(view);
+    if (!vc) return NO;
+
+    UIViewController *parent = vc; // Start with the direct VC
+    while (parent) {
+        if ([parent isKindOfClass:gDashHostingControllerClass]) return YES;
+        parent = parent.parentViewController;
+    }
+    UIViewController *presenting = vc.presentingViewController; // Check presenting chain from direct VC
+    while(presenting){
+        if([presenting isKindOfClass:gDashHostingControllerClass]) return YES;
+        if(presenting.presentingViewController){
+            // Check containers in the presenting chain
+            if([presenting isKindOfClass:[UINavigationController class]]){
+                UINavigationController *nav = (UINavigationController*)presenting;
+                for(UIViewController *childVc in nav.viewControllers){
+                    if([childVc isKindOfClass:gDashHostingControllerClass]) return YES;
+                }
+            }
+            presenting = presenting.presentingViewController;
+        } else {
+             // Final check on the root of the presenting chain for container
+             if([presenting isKindOfClass:[UINavigationController class]]){
+                 UINavigationController *nav = (UINavigationController*)presenting;
+                 for(UIViewController *childVc in nav.viewControllers){
+                     if([childVc isKindOfClass:gDashHostingControllerClass]) return YES;
+                 }
+            }
+            break; 
+        }
+    }
+    return NO;
+}
+
+%hook T1ProfileHeaderViewController
+
+- (void)viewDidLayoutSubviews { // Or viewWillAppear:, depending on when controls are added
+    %orig;
+    // Search for and hide T1SuperFollowControl within this view controller's view
+    if ([BHTManager hideSubscribeButton] && self.isViewLoaded) { // Ensure the view is loaded
+        findAndHideSuperFollowControl(self.view);
+    }
+}
+
+%end
+
+// MARK: - Timestamp Label Styling via UILabel -setText:
+
+%hook UILabel
+
+- (void)setText:(NSString *)text {
+    %orig(text);
+
+    // Check if this label is the one we want to modify (e.g., video timestamp)
+    if ([BHTManager restoreVideoTimestamp] && self.text && [self.text containsString:@":"] && [self.text containsString:@"/"]) {
+        self.hidden = NO;
+        self.alpha = 1.0;
+        self.font = [UIFont systemFontOfSize:14.0];
+        
+        [self sizeToFit];
+
+        // Fallback if sizeToFit results in a tiny frame (e.g., if superview constraints are weird initially)
+        if (CGRectGetWidth(self.frame) < 10 || CGRectGetHeight(self.frame) < 5) {
+            self.frame = CGRectMake(10, 50, 100, 25); // Slightly larger fallback height
+        }
+    }
+}
+
+%end
+
+// MARK: - Square Avatars (TFNAvatarImageView)
+
+@interface TFNAvatarImageView : UIView // Assuming it's a UIView subclass, adjust if necessary
+- (void)setStyle:(NSInteger)style;
+- (NSInteger)style;
+@end
+
+%hook TFNAvatarImageView
+
+- (void)setStyle:(NSInteger)style {
+    if ([BHTManager squareAvatars]) {
+        CGFloat activeCornerRadius;
+        NSString *selfClassName = NSStringFromClass([self class]); // Get class name as string
+
+        BOOL isDashAvatar = [selfClassName isEqualToString:@"TwitterDash.DashAvatarImageView"];
+        BOOL isDashDrawerAvatar = [selfClassName isEqualToString:@"TwitterDash.DashDrawerAvatarImageView"];
+        
+        BOOL inDashHostingContext = isViewInsideDashHostingController(self);
+
+        if ((isDashAvatar || isDashDrawerAvatar) && inDashHostingContext) {
+            // Specific Dash avatars (regular or drawer) in their hosting context get 8.0f
+            activeCornerRadius = 8.0f;
+        } else if (isViewInsideT1ProfileHeaderViewController(self)) {
+            // Avatars in profile header (that aren't the Dash ones above) get 8.0f
+            activeCornerRadius = 8.0f;
+        } else {
+            // Default for all other avatars is 12.0f
+            activeCornerRadius = 12.0f;
+        }
+
+        %orig(3); // Call original with forced style 3
+
+        // Force slightly rounded square on the main TFNAvatarImageView layer
+        self.layer.cornerRadius = activeCornerRadius; 
+        self.layer.masksToBounds = YES; // Ensure the main view clips
+
+        // Find TIPImageViewObserver and force it to be slightly rounded
+        for (NSUInteger i = 0; i < self.subviews.count; i++) {
+            UIView *subview = [self.subviews objectAtIndex:i];
+            NSString *subviewClassString = NSStringFromClass([subview class]);
+            if ([subviewClassString isEqualToString:@"TIPImageViewObserver"]) {
+                subview.layer.cornerRadius = activeCornerRadius;
+                subview.layer.mask = nil;
+                subview.clipsToBounds = YES;        // View property
+                subview.layer.masksToBounds = YES;  // Layer property
+                subview.contentMode = UIViewContentModeScaleAspectFill; // Set contentMode
+
+                // Check for subviews of TIPImageViewObserver
+                if (subview.subviews.count > 0) {
+                    for (NSUInteger j = 0; j < subview.subviews.count; j++) {
+                        UIView *tipSubview = [subview.subviews objectAtIndex:j];
+                        tipSubview.layer.cornerRadius = activeCornerRadius;
+                        tipSubview.layer.mask = nil;
+                        tipSubview.clipsToBounds = YES;
+                        tipSubview.layer.masksToBounds = YES;
+                        tipSubview.contentMode = UIViewContentModeScaleAspectFill; // Set contentMode
+                    }
+                }
+                break; // Assuming only one TIPImageViewObserver, exit loop
+            }
+        }
+    } else {
+        %orig;
+    }
+}
+
+- (NSInteger)style {
+    if ([BHTManager squareAvatars]) {
+        return 3;
+    }
+    return %orig;
+}
+
+%end
+
+// --- UIImage Hook Implementation ---
+%hook UIImage
+
+// Hook the specific TFN rounding method
+- (UIImage *)tfn_roundImageWithTargetDimensions:(CGSize)targetDimensions targetContentMode:(UIViewContentMode)targetContentMode {
+    if ([BHTManager squareAvatars]) {
+        if (targetDimensions.width <= 0 || targetDimensions.height <= 0) {
+            return self; // Avoid issues with zero/negative size
+        }
+
+        CGFloat cornerRadius = 12.0f;
+        CGRect imageRect = CGRectMake(0, 0, targetDimensions.width, targetDimensions.height);
+
+        // Ensure cornerRadius is not too large for the dimensions
+        CGFloat minSide = MIN(targetDimensions.width, targetDimensions.height);
+        if (cornerRadius > minSide / 2.0f) {
+            cornerRadius = minSide / 2.0f; // Cap radius to avoid weird shapes
+        }
+        
+        UIGraphicsBeginImageContextWithOptions(targetDimensions, NO, self.scale); // Use self.scale for retina, NO for opaque if image has alpha
+        if (!UIGraphicsGetCurrentContext()) {
+            UIGraphicsEndImageContext(); // Defensive call
+            return self;
+        }
+        
+        [[UIBezierPath bezierPathWithRoundedRect:imageRect cornerRadius:cornerRadius] addClip];
+        [self drawInRect:imageRect];
+        
+        UIImage *roundedImage = UIGraphicsGetImageFromCurrentImageContext();
+        UIGraphicsEndImageContext();
+        
+        if (roundedImage) {
+            return roundedImage;
+        } else {
+            return self; // Fallback to original image if rounding fails
+        }
+    } else {
+        return %orig;
+    }
+}
+
+%end
+
+// --- TFNCircularAvatarShadowLayer Hook Implementation ---
+%hook TFNCircularAvatarShadowLayer
+
+- (void)setHidden:(BOOL)hidden {
+    if ([BHTManager squareAvatars]) {
+        %orig(YES); // Always hide this layer when square avatars are enabled
+    } else {
+        %orig;
+    }
+}
+
+%end
+
+// Constructor to initialize all hooks
+%ctor {
+    // Initialize global Class pointers here when the tweak loads
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        gGuideContainerVCClass = NSClassFromString(@"T1TwitterSwift.GuideContainerViewController");
+        if (!gGuideContainerVCClass) gGuideContainerVCClass = NSClassFromString(@"T1TwitterSwift_GuideContainerViewController");
+
+        gTombstoneCellClass = NSClassFromString(@"T1TwitterSwift.ConversationTombstoneCell");
+        if (!gTombstoneCellClass) gTombstoneCellClass = NSClassFromString(@"T1TwitterSwift_ConversationTombstoneCell");
+
+        gExploreHeroCellClass = NSClassFromString(@"T1ExploreEventSummaryHeroTableViewCell");
+        // Add fallback for gExploreHeroCellClass with underscore if needed based on testing
+        
+        // Initialize T1ProfileHeaderViewController class pointer
+        gT1ProfileHeaderViewControllerClass = NSClassFromString(@"T1ProfileHeaderViewController");
+        if (!gT1ProfileHeaderViewControllerClass) {
+            // Failed to find T1ProfileHeaderViewController class in %ctor
+        }
+
+        // Initialize Dash specific class pointers
+        gDashAvatarImageViewClass = NSClassFromString(@"TwitterDash.DashAvatarImageView");
+        
+        gDashDrawerAvatarImageViewClass = NSClassFromString(@"TwitterDash.DashDrawerAvatarImageView"); // Initialize new class
+        
+        // The full name for the hosting controller is very long and specific.
+        gDashHostingControllerClass = NSClassFromString(@"_TtGC7SwiftUI19UIHostingControllerGV10TFNUISwift22HostingEnvironmentViewV11TwitterDash18DashNavigationView__");
+    });
+
+    %init; // Initialize all hooks in the file
+}

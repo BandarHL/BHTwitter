@@ -376,6 +376,19 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 
         PSSpecifier *disableHighlights = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_HIGHLIGHTS_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_HIGHLIGHTS_OPTION_DETAIL_TITLE"] key:@"disableHighlights" defaultValue:false changeAction:nil];
 
+        // New UI Customization toggles
+        PSSpecifier *hideGrokAnalyze = [self newSwitchCellWithTitle:@"Hide Grok Analyze Button" detailTitle:@"Hides the Grok Analyze button in tweets" key:@"hide_grok_analyze" defaultValue:false changeAction:nil];
+        
+        PSSpecifier *hideSubscribeButton = [self newSwitchCellWithTitle:@"Hide Subscribe Button" detailTitle:@"Hides the Subscribe button in profiles" key:@"hide_subscribe_button" defaultValue:false changeAction:nil];
+        
+        PSSpecifier *hideFollowButton = [self newSwitchCellWithTitle:@"Hide Follow Button" detailTitle:@"Hides the Follow button in conversation view" key:@"hide_follow_button" defaultValue:false changeAction:nil];
+        
+        PSSpecifier *restoreFollowButton = [self newSwitchCellWithTitle:@"Restore Follow Button" detailTitle:@"Restores the normal Follow button instead of Subscribe" key:@"restore_follow_button" defaultValue:false changeAction:nil];
+        
+        PSSpecifier *squareAvatars = [self newSwitchCellWithTitle:@"Square Avatars" detailTitle:@"Makes avatars slightly rounded squares instead of circles" key:@"square_avatars" defaultValue:false changeAction:nil];
+        
+        PSSpecifier *restoreVideoTimestamp = [self newSwitchCellWithTitle:@"Restore Video Timestamp" detailTitle:@"Shows video timestamp that may be hidden in some views" key:@"restore_video_timestamp" defaultValue:false changeAction:nil];
+
         // debug section
         PSSpecifier *flex = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_DETAIL_TITLE"] key:@"flex_twitter" defaultValue:false changeAction:@selector(FLEXAction:)];
         
@@ -409,6 +422,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             hideViewCount,
             hideBookmarkButton,
             disableSensitiveTweetWarnings,
+            hideGrokAnalyze,
 
             profilesSection, // 2
             followConfirm,
@@ -418,6 +432,10 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             disableMediaTab,
             disableArticles,
             disableHighlights,
+            hideSubscribeButton,
+            hideFollowButton,
+            restoreFollowButton,
+            squareAvatars,
 
             searchSection, // 3
             noHistory,
@@ -427,6 +445,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             videoLayerCaption,
             autoHighestLoad,
             forceFullFrame,
+            restoreVideoTimestamp,
 
             twitterBlueSection, // 5
             undoTweet,
