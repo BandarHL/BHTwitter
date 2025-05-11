@@ -2219,8 +2219,7 @@ static NSDate *lastCookieRefresh              = nil;
 // MARK: - Hide Grok Analyze & Subscribe Buttons on Detail View (UIControl)
 
 // Minimal interface for TFNButton, used by UIControl hook and FollowButton logic
-@interface TFNButton : UIButton
-@end
+@class TFNButton;
 
 %hook UIControl
 // Grok Analyze and Subscribe button
@@ -2243,8 +2242,7 @@ static NSDate *lastCookieRefresh              = nil;
 // MARK: - Hide Follow Button (T1ConversationFocalStatusView)
 
 // Minimal interface for T1ConversationFocalStatusView
-@interface T1ConversationFocalStatusView : UIView
-@end
+@class T1ConversationFocalStatusView;
 
 // Helper function to recursively find and hide a TFNButton by accessibilityIdentifier
 static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString *targetAccessibilityId) {
@@ -2323,8 +2321,7 @@ static void findAndHideSuperFollowControl(UIView *viewToSearch) {
     }
 }
 
-@interface T1ProfileHeaderViewController : UIViewController // Or appropriate superclass
-@end
+@class T1ProfileHeaderViewController; // Forward declaration instead of interface definition
 
 // It's good practice to also declare the class we are looking for, even if just minimally
 @interface T1SuperFollowControl : UIView
