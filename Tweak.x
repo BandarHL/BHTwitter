@@ -2817,61 +2817,13 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     if (self.isOutgoingMessage) {
         return NO; // Don't show avatar for your own messages
     }
+    // For incoming messages, only show avatar if it's the last message in a group from that sender
     return [[self valueForKey:@"lastEntryInGroup"] boolValue];
 }
 
 - (BOOL)isAvatarImageEnabled {
-    if (self.isOutgoingMessage) {
-        return NO;
-    }
-    return [[self valueForKey:@"lastEntryInGroup"] boolValue];
-}
-
-- (double)avatarYOffset {
-    double originalOffset = %orig;
-    if (!self.isOutgoingMessage) {
-        return originalOffset;
-    }
-    return originalOffset;
-}
-
-- (struct CGSize)avatarSize {
-    struct CGSize originalSize = %orig;
-    if (!self.isOutgoingMessage) {
-        T1DirectMessageEntryMetrics *metrics = self.entryLayoutMetrics; // Use property accessor
-        if (metrics && [metrics respondsToSelector:@selector(avatarImageSize)]) { 
-            NSValue* sizeValue = [metrics valueForKey:@"avatarImageSize"];
-            if (sizeValue) {
-                CGSize metricSize = [sizeValue CGSizeValue];
-                if (metricSize.width > 0 && metricSize.height > 0) {
-                    return metricSize;
-                }
-            }
-        }
-        return CGSizeMake(32, 32); 
-    }
-    return originalSize;
-}
-
-- (struct UIEdgeInsets)messageTextInsets {
-    struct UIEdgeInsets originalInsets = %orig;
-    if (!self.isOutgoingMessage) {
-        BOOL actuallyShowAvatarForThisEntry = [[self valueForKey:@"lastEntryInGroup"] boolValue];
-        if (!actuallyShowAvatarForThisEntry) {
-            NSValue *selfAvatarSizeValue = [self valueForKey:@"avatarSize"]; // KVC for self avatarSize
-            CGSize avSize = selfAvatarSizeValue ? [selfAvatarSizeValue CGSizeValue] : CGSizeMake(32,32); // Default if KVC fails
-            
-            double standardAvatarMargin = [objc_getClass("T1DirectMessageEntryViewModel") avatarMargin]; // Use objc_getClass
-            
-            CGFloat requiredLeftIndent = 0.0;
-            if (avSize.width > 0) {
-                requiredLeftIndent = avSize.width + standardAvatarMargin;
-            }
-            originalInsets.left = requiredLeftIndent + 8.0; 
-        }
-    }
-    return originalInsets;
+    // Always return YES so that space is allocated for the avatar,
+    // allowing shouldShowAvatarImage to control actual visibility.
+    return YES;
 }
 %end
-
-@class T1DirectMessageEntryMetrics; // Forward declare T1DirectMessageEntryMetrics
