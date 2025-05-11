@@ -1412,72 +1412,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %end
 
 // MARK: Clean tracking from copied links: https://github.com/BandarHL/BHTwitter/issues/75
-%ctor {
-    NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
-    NSOperationQueue *mainQueue = [NSOperationQueue mainQueue];
-    // Someone needs to hold reference the to Notification
-    _PasteboardChangeObserver = [center addObserverForName:UIPasteboardChangedNotification object:nil queue:mainQueue usingBlock:^(NSNotification * _Nonnull note){
-        
-        static dispatch_once_t onceToken;
-        dispatch_once(&onceToken, ^{
-            trackingParams = @{
-                @"twitter.com" : @[@"s", @"t"],
-                @"x.com" : @[@"s", @"t"],
-            };
-        });
-        
-        if ([BHTManager stripTrackingParams]) {
-            if (UIPasteboard.generalPasteboard.hasURLs) {
-                NSURL *pasteboardURL = UIPasteboard.generalPasteboard.URL;
-                NSArray<NSString*>* params = trackingParams[pasteboardURL.host];
-                
-                if ([pasteboardURL.absoluteString isEqualToString:_lastCopiedURL] == NO && params != nil && pasteboardURL.query != nil) {
-                    // to prevent endless copy loop
-                    _lastCopiedURL = pasteboardURL.absoluteString;
-                    NSURLComponents *cleanedURL = [NSURLComponents componentsWithURL:pasteboardURL resolvingAgainstBaseURL:NO];
-                    NSMutableArray<NSURLQueryItem*> *safeParams = [NSMutableArray arrayWithCapacity:0];
-                    
-                    for (NSURLQueryItem *item in cleanedURL.queryItems) {
-                        if ([params containsObject:item.name] == NO) {
-                            [safeParams addObject:item];
-                        }
-                    }
-                    cleanedURL.queryItems = safeParams.count > 0 ? safeParams : nil;
-
-                    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"tweet_url_host"]) {
-                        NSString *selectedHost = [[NSUserDefaults standardUserDefaults] objectForKey:@"tweet_url_host"];
-                        cleanedURL.host = selectedHost;
-                    }
-                    UIPasteboard.generalPasteboard.URL = cleanedURL.URL;
-                }
-            }
-        }
-    }];
-    
-    // Initialize global Class pointers here when the tweak loads
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        gGuideContainerVCClass = NSClassFromString(@"T1TwitterSwift.GuideContainerViewController");
-        if (!gGuideContainerVCClass) gGuideContainerVCClass = NSClassFromString(@"T1TwitterSwift_GuideContainerViewController");
-
-        gTombstoneCellClass = NSClassFromString(@"T1TwitterSwift.ConversationTombstoneCell");
-        if (!gTombstoneCellClass) gTombstoneCellClass = NSClassFromString(@"T1TwitterSwift_ConversationTombstoneCell");
-
-        gExploreHeroCellClass = NSClassFromString(@"T1ExploreEventSummaryHeroTableViewCell");
-        
-        // Initialize T1ProfileHeaderViewController class pointer
-        gT1ProfileHeaderViewControllerClass = NSClassFromString(@"T1ProfileHeaderViewController");
-        
-        // Initialize Dash specific class pointers
-        gDashAvatarImageViewClass = NSClassFromString(@"TwitterDash.DashAvatarImageView");
-        gDashDrawerAvatarImageViewClass = NSClassFromString(@"TwitterDash.DashDrawerAvatarImageView");
-        
-        // The full name for the hosting controller is very long and specific.
-        gDashHostingControllerClass = NSClassFromString(@"_TtGC7SwiftUI19UIHostingControllerGV10TFNUISwift22HostingEnvironmentViewV11TwitterDash18DashNavigationView__");
-    });
-    
-    %init;
-}
 
 // MARK: Restore Source Labels - This is still pretty experimental and may break. This restores Tweet Source Labels by using an Legacy API. by: @nyaathea
 
@@ -2181,20 +2115,6 @@ static NSDate *lastCookieRefresh              = nil;
 %end
 
 // --- Initialisation ---
-%ctor {
-    if (!tweetSources)      tweetSources      = [NSMutableDictionary dictionary];
-    if (!viewToTweetID)     viewToTweetID     = [NSMutableDictionary dictionary];
-    if (!fetchTimeouts)     fetchTimeouts     = [NSMutableDictionary dictionary];
-    if (!viewInstances)     viewInstances     = [NSMutableDictionary dictionary];
-    if (!fetchRetries)      fetchRetries      = [NSMutableDictionary dictionary];
-    if (!updateRetries)     updateRetries     = [NSMutableDictionary dictionary];
-    if (!updateCompleted)   updateCompleted   = [NSMutableDictionary dictionary];
-    if (!fetchPending)      fetchPending      = [NSMutableDictionary dictionary];
-    if (!cookieCache)       cookieCache       = [NSMutableDictionary dictionary];
-    
-    // Load cached cookies at initialization
-    [TweetSourceHelper loadCachedCookies];
-}
 
 // MARK: Bird Icon Theming - Dirty hax for making the Nav Bird Icon themeable again.
 
@@ -2680,8 +2600,51 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 %end
 
-// Constructor to initialize all hooks
+}
+
+// MARK: - Combined constructor to initialize all hooks and features
 %ctor {
+    NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+    NSOperationQueue *mainQueue = [NSOperationQueue mainQueue];
+    // Someone needs to hold reference the to Notification
+    _PasteboardChangeObserver = [center addObserverForName:UIPasteboardChangedNotification object:nil queue:mainQueue usingBlock:^(NSNotification * _Nonnull note){
+        
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
+            trackingParams = @{
+                @"twitter.com" : @[@"s", @"t"],
+                @"x.com" : @[@"s", @"t"],
+            };
+        });
+        
+        if ([BHTManager stripTrackingParams]) {
+            if (UIPasteboard.generalPasteboard.hasURLs) {
+                NSURL *pasteboardURL = UIPasteboard.generalPasteboard.URL;
+                NSArray<NSString*>* params = trackingParams[pasteboardURL.host];
+                
+                if ([pasteboardURL.absoluteString isEqualToString:_lastCopiedURL] == NO && params != nil && pasteboardURL.query != nil) {
+                    // to prevent endless copy loop
+                    _lastCopiedURL = pasteboardURL.absoluteString;
+                    NSURLComponents *cleanedURL = [NSURLComponents componentsWithURL:pasteboardURL resolvingAgainstBaseURL:NO];
+                    NSMutableArray<NSURLQueryItem*> *safeParams = [NSMutableArray arrayWithCapacity:0];
+                    
+                    for (NSURLQueryItem *item in cleanedURL.queryItems) {
+                        if ([params containsObject:item.name] == NO) {
+                            [safeParams addObject:item];
+                        }
+                    }
+                    cleanedURL.queryItems = safeParams.count > 0 ? safeParams : nil;
+
+                    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"tweet_url_host"]) {
+                        NSString *selectedHost = [[NSUserDefaults standardUserDefaults] objectForKey:@"tweet_url_host"];
+                        cleanedURL.host = selectedHost;
+                    }
+                    UIPasteboard.generalPasteboard.URL = cleanedURL.URL;
+                }
+            }
+        }
+    }];
+    
     // Initialize global Class pointers here when the tweak loads
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -2692,22 +2655,31 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         if (!gTombstoneCellClass) gTombstoneCellClass = NSClassFromString(@"T1TwitterSwift_ConversationTombstoneCell");
 
         gExploreHeroCellClass = NSClassFromString(@"T1ExploreEventSummaryHeroTableViewCell");
-        // Add fallback for gExploreHeroCellClass with underscore if needed based on testing
         
         // Initialize T1ProfileHeaderViewController class pointer
         gT1ProfileHeaderViewControllerClass = NSClassFromString(@"T1ProfileHeaderViewController");
-        if (!gT1ProfileHeaderViewControllerClass) {
-            // Failed to find T1ProfileHeaderViewController class in %ctor
-        }
-
+        
         // Initialize Dash specific class pointers
         gDashAvatarImageViewClass = NSClassFromString(@"TwitterDash.DashAvatarImageView");
-        
-        gDashDrawerAvatarImageViewClass = NSClassFromString(@"TwitterDash.DashDrawerAvatarImageView"); // Initialize new class
+        gDashDrawerAvatarImageViewClass = NSClassFromString(@"TwitterDash.DashDrawerAvatarImageView");
         
         // The full name for the hosting controller is very long and specific.
         gDashHostingControllerClass = NSClassFromString(@"_TtGC7SwiftUI19UIHostingControllerGV10TFNUISwift22HostingEnvironmentViewV11TwitterDash18DashNavigationView__");
     });
-
-    %init; // Initialize all hooks in the file
+    
+    // Initialize dictionaries for Tweet Source Labels restoration
+    if (!tweetSources)      tweetSources      = [NSMutableDictionary dictionary];
+    if (!viewToTweetID)     viewToTweetID     = [NSMutableDictionary dictionary];
+    if (!fetchTimeouts)     fetchTimeouts     = [NSMutableDictionary dictionary];
+    if (!viewInstances)     viewInstances     = [NSMutableDictionary dictionary];
+    if (!fetchRetries)      fetchRetries      = [NSMutableDictionary dictionary];
+    if (!updateRetries)     updateRetries     = [NSMutableDictionary dictionary];
+    if (!updateCompleted)   updateCompleted   = [NSMutableDictionary dictionary];
+    if (!fetchPending)      fetchPending      = [NSMutableDictionary dictionary];
+    if (!cookieCache)       cookieCache       = [NSMutableDictionary dictionary];
+    
+    // Load cached cookies at initialization
+    [TweetSourceHelper loadCachedCookies];
+    
+    %init;
 }
