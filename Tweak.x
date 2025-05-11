@@ -1987,7 +1987,8 @@ static NSDate *lastCookieRefresh              = nil;
         NSValue *viewValue = viewInstances[tweetID]; // viewInstances is a global static
         T1ConversationFocalStatusView *targetInstance = viewValue ? [viewValue nonretainedObjectValue] : nil;
         if (targetInstance && [targetInstance isKindOfClass:[self class]]) { // Check if it's an instance of T1ConversationFocalStatusView
-            [targetInstance handleTweetSourceUpdated:notification];
+            // Cast to id to resolve "no visible @interface" for the %new instance method
+            [(id)targetInstance handleTweetSourceUpdated:notification];
         }
     }
 }
@@ -2116,7 +2117,16 @@ static NSDate *lastCookieRefresh              = nil;
                             
                             [newString appendAttributedString:appended];
                            
-                            TFNAttributedTextModel *newModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newString activeRanges:model.activeRanges];
+                            // Use standard initializer and set activeRanges via KVC if available
+                            TFNAttributedTextModel *newModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newString];
+                            @try {
+                                id originalActiveRanges = [model valueForKey:@"activeRanges"];
+                                if (originalActiveRanges) {
+                                    [newModel setValue:originalActiveRanges forKey:@"activeRanges"];
+                                }
+                            } @catch (NSException *exception) {
+                                NSLog(@"TweetSourceTweak: Could not get/set activeRanges via KVC: %@", exception);
+                            }
                             %orig(newModel);
                             return;
                         }
@@ -2704,4 +2714,13 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     [TweetSourceHelper loadCachedCookies];
     
     %init;
+}
+
+// Static helper function for recursive view traversal
+static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
+    if (!view || !block) return;
+    block(view);
+    for (UIView *subview in view.subviews) {
+        BH_EnumerateSubviewsRecursively(subview, block);
+    }
 }
