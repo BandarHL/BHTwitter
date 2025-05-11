@@ -291,7 +291,42 @@
 }
 
 + (BOOL)squareAvatars {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"square_avatars"];
+    BOOL enabled = [[NSUserDefaults standardUserDefaults] boolForKey:@"square_avatars"];
+    
+    // Check if this is a new enable action by comparing with last known state
+    static BOOL lastKnownState = NO;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        lastKnownState = enabled;
+    });
+    
+    // If newly enabled (was off, now on), show the alert
+    if (enabled && !lastKnownState) {
+        lastKnownState = enabled;
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+            UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"NeoFreeBird" 
+                                                                           message:@"You will have to restart the app for square avatars to take effect"
+                                                                    preferredStyle:UIAlertControllerStyleAlert];
+            
+            UIAlertAction *closeAppAction = [UIAlertAction actionWithTitle:@"Quit App Now"
+                                                                      style:UIAlertActionStyleDestructive
+                                                                    handler:^(UIAlertAction * _Nonnull action) {
+                exit(0);
+            }];
+            
+            UIAlertAction *laterAction = [UIAlertAction actionWithTitle:@"Later"
+                                                                  style:UIAlertActionStyleCancel
+                                                                handler:nil];
+            
+            [alert addAction:closeAppAction];
+            [alert addAction:laterAction];
+            
+            [topMostController() presentViewController:alert animated:YES completion:nil];
+        });
+    }
+    
+    return enabled;
 }
 
 + (BOOL)restoreVideoTimestamp {

@@ -385,7 +385,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         
         PSSpecifier *restoreFollowButton = [self newSwitchCellWithTitle:@"Restore Follow Button" detailTitle:@"Restores the normal Follow button instead of Subscribe" key:@"restore_follow_button" defaultValue:false changeAction:nil];
         
-        PSSpecifier *squareAvatars = [self newSwitchCellWithTitle:@"Square Avatars" detailTitle:@"Makes avatars slightly rounded squares instead of circles" key:@"square_avatars" defaultValue:false changeAction:nil];
+        PSSpecifier *squareAvatars = [self newSwitchCellWithTitle:@"Square Avatars" detailTitle:@"Make profile pictures square instead of circular" key:@"square_avatars" defaultValue:false changeAction:@selector(squareAvatarsAction:)];
         
         PSSpecifier *restoreVideoTimestamp = [self newSwitchCellWithTitle:@"Restore Video Timestamp" detailTitle:@"Shows video timestamp that may be hidden in some views" key:@"restore_video_timestamp" defaultValue:false changeAction:nil];
 
@@ -423,6 +423,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             hideBookmarkButton,
             disableSensitiveTweetWarnings,
             hideGrokAnalyze,
+            squareAvatars,
 
             profilesSection, // 2
             followConfirm,
@@ -435,7 +436,6 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             hideSubscribeButton,
             hideFollowButton,
             restoreFollowButton,
-            squareAvatars,
 
             searchSection, // 3
             noHistory,
@@ -813,6 +813,32 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 }
 - (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker {
     [picker dismissViewControllerAnimated:true completion:nil];
+}
+
+- (void)squareAvatarsAction:(id)sender {
+    PSSpecifier *specifier = sender;
+    BOOL enabled = [[self readPreferenceValue:specifier] boolValue];
+    
+    if (enabled) {
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"NeoFreeBird" 
+                                                                       message:@"You will have to restart the app for square avatars to take effect"
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        
+        UIAlertAction *closeAppAction = [UIAlertAction actionWithTitle:@"Quit App Now"
+                                                                  style:UIAlertActionStyleDestructive
+                                                                handler:^(UIAlertAction * _Nonnull action) {
+            exit(0);
+        }];
+        
+        UIAlertAction *laterAction = [UIAlertAction actionWithTitle:@"Later"
+                                                              style:UIAlertActionStyleCancel
+                                                            handler:nil];
+        
+        [alert addAction:closeAppAction];
+        [alert addAction:laterAction];
+        
+        [self presentViewController:alert animated:YES completion:nil];
+    }
 }
 @end
 
