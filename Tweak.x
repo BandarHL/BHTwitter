@@ -2815,17 +2815,57 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 %hook T1DirectMessageEntryViewModel
 - (BOOL)shouldShowAvatarImage {
     if (self.isOutgoingMessage) {
-        return NO; // Don't show avatar for your own messages
+        return NO; // Don't show avatar (or its space) for your own messages
     }
-    // For incoming messages, only show avatar if it's the last message in a group from that sender
-    return [[self valueForKey:@"lastEntryInGroup"] boolValue]; // Use KVC to call the isLastEntryInGroup method
+    // For incoming messages, always tell the cell that an avatar *could* be shown,
+    // so space is allocated. The cell will handle actual image visibility.
+    return YES;
 }
 
 - (BOOL)isAvatarImageEnabled {
-    // Duplicated logic from shouldShowAvatarImage
+    // Mirror the logic of shouldShowAvatarImage
     if (self.isOutgoingMessage) {
         return NO;
     }
-    return [[self valueForKey:@"lastEntryInGroup"] boolValue]; // Use KVC to call the isLastEntryInGroup method
+    return YES;
+}
+%end
+
+@class T1DirectMessageEntryBaseCell; // Forward declaration
+
+%hook T1DirectMessageEntryBaseCell
+- (void)setEntryViewModel:(T1DirectMessageAbstractConversationEntryViewModel *)entryViewModel {
+    %orig(entryViewModel);
+
+    if (!self.entryViewModel || ![self.entryViewModel isKindOfClass:%c(T1DirectMessageEntryViewModel)]) {
+        return;
+    }
+
+    T1DirectMessageEntryViewModel *messageVM = (T1DirectMessageEntryViewModel *)self.entryViewModel;
+    
+    // Assuming 'avatarImageView' is the correct property for the avatar view.
+    // If not, this might need to be [self valueForKey:@"avatarImageView"];
+    UIImageView *avatarView = self.avatarImageView; 
+
+    if (!avatarView) {
+        return; // Safety check if avatarView is nil
+    }
+
+    if (messageVM.isOutgoingMessage) {
+        avatarView.hidden = YES;
+    } else {
+        // For incoming messages, the avatarView itself should be visible (not hidden)
+        // so it participates in layout and reserves space.
+        avatarView.hidden = NO;
+
+        // Control the actual image visibility (alpha) based on whether it's the last in group.
+        BOOL isLastInGroup = [[messageVM valueForKey:@"lastEntryInGroup"] boolValue];
+        if (isLastInGroup) {
+            avatarView.alpha = 1.0;
+            // The cell's original logic should handle loading the image when avatarView is visible.
+        } else {
+            avatarView.alpha = 0.0; // Make it transparent, but it still takes up space.
+        }
+    }
 }
 %end
