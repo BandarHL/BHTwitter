@@ -1453,6 +1453,29 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             }
         }
     }];
+    
+    // Initialize global Class pointers here when the tweak loads
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        gGuideContainerVCClass = NSClassFromString(@"T1TwitterSwift.GuideContainerViewController");
+        if (!gGuideContainerVCClass) gGuideContainerVCClass = NSClassFromString(@"T1TwitterSwift_GuideContainerViewController");
+
+        gTombstoneCellClass = NSClassFromString(@"T1TwitterSwift.ConversationTombstoneCell");
+        if (!gTombstoneCellClass) gTombstoneCellClass = NSClassFromString(@"T1TwitterSwift_ConversationTombstoneCell");
+
+        gExploreHeroCellClass = NSClassFromString(@"T1ExploreEventSummaryHeroTableViewCell");
+        
+        // Initialize T1ProfileHeaderViewController class pointer
+        gT1ProfileHeaderViewControllerClass = NSClassFromString(@"T1ProfileHeaderViewController");
+        
+        // Initialize Dash specific class pointers
+        gDashAvatarImageViewClass = NSClassFromString(@"TwitterDash.DashAvatarImageView");
+        gDashDrawerAvatarImageViewClass = NSClassFromString(@"TwitterDash.DashDrawerAvatarImageView");
+        
+        // The full name for the hosting controller is very long and specific.
+        gDashHostingControllerClass = NSClassFromString(@"_TtGC7SwiftUI19UIHostingControllerGV10TFNUISwift22HostingEnvironmentViewV11TwitterDash18DashNavigationView__");
+    });
+    
     %init;
 }
 
