@@ -2815,12 +2815,13 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 %hook T1DirectMessageEntryViewModel
 - (BOOL)shouldShowAvatarImage {
     // Don't show avatar on your own messages
-    if ([self isFromRecipient] == NO) {
+    if ([self isSelfSent]) {
         return NO; // Your own messages
     }
     
-    // For recipient messages, show avatar only on the last message of a sequence
-    if ([self isLastMessageInSequence]) {
+    // For recipient messages, check if this is the last message in a group
+    // This approach uses the built-in conversation grouping property
+    if ([self isLastEntryInGroup]) {
         return YES;
     }
     
@@ -2828,7 +2829,15 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 }
 
 - (BOOL)isAvatarImageEnabled {
-    // Follow the same logic as shouldShowAvatarImage
-    return [self shouldShowAvatarImage];
+    // Mirror the implementation above to ensure consistency
+    if ([self isSelfSent]) {
+        return NO;
+    }
+    
+    if ([self isLastEntryInGroup]) {
+        return YES;
+    }
+    
+    return NO;
 }
 %end
