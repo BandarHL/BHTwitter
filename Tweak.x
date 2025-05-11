@@ -2889,8 +2889,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
                     avatarTrailingConstraint.constant = -7.0; // Same value for consistency
                 }
                 
-                // Force immediate constraint updates without using layoutSubviews
-                [avatarTrailingConstraint setNeedsDisplay];
+                // Trigger constraint updates properly
+                [self setNeedsUpdateConstraints];
             }
         }
     }
