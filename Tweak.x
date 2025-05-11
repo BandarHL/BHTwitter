@@ -2813,68 +2813,71 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 // MARK: - DM Avatar Images
 %hook T1DirectMessageEntryViewModel
-- (BOOL)shouldShowAvatarImage {
-    // Use a simpler approach - always show avatars for messages from others
-    // isMe property is a common pattern in chat frameworks to identify self messages
-    BOOL isFromMe = NO;
+- (id)init {
+    id result = %orig;
     
-    // Safely check if "isFromMe" property exists using runtime
+    // Log this instance for debugging
+    NSLog(@"[BHTwitter Debug] T1DirectMessageEntryViewModel init: %@", self);
+    
+    // Try to log known properties
     @try {
-        if ([self respondsToSelector:@selector(isFromMe)]) {
-            isFromMe = [(NSNumber *)[self valueForKey:@"isFromMe"] boolValue];
-        } else if ([self respondsToSelector:@selector(isMe)]) {
-            isFromMe = [(NSNumber *)[self valueForKey:@"isMe"] boolValue];
-        } else if ([self respondsToSelector:@selector(fromMe)]) {
-            isFromMe = [(NSNumber *)[self valueForKey:@"fromMe"] boolValue];
-        } else if ([self respondsToSelector:@selector(fromSelf)]) {
-            isFromMe = [(NSNumber *)[self valueForKey:@"fromSelf"] boolValue];
-        } else if ([self respondsToSelector:@selector(sender)]) {
-            // Assuming sender is an object that might have an isMe property
-            id sender = [self valueForKey:@"sender"];
-            if ([sender respondsToSelector:@selector(isMe)]) {
-                isFromMe = [(NSNumber *)[sender valueForKey:@"isMe"] boolValue];
+        NSMutableDictionary *props = [NSMutableDictionary dictionary];
+        
+        // Common properties to check
+        NSArray *propNames = @[@"fromMe", @"fromSelf", @"isMe", @"isFromMe", @"isOutgoing", 
+                               @"sender", @"recipient", @"inReplyTo", @"entry", @"isGrouped",
+                               @"isFirstInGroup", @"isLastInGroup", @"groupPosition"];
+        
+        for (NSString *propName in propNames) {
+            @try {
+                if ([self respondsToSelector:NSSelectorFromString(propName)]) {
+                    id value = [self valueForKey:propName];
+                    if (value) {
+                        props[propName] = [value description];
+                    } else {
+                        props[propName] = @"nil";
+                    }
+                }
+            } @catch (NSException *e) {
+                props[propName] = [NSString stringWithFormat:@"Error: %@", e.reason];
             }
         }
+        
+        NSLog(@"[BHTwitter Debug] T1DirectMessageEntryViewModel properties: %@", props);
+        
+        // Check the actual implementation
+        Method originalShouldShow = class_getInstanceMethod([self class], @selector(shouldShowAvatarImage));
+        Method originalIsEnabled = class_getInstanceMethod([self class], @selector(isAvatarImageEnabled));
+        
+        if (originalShouldShow) {
+            NSLog(@"[BHTwitter Debug] shouldShowAvatarImage exists");
+        } else {
+            NSLog(@"[BHTwitter Debug] shouldShowAvatarImage does NOT exist");
+        }
+        
+        if (originalIsEnabled) {
+            NSLog(@"[BHTwitter Debug] isAvatarImageEnabled exists");
+        } else {
+            NSLog(@"[BHTwitter Debug] isAvatarImageEnabled does NOT exist");
+        }
     } @catch (NSException *e) {
-        // If any exception occurs, default to not showing avatar
-        return NO;
+        NSLog(@"[BHTwitter Debug] Error inspecting properties: %@", e);
     }
     
-    if (isFromMe) {
-        return NO; // Don't show avatar for self messages
-    }
-    
-    // For simplicity, always show avatar on messages from others
-    return YES;
+    return result;
+}
+
+// For now, let's keep our existing implementations, but comment them out
+// and return the original behavior to see what Twitter is doing by default
+- (BOOL)shouldShowAvatarImage {
+    // Log what's being called
+    NSLog(@"[BHTwitter Debug] shouldShowAvatarImage called for: %@", self);
+    return %orig;
 }
 
 - (BOOL)isAvatarImageEnabled {
-    // Duplicate the same logic here instead of calling shouldShowAvatarImage
-    BOOL isFromMe = NO;
-    
-    @try {
-        if ([self respondsToSelector:@selector(isFromMe)]) {
-            isFromMe = [(NSNumber *)[self valueForKey:@"isFromMe"] boolValue];
-        } else if ([self respondsToSelector:@selector(isMe)]) {
-            isFromMe = [(NSNumber *)[self valueForKey:@"isMe"] boolValue];
-        } else if ([self respondsToSelector:@selector(fromMe)]) {
-            isFromMe = [(NSNumber *)[self valueForKey:@"fromMe"] boolValue];
-        } else if ([self respondsToSelector:@selector(fromSelf)]) {
-            isFromMe = [(NSNumber *)[self valueForKey:@"fromSelf"] boolValue];
-        } else if ([self respondsToSelector:@selector(sender)]) {
-            id sender = [self valueForKey:@"sender"];
-            if ([sender respondsToSelector:@selector(isMe)]) {
-                isFromMe = [(NSNumber *)[sender valueForKey:@"isMe"] boolValue];
-            }
-        }
-    } @catch (NSException *e) {
-        return NO;
-    }
-    
-    if (isFromMe) {
-        return NO;
-    }
-    
-    return YES;
+    // Log what's being called
+    NSLog(@"[BHTwitter Debug] isAvatarImageEnabled called for: %@", self);
+    return %orig;
 }
 %end
