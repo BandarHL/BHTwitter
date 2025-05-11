@@ -2838,8 +2838,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 - (struct CGSize)avatarSize {
     struct CGSize originalSize = %orig;
     if (!self.isOutgoingMessage) {
-        T1DirectMessageEntryMetrics *metrics = self->_entryLayoutMetrics; // Access ivar
-        if (metrics && [metrics respondsToSelector:@selector(avatarImageSize)]) {
+        T1DirectMessageEntryMetrics *metrics = self.entryLayoutMetrics; // Use property accessor
+        if (metrics && [metrics respondsToSelector:@selector(avatarImageSize)]) { 
             NSValue* sizeValue = [metrics valueForKey:@"avatarImageSize"];
             if (sizeValue) {
                 CGSize metricSize = [sizeValue CGSizeValue];
@@ -2861,7 +2861,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             NSValue *selfAvatarSizeValue = [self valueForKey:@"avatarSize"]; // KVC for self avatarSize
             CGSize avSize = selfAvatarSizeValue ? [selfAvatarSizeValue CGSizeValue] : CGSizeMake(32,32); // Default if KVC fails
             
-            double standardAvatarMargin = [T1DirectMessageEntryViewModel avatarMargin]; // Call class method directly
+            double standardAvatarMargin = [objc_getClass("T1DirectMessageEntryViewModel") avatarMargin]; // Use objc_getClass
             
             CGFloat requiredLeftIndent = 0.0;
             if (avSize.width > 0) {
@@ -2873,3 +2873,5 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     return originalInsets;
 }
 %end
+
+@class T1DirectMessageEntryMetrics; // Forward declare T1DirectMessageEntryMetrics
