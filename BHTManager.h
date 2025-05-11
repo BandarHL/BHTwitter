@@ -69,5 +69,8 @@
 + (BOOL)restoreFollowButton;
 + (BOOL)squareAvatars;
 + (BOOL)restoreVideoTimestamp;
+
++ (void)clearSourceLabelCache;
+
 @end
 

@@ -397,6 +397,11 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         // debug section
         PSSpecifier *flex = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_DETAIL_TITLE"] key:@"flex_twitter" defaultValue:false changeAction:@selector(FLEXAction:)];
         
+        PSSpecifier *clearSourceCache = [self newButtonCellWithTitle:@"Clear Source Label Cache"
+                                                       detailTitle:@"Forces refetching of all tweet source labels."
+                                                       dynamicRule:nil
+                                                            action:@selector(showClearSourceCacheConfirmation:)];
+        
         // legal section
         PSSpecifier *acknowledgements = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"LEGAL_BUTTON_TITLE"] detailTitle:nil dynamicRule:nil action:@selector(showAcknowledgements:)];
         
@@ -477,6 +482,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             
             debug, // 8
             flex,
+            clearSourceCache,
             
             developer, // 9
             actuallyaridan,
@@ -788,6 +794,24 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
     }
 }
 
+- (void)showClearSourceCacheConfirmation:(PSSpecifier *)specifier {
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Clear Source Label Cache"
+                                                                   message:@"Are you sure you want to clear the tweet source label cache? This will require labels to be re-fetched and may take some time."
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    
+    [alert addAction:[UIAlertAction actionWithTitle:@"Clear Cache" style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
+        [BHTManager clearSourceLabelCache];
+        
+        UIAlertController *doneAlert = [UIAlertController alertControllerWithTitle:@"Cache Cleared"
+                                                                       message:@"Tweet source label cache has been cleared. Labels will be re-fetched as you browse."
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        [doneAlert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+        [self presentViewController:doneAlert animated:YES completion:nil];
+    }]];
+    
+    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+    [self presentViewController:alert animated:YES completion:nil];
+}
 
 - (void)colorPickerViewControllerDidSelectColor:(UIColorPickerViewController *)viewController {
     [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"change_msg_background"];

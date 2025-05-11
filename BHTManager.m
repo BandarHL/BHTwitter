@@ -300,6 +300,11 @@
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"restore_video_timestamp"];
 }
 
++ (void)clearSourceLabelCache {
+    NSLog(@"BHTManager: Posting BHTClearSourceLabelCacheNotification");
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTClearSourceLabelCacheNotification" object:nil];
+}
+
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount {
     SettingsViewController *pref = [[SettingsViewController alloc] initWithTwitterAccount:twAccount];
     [pref.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:@"NeoFreeBird" subtitle:twAccount.displayUsername]];
