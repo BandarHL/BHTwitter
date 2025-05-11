@@ -2818,14 +2818,14 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         return NO; // Don't show avatar for your own messages
     }
     // For incoming messages, only show avatar if it's the last message in a group from that sender
-    return self->_lastEntryInGroup; // Access ivar directly
+    return [[self valueForKey:@"lastEntryInGroup"] boolValue]; // Use KVC to call the isLastEntryInGroup method
 }
 
 - (BOOL)isAvatarImageEnabled {
-    // Duplicated logic from shouldShowAvatarImage to avoid selector issues within the hook
+    // Duplicated logic from shouldShowAvatarImage
     if (self.isOutgoingMessage) {
         return NO;
     }
-    return self->_lastEntryInGroup; // Access ivar directly
+    return [[self valueForKey:@"lastEntryInGroup"] boolValue]; // Use KVC to call the isLastEntryInGroup method
 }
 %end
