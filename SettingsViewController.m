@@ -597,14 +597,9 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 - (void)setPreferenceValue:(id)value specifier:(PSSpecifier *)specifier {
     NSUserDefaults *Prefs = [NSUserDefaults standardUserDefaults];
     
-    // Get the specifier ID/key
+    // Skip saving for square_avatars since we handle it specially in the action method
     NSString *specifierID = [specifier identifier];
-    
-    // Special handling for square_avatars to make sure it's synchronously saved
-    if ([specifierID isEqualToString:@"square_avatars"]) {
-        [Prefs setBool:[value boolValue] forKey:specifierID];
-        [Prefs synchronize]; // Force immediate save
-    } else {
+    if (![specifierID isEqualToString:@"square_avatars"]) {
         [Prefs setValue:value forKey:specifierID];
     }
     
@@ -827,32 +822,58 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 
 - (void)squareAvatarsAction:(id)sender {
     PSSpecifier *specifier = sender;
-    BOOL enabled = [[self readPreferenceValue:specifier] boolValue];
     
-    if (enabled) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"NeoFreeBird" 
-                                                                           message:@"You will have to restart the app for square avatars to take effect"
-                                                                    preferredStyle:UIAlertControllerStyleAlert];
+    // Get the current switch value but DO NOT save it yet
+    UISwitch *switchControl = sender;
+    BOOL currentValue = switchControl.on;
+    
+    // If trying to enable the feature, show alert first before saving
+    if (currentValue) {
+        // Set the switch back to OFF temporarily while we show the alert
+        [switchControl setOn:NO animated:YES];
+        
+        // Show confirmation alert using standard UIAlertController
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Enable Square Avatars" 
+                                                                       message:@"This requires restarting the app to take effect. Would you like to proceed?"
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        
+        // YES - Enable and optionally quit
+        UIAlertAction *enableAction = [UIAlertAction actionWithTitle:@"Yes" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            // Now we can safely enable the toggle
+            [switchControl setOn:YES animated:YES];
             
-            UIAlertAction *closeAppAction = [UIAlertAction actionWithTitle:@"Quit App Now"
-                                                                     style:UIAlertActionStyleDestructive
-                                                                   handler:^(UIAlertAction * _Nonnull action) {
-                // Wait a moment before exiting to ensure all UI operations are complete
+            // Actually save the preference value
+            [[NSUserDefaults standardUserDefaults] setBool:YES forKey:[specifier propertyForKey:@"key"]];
+            [[NSUserDefaults standardUserDefaults] synchronize];
+            
+            // Show second alert with restart options
+            UIAlertController *restartAlert = [UIAlertController alertControllerWithTitle:@"Restart Required" 
+                                                                                  message:@"Do you want to quit the app now to apply changes?"
+                                                                           preferredStyle:UIAlertControllerStyleAlert];
+            
+            [restartAlert addAction:[UIAlertAction actionWithTitle:@"Quit Now" style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
+                // Wait a short time before quitting
                 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
                     exit(0);
                 });
-            }];
+            }]];
             
-            UIAlertAction *laterAction = [UIAlertAction actionWithTitle:@"Later"
-                                                                  style:UIAlertActionStyleCancel
-                                                                handler:nil];
+            [restartAlert addAction:[UIAlertAction actionWithTitle:@"Later" style:UIAlertActionStyleCancel handler:nil]];
             
-            [alert addAction:closeAppAction];
-            [alert addAction:laterAction];
-            
-            [self presentViewController:alert animated:YES completion:nil];
-        });
+            [self presentViewController:restartAlert animated:YES completion:nil];
+        }];
+        
+        // NO - Don't enable
+        UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"No" style:UIAlertActionStyleCancel handler:nil];
+        
+        [alert addAction:enableAction];
+        [alert addAction:cancelAction];
+        
+        [self presentViewController:alert animated:YES completion:nil];
+    } else {
+        // Disabling the feature, just save the value normally
+        [[NSUserDefaults standardUserDefaults] setBool:NO forKey:[specifier propertyForKey:@"key"]];
+        [[NSUserDefaults standardUserDefaults] synchronize];
     }
 }
 @end
