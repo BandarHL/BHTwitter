@@ -66,12 +66,14 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         [self.navigationController.navigationBar setPrefersLargeTitles:false];
         [[NSUserDefaults standardUserDefaults] addObserver:self forKeyPath:@"bh_color_theme_selectedColor" options:NSKeyValueObservingOptionNew context:nil];
         [[NSUserDefaults standardUserDefaults] addObserver:self forKeyPath:@"T1ColorSettingsPrimaryColorOptionKey" options:NSKeyValueObservingOptionNew context:nil];
+        [[NSUserDefaults standardUserDefaults] addObserver:self forKeyPath:@"tab_bar_theming" options:NSKeyValueObservingOptionNew context:nil];
     }
     return self;
 }
 - (void)dealloc {
     [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:@"bh_color_theme_selectedColor"];
     [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:@"T1ColorSettingsPrimaryColorOptionKey"];
+    [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:@"tab_bar_theming"];
 }
 
 - (void)setupAppearance {
@@ -95,6 +97,10 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
     if ([keyPath isEqualToString:@"bh_color_theme_selectedColor"] || [keyPath isEqualToString:@"T1ColorSettingsPrimaryColorOptionKey"]) {
         [self setupAppearance];
+    }
+    if ([keyPath isEqualToString:@"tab_bar_theming"]) {
+        // Post notification to update tab bar icons
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTTabBarThemingChanged" object:nil];
     }
 }
 
@@ -359,7 +365,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         
         PSSpecifier *dmAvatars = [self newSwitchCellWithTitle:@"DM Avatars" detailTitle:@"Only show avatars for the last message in a group from the same sender" key:@"dm_avatars" defaultValue:true changeAction:nil];
         
-        PSSpecifier *tabBarTheming = [self newSwitchCellWithTitle:@"Tab Bar Theming" detailTitle:@"Apply accent color to tab bar icons" key:@"tab_bar_theming" defaultValue:true changeAction:@selector(tabBarThemingAction:)];
+        PSSpecifier *tabBarTheming = [self newSwitchCellWithTitle:@"Tab Bar Theming" detailTitle:@"Apply accent color to tab bar icons" key:@"tab_bar_theming" defaultValue:true changeAction:nil];
         
         PSSpecifier *hideViewCount = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE"] key:@"hide_view_count" defaultValue:false changeAction:nil];
 
@@ -936,13 +942,6 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
     }
     
     return nil;
-}
-
-- (void)tabBarThemingAction:(UISwitch *)sender {
-    // Post a notification that the tab bar theming setting has changed
-    [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTTabBarThemingChangedNotification" 
-                                                        object:nil 
-                                                      userInfo:@{@"enabled": @(sender.isOn)}];
 }
 @end
 
