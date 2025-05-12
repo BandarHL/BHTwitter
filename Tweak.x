@@ -2887,11 +2887,12 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
         }
         
-        // Try using the applyTintColor method first
+        // Try using the applyTintColor method first - use IMP to avoid performSelector leak warning
         SEL applyTintColorSelector = @selector(applyTintColor:);
         if ([self respondsToSelector:applyTintColorSelector]) {
-            // Since applyTintColor: takes an (id) and returns void, performSelector is okay.
-            [self performSelector:applyTintColorSelector withObject:targetColor];
+            IMP imp = [self methodForSelector:applyTintColorSelector];
+            void (*func)(id, SEL, id) = (void *)imp;
+            func(self, applyTintColorSelector, targetColor);
         } else {
             // Fallback to directly setting the tintColor on the imageView
             imgView.tintColor = targetColor;
@@ -2903,10 +2904,12 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         }
         imgView.tintColor = nil; // Remove custom tinting
         
-        // Call internal rendering reset method if available
+        // Call internal rendering reset method if available - use IMP to avoid performSelector leak warning
         SEL resetTintColorSelector = NSSelectorFromString(@"resetTintColor");
         if ([self respondsToSelector:resetTintColorSelector]) {
-            [self performSelector:resetTintColorSelector];
+            IMP imp = [self methodForSelector:resetTintColorSelector];
+            void (*func)(id, SEL) = (void *)imp;
+            func(self, resetTintColorSelector);
         }
     }
     
@@ -2925,46 +2928,15 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 - (void)setSelected:(_Bool)selected {
     %orig(selected);
-    // Call the new method using performSelector to ensure it's found at runtime
-    [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
+    // Call the new method
+    [self bh_applyCurrentThemeToIcon];
 }
 
-+ (void)load {
-    // Register for tab bar theming notification
-    [[NSNotificationCenter defaultCenter] addObserver:self 
-                                             selector:@selector(handleTabBarThemingChanged:) 
-                                                 name:@"BHTTabBarThemingChangedNotification" 
-                                               object:nil];
-}
-
-%new
-+ (void)handleTabBarThemingChanged:(NSNotification *)notification {
-    BOOL enabled = [notification.userInfo[@"enabled"] boolValue];
-    
-    // Update all visible tabs 
-    // First, find all instances of T1TabBarViewController
-    for (UIWindow *window in UIApplication.sharedApplication.windows) {
-        [self findAndUpdateTabViewsInView:window withEnabled:enabled];
-    }
-}
-
-%new
-+ (void)findAndUpdateTabViewsInView:(UIView *)view withEnabled:(BOOL)enabled {
-    // If this is a T1TabView, update it
-    if ([view isKindOfClass:self]) {
-        T1TabView *tabView = (T1TabView *)view;
-        [tabView bh_applyCurrentThemeToIcon];
-    }
-    
-    // Recursively check subviews
-    for (UIView *subview in view.subviews) {
-        [self findAndUpdateTabViewsInView:subview withEnabled:enabled];
-    }
-}
+// The TabView itself doesn't need to listen for notifications
+// This will be handled from the T1TabBarViewController
 
 %end
 
-// We also need to hook T1TabBarViewController to update all tabs when the setting changes
 %hook T1TabBarViewController
 
 - (void)viewDidLoad {
@@ -2972,19 +2944,31 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     
     // Register for the tab bar theming notification
     [[NSNotificationCenter defaultCenter] addObserver:self 
-                                             selector:@selector(handleTabBarThemingChanged:) 
+                                             selector:@selector(bh_handleTabBarThemingChanged:) 
                                                  name:@"BHTTabBarThemingChangedNotification" 
                                                object:nil];
+    
+    // Apply theme to all tab views on initial load
+    if ([BHTManager tabBarTheming]) {
+        [self bh_updateAllTabViews];
+    }
 }
 
 %new
-- (void)handleTabBarThemingChanged:(NSNotification *)notification {
-    // Update all tab views in this controller
-    for (T1TabView *tabView in self.tabViews) {
-        if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
-            [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
+- (void)bh_updateAllTabViews {
+    if (self.tabViews) {
+        for (id tabView in self.tabViews) {
+            if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
+                [tabView bh_applyCurrentThemeToIcon];
+            }
         }
     }
+}
+
+%new
+- (void)bh_handleTabBarThemingChanged:(NSNotification *)notification {
+    // Update all tab views
+    [self bh_updateAllTabViews];
 }
 
 - (void)dealloc {
