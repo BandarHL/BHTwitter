@@ -169,8 +169,24 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     
     return %orig;
 }
-%end
 
+- (void)setTabBarOpacity:(double)opacity {
+    if ([BHTManager preventTabBarFade]) {
+        %orig(1.0);
+    } else {
+        %orig(opacity);
+    }
+}
+
+// May also need to hook setTabBarScrolling: if the above isn't enough
+// - (void)setTabBarScrolling:(BOOL)scrolling {
+//     if ([BHTManager preventTabBarFade]) {
+//         %orig(NO); // Or handle as needed
+//     } else {
+//         %orig(scrolling);
+//     }
+// }
+%end
 
 %hook T1DirectMessageConversationEntriesViewController
 - (void)viewDidLoad {
@@ -2830,15 +2846,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 // MARK: - Tab Bar Icon Theming
 %hook T1TabView
-
-// Prevent tab bar fade by intercepting alpha changes if the feature is enabled
-- (void)setAlpha:(CGFloat)alpha {
-    if ([BHTManager preventTabBarFade]) {
-        %orig(1.0); // Always keep alpha at 1.0 (fully visible)
-    } else {
-        %orig;
-    }
-}
 
 %new
 - (void)bh_applyCurrentThemeToIcon {
