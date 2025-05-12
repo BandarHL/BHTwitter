@@ -179,13 +179,13 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 
 // May also need to hook setTabBarScrolling: if the above isn't enough
-// - (void)setTabBarScrolling:(BOOL)scrolling {
-//     if ([BHTManager preventTabBarFade]) {
-//         %orig(NO); // Or handle as needed
-//     } else {
-//         %orig(scrolling);
-//     }
-// }
+- (void)setTabBarScrolling:(BOOL)scrolling {
+    if ([BHTManager preventTabBarFade]) {
+        %orig(NO); // Force scrolling to NO if fading is prevented
+    } else {
+        %orig(scrolling);
+    }
+}
 %end
 
 %hook T1DirectMessageConversationEntriesViewController
