@@ -2860,15 +2860,24 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     }
 
     // Try using the applyTintColor method first
-    if ([self respondsToSelector:@selector(applyTintColor:)]) {
-        [self performSelector:@selector(applyTintColor:) withObject:targetColor];
+    SEL applyTintColorSelector = @selector(applyTintColor:);
+    if ([self respondsToSelector:applyTintColorSelector]) {
+        // Since applyTintColor: takes an (id) and returns void, performSelector is okay.
+        [self performSelector:applyTintColorSelector withObject:targetColor];
     } else {
         // Fallback to directly setting the tintColor on the imageView
         imgView.tintColor = targetColor;
     }
     
-    // Force a redraw of the image view to reflect color change
-    if (imgView) {
+    // After applying color, try to force an update of the image view state
+    SEL updateImageViewSelector = NSSelectorFromString(@"_t1_updateImageViewAnimated:");
+    if ([self respondsToSelector:updateImageViewSelector]) {
+        // _t1_updateImageViewAnimated: takes a BOOL, so direct IMP call is safer
+        IMP imp = [self methodForSelector:updateImageViewSelector];
+        void (*func)(id, SEL, _Bool) = (void *)imp;
+        func(self, updateImageViewSelector, NO); // Pass NO for not animated
+    } else if (imgView) {
+        // If the specific update method isn't there, try a generic redraw
         [imgView setNeedsDisplay];
     }
 }
