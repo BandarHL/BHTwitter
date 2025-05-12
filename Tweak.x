@@ -3034,3 +3034,61 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     %orig(url);
 }
 %end
+
+// MARK: Rickroll Premium Sign-up by hooking WKWebView
+%hook WKWebView
+
+// Hook the URL property getter
+- (NSURL *)URL {
+    NSURL *originalURL = %orig;
+    if (originalURL && [[originalURL absoluteString] containsString:@"premium_sign_up"]) {
+        return [NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"];
+    }
+    return originalURL;
+}
+
+// Hook the _committedURL property getter
+- (NSURL *)_committedURL {
+    NSURL *originalURL = %orig;
+    if (originalURL && [[originalURL absoluteString] containsString:@"premium_sign_up"]) {
+        return [NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"];
+    }
+    return originalURL;
+}
+
+// This is the critical method that intercepts navigation requests
+- (BOOL)_shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(NSInteger)navigationType {
+    NSURL *url = [request URL];
+    if (url && [[url absoluteString] containsString:@"premium_sign_up"]) {
+        // Create a new request to the rickroll URL
+        NSURLRequest *rickrollRequest = [NSURLRequest requestWithURL:[NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"]];
+        // Call the original method with our modified request
+        return %orig(rickrollRequest, navigationType);
+    }
+    return %orig;
+}
+
+// Hook shouldStartLoadWithRequest (this is the public API version)
+- (BOOL)shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(NSInteger)navigationType {
+    NSURL *url = [request URL];
+    if (url && [[url absoluteString] containsString:@"premium_sign_up"]) {
+        // Create a new request to the rickroll URL
+        NSURLRequest *rickrollRequest = [NSURLRequest requestWithURL:[NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"]];
+        // Call the original method with our modified request
+        return %orig(rickrollRequest, navigationType);
+    }
+    return %orig;
+}
+
+// Let's also try to hook the WKWebView's loadRequest: method
+- (id)loadRequest:(NSURLRequest *)request {
+    NSURL *url = [request URL];
+    if (url && [[url absoluteString] containsString:@"premium_sign_up"]) {
+        // Create a new request to the rickroll URL
+        NSURLRequest *rickrollRequest = [NSURLRequest requestWithURL:[NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"]];
+        return %orig(rickrollRequest);
+    }
+    return %orig;
+}
+
+%end
