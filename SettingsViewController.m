@@ -939,34 +939,10 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 }
 
 - (void)tabBarThemingAction:(UISwitch *)sender {
-    // Special handling when disabling tab bar theming to ensure colors are properly restored
-    if (!sender.isOn) {
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Disable Tab Bar Theming"
-                                                                       message:@"For best results, would you like to restart the app to fully restore default tab bar colors?"
-                                                                preferredStyle:UIAlertControllerStyleAlert];
-        
-        [alert addAction:[UIAlertAction actionWithTitle:@"Restart Now" style:UIAlertActionStyleDestructive
-                                                handler:^(UIAlertAction * _Nonnull action) {
-            // Post notification immediately to try to restore colors
-            [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTTabBarThemingChangedNotification" object:nil];
-            
-            // Force restart after a short delay
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                exit(0);
-            });
-        }]];
-        
-        [alert addAction:[UIAlertAction actionWithTitle:@"Don't Restart" style:UIAlertActionStyleCancel
-                                                handler:^(UIAlertAction * _Nonnull action) {
-            // Just post the notification to try to update
-            [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTTabBarThemingChangedNotification" object:nil];
-        }]];
-        
-        [self presentViewController:alert animated:YES completion:nil];
-    } else {
-        // When enabling, just post the notification
-        [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTTabBarThemingChangedNotification" object:nil];
-    }
+    // Post a notification that the tab bar theming setting has changed
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTTabBarThemingChangedNotification" 
+                                                        object:nil 
+                                                      userInfo:@{@"enabled": @(sender.isOn)}];
 }
 @end
 

@@ -2857,33 +2857,16 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 // MARK: - Tab Bar Icon Theming
 %hook T1TabView
 
-- (void)didMoveToWindow {
-    %orig;
-    
-    if (self.window) {
-        // Register for theme change notifications when added to window
-        [[NSNotificationCenter defaultCenter] addObserver:self 
-                                                 selector:@selector(handleTabBarThemingChanged:) 
-                                                     name:@"BHTTabBarThemingChangedNotification" 
-                                                   object:nil];
-        
-        // Apply current theme state using respondsToSelector for safety
-        if ([self respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
-            #pragma clang diagnostic push
-            #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-            [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
-            #pragma clang diagnostic pop
-        }
-    } else {
-        // Remove observer when removed from window
-        [[NSNotificationCenter defaultCenter] removeObserver:self name:@"BHTTabBarThemingChangedNotification" object:nil];
-    }
-}
-
-// Make sure %new is on its own line before the method
 %new
 - (void)bh_applyCurrentThemeToIcon {
-    // Get/create the image view
+    UIColor *targetColor;
+    // Use KVC for isSelected as it's a property that might not be directly accessible
+    if ([[self valueForKey:@"selected"] boolValue]) { 
+        targetColor = [BHTManager tabBarTheming] ? BHTCurrentAccentColor() : nil;
+    } else {
+        targetColor = nil; // Let the system determine the default color when not themed
+    }
+
     UIImageView *imgView = nil;
     @try {
         imgView = [self valueForKey:@"imageView"];
@@ -2897,75 +2880,33 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         return;
     }
 
-    // Check if we need to apply theming
+    // Set the rendering mode based on theming status
     if ([BHTManager tabBarTheming]) {
-        UIColor *targetColor;
-        // Use KVC for isSelected as it's a property that might not be directly accessible
-        if ([[self valueForKey:@"selected"] boolValue]) { 
-            targetColor = BHTCurrentAccentColor();
-        } else {
-            targetColor = [UIColor grayColor]; // Default gray for unselected
-        }
-
-        // Ensure the image can be tinted
+        // Make the image templateable so we can tint it
         if (imgView.image && imgView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
             imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
         }
-
+        
         // Try using the applyTintColor method first
         SEL applyTintColorSelector = @selector(applyTintColor:);
         if ([self respondsToSelector:applyTintColorSelector]) {
-            // Suppress warning about performSelector
-            #pragma clang diagnostic push
-            #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+            // Since applyTintColor: takes an (id) and returns void, performSelector is okay.
             [self performSelector:applyTintColorSelector withObject:targetColor];
-            #pragma clang diagnostic pop
         } else {
             // Fallback to directly setting the tintColor on the imageView
             imgView.tintColor = targetColor;
         }
     } else {
-        // COMPLETELY RESTORE DEFAULT TWITTER BEHAVIOR
-        
-        // Reset to original rendering mode
-        if (imgView.image) {
-            imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
-            // Also try to load fresh image if possible
-            @try {
-                SEL iconSelector = NSSelectorFromString(@"_iconForSelected:");
-                if ([self respondsToSelector:iconSelector]) {
-                    IMP imp = [self methodForSelector:iconSelector];
-                    UIImage* (*func)(id, SEL, BOOL) = (void *)imp;
-                    BOOL isSelected = [[self valueForKey:@"selected"] boolValue];
-                    UIImage *originalIcon = func(self, iconSelector, isSelected);
-                    if (originalIcon) {
-                        imgView.image = originalIcon;
-                    }
-                }
-            } @catch (NSException *e) {
-                NSLog(@"[BHTwitter] Error restoring tab icon: %@", e);
-            }
+        // Reset to original rendering when theming is disabled
+        if (imgView.image && imgView.image.renderingMode != UIImageRenderingModeAutomatic) {
+            imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAutomatic];
         }
+        imgView.tintColor = nil; // Remove custom tinting
         
-        // Remove any tint color overrides completely
-        imgView.tintColor = nil;
-        
-        // Explicitly call original Twitter methods if available
-        SEL resetTintSelector = NSSelectorFromString(@"resetTintColor");
-        if ([self respondsToSelector:resetTintSelector]) {
-            #pragma clang diagnostic push
-            #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-            [self performSelector:resetTintSelector];
-            #pragma clang diagnostic pop
-        }
-        
-        // Call Twitter's built-in update method to let it handle colors properly
-        SEL updateTabSelector = NSSelectorFromString(@"_t1_updateTab");
-        if ([self respondsToSelector:updateTabSelector]) {
-            #pragma clang diagnostic push
-            #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-            [self performSelector:updateTabSelector];
-            #pragma clang diagnostic pop
+        // Call internal rendering reset method if available
+        SEL resetTintColorSelector = NSSelectorFromString(@"resetTintColor");
+        if ([self respondsToSelector:resetTintColorSelector]) {
+            [self performSelector:resetTintColorSelector];
         }
     }
     
@@ -2984,111 +2925,69 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 - (void)setSelected:(_Bool)selected {
     %orig(selected);
-    // Call our theming method with checks
-    if ([self respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
-        #pragma clang diagnostic push
-        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-        [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
-        #pragma clang diagnostic pop
-    }
+    // Call the new method using performSelector to ensure it's found at runtime
+    [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
 }
 
-// Ensure %new is correctly placed
-%new
-- (void)handleTabBarThemingChanged:(NSNotification *)notification {
-    // Apply theming changes immediately with checks
-    if ([self respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
-        #pragma clang diagnostic push
-        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-        [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
-        #pragma clang diagnostic pop
-    }
-}
-
-- (void)dealloc {
-    // Remove observer
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"BHTTabBarThemingChangedNotification" object:nil];
-    %orig;
-}
-
-%end
-
-%hook T1TabBarViewController
-
-- (void)viewDidLoad {
-    %orig;
-    
-    // Apply theme on initial load
-    if ([self respondsToSelector:@selector(tabViews)]) {
-        NSArray *tabViews = [self valueForKey:@"tabViews"];
-        for (id tabView in tabViews) {
-            if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
-                #pragma clang diagnostic push
-                #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-                [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
-                #pragma clang diagnostic pop
-            }
-        }
-    }
-    
-    // Register for theme change notifications
++ (void)load {
+    // Register for tab bar theming notification
     [[NSNotificationCenter defaultCenter] addObserver:self 
-                                             selector:@selector(handleTabBarThemingSettingChanged:) 
+                                             selector:@selector(handleTabBarThemingChanged:) 
                                                  name:@"BHTTabBarThemingChangedNotification" 
                                                object:nil];
 }
 
 %new
-- (void)handleTabBarThemingSettingChanged:(NSNotification *)notification {
-    // Completely refresh tab bar when theme changes, especially when disabled
-    if (![BHTManager tabBarTheming]) {
-        // Try to reload the tab bar completely using known internal methods
-        SEL reloadTabsSelector = NSSelectorFromString(@"_t1_reloadTabBarAppearance");
-        if ([self respondsToSelector:reloadTabsSelector]) {
-            #pragma clang diagnostic push
-            #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-            [self performSelector:reloadTabsSelector];
-            #pragma clang diagnostic pop
-        }
-        
-        // Try to force layout update
-        [self.view setNeedsLayout];
-        [self.view layoutIfNeeded];
-        
-        // If we have the tabBar property, tell it to refresh
-        if ([self respondsToSelector:@selector(tabBar)]) {
-            UIView *tabBar = [self valueForKey:@"tabBar"];
-            if (tabBar) {
-                [tabBar setNeedsDisplay];
-                
-                // Force-reload each tab view with default appearance
-                SEL reloadSelector = NSSelectorFromString(@"reloadTabViews");
-                if ([tabBar respondsToSelector:reloadSelector]) {
-                    #pragma clang diagnostic push
-                    #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-                    [tabBar performSelector:reloadSelector];
-                    #pragma clang diagnostic pop
-                }
-            }
-        }
++ (void)handleTabBarThemingChanged:(NSNotification *)notification {
+    BOOL enabled = [notification.userInfo[@"enabled"] boolValue];
+    
+    // Update all visible tabs 
+    // First, find all instances of T1TabBarViewController
+    for (UIWindow *window in UIApplication.sharedApplication.windows) {
+        [self findAndUpdateTabViewsInView:window withEnabled:enabled];
+    }
+}
+
+%new
++ (void)findAndUpdateTabViewsInView:(UIView *)view withEnabled:(BOOL)enabled {
+    // If this is a T1TabView, update it
+    if ([view isKindOfClass:self]) {
+        T1TabView *tabView = (T1TabView *)view;
+        [tabView bh_applyCurrentThemeToIcon];
     }
     
-    // Update all tab views when the setting changes
-    if ([self respondsToSelector:@selector(tabViews)]) {
-        NSArray *tabViews = [self valueForKey:@"tabViews"];
-        for (id tabView in tabViews) {
-            if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
-                #pragma clang diagnostic push
-                #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-                [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
-                #pragma clang diagnostic pop
-            }
+    // Recursively check subviews
+    for (UIView *subview in view.subviews) {
+        [self findAndUpdateTabViewsInView:subview withEnabled:enabled];
+    }
+}
+
+%end
+
+// We also need to hook T1TabBarViewController to update all tabs when the setting changes
+%hook T1TabBarViewController
+
+- (void)viewDidLoad {
+    %orig;
+    
+    // Register for the tab bar theming notification
+    [[NSNotificationCenter defaultCenter] addObserver:self 
+                                             selector:@selector(handleTabBarThemingChanged:) 
+                                                 name:@"BHTTabBarThemingChangedNotification" 
+                                               object:nil];
+}
+
+%new
+- (void)handleTabBarThemingChanged:(NSNotification *)notification {
+    // Update all tab views in this controller
+    for (T1TabView *tabView in self.tabViews) {
+        if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
+            [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
         }
     }
 }
 
 - (void)dealloc {
-    // Remove observer
     [[NSNotificationCenter defaultCenter] removeObserver:self name:@"BHTTabBarThemingChangedNotification" object:nil];
     %orig;
 }
