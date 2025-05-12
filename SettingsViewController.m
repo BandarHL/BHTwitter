@@ -359,7 +359,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         
         PSSpecifier *dmAvatars = [self newSwitchCellWithTitle:@"DM Avatars" detailTitle:@"Only show avatars for the last message in a group from the same sender" key:@"dm_avatars" defaultValue:true changeAction:nil];
         
-        PSSpecifier *tabBarTheming = [self newSwitchCellWithTitle:@"Tab Bar Theming" detailTitle:@"Apply accent color to tab bar icons" key:@"tab_bar_theming" defaultValue:true changeAction:nil];
+        PSSpecifier *tabBarTheming = [self newSwitchCellWithTitle:@"Tab Bar Theming" detailTitle:@"Apply accent color to tab bar icons" key:@"tab_bar_theming" defaultValue:true changeAction:@selector(tabBarThemingAction:)];
         
         PSSpecifier *hideViewCount = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE"] key:@"hide_view_count" defaultValue:false changeAction:nil];
 
@@ -936,6 +936,11 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
     }
     
     return nil;
+}
+
+- (void)tabBarThemingAction:(UISwitch *)sender {
+    // Post a notification to trigger tab bar theme update
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTTabBarThemingChangedNotification" object:nil];
 }
 @end
 

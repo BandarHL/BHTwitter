@@ -2857,20 +2857,27 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 // MARK: - Tab Bar Icon Theming
 %hook T1TabView
 
+- (void)didMoveToWindow {
+    %orig;
+    
+    if (self.window) {
+        // Register for theme change notifications when added to window
+        [[NSNotificationCenter defaultCenter] addObserver:self 
+                                                 selector:@selector(handleTabBarThemingChanged:) 
+                                                     name:@"BHTTabBarThemingChangedNotification" 
+                                                   object:nil];
+        
+        // Apply current theme state
+        [self bh_applyCurrentThemeToIcon];
+    } else {
+        // Remove observer when removed from window
+        [[NSNotificationCenter defaultCenter] removeObserver:self name:@"BHTTabBarThemingChangedNotification" object:nil];
+    }
+}
+
 %new
 - (void)bh_applyCurrentThemeToIcon {
-    if (![BHTManager tabBarTheming]) {
-        return;
-    }
-    
-    UIColor *targetColor;
-    // Use KVC for isSelected as it's a property that might not be directly accessible
-    if ([[self valueForKey:@"selected"] boolValue]) { 
-        targetColor = BHTCurrentAccentColor();
-    } else {
-        targetColor = [UIColor grayColor]; // Or a more specific Twitter gray if known
-    }
-
+    // Get/create the image view
     UIImageView *imgView = nil;
     @try {
         imgView = [self valueForKey:@"imageView"];
@@ -2884,19 +2891,58 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         return;
     }
 
-    // Ensure the image can be tinted
-    if (imgView.image && imgView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
-        imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-    }
+    // Check if we need to apply theming
+    if ([BHTManager tabBarTheming]) {
+        UIColor *targetColor;
+        // Use KVC for isSelected as it's a property that might not be directly accessible
+        if ([[self valueForKey:@"selected"] boolValue]) { 
+            targetColor = BHTCurrentAccentColor();
+        } else {
+            targetColor = [UIColor grayColor]; // Default gray for unselected
+        }
 
-    // Try using the applyTintColor method first
-    SEL applyTintColorSelector = @selector(applyTintColor:);
-    if ([self respondsToSelector:applyTintColorSelector]) {
-        // Since applyTintColor: takes an (id) and returns void, performSelector is okay.
-        [self performSelector:applyTintColorSelector withObject:targetColor];
+        // Ensure the image can be tinted
+        if (imgView.image && imgView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
+            imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+        }
+
+        // Try using the applyTintColor method first
+        SEL applyTintColorSelector = @selector(applyTintColor:);
+        if ([self respondsToSelector:applyTintColorSelector]) {
+            // Since applyTintColor: takes an (id) and returns void, performSelector is okay.
+            [self performSelector:applyTintColorSelector withObject:targetColor];
+        } else {
+            // Fallback to directly setting the tintColor on the imageView
+            imgView.tintColor = targetColor;
+        }
     } else {
-        // Fallback to directly setting the tintColor on the imageView
-        imgView.tintColor = targetColor;
+        // Theming is disabled - restore default behavior
+        // Get the tab bar controller to access its appearance
+        UIViewController *controller = nil;
+        UIView *view = self;
+        while (view && !controller) {
+            UIResponder *nextResponder = [view nextResponder];
+            if ([nextResponder isKindOfClass:[UIViewController class]]) {
+                controller = (UIViewController *)nextResponder;
+                break;
+            }
+            view = view.superview;
+        }
+
+        // Reset image to original rendering mode
+        UIImage *originalImage = imgView.image;
+        if (originalImage) {
+            imgView.image = [originalImage imageWithRenderingMode:UIImageRenderingModeAutomatic];
+        }
+
+        // Reset tint color based on selection state
+        if ([[self valueForKey:@"selected"] boolValue]) {
+            // Use system blue for selected items when theming is off
+            imgView.tintColor = [UIColor systemBlueColor];
+        } else {
+            // Use standard gray for unselected items
+            imgView.tintColor = [UIColor grayColor];
+        }
     }
     
     // After applying color, try to force an update of the image view state
@@ -2914,61 +2960,49 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 - (void)setSelected:(_Bool)selected {
     %orig(selected);
-    // Call the new method using performSelector to ensure it's found at runtime
-    [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
+    // Call our theming method
+    [self bh_applyCurrentThemeToIcon];
 }
 
-/* Potential alternative or supplementary hook if setSelected: alone isn't enough:
-- (void)_t1_updateImageViewAnimated:(_Bool)animated {
-    %orig(animated);
-    // We'd call bh_applyCurrentThemeToIcon here too, or replicate its logic if context differs.
-    [self bh_applyCurrentThemeToIcon]; 
+%new
+- (void)handleTabBarThemingChanged:(NSNotification *)notification {
+    // Apply theming changes immediately
+    [self bh_applyCurrentThemeToIcon];
 }
-*/
+
+- (void)dealloc {
+    // Remove observer
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"BHTTabBarThemingChangedNotification" object:nil];
+    %orig;
+}
 
 %end
 
-// Store weak references to T1TabBarViewController instances
-// static NSHashTable *gTabBarControllers = nil; // REMOVED
-
-// Notification handler function // REMOVED
-// static void BHTTabBarAccentColorChanged(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
-//    if (gTabBarControllers) {
-//        for (T1TabBarViewController *tabBarVC in [gTabBarControllers allObjects]) {
-//            if ([tabBarVC respondsToSelector:@selector(tabViews)]) {
-//                NSArray *tabViews = [tabBarVC valueForKey:@"tabViews"]; // KVC for safety
-//                for (id tabView in tabViews) { // id type because T1TabView might not be fully known here
-//                    if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
-//                        [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
-//                    }
-//                }
-//            }
-//        }
-//    }
-//}
-
 %hook T1TabBarViewController
-
-// + (void)load { // REMOVED
-    // Initialize the hash table once
-    // static dispatch_once_t onceToken;
-    // dispatch_once(&onceToken, ^{
-        // gTabBarControllers = [NSHashTable hashTableWithOptions:NSPointerFunctionsWeakMemory];
-        // [[NSNotificationCenter defaultCenter] addObserverForName:NSUserDefaultsDidChangeNotification 
-                                                          // object:nil 
-                                                           // queue:[NSOperationQueue mainQueue] 
-                                                      // usingBlock:^(NSNotification * _Nonnull note) {
-            // BHTTabBarAccentColorChanged(NULL, NULL, NULL, NULL, NULL); 
-        // }];
-    // });
-// }
 
 - (void)viewDidLoad {
     %orig;
-    // if (gTabBarControllers) { // REMOVED
-        // [gTabBarControllers addObject:self]; // REMOVED
-    // }
+    
     // Apply theme on initial load
+    if ([self respondsToSelector:@selector(tabViews)]) {
+        NSArray *tabViews = [self valueForKey:@"tabViews"];
+        for (id tabView in tabViews) {
+            if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
+                [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
+            }
+        }
+    }
+    
+    // Register for theme change notifications
+    [[NSNotificationCenter defaultCenter] addObserver:self 
+                                             selector:@selector(handleTabBarThemingSettingChanged:) 
+                                                 name:@"BHTTabBarThemingChangedNotification" 
+                                               object:nil];
+}
+
+%new
+- (void)handleTabBarThemingSettingChanged:(NSNotification *)notification {
+    // Update all tab views when the setting changes
     if ([self respondsToSelector:@selector(tabViews)]) {
         NSArray *tabViews = [self valueForKey:@"tabViews"];
         for (id tabView in tabViews) {
@@ -2980,9 +3014,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 }
 
 - (void)dealloc {
-    // if (gTabBarControllers) { // REMOVED
-        // [gTabBarControllers removeObject:self]; // REMOVED
-    // }
+    // Remove observer
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"BHTTabBarThemingChangedNotification" object:nil];
     %orig;
 }
 
