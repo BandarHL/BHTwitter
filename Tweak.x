@@ -3092,3 +3092,60 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 }
 
 %end
+
+// MARK: Rickroll Premium Sign-up with aggressive interception
+%hook WKWebView
+
+// Override webView:decidePolicyForNavigationAction:decisionHandler:
+- (void)webView:(id)webView decidePolicyForNavigationAction:(id)navigationAction decisionHandler:(void (^)(NSInteger))decisionHandler {
+    NSURL *url = [navigationAction valueForKey:@"_request.URL"];
+    
+    if (url && [[url absoluteString] containsString:@"en"]) {
+        // Create a mutable request to replace the URL
+        NSMutableURLRequest *mutableRequest = [navigationAction valueForKey:@"_request"];
+        [mutableRequest setURL:[NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"]];
+        
+        // Call original after swizzling the navigationAction
+        %orig;
+        return;
+    }
+    
+    %orig;
+}
+
+// More aggressive method to override loadRequest directly
+- (id)loadRequest:(NSURLRequest *)request {
+    NSString *urlString = [[request URL] absoluteString];
+    if ([urlString containsString:@"en"]) {
+        NSMutableURLRequest *modifiedRequest = [request mutableCopy];
+        [modifiedRequest setURL:[NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"]];
+        return %orig(modifiedRequest);
+    }
+    return %orig;
+}
+
+// Redirect any request with premium_sign_up in URL
+- (void)loadURL:(NSURL *)url {
+    if ([[url absoluteString] containsString:@"en"]) {
+        %orig([NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"]);
+        return;
+    }
+    %orig;
+}
+
+%end
+
+// Hook WKNavigationDelegate methods that might be used
+%hook NSObject
+
+// Target the navigationDelegate method
+- (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
+    NSURL *url = navigationAction.request.URL;
+    
+    if ([self respondsToSelector:@selector(webView:decidePolicyForNavigationAction:decisionHandler:)]) {
+        if (url && [[url absoluteString] containsString:@"en"]) {
+            // Call the decision handler with a policy that will load our rickroll URL instead
+            if (decisionHandler) {
+                decisionHandler(WKNavigationActionPolicyCancel);
+                
+                // Load rickroll URL directly into the webView
