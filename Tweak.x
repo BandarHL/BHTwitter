@@ -2875,7 +2875,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             targetColor = [UIColor grayColor];
         }
     } else {
-        targetColor = [UIColor grayColor];
+        targetColor = [UIColor whiteColor];
     }
     UIImageView *imgView = nil;
     @try {
