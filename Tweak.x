@@ -2834,7 +2834,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 %new
 - (void)bh_applyCurrentThemeToIcon {
     UIColor *targetColor;
-    if ([selfisSelected]) { // Use KVC for isSelected as it's a property
+    // Use KVC for isSelected as it's a property that might not be directly accessible
+    if ([[self valueForKey:@"selected"] boolValue]) { 
         targetColor = BHTCurrentAccentColor();
     } else {
         targetColor = [UIColor grayColor]; // Or a more specific Twitter gray if known
@@ -2869,7 +2870,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 - (void)setSelected:(_Bool)selected {
     %orig(selected);
-    [self bh_applyCurrentThemeToIcon];
+    // Call the new method using performSelector to ensure it's found at runtime
+    [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
 }
 
 /* Potential alternative or supplementary hook if setSelected: alone isn't enough:
