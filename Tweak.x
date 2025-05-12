@@ -2831,11 +2831,10 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 // MARK: - Tab Bar Icon Theming
 %hook T1TabView
 
-- (void)setSelected:(_Bool)selected {
-    %orig(selected);
-
+%new
+- (void)bh_applyCurrentThemeToIcon {
     UIColor *targetColor;
-    if (selected) {
+    if ([selfisSelected]) { // Use KVC for isSelected as it's a property
         targetColor = BHTCurrentAccentColor();
     } else {
         targetColor = [UIColor grayColor]; // Or a more specific Twitter gray if known
@@ -2868,38 +2867,86 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     }
 }
 
+- (void)setSelected:(_Bool)selected {
+    %orig(selected);
+    [self bh_applyCurrentThemeToIcon];
+}
+
 /* Potential alternative or supplementary hook if setSelected: alone isn't enough:
 - (void)_t1_updateImageViewAnimated:(_Bool)animated {
     %orig(animated);
-    UIColor *targetColor;
-    if (self.selected) { // Assuming self.selected is correctly reported here
-        targetColor = BHTCurrentAccentColor();
-    } else {
-        targetColor = [UIColor grayColor];
-    }
-
-    UIImageView *imgView = nil;
-    @try {
-        imgView = [self valueForKey:@"imageView"];
-    } @catch (NSException *exception) {
-        NSLog(@"[BHTwitter TabTheme UpdateAnim] Exception getting imageView: %@", exception);
-        return;
-    }
-    if (!imgView) {
-        NSLog(@"[BHTwitter TabTheme UpdateAnim] imageView is nil.");
-        return;
-    }
-
-    if (imgView.image && imgView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
-        imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-    }
-
-    if ([self respondsToSelector:@selector(applyTintColor:)]) {
-        [self performSelector:@selector(applyTintColor:) withObject:targetColor];
-    } else {
-        imgView.tintColor = targetColor;
-    }
+    // We'd call bh_applyCurrentThemeToIcon here too, or replicate its logic if context differs.
+    [self bh_applyCurrentThemeToIcon]; 
 }
 */
+
+%end
+
+// Store weak references to T1TabBarViewController instances
+static NSHashTable *gTabBarControllers = nil;
+
+// Notification handler function
+static void BHTTabBarAccentColorChanged(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
+    if (gTabBarControllers) {
+        for (T1TabBarViewController *tabBarVC in [gTabBarControllers allObjects]) {
+            if ([tabBarVC respondsToSelector:@selector(tabViews)]) {
+                NSArray *tabViews = [tabBarVC valueForKey:@"tabViews"]; // KVC for safety
+                for (id tabView in tabViews) { // id type because T1TabView might not be fully known here
+                    if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
+                        [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
+                    }
+                }
+            }
+        }
+    }
+}
+
+%hook T1TabBarViewController
+
++ (void)load {
+    // Initialize the hash table once
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        gTabBarControllers = [NSHashTable hashTableWithOptions:NSPointerFunctionsWeakMemory];
+        // Register for direct NSUserDefaults notification (more robust for specific key changes if possible)
+        // However, a general color change notification from BHTManager might be better if it exists.
+        // For now, using NSUserDefaultsDidChangeNotification and checking the key.
+        [[NSNotificationCenter defaultCenter] addObserverForName:NSUserDefaultsDidChangeNotification 
+                                                          object:nil 
+                                                           queue:[NSOperationQueue mainQueue] 
+                                                      usingBlock:^(NSNotification * _Nonnull note) {
+            // Check if our specific color key changed. 
+            // NSUserDefaultsDidChangeNotification doesn't always provide changed keys in userInfo.
+            // A more robust way is to have BHTManager post a specific notification when its color changes.
+            // For now, we'll call our update function and let it re-evaluate.
+            BHTTabBarAccentColorChanged(NULL, NULL, NULL, NULL, NULL); // Call our C-style function
+        }];
+    });
+}
+
+- (void)viewDidLoad {
+    %orig;
+    if (gTabBarControllers) {
+        [gTabBarControllers addObject:self];
+    }
+    // Apply theme on initial load
+    if ([self respondsToSelector:@selector(tabViews)]) {
+        NSArray *tabViews = [self valueForKey:@"tabViews"];
+        for (id tabView in tabViews) {
+            if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
+                [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
+            }
+        }
+    }
+}
+
+- (void)dealloc {
+    if (gTabBarControllers) {
+        [gTabBarControllers removeObject:self];
+    }
+    // No need to explicitly unregister block-based observer added with addObserverForName if it captures self weakly or not at all for this static registration pattern.
+    // However, if we used addObserver:selector:name:object:, we would unregister here.
+    %orig;
+}
 
 %end
