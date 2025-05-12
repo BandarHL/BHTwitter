@@ -2925,32 +2925,47 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             imgView.tintColor = targetColor;
         }
     } else {
-        // Theming is disabled - restore default behavior
-        // Get the tab bar controller to access its appearance
-        UIViewController *controller = nil;
-        UIView *view = self;
-        while (view && !controller) {
-            UIResponder *nextResponder = [view nextResponder];
-            if ([nextResponder isKindOfClass:[UIViewController class]]) {
-                controller = (UIViewController *)nextResponder;
-                break;
+        // COMPLETELY RESTORE DEFAULT TWITTER BEHAVIOR
+        
+        // Reset to original rendering mode
+        if (imgView.image) {
+            imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+            // Also try to load fresh image if possible
+            @try {
+                SEL iconSelector = NSSelectorFromString(@"_iconForSelected:");
+                if ([self respondsToSelector:iconSelector]) {
+                    IMP imp = [self methodForSelector:iconSelector];
+                    UIImage* (*func)(id, SEL, BOOL) = (void *)imp;
+                    BOOL isSelected = [[self valueForKey:@"selected"] boolValue];
+                    UIImage *originalIcon = func(self, iconSelector, isSelected);
+                    if (originalIcon) {
+                        imgView.image = originalIcon;
+                    }
+                }
+            } @catch (NSException *e) {
+                NSLog(@"[BHTwitter] Error restoring tab icon: %@", e);
             }
-            view = view.superview;
         }
-
-        // Reset image to original rendering mode
-        UIImage *originalImage = imgView.image;
-        if (originalImage) {
-            imgView.image = [originalImage imageWithRenderingMode:UIImageRenderingModeAutomatic];
+        
+        // Remove any tint color overrides completely
+        imgView.tintColor = nil;
+        
+        // Explicitly call original Twitter methods if available
+        SEL resetTintSelector = NSSelectorFromString(@"resetTintColor");
+        if ([self respondsToSelector:resetTintSelector]) {
+            #pragma clang diagnostic push
+            #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+            [self performSelector:resetTintSelector];
+            #pragma clang diagnostic pop
         }
-
-        // Reset tint color based on selection state
-        if ([[self valueForKey:@"selected"] boolValue]) {
-            // Use system blue for selected items when theming is off
-            imgView.tintColor = [UIColor systemBlueColor];
-        } else {
-            // Use standard gray for unselected items
-            imgView.tintColor = [UIColor grayColor];
+        
+        // Call Twitter's built-in update method to let it handle colors properly
+        SEL updateTabSelector = NSSelectorFromString(@"_t1_updateTab");
+        if ([self respondsToSelector:updateTabSelector]) {
+            #pragma clang diagnostic push
+            #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+            [self performSelector:updateTabSelector];
+            #pragma clang diagnostic pop
         }
     }
     
@@ -3025,6 +3040,39 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 %new
 - (void)handleTabBarThemingSettingChanged:(NSNotification *)notification {
+    // Completely refresh tab bar when theme changes, especially when disabled
+    if (![BHTManager tabBarTheming]) {
+        // Try to reload the tab bar completely using known internal methods
+        SEL reloadTabsSelector = NSSelectorFromString(@"_t1_reloadTabBarAppearance");
+        if ([self respondsToSelector:reloadTabsSelector]) {
+            #pragma clang diagnostic push
+            #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+            [self performSelector:reloadTabsSelector];
+            #pragma clang diagnostic pop
+        }
+        
+        // Try to force layout update
+        [self.view setNeedsLayout];
+        [self.view layoutIfNeeded];
+        
+        // If we have the tabBar property, tell it to refresh
+        if ([self respondsToSelector:@selector(tabBar)]) {
+            UIView *tabBar = [self valueForKey:@"tabBar"];
+            if (tabBar) {
+                [tabBar setNeedsDisplay];
+                
+                // Force-reload each tab view with default appearance
+                SEL reloadSelector = NSSelectorFromString(@"reloadTabViews");
+                if ([tabBar respondsToSelector:reloadSelector]) {
+                    #pragma clang diagnostic push
+                    #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                    [tabBar performSelector:reloadSelector];
+                    #pragma clang diagnostic pop
+                }
+            }
+        }
+    }
+    
     // Update all tab views when the setting changes
     if ([self respondsToSelector:@selector(tabViews)]) {
         NSArray *tabViews = [self valueForKey:@"tabViews"];
