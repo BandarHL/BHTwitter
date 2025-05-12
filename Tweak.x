@@ -2831,6 +2831,15 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 // MARK: - Tab Bar Icon Theming
 %hook T1TabView
 
+// Prevent tab bar fade by intercepting alpha changes if the feature is enabled
+- (void)setAlpha:(CGFloat)alpha {
+    if ([BHTManager preventTabBarFade]) {
+        %orig(1.0); // Always keep alpha at 1.0 (fully visible)
+    } else {
+        %orig;
+    }
+}
+
 %new
 - (void)bh_applyCurrentThemeToIcon {
     UIColor *targetColor;

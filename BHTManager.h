@@ -70,6 +70,9 @@
 + (BOOL)squareAvatars;
 + (BOOL)restoreVideoTimestamp;
 
+// Prevent Tab Bar Fade
++ (BOOL)preventTabBarFade;
+
 + (void)clearSourceLabelCache;
 
 @end

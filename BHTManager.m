@@ -300,6 +300,10 @@
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"restore_video_timestamp"];
 }
 
++ (BOOL)preventTabBarFade {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"prevent_tab_bar_fade"];
+}
+
 + (void)clearSourceLabelCache {
     NSLog(@"BHTManager: Posting BHTClearSourceLabelCacheNotification");
     [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTClearSourceLabelCacheNotification" object:nil];
