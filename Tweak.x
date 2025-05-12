@@ -2867,14 +2867,20 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
                                                      name:@"BHTTabBarThemingChangedNotification" 
                                                    object:nil];
         
-        // Apply current theme state
-        [self bh_applyCurrentThemeToIcon];
+        // Apply current theme state using respondsToSelector for safety
+        if ([self respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
+            #pragma clang diagnostic push
+            #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+            [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
+            #pragma clang diagnostic pop
+        }
     } else {
         // Remove observer when removed from window
         [[NSNotificationCenter defaultCenter] removeObserver:self name:@"BHTTabBarThemingChangedNotification" object:nil];
     }
 }
 
+// Make sure %new is on its own line before the method
 %new
 - (void)bh_applyCurrentThemeToIcon {
     // Get/create the image view
@@ -2909,8 +2915,11 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         // Try using the applyTintColor method first
         SEL applyTintColorSelector = @selector(applyTintColor:);
         if ([self respondsToSelector:applyTintColorSelector]) {
-            // Since applyTintColor: takes an (id) and returns void, performSelector is okay.
+            // Suppress warning about performSelector
+            #pragma clang diagnostic push
+            #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
             [self performSelector:applyTintColorSelector withObject:targetColor];
+            #pragma clang diagnostic pop
         } else {
             // Fallback to directly setting the tintColor on the imageView
             imgView.tintColor = targetColor;
@@ -2960,14 +2969,25 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 - (void)setSelected:(_Bool)selected {
     %orig(selected);
-    // Call our theming method
-    [self bh_applyCurrentThemeToIcon];
+    // Call our theming method with checks
+    if ([self respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+        [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
+        #pragma clang diagnostic pop
+    }
 }
 
+// Ensure %new is correctly placed
 %new
 - (void)handleTabBarThemingChanged:(NSNotification *)notification {
-    // Apply theming changes immediately
-    [self bh_applyCurrentThemeToIcon];
+    // Apply theming changes immediately with checks
+    if ([self respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+        [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
+        #pragma clang diagnostic pop
+    }
 }
 
 - (void)dealloc {
@@ -2988,7 +3008,10 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         NSArray *tabViews = [self valueForKey:@"tabViews"];
         for (id tabView in tabViews) {
             if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
+                #pragma clang diagnostic push
+                #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
                 [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
+                #pragma clang diagnostic pop
             }
         }
     }
@@ -3007,7 +3030,10 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         NSArray *tabViews = [self valueForKey:@"tabViews"];
         for (id tabView in tabViews) {
             if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
+                #pragma clang diagnostic push
+                #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
                 [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
+                #pragma clang diagnostic pop
             }
         }
     }
