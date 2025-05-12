@@ -355,9 +355,11 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         
         PSSpecifier *OldStyle = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ORIG_TWEET_STYLE_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE"] key:@"old_style" defaultValue:false changeAction:nil];
         
-        PSSpecifier *stopHidingTabBar = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"STOP_HIDING_TAB_BAR_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"STOP_HIDING_TAB_BAR_DETAIL_TITLE"] key:@"no_tab_bar_hiding" defaultValue:false changeAction:nil];
+        PSSpecifier *stopHidingTabBar = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"STOP_HIDING_TAB_BAR_TITLE"] detailTitle:@"Keeps the tab bar visible and prevents fading" key:@"no_tab_bar_hiding" defaultValue:false changeAction:nil];
         
-        PSSpecifier *preventTabBarFade = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"PREVENT_TAB_BAR_FADE_TITLE"] detailTitle:nil key:@"prevent_tab_bar_fade" defaultValue:false changeAction:nil];
+        PSSpecifier *dmAvatars = [self newSwitchCellWithTitle:@"DM Avatars" detailTitle:@"Only show avatars for the last message in a group from the same sender" key:@"dm_avatars" defaultValue:true changeAction:nil];
+        
+        PSSpecifier *tabBarTheming = [self newSwitchCellWithTitle:@"Tab Bar Theming" detailTitle:@"Apply accent color to tab bar icons" key:@"tab_bar_theming" defaultValue:true changeAction:nil];
         
         PSSpecifier *hideViewCount = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE"] key:@"hide_view_count" defaultValue:false changeAction:nil];
 
@@ -382,11 +384,9 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         // New UI Customization toggles
         PSSpecifier *hideGrokAnalyze = [self newSwitchCellWithTitle:@"Hide Grok Analyze Button" detailTitle:@"Hides the Grok Analyze button in tweets" key:@"hide_grok_analyze" defaultValue:false changeAction:nil];
         
-        PSSpecifier *hideSubscribeButton = [self newSwitchCellWithTitle:@"Hide Subscribe Button" detailTitle:@"Hides the Subscribe button in profiles" key:@"hide_subscribe_button" defaultValue:false changeAction:nil];
-        
         PSSpecifier *hideFollowButton = [self newSwitchCellWithTitle:@"Hide Follow Button" detailTitle:@"Hides the Follow button in conversation view" key:@"hide_follow_button" defaultValue:false changeAction:nil];
         
-        PSSpecifier *restoreFollowButton = [self newSwitchCellWithTitle:@"Restore Follow Button" detailTitle:@"Restores the normal Follow button instead of Subscribe" key:@"restore_follow_button" defaultValue:false changeAction:nil];
+        PSSpecifier *restoreFollowButton = [self newSwitchCellWithTitle:@"Restore Follow Button" detailTitle:@"Restores the normal Follow button instead of Subscribe (also hides Subscribe button)" key:@"restore_follow_button" defaultValue:false changeAction:nil];
         
         PSSpecifier *squareAvatars = [self newButtonCellWithTitle:@"Square Avatars" 
                                                       detailTitle:[[NSUserDefaults standardUserDefaults] boolForKey:@"square_avatars"] ? 
@@ -446,7 +446,6 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             disableMediaTab,
             disableArticles,
             disableHighlights,
-            hideSubscribeButton,
             hideFollowButton,
             restoreFollowButton,
 
@@ -474,7 +473,8 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             customDirectBackgroundView,
             hideSpace,
             stopHidingTabBar,
-            preventTabBarFade,
+            dmAvatars,
+            tabBarTheming,
             disableRTL,
             showScrollIndicator,
             font,

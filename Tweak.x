@@ -7,8 +7,6 @@
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
 
-@class T1TwitterSwiftPreloadedWebviewController; // Forward declaration
-
 // Static helper function for recursive view traversal - DEFINED AT THE TOP
 static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
     if (!view || !block) return;
@@ -94,6 +92,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"disableSensitiveTweetWarnings"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"disable_immersive_player"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"custom_voice_upload"];
+        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"dm_avatars"];
+        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"tab_bar_theming"];
     }
     [BHTManager cleanCache];
     if ([BHTManager FLEX]) {
@@ -173,16 +173,16 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 
 - (void)setTabBarOpacity:(double)opacity {
-    if ([BHTManager preventTabBarFade]) {
+    if ([BHTManager stopHidingTabBar]) {
         %orig(1.0);
     } else {
         %orig(opacity);
     }
 }
 
-// May also need to hook setTabBarScrolling: if the above isn't enough
+// Combined with stopHidingTabBar
 - (void)setTabBarScrolling:(BOOL)scrolling {
-    if ([BHTManager preventTabBarFade]) {
+    if ([BHTManager stopHidingTabBar]) {
         %orig(NO); // Force scrolling to NO if fading is prevented
     } else {
         %orig(scrolling);
@@ -2365,7 +2365,7 @@ static NSDate *lastCookieRefresh              = nil;
             self.hidden = YES;
         }
     } else if (action == @selector(_didTapSubscribe)) {
-        if ([self isKindOfClass:NSClassFromString(@"TFNButton")] && [BHTManager hideSubscribeButton]) {
+        if ([self isKindOfClass:NSClassFromString(@"TFNButton")] && [BHTManager restoreFollowButton]) {
             self.alpha = 0.0;
             self.userInteractionEnabled = NO;
         }
@@ -2571,7 +2571,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 - (void)viewDidLayoutSubviews { // Or viewWillAppear:, depending on when controls are added
     %orig;
     // Search for and hide T1SuperFollowControl within this view controller's view
-    if ([BHTManager hideSubscribeButton] && self.isViewLoaded) { // Ensure the view is loaded
+    if ([BHTManager restoreFollowButton] && self.isViewLoaded) { // Ensure the view is loaded
         findAndHideSuperFollowControl(self.view);
     }
 }
@@ -2832,6 +2832,10 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 // MARK: - DM Avatar Images
 %hook T1DirectMessageEntryViewModel
 - (BOOL)shouldShowAvatarImage {
+    if (![BHTManager dmAvatars]) {
+        return %orig;
+    }
+    
     if (self.isOutgoingMessage) {
         return NO; // Don't show avatar for your own messages
     }
@@ -2840,6 +2844,10 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 }
 
 - (BOOL)isAvatarImageEnabled {
+    if (![BHTManager dmAvatars]) {
+        return %orig;
+    }
+    
     // Always return YES so that space is allocated for the avatar,
     // allowing shouldShowAvatarImage to control actual visibility.
     return YES;
@@ -2851,6 +2859,10 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 %new
 - (void)bh_applyCurrentThemeToIcon {
+    if (![BHTManager tabBarTheming]) {
+        return;
+    }
+    
     UIColor *targetColor;
     // Use KVC for isSelected as it's a property that might not be directly accessible
     if ([[self valueForKey:@"selected"] boolValue]) { 
@@ -2975,177 +2987,3 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 }
 
 %end
-
-// MARK: Rickroll Premium Sign-up in PreloadedWebviewController
-@class _TtC14T1TwitterSwift26PreloadedWebviewController;
-
-%hook _TtC14T1TwitterSwift26PreloadedWebviewController
-
-- (id)_committedURL {
-    id url = %orig;
-    if ([url isKindOfClass:[NSURL class]] && [[url absoluteString] isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
-        return [NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"];
-    }
-    if ([url isKindOfClass:[NSString class]] && [url isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
-        return @"https://www.youtube.com/watch?v=dQw4w9WgXcQ";
-    }
-    return url;
-}
-- (id)_mainFrameURL {
-    id url = %orig;
-    if ([url isKindOfClass:[NSURL class]] && [[url absoluteString] isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
-        return [NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"];
-    }
-    if ([url isKindOfClass:[NSString class]] && [url isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
-        return @"https://www.youtube.com/watch?v=dQw4w9WgXcQ";
-    }
-    return url;
-}
-- (id)URL {
-    id url = %orig;
-    if ([url isKindOfClass:[NSURL class]] && [[url absoluteString] isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
-        return [NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"];
-    }
-    if ([url isKindOfClass:[NSString class]] && [url isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
-        return @"https://www.youtube.com/watch?v=dQw4w9WgXcQ";
-    }
-    return url;
-}
-- (void)set_mainFrameURL:(id)url {
-    if ([url isKindOfClass:[NSURL class]] && [[url absoluteString] isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
-        %orig([NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"]);
-        return;
-    }
-    if ([url isKindOfClass:[NSString class]] && [url isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
-        %orig(@"https://www.youtube.com/watch?v=dQw4w9WgXcQ");
-        return;
-    }
-    %orig(url);
-}
-- (void)set_committedURL:(id)url {
-    if ([url isKindOfClass:[NSURL class]] && [[url absoluteString] isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
-        %orig([NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"]);
-        return;
-    }
-    if ([url isKindOfClass:[NSString class]] && [url isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
-        %orig(@"https://www.youtube.com/watch?v=dQw4w9WgXcQ");
-        return;
-    }
-    %orig(url);
-}
-%end
-
-// MARK: Rickroll Premium Sign-up by hooking WKWebView
-%hook WKWebView
-
-// Hook the URL property getter
-- (NSURL *)URL {
-    NSURL *originalURL = %orig;
-    if (originalURL && [[originalURL absoluteString] containsString:@"premium_sign_up"]) {
-        return [NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"];
-    }
-    return originalURL;
-}
-
-// Hook the _committedURL property getter
-- (NSURL *)_committedURL {
-    NSURL *originalURL = %orig;
-    if (originalURL && [[originalURL absoluteString] containsString:@"premium_sign_up"]) {
-        return [NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"];
-    }
-    return originalURL;
-}
-
-// This is the critical method that intercepts navigation requests
-- (BOOL)_shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(NSInteger)navigationType {
-    NSURL *url = [request URL];
-    if (url && [[url absoluteString] containsString:@"premium_sign_up"]) {
-        // Create a new request to the rickroll URL
-        NSURLRequest *rickrollRequest = [NSURLRequest requestWithURL:[NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"]];
-        // Call the original method with our modified request
-        return %orig(rickrollRequest, navigationType);
-    }
-    return %orig;
-}
-
-// Hook shouldStartLoadWithRequest (this is the public API version)
-- (BOOL)shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(NSInteger)navigationType {
-    NSURL *url = [request URL];
-    if (url && [[url absoluteString] containsString:@"premium_sign_up"]) {
-        // Create a new request to the rickroll URL
-        NSURLRequest *rickrollRequest = [NSURLRequest requestWithURL:[NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"]];
-        // Call the original method with our modified request
-        return %orig(rickrollRequest, navigationType);
-    }
-    return %orig;
-}
-
-// Let's also try to hook the WKWebView's loadRequest: method
-- (id)loadRequest:(NSURLRequest *)request {
-    NSURL *url = [request URL];
-    if (url && [[url absoluteString] containsString:@"premium_sign_up"]) {
-        // Create a new request to the rickroll URL
-        NSURLRequest *rickrollRequest = [NSURLRequest requestWithURL:[NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"]];
-        return %orig(rickrollRequest);
-    }
-    return %orig;
-}
-
-%end
-
-// MARK: Rickroll Premium Sign-up with aggressive interception
-%hook WKWebView
-
-// Override webView:decidePolicyForNavigationAction:decisionHandler:
-- (void)webView:(id)webView decidePolicyForNavigationAction:(id)navigationAction decisionHandler:(void (^)(NSInteger))decisionHandler {
-    NSURL *url = [navigationAction valueForKey:@"_request.URL"];
-    
-    if (url && [[url absoluteString] containsString:@"en"]) {
-        // Create a mutable request to replace the URL
-        NSMutableURLRequest *mutableRequest = [navigationAction valueForKey:@"_request"];
-        [mutableRequest setURL:[NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"]];
-        
-        // Call original after swizzling the navigationAction
-        %orig;
-        return;
-    }
-    
-    %orig;
-}
-
-// More aggressive method to override loadRequest directly
-- (id)loadRequest:(NSURLRequest *)request {
-    NSString *urlString = [[request URL] absoluteString];
-    if ([urlString containsString:@"en"]) {
-        NSMutableURLRequest *modifiedRequest = [request mutableCopy];
-        [modifiedRequest setURL:[NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"]];
-        return %orig(modifiedRequest);
-    }
-    return %orig;
-}
-
-// Redirect any request with premium_sign_up in URL
-- (void)loadURL:(NSURL *)url {
-    if ([[url absoluteString] containsString:@"en"]) {
-        %orig([NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"]);
-        return;
-    }
-    %orig;
-}
-
-%end
-
-// Hook WKNavigationDelegate methods that might be used
-%hook NSObject
-
-// Target the navigationDelegate method
-- (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
-    NSURL *url = navigationAction.request.URL;
-    
-    if ([self respondsToSelector:@selector(webView:decidePolicyForNavigationAction:decisionHandler:)]) {
-        if (url && [[url absoluteString] containsString:@"en"]) {
-            // Call the decision handler with a policy that will load our rickroll URL instead
-            if (decisionHandler) {
-                decisionHandler(WKNavigationActionPolicyCancel);
-                
-                // Load rickroll URL directly into the webView

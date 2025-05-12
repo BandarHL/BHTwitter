@@ -64,11 +64,12 @@
 
 // New feature toggles
 + (BOOL)hideGrokAnalyze;
-+ (BOOL)hideSubscribeButton;
 + (BOOL)hideFollowButton;
 + (BOOL)restoreFollowButton;
 + (BOOL)squareAvatars;
 + (BOOL)restoreVideoTimestamp;
++ (BOOL)dmAvatars;
++ (BOOL)tabBarTheming;
 
 // Prevent Tab Bar Fade
 + (BOOL)preventTabBarFade;

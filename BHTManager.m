@@ -278,15 +278,12 @@
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_grok_analyze"];
 }
 
-+ (BOOL)hideSubscribeButton {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_subscribe_button"];
-}
-
 + (BOOL)hideFollowButton {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_follow_button"];
 }
 
 + (BOOL)restoreFollowButton {
+    // Also controls hideSubscribeButton functionality
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"restore_follow_button"];
 }
 
@@ -301,7 +298,16 @@
 }
 
 + (BOOL)preventTabBarFade {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"prevent_tab_bar_fade"];
+    // This is now controlled by stopHidingTabBar
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"no_tab_bar_hiding"];
+}
+
++ (BOOL)dmAvatars {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"dm_avatars"];
+}
+
++ (BOOL)tabBarTheming {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"tab_bar_theming"];
 }
 
 + (void)clearSourceLabelCache {
