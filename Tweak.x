@@ -3063,24 +3063,59 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 // --- Runtime diagnostics for PreloadedWebviewController ---
 __attribute__((constructor)) static void BHTLogPreloadedWebviewControllerClassesAndMethods() {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        int numClasses = objc_getClassList(NULL, 0);
-        Class *classes = (Class *)malloc(sizeof(Class) * numClasses);
-        numClasses = objc_getClassList(classes, numClasses);
-        for (int i = 0; i < numClasses; i++) {
-            Class cls = classes[i];
-            const char *name = class_getName(cls);
-            if (strstr(name, "PreloadedWebviewController")) {
-                NSLog(@"[BHT] Found class: %s", name);
-                unsigned int methodCount = 0;
-                Method *methods = class_copyMethodList(cls, &methodCount);
+    NSLog(@"[BHT_Diag] Logger constructor called.");
+    int numClasses = objc_getClassList(NULL, 0);
+
+    if (numClasses <= 0) {
+        NSLog(@"[BHT_Diag] No classes found or error in objc_getClassList (numClasses: %d).", numClasses);
+        return;
+    }
+    NSLog(@"[BHT_Diag] Number of classes to process: %d", numClasses);
+
+    Class *classes = (Class *)malloc(sizeof(Class) * numClasses);
+    if (!classes) {
+        NSLog(@"[BHT_Diag] Failed to allocate memory for classes array.");
+        return;
+    }
+    NSLog(@"[BHT_Diag] Allocated classes array.");
+
+    numClasses = objc_getClassList(classes, numClasses); // Populate the array
+
+    for (int i = 0; i < numClasses; i++) {
+        Class cls = classes[i];
+        if (!cls) {
+            // Should not happen with a valid list, but good to be safe
+            NSLog(@"[BHT_Diag] Encountered NULL class at index %d.", i);
+            continue;
+        }
+
+        const char *name = class_getName(cls);
+
+        if (name && strstr(name, "PreloadedWebviewController")) {
+            NSLog(@"[BHT_Diag] Found class potentially matching 'PreloadedWebviewController': %s", name);
+            unsigned int methodCount = 0;
+            Method *methods = class_copyMethodList(cls, &methodCount);
+            if (methods) {
+                NSLog(@"[BHT_Diag]   Class %s has %u methods.", name, methodCount);
                 for (unsigned int j = 0; j < methodCount; j++) {
                     SEL sel = method_getName(methods[j]);
-                    NSLog(@"[BHT]   Method: %s", sel_getName(sel));
+                    if (sel) {
+                         const char *methodName = sel_getName(sel);
+                         if (methodName) {
+                             NSLog(@"[BHT_Diag]     Method: %s", methodName);
+                         } else {
+                             NSLog(@"[BHT_Diag]     Found NULL method name at index %u for class %s", j, name);
+                         }
+                    } else {
+                        NSLog(@"[BHT_Diag]     Found NULL selector at method index %u for class %s", j, name);
+                    }
                 }
                 free(methods);
+            } else {
+                NSLog(@"[BHT_Diag]   Class %s: class_copyMethodList returned NULL or methodCount is 0 (actual count: %u).", name, methodCount);
             }
         }
-        free(classes);
-    });
+    }
+    free(classes);
+    NSLog(@"[BHT_Diag] Logger finished.");
 }
