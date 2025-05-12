@@ -2981,6 +2981,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 - (id)_committedURL {
     id url = %orig;
+    NSLog(@"[BHT] _committedURL getter called: %@", url);
     if ([url isKindOfClass:[NSURL class]] && [[url absoluteString] isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
         return [NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"];
     }
@@ -2991,6 +2992,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 }
 - (id)_mainFrameURL {
     id url = %orig;
+    NSLog(@"[BHT] _mainFrameURL getter called: %@", url);
     if ([url isKindOfClass:[NSURL class]] && [[url absoluteString] isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
         return [NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"];
     }
@@ -3001,6 +3003,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 }
 - (id)URL {
     id url = %orig;
+    NSLog(@"[BHT] URL getter called: %@", url);
     if ([url isKindOfClass:[NSURL class]] && [[url absoluteString] isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
         return [NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"];
     }
@@ -3010,6 +3013,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     return url;
 }
 - (void)set_mainFrameURL:(id)url {
+    NSLog(@"[BHT] set_mainFrameURL: called with %@", url);
     if ([url isKindOfClass:[NSURL class]] && [[url absoluteString] isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
         %orig([NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"]);
         return;
@@ -3021,6 +3025,30 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     %orig(url);
 }
 - (void)set_committedURL:(id)url {
+    NSLog(@"[BHT] set_committedURL: called with %@", url);
+    if ([url isKindOfClass:[NSURL class]] && [[url absoluteString] isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
+        %orig([NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"]);
+        return;
+    }
+    if ([url isKindOfClass:[NSString class]] && [url isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
+        %orig(@"https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+        return;
+    }
+    %orig(url);
+}
+- (id)committedURL {
+    id url = %orig;
+    NSLog(@"[BHT] committedURL getter called: %@", url);
+    if ([url isKindOfClass:[NSURL class]] && [[url absoluteString] isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
+        return [NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"];
+    }
+    if ([url isKindOfClass:[NSString class]] && [url isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
+        return @"https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+    }
+    return url;
+}
+- (void)setCommittedURL:(id)url {
+    NSLog(@"[BHT] setCommittedURL: called with %@", url);
     if ([url isKindOfClass:[NSURL class]] && [[url absoluteString] isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
         %orig([NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"]);
         return;
