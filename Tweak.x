@@ -2866,6 +2866,11 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         // Fallback to directly setting the tintColor on the imageView
         imgView.tintColor = targetColor;
     }
+    
+    // Force a redraw of the image view to reflect color change
+    if (imgView) {
+        [imgView setNeedsDisplay];
+    }
 }
 
 - (void)setSelected:(_Bool)selected {
