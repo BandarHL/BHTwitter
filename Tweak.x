@@ -2827,3 +2827,61 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     return YES;
 }
 %end
+
+// MARK: - Tab Bar Icon Theming
+%hook T1TabView
+
+- (void)setSelected:(_Bool)selected {
+    %orig(selected);
+
+    UIColor *targetColor;
+    if (selected) {
+        targetColor = BHTCurrentAccentColor();
+    } else {
+        targetColor = [UIColor grayColor];
+    }
+
+    // Ensure the image can be tinted
+    if (self.imageView && self.imageView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
+        self.imageView.image = [self.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+    }
+
+    // Try using the applyTintColor method first, as it might be the designated way
+    if ([self respondsToSelector:@selector(applyTintColor:)]) {
+        [self applyTintColor:targetColor];
+    } else if (self.imageView) {
+        // Fallback to directly setting the tintColor on the imageView
+        self.imageView.tintColor = targetColor;
+    }
+
+    // If there's a titleLabel, its color might also need to adjust or stay consistent
+    // For now, let's assume the default title color handling is acceptable.
+    // If not, we might need to adjust self.titleLabel.textColor here as well.
+}
+
+// It might also be necessary to hook a layout or update method to re-apply colors
+// if they get reset by other parts of the app's code.
+// For example, if - (void)_t1_updateImageViewAnimated:(_Bool)arg1; resets the color,
+// we might need to hook it too.
+
+/* Potential alternative or supplementary hook if setSelected: alone isn't enough:
+- (void)_t1_updateImageViewAnimated:(_Bool)animated {
+    %orig(animated);
+    UIColor *targetColor;
+    if (self.selected) {
+        targetColor = BHTCurrentAccentColor();
+    } else {
+        targetColor = [UIColor grayColor];
+    }
+    if (self.imageView && self.imageView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
+        self.imageView.image = [self.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+    }
+    if ([self respondsToSelector:@selector(applyTintColor:)]) {
+        [self applyTintColor:targetColor];
+    } else if (self.imageView) {
+        self.imageView.tintColor = targetColor;
+    }
+}
+*/
+
+%end
