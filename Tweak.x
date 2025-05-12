@@ -2838,48 +2838,66 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     if (selected) {
         targetColor = BHTCurrentAccentColor();
     } else {
-        targetColor = [UIColor grayColor];
+        targetColor = [UIColor grayColor]; // Or a more specific Twitter gray if known
+    }
+
+    UIImageView *imgView = nil;
+    @try {
+        imgView = [self valueForKey:@"imageView"];
+    } @catch (NSException *exception) {
+        NSLog(@"[BHTwitter TabTheme] Exception getting imageView: %@", exception);
+        return; // Can't proceed without the image view
+    }
+
+    if (!imgView) {
+        NSLog(@"[BHTwitter TabTheme] imageView is nil.");
+        return;
     }
 
     // Ensure the image can be tinted
-    if (self.imageView && self.imageView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
-        self.imageView.image = [self.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+    if (imgView.image && imgView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
+        imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
     }
 
-    // Try using the applyTintColor method first, as it might be the designated way
+    // Try using the applyTintColor method first
     if ([self respondsToSelector:@selector(applyTintColor:)]) {
-        [self applyTintColor:targetColor];
-    } else if (self.imageView) {
+        [self performSelector:@selector(applyTintColor:) withObject:targetColor];
+    } else {
         // Fallback to directly setting the tintColor on the imageView
-        self.imageView.tintColor = targetColor;
+        imgView.tintColor = targetColor;
     }
-
-    // If there's a titleLabel, its color might also need to adjust or stay consistent
-    // For now, let's assume the default title color handling is acceptable.
-    // If not, we might need to adjust self.titleLabel.textColor here as well.
 }
-
-// It might also be necessary to hook a layout or update method to re-apply colors
-// if they get reset by other parts of the app's code.
-// For example, if - (void)_t1_updateImageViewAnimated:(_Bool)arg1; resets the color,
-// we might need to hook it too.
 
 /* Potential alternative or supplementary hook if setSelected: alone isn't enough:
 - (void)_t1_updateImageViewAnimated:(_Bool)animated {
     %orig(animated);
     UIColor *targetColor;
-    if (self.selected) {
+    if (self.selected) { // Assuming self.selected is correctly reported here
         targetColor = BHTCurrentAccentColor();
     } else {
         targetColor = [UIColor grayColor];
     }
-    if (self.imageView && self.imageView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
-        self.imageView.image = [self.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+
+    UIImageView *imgView = nil;
+    @try {
+        imgView = [self valueForKey:@"imageView"];
+    } @catch (NSException *exception) {
+        NSLog(@"[BHTwitter TabTheme UpdateAnim] Exception getting imageView: %@", exception);
+        return;
     }
+    if (!imgView) {
+        NSLog(@"[BHTwitter TabTheme UpdateAnim] imageView is nil.");
+        return;
+    }
+
+    if (imgView.image && imgView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
+        imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+    }
+
     if ([self respondsToSelector:@selector(applyTintColor:)]) {
-        [self applyTintColor:targetColor];
-    } else if (self.imageView) {
-        self.imageView.tintColor = targetColor;
+        [self performSelector:@selector(applyTintColor:) withObject:targetColor];
+    } else {
+        imgView.tintColor = targetColor;
     }
 }
 */
