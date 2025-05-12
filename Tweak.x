@@ -7,6 +7,8 @@
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
 
+@class T1TwitterSwiftPreloadedWebviewController; // Forward declaration
+
 // Static helper function for recursive view traversal - DEFINED AT THE TOP
 static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
     if (!view || !block) return;
@@ -2981,7 +2983,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 - (id)_committedURL {
     id url = %orig;
-    NSLog(@"[BHT] _committedURL getter called: %@", url);
     if ([url isKindOfClass:[NSURL class]] && [[url absoluteString] isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
         return [NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"];
     }
@@ -2992,7 +2993,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 }
 - (id)_mainFrameURL {
     id url = %orig;
-    NSLog(@"[BHT] _mainFrameURL getter called: %@", url);
     if ([url isKindOfClass:[NSURL class]] && [[url absoluteString] isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
         return [NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"];
     }
@@ -3003,7 +3003,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 }
 - (id)URL {
     id url = %orig;
-    NSLog(@"[BHT] URL getter called: %@", url);
     if ([url isKindOfClass:[NSURL class]] && [[url absoluteString] isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
         return [NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"];
     }
@@ -3013,7 +3012,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     return url;
 }
 - (void)set_mainFrameURL:(id)url {
-    NSLog(@"[BHT] set_mainFrameURL: called with %@", url);
     if ([url isKindOfClass:[NSURL class]] && [[url absoluteString] isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
         %orig([NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"]);
         return;
@@ -3025,30 +3023,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     %orig(url);
 }
 - (void)set_committedURL:(id)url {
-    NSLog(@"[BHT] set_committedURL: called with %@", url);
-    if ([url isKindOfClass:[NSURL class]] && [[url absoluteString] isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
-        %orig([NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"]);
-        return;
-    }
-    if ([url isKindOfClass:[NSString class]] && [url isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
-        %orig(@"https://www.youtube.com/watch?v=dQw4w9WgXcQ");
-        return;
-    }
-    %orig(url);
-}
-- (id)committedURL {
-    id url = %orig;
-    NSLog(@"[BHT] committedURL getter called: %@", url);
-    if ([url isKindOfClass:[NSURL class]] && [[url absoluteString] isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
-        return [NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"];
-    }
-    if ([url isKindOfClass:[NSString class]] && [url isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
-        return @"https://www.youtube.com/watch?v=dQw4w9WgXcQ";
-    }
-    return url;
-}
-- (void)setCommittedURL:(id)url {
-    NSLog(@"[BHT] setCommittedURL: called with %@", url);
     if ([url isKindOfClass:[NSURL class]] && [[url absoluteString] isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
         %orig([NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"]);
         return;
@@ -3060,62 +3034,3 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     %orig(url);
 }
 %end
-
-// --- Runtime diagnostics for PreloadedWebviewController ---
-__attribute__((constructor)) static void BHTLogPreloadedWebviewControllerClassesAndMethods() {
-    NSLog(@"[BHT_Diag] Logger constructor called.");
-    int numClasses = objc_getClassList(NULL, 0);
-
-    if (numClasses <= 0) {
-        NSLog(@"[BHT_Diag] No classes found or error in objc_getClassList (numClasses: %d).", numClasses);
-        return;
-    }
-    NSLog(@"[BHT_Diag] Number of classes to process: %d", numClasses);
-
-    Class *classes = (Class *)malloc(sizeof(Class) * numClasses);
-    if (!classes) {
-        NSLog(@"[BHT_Diag] Failed to allocate memory for classes array.");
-        return;
-    }
-    NSLog(@"[BHT_Diag] Allocated classes array.");
-
-    numClasses = objc_getClassList(classes, numClasses); // Populate the array
-
-    for (int i = 0; i < numClasses; i++) {
-        Class cls = classes[i];
-        if (!cls) {
-            // Should not happen with a valid list, but good to be safe
-            NSLog(@"[BHT_Diag] Encountered NULL class at index %d.", i);
-            continue;
-        }
-
-        const char *name = class_getName(cls);
-
-        if (name && strstr(name, "PreloadedWebviewController")) {
-            NSLog(@"[BHT_Diag] Found class potentially matching 'PreloadedWebviewController': %s", name);
-            unsigned int methodCount = 0;
-            Method *methods = class_copyMethodList(cls, &methodCount);
-            if (methods) {
-                NSLog(@"[BHT_Diag]   Class %s has %u methods.", name, methodCount);
-                for (unsigned int j = 0; j < methodCount; j++) {
-                    SEL sel = method_getName(methods[j]);
-                    if (sel) {
-                         const char *methodName = sel_getName(sel);
-                         if (methodName) {
-                             NSLog(@"[BHT_Diag]     Method: %s", methodName);
-                         } else {
-                             NSLog(@"[BHT_Diag]     Found NULL method name at index %u for class %s", j, name);
-                         }
-                    } else {
-                        NSLog(@"[BHT_Diag]     Found NULL selector at method index %u for class %s", j, name);
-                    }
-                }
-                free(methods);
-            } else {
-                NSLog(@"[BHT_Diag]   Class %s: class_copyMethodList returned NULL or methodCount is 0 (actual count: %u).", name, methodCount);
-            }
-        }
-    }
-    free(classes);
-    NSLog(@"[BHT_Diag] Logger finished.");
-}
