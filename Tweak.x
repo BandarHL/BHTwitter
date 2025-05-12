@@ -2974,85 +2974,61 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 %end
 
-// Forward declare the Swift view controller and the CustomWKView
-@class _TtC12T1TwitterSwift32PreloadedWebkitViewController;
-@class CustomWKView; // Assuming this is the name. It might be different, e.g., _TtC12T1TwitterSwift12CustomWKView
+// MARK: Rickroll Premium Sign-up in PreloadedWebviewController
+@class T1TwitterSwiftPreloadedWebviewController;
 
-// It's also possible CustomWKView is a more generic WKWebView, let's prepare for that too.
-#import <WebKit/WebKit.h> // WKWebView
+%hook T1TwitterSwiftPreloadedWebviewController
 
-%hook _TtC12T1TwitterSwift32PreloadedWebkitViewController
-
-// It's common for web views to be configured in viewWillAppear or viewDidLoad
-- (void)viewWillAppear:(BOOL)animated {
-    %orig(animated);
-
-    // Try to find the CustomWKView instance.
-    // It might be a direct property, or we might need to search subviews.
-    UIView *webViewInstance = nil; // Use UIView as a generic pointer first
-
-    // Option 1: Check for a known property (common names)
-    if ([self respondsToSelector:@selector(webView)]) {
-        webViewInstance = [self performSelector:@selector(webView)];
-    } else if ([self respondsToSelector:@selector(customWKView)]) { // Or a more specific name
-        webViewInstance = [self performSelector:@selector(customWKView)];
+- (id)_committedURL {
+    id url = %orig;
+    if ([url isKindOfClass:[NSURL class]] && [[url absoluteString] isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
+        return [NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"];
     }
-    // Add other potential property names if you discover them
-
-    // Option 2: If not found as a property, iterate subviews (less ideal but a fallback)
-    if (!webViewInstance) {
-        for (UIView *subview in self.view.subviews) {
-            // Check class name string, as direct class comparison with Swift classes can be tricky
-            if ([NSStringFromClass([subview class]) containsString:@"CustomWKView"]) {
-                webViewInstance = subview;
-                break;
-            }
-            // Also check for a standard WKWebView as a fallback
-            if ([subview isKindOfClass:[WKWebView class]]) {
-                 webViewInstance = subview;
-                 // If we find a generic WKWebView, we might prefer a more specific CustomWKView if it also exists
-            }
-        }
+    if ([url isKindOfClass:[NSString class]] && [url isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
+        return @"https://www.youtube.com/watch?v=dQw4w9WgXcQ";
     }
-
-    if (webViewInstance) {
-        // Now we have a webViewInstance, let's try to get and set its URL
-        NSURL *currentURL = nil;
-        if ([webViewInstance respondsToSelector:@selector(URL)]) {
-            currentURL = [webViewInstance performSelector:@selector(URL)];
-        }
-
-        NSString *targetURLString = @"https://twitter.com/i/premium_sign_up";
-        if (currentURL && [currentURL.absoluteString isEqualToString:targetURLString]) {
-            NSURL *newURL = [NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"];
-            
-            // Try setting the URL property directly first (common for WKWebView)
-            if ([webViewInstance respondsToSelector:@selector(setURL:)]) {
-                 [webViewInstance performSelector:@selector(setURL:) withObject:newURL];
-                 // If it's a standard WKWebView, it might also need a loadRequest
-                 if ([webViewInstance isKindOfClass:[WKWebView class]]) {
-                     [(WKWebView *)webViewInstance loadRequest:[NSURLRequest requestWithURL:newURL]];
-                 }
-            } 
-            // Else, try to find a loadRequest: or similar method
-            // This part might need adjustment based on CustomWKView's actual API
-            else if ([webViewInstance respondsToSelector:@selector(loadRequest:)]) {
-                [webViewInstance performSelector:@selector(loadRequest:) withObject:[NSURLRequest requestWithURL:newURL]];
-            } else if ([webViewInstance respondsToSelector:@selector(loadURL:)]) { // A custom load method
-                [webViewInstance performSelector:@selector(loadURL:) withObject:newURL];
-            } else {
-                // Fallback: If it's a WKWebView, try its loadRequest method
-                 if ([webViewInstance isKindOfClass:[WKWebView class]]) {
-                     [(WKWebView *)webViewInstance loadRequest:[NSURLRequest requestWithURL:newURL]];
-                 } else {
-                    // NSLog or os_log that we couldn't find a way to set the URL
-                    NSLog(@"[BHTwitter] Could not find method to set URL on CustomWKView or WKWebView.");
-                 }
-            }
-        }
-    } else {
-         NSLog(@"[BHTwitter] CustomWKView or WKWebView instance not found in _TtC12T1TwitterSwift32PreloadedWebkitViewController.");
-    }
+    return url;
 }
-
+- (id)_mainFrameURL {
+    id url = %orig;
+    if ([url isKindOfClass:[NSURL class]] && [[url absoluteString] isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
+        return [NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"];
+    }
+    if ([url isKindOfClass:[NSString class]] && [url isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
+        return @"https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+    }
+    return url;
+}
+- (id)URL {
+    id url = %orig;
+    if ([url isKindOfClass:[NSURL class]] && [[url absoluteString] isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
+        return [NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"];
+    }
+    if ([url isKindOfClass:[NSString class]] && [url isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
+        return @"https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+    }
+    return url;
+}
+- (void)set_mainFrameURL:(id)url {
+    if ([url isKindOfClass:[NSURL class]] && [[url absoluteString] isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
+        %orig([NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"]);
+        return;
+    }
+    if ([url isKindOfClass:[NSString class]] && [url isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
+        %orig(@"https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+        return;
+    }
+    %orig(url);
+}
+- (void)set_committedURL:(id)url {
+    if ([url isKindOfClass:[NSURL class]] && [[url absoluteString] isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
+        %orig([NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"]);
+        return;
+    }
+    if ([url isKindOfClass:[NSString class]] && [url isEqualToString:@"https://twitter.com/i/premium_sign_up"]) {
+        %orig(@"https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+        return;
+    }
+    %orig(url);
+}
 %end
