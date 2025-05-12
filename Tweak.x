@@ -2977,9 +2977,9 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 %end
 
 // MARK: Rickroll Premium Sign-up in PreloadedWebviewController
-@class T1TwitterSwiftPreloadedWebviewController;
+@class _TtC14T1TwitterSwift26PreloadedWebviewController;
 
-%hook T1TwitterSwiftPreloadedWebviewController
+%hook _TtC14T1TwitterSwift26PreloadedWebviewController
 
 - (id)_committedURL {
     id url = %orig;
