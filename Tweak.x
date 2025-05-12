@@ -2899,52 +2899,45 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 %end
 
 // Store weak references to T1TabBarViewController instances
-static NSHashTable *gTabBarControllers = nil;
+// static NSHashTable *gTabBarControllers = nil; // REMOVED
 
-// Notification handler function
-static void BHTTabBarAccentColorChanged(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
-    if (gTabBarControllers) {
-        for (T1TabBarViewController *tabBarVC in [gTabBarControllers allObjects]) {
-            if ([tabBarVC respondsToSelector:@selector(tabViews)]) {
-                NSArray *tabViews = [tabBarVC valueForKey:@"tabViews"]; // KVC for safety
-                for (id tabView in tabViews) { // id type because T1TabView might not be fully known here
-                    if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
-                        [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
-                    }
-                }
-            }
-        }
-    }
-}
+// Notification handler function // REMOVED
+// static void BHTTabBarAccentColorChanged(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
+//    if (gTabBarControllers) {
+//        for (T1TabBarViewController *tabBarVC in [gTabBarControllers allObjects]) {
+//            if ([tabBarVC respondsToSelector:@selector(tabViews)]) {
+//                NSArray *tabViews = [tabBarVC valueForKey:@"tabViews"]; // KVC for safety
+//                for (id tabView in tabViews) { // id type because T1TabView might not be fully known here
+//                    if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
+//                        [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
+//                    }
+//                }
+//            }
+//        }
+//    }
+//}
 
 %hook T1TabBarViewController
 
-+ (void)load {
+// + (void)load { // REMOVED
     // Initialize the hash table once
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        gTabBarControllers = [NSHashTable hashTableWithOptions:NSPointerFunctionsWeakMemory];
-        // Register for direct NSUserDefaults notification (more robust for specific key changes if possible)
-        // However, a general color change notification from BHTManager might be better if it exists.
-        // For now, using NSUserDefaultsDidChangeNotification and checking the key.
-        [[NSNotificationCenter defaultCenter] addObserverForName:NSUserDefaultsDidChangeNotification 
-                                                          object:nil 
-                                                           queue:[NSOperationQueue mainQueue] 
-                                                      usingBlock:^(NSNotification * _Nonnull note) {
-            // Check if our specific color key changed. 
-            // NSUserDefaultsDidChangeNotification doesn't always provide changed keys in userInfo.
-            // A more robust way is to have BHTManager post a specific notification when its color changes.
-            // For now, we'll call our update function and let it re-evaluate.
-            BHTTabBarAccentColorChanged(NULL, NULL, NULL, NULL, NULL); // Call our C-style function
-        }];
-    });
-}
+    // static dispatch_once_t onceToken;
+    // dispatch_once(&onceToken, ^{
+        // gTabBarControllers = [NSHashTable hashTableWithOptions:NSPointerFunctionsWeakMemory];
+        // [[NSNotificationCenter defaultCenter] addObserverForName:NSUserDefaultsDidChangeNotification 
+                                                          // object:nil 
+                                                           // queue:[NSOperationQueue mainQueue] 
+                                                      // usingBlock:^(NSNotification * _Nonnull note) {
+            // BHTTabBarAccentColorChanged(NULL, NULL, NULL, NULL, NULL); 
+        // }];
+    // });
+// }
 
 - (void)viewDidLoad {
     %orig;
-    if (gTabBarControllers) {
-        [gTabBarControllers addObject:self];
-    }
+    // if (gTabBarControllers) { // REMOVED
+        // [gTabBarControllers addObject:self]; // REMOVED
+    // }
     // Apply theme on initial load
     if ([self respondsToSelector:@selector(tabViews)]) {
         NSArray *tabViews = [self valueForKey:@"tabViews"];
@@ -2957,11 +2950,9 @@ static void BHTTabBarAccentColorChanged(CFNotificationCenterRef center, void *ob
 }
 
 - (void)dealloc {
-    if (gTabBarControllers) {
-        [gTabBarControllers removeObject:self];
-    }
-    // No need to explicitly unregister block-based observer added with addObserverForName if it captures self weakly or not at all for this static registration pattern.
-    // However, if we used addObserver:selector:name:object:, we would unregister here.
+    // if (gTabBarControllers) { // REMOVED
+        // [gTabBarControllers removeObject:self]; // REMOVED
+    // }
     %orig;
 }
 
