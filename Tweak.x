@@ -3060,3 +3060,27 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     %orig(url);
 }
 %end
+
+// --- Runtime diagnostics for PreloadedWebviewController ---
+__attribute__((constructor)) static void BHTLogPreloadedWebviewControllerClassesAndMethods() {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        int numClasses = objc_getClassList(NULL, 0);
+        Class *classes = (Class *)malloc(sizeof(Class) * numClasses);
+        numClasses = objc_getClassList(classes, numClasses);
+        for (int i = 0; i < numClasses; i++) {
+            Class cls = classes[i];
+            const char *name = class_getName(cls);
+            if (strstr(name, "PreloadedWebviewController")) {
+                NSLog(@"[BHT] Found class: %s", name);
+                unsigned int methodCount = 0;
+                Method *methods = class_copyMethodList(cls, &methodCount);
+                for (unsigned int j = 0; j < methodCount; j++) {
+                    SEL sel = method_getName(methods[j]);
+                    NSLog(@"[BHT]   Method: %s", sel_getName(sel));
+                }
+                free(methods);
+            }
+        }
+        free(classes);
+    });
+}
