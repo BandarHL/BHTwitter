@@ -2715,42 +2715,73 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 - (void)setText:(NSString *)text {
     %orig(text);
 
-    // Check if this label is the one we want to modify (e.g., video timestamp)
-    if ([BHTManager restoreVideoTimestamp] && self.text && [self.text containsString:@":"] && [self.text containsString:@"/"]) {
-        // Check if this label is THE progressLabel from ImmersiveCardViewV2
-        BOOL isTheTargetLabel = NO;
+    if ([BHTManager restoreVideoTimestamp] && self.text && ([self.text containsString:@":"] || [self.text containsString:@"/" || [self.text containsString:@"Live"])) { // Broaden text check slightly
+        BOOL isInsideImmersiveCardView = NO;
         UIView *superviewCheck = self;
-        _TtC14T1TwitterSwift19ImmersiveCardViewV2* foundCardViewForLabel = nil;
+        _TtC14T1TwitterSwift19ImmersiveCardViewV2* cardViewInstance = nil;
+
         while(superviewCheck != nil) {
             if ([superviewCheck isKindOfClass:NSClassFromString(@"_TtC14T1TwitterSwift19ImmersiveCardViewV2")]) {
-                 foundCardViewForLabel = (_TtC14T1TwitterSwift19ImmersiveCardViewV2*)superviewCheck;
-                 UILabel* kvcLabel = nil;
-                 @try { kvcLabel = [(id)foundCardViewForLabel valueForKey:@"progressLabel"]; } @catch (NSException*e) {}
-                 if (kvcLabel == self) {
-                     isTheTargetLabel = YES;
-                     NSLog(@"[BHTwitter ImmersiveTimestamp] UILabel -setText: Identified target progressLabel (%p) for cardView (%p). Text: %@", self, foundCardViewForLabel, text);
-                     NSLog(@"[BHTwitter ImmersiveTimestamp] UILabel -setText: Initial hidden: %d, alpha: %.2f", self.hidden, self.alpha);
-                 }
-                break; 
+                 isInsideImmersiveCardView = YES;
+                 cardViewInstance = (_TtC14T1TwitterSwift19ImmersiveCardViewV2*)superviewCheck;
+                 NSLog(@"[BHTwitter ImmersiveTimestampDebug] UILabel (%p, text: '%@') found ImmersiveCardViewV2 superview (%p).", self, text, cardViewInstance);
+                 break; 
             }
             superviewCheck = superviewCheck.superview;
         }
 
-        if (isTheTargetLabel) {
-            self.font = [UIFont systemFontOfSize:14.0];
-            self.textColor = [UIColor whiteColor]; // Ensure it's visible on dark video backgrounds
-            
-            [self sizeToFit];
-            // Minimal size check, if needed
-            if (CGRectGetWidth(self.frame) < 10 || CGRectGetHeight(self.frame) < 5) {
-                CGRect currentFrame = self.frame;
-                currentFrame.size.width = MAX(currentFrame.size.width, 50.0f); // Use float literal
-                currentFrame.size.height = MAX(currentFrame.size.height, 20.0f); // Use float literal
-                // self.frame = currentFrame; // Be careful with direct frame manipulation if auto layout is used
-                NSLog(@"[BHTwitter ImmersiveTimestamp] UILabel -setText: Adjusted frame for small label to w:%.2f, h:%.2f", currentFrame.size.width, currentFrame.size.height);
+        if (isInsideImmersiveCardView && cardViewInstance) {
+            // Attempt to KVC for progressLabel, log success or failure
+            UILabel* kvcLabel = nil;
+            @try {
+                kvcLabel = [(id)cardViewInstance valueForKey:@"progressLabel"];
+                if (kvcLabel == self) {
+                    NSLog(@"[BHTwitter ImmersiveTimestampDebug] UILabel (%p) IS the KVC progressLabel for cardView (%p).", self, cardViewInstance);
+                    // This is our target label - make it visible and styled
+                    self.hidden = NO;
+                    self.alpha = 1.0f;
+                    self.font = [UIFont systemFontOfSize:14.0];
+                    self.textColor = [UIColor whiteColor];
+                    [self sizeToFit];
+                     NSLog(@"[BHTwitter ImmersiveTimestampDebug] UILabel (%p) FORCED VISIBLE & STYLED. Hidden: %d, Alpha: %.2f", self, self.hidden, self.alpha);
+                } else if (kvcLabel != nil) {
+                    NSLog(@"[BHTwitter ImmersiveTimestampDebug] UILabel (%p) is NOT the KVC progressLabel. KVC returned other label: %p for cardView (%p).", self, kvcLabel, cardViewInstance);
+                } else {
+                    NSLog(@"[BHTwitter ImmersiveTimestampDebug] KVC for progressLabel returned NIL for cardView (%p). Current label is (%p).", cardViewInstance, self);
+                    // If KVC failed, but we are a UILabel with matching text inside the card view, 
+                    // this might be our label. Let's try styling it anyway for debugging.
+                    if ([self.text containsString:@":"] && [self.text containsString:@"/"]) { // Be more specific for this fallback
+                        NSLog(@"[BHTwitter ImmersiveTimestampDebug] Fallback: Applying style to UILabel (%p) with text '%@' due to KVC fail but text match.", self, self.text);
+                        self.hidden = NO; 
+                        self.alpha = 1.0f;
+                        self.font = [UIFont systemFontOfSize:14.0];
+                        self.textColor = [UIColor whiteColor];
+                        [self sizeToFit];
+                        NSLog(@"[BHTwitter ImmersiveTimestampDebug] UILabel (%p) FALLBACK FORCED VISIBLE & STYLED. Hidden: %d, Alpha: %.2f", self, self.hidden, self.alpha);
+                    }
+                }
+            } @catch (NSException*e) {
+                NSLog(@"[BHTwitter ImmersiveTimestampDebug] KVC EXCEPTION for progressLabel on cardView (%p): %@. Current label is (%p).", cardViewInstance, e, self);
+                // Even on KVC exception, if text matches, try to style for debugging.
+                if ([self.text containsString:@":"] && [self.text containsString:@"/"]) { // Be more specific
+                    NSLog(@"[BHTwitter ImmersiveTimestampDebug] Fallback (Exception): Applying style to UILabel (%p) with text '%@'.", self, self.text);
+                    self.hidden = NO;
+                    self.alpha = 1.0f;
+                    self.font = [UIFont systemFontOfSize:14.0];
+                    self.textColor = [UIColor whiteColor];
+                    [self sizeToFit];
+                    NSLog(@"[BHTwitter ImmersiveTimestampDebug] UILabel (%p) FALLBACK (Exception) FORCED VISIBLE & STYLED. Hidden: %d, Alpha: %.2f", self, self.hidden, self.alpha);
+                }
             }
-            // Visibility (hidden, alpha) is now controlled by T1ImmersiveFullScreenViewController hook
-            NSLog(@"[BHTwitter ImmersiveTimestamp] UILabel -setText: Styled target progressLabel (%p). Current hidden: %d, alpha: %.2f", self, self.hidden, self.alpha);
+            
+            // Minimal size check, if needed, for the label we made visible
+            if (!self.hidden && (CGRectGetWidth(self.frame) < 10 || CGRectGetHeight(self.frame) < 5)) {
+                CGRect currentFrame = self.frame;
+                currentFrame.size.width = MAX(currentFrame.size.width, 50.0f); 
+                currentFrame.size.height = MAX(currentFrame.size.height, 20.0f); 
+                // self.frame = currentFrame; // Careful with direct frame manipulation if auto layout is used
+                NSLog(@"[BHTwitter ImmersiveTimestampDebug] UILabel (%p) Adjusted frame for small label to w:%.2f, h:%.2f", self, currentFrame.size.width, currentFrame.size.height);
+            }
         }
     }
 }
