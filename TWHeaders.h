@@ -522,9 +522,6 @@ typedef FLEXAlertAction * _Nonnull (^FLEXAlertActionHandler)(void(^handler)(NSAr
 @interface TAEColorSettings : NSObject
 @property(retain, nonatomic) TAETwitterColorPaletteSettingInfo *currentColorPalette;
 - (void)setPrimaryColorOption:(NSInteger)colorOption;
-- (id)currentColorPalette;
-- (void)setSelectedColorOption:(NSInteger)option;
-- (NSInteger)selectedColorOption;
 + (instancetype)sharedSettings;
 @end
 
@@ -613,9 +610,4 @@ static UIViewController * _Nonnull topMostController() {
 
 @interface T1ConversationFooterTextView : TFNAttributedTextView
 @property(nonatomic, readonly) id viewModel;
-@end
-
-@interface TAEColorPalette : NSObject
-- (UIColor *)primaryColor;
-- (UIColor *)primaryColorForOption:(NSInteger)option;
 @end

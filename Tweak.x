@@ -11,7 +11,6 @@
 static void BHT_UpdateAllTabBarIcons(void);
 static void BHT_applyThemeToWindow(UIWindow *window);
 static void BHT_ensureTheming(void);
-static NSInteger BHT_getSelectedColorOption(void);
 
 // Static helper function for recursive view traversal - DEFINED AT THE TOP
 static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
@@ -31,8 +30,21 @@ UIColor *BHTCurrentAccentColor(void) {
     }
 
     id settings = [TAEColorSettingsCls sharedSettings];
-    id palette = [[settings currentColorPalette] colorPalette];
-    return [palette primaryColorForOption:BHT_getSelectedColorOption()] ?: [UIColor systemBlueColor];
+    id current = [settings currentColorPalette];
+    id palette = [current colorPalette];
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
+    }
+
+    if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
+        NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+        return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
+    }
+
+    return [UIColor systemBlueColor];
 }
 
 static UIFont * _Nullable TAEStandardFontGroupReplacement(UIFont *self, SEL _cmd, CGFloat arg1, CGFloat arg2) {
@@ -3104,24 +3116,47 @@ static void BHT_UpdateAllTabBarIcons(void) {
 
 static void BHT_applyThemeToWindow(UIWindow *window) {
     if (!window) return;
-    
-    // Theme the window itself if needed
-    window.tintColor = BHTCurrentAccentColor();
-    
-    // Theme all tab bar controllers in this window
-    for (UIView *view in window.subviews) {
-        if ([view.nextResponder isKindOfClass:NSClassFromString(@"T1TabBarViewController")]) {
-            BHT_UpdateAllTabBarIcons();
-            break;
+
+    // 1. Update our custom themed elements first
+    // Update our custom tab bar icons
+    if ([window.rootViewController isKindOfClass:NSClassFromString(@"T1TabBarViewController")]) {
+        // Ensure BHT_UpdateAllTabBarIcons properly targets the tabViews of this specific window's rootVC
+        // If BHT_UpdateAllTabBarIcons iterates all T1TabBarViewControllers globally, this direct call might be okay,
+        // but targeting is safer if possible.
+        BHT_UpdateAllTabBarIcons(); 
+    }
+
+    // Update our custom nav bar bird icon by recursively finding TFNNavigationBars
+    BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
+        if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
+            // updateLogoTheme should internally use BHTCurrentAccentColor()
+            [(TFNNavigationBar *)currentView updateLogoTheme];
+        }
+    });
+
+    // 2. Force a refresh of the currently visible content view hierarchy.
+    // This is an attempt to make Twitter's own views re-evaluate the (now changed) accent color.
+    UIViewController *rootVC = window.rootViewController;
+    if (rootVC) {
+        UIViewController *currentContentVC = rootVC;
+        // Traverse to the most relevant visible content view controller
+        if ([rootVC isKindOfClass:NSClassFromString(@"T1TabBarViewController")]) {
+            currentContentVC = [(T1TabBarViewController *)rootVC selectedViewController];
+        }
+        
+        // If the selected VC in a tab bar is a Nav controller, go to its visible VC
+        if ([currentContentVC isKindOfClass:[UINavigationController class]]) {
+            currentContentVC = [(UINavigationController *)currentContentVC visibleViewController];
+        }
+
+        // If we have a valid, loaded content view, tell it to redraw and re-layout.
+        if (currentContentVC && currentContentVC.isViewLoaded) {
+            [currentContentVC.view setNeedsDisplay];
+            [currentContentVC.view setNeedsLayout];
+            // Optionally, for a more immediate effect, though it can be costly if overused:
+            // [currentContentVC.view layoutIfNeeded]; 
         }
     }
-    
-    // Theme all navigation bars in this window
-    [window.rootViewController.view.subviews enumerateObjectsUsingBlock:^(__kindof UIView * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
-        if ([obj isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
-            [(TFNNavigationBar *)obj updateLogoTheme];
-        }
-    }];
 }
 
 static void BHT_ensureTheming(void) {
@@ -3135,65 +3170,3 @@ static void BHT_ensureTheming(void) {
         BHT_applyThemeToWindow(window);
     }
 }
-
-static NSInteger BHT_getSelectedColorOption(void) {
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        return [defs integerForKey:@"bh_color_theme_selectedColor"];
-    }
-    return [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-}
-
-// Hook TAEColorSettings to ensure our color is always returned
-%hook TAEColorSettings
-+ (id)sharedSettings {
-    id settings = %orig;
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        // Force an update of the color palette
-        [settings setValue:@(BHT_getSelectedColorOption()) forKey:@"selectedColorOption"];
-    }
-    return settings;
-}
-
-- (void)setSelectedColorOption:(NSInteger)option {
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        %orig(BHT_getSelectedColorOption());
-    } else {
-        %orig;
-    }
-}
-
-- (NSInteger)selectedColorOption {
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        return BHT_getSelectedColorOption();
-    }
-    return %orig;
-}
-
-// Ensure our color is used for all palette requests
-- (id)currentColorPalette {
-    id palette = %orig;
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        // Force palette to use our color
-        [palette setValue:@(BHT_getSelectedColorOption()) forKey:@"selectedColorOption"];
-    }
-    return palette;
-}
-%end
-
-// Hook the color palette to ensure it always returns our themed color
-%hook TAEColorPalette
-- (UIColor *)primaryColor {
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        return [self primaryColorForOption:BHT_getSelectedColorOption()];
-    }
-    return %orig;
-}
-
-- (UIColor *)primaryColorForOption:(NSInteger)option {
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        return %orig(BHT_getSelectedColorOption());
-    }
-    return %orig;
-}
-%end
