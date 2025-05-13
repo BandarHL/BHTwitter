@@ -3011,46 +3011,51 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 %new
 - (void)bh_applyCurrentThemeToIcon {
     UIImageView *imgView = nil;
+    UIVisualEffectView *effectView = nil; // Declare effectView
+
     @try {
         imgView = [self valueForKey:@"imageView"];
+        effectView = [self valueForKey:@"effectView"]; // Attempt to get effectView
     } @catch (NSException *exception) {
-        NSLog(@"[BHTwitter TabTheme] Exception getting imageView: %@", exception);
-        return;
+        NSLog(@"[BHTwitter TabTheme] Exception getting imageView or effectView: %@", exception);
+        // If imgView is nil, we can't proceed with image theming.
+        if (!imgView) {
+            return;
+        }
     }
 
     if (!imgView) {
-        NSLog(@"[BHTwitter TabTheme] imageView is nil for tabView: %@", self);
+        NSLog(@"[BHTwitter TabTheme] imageView is nil for tabView: %@\", self);
         return;
     }
 
     if (![BHTManager tabBarTheming]) {
         // Theming is OFF, revert to default
-        if (imgView.image && imgView.image.renderingMode == UIImageRenderingModeAlwaysTemplate) {
-            // If it's a template image, setting tintColor to nil might revert it.
-            // Or, we might need to fetch the original unselected/selected system color.
-            // For now, nil should make it use its original colors if it's a template.
-            // If the original image wasn't a template, this won't have much effect.
-            // The key is that we are NOT applying our custom colors.
-            imgView.tintColor = nil; 
+        if (effectView) {
+            effectView.hidden = NO; // Show the effect view
         }
-        // It might be necessary to restore the original image if it was replaced,
-        // but T1TabView likely handles its own selected/unselected images.
-        // We are just influencing the tint.
+        if (imgView.image && imgView.image.renderingMode == UIImageRenderingModeAlwaysTemplate) {
+            imgView.tintColor = nil;
+        }
+        // Consider if original image rendering mode needs to be restored if we changed it.
+        // For now, assuming _t1_updateImageViewAnimated or native logic handles this when tintColor is nil.
     } else {
         // Theming is ON
+        if (effectView) {
+            effectView.hidden = YES; // Hide the effect view
+        }
+
         UIColor *targetColor;
-        if ([[self valueForKey:@"selected"] boolValue]) { 
+        if ([[self valueForKey:@"selected"] boolValue]) {
             targetColor = BHTCurrentAccentColor();
         } else {
-            // For unselected themed icons, use gray or a less prominent version of the accent.
-            // Using gray consistently as before.
-            targetColor = [UIColor grayColor]; 
+            targetColor = [UIColor grayColor];
         }
 
         if (imgView.image && imgView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
             imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
         }
-        imgView.tintColor = targetColor; // Directly set tintColor, as applyTintColor: might be a private T1 method.
+        imgView.tintColor = targetColor;
     }
 
     // Common update logic
