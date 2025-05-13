@@ -2864,8 +2864,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 // MARK: - Tab Bar Icon Theming
 %hook T1TabView
 
-%new // Renamed and logic updated
-- (void)bh_updateAppearanceBasedOnThemeSetting {
+%new
+- (void)bh_applyThemeOrResetToDefault {
     UIImageView *imgView = nil;
     @try {
         imgView = [self valueForKey:@"imageView"];
@@ -2878,45 +2878,45 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         return;
     }
 
-    BOOL isSelected = [[self valueForKey:@"selected"] boolValue];
-    UIImage *currentImage = imgView.image;
-    UIImageRenderingMode targetRenderingMode = UIImageRenderingModeAlwaysTemplate; // Default usually uses template
-    UIColor *targetColor = nil;
-
-    if ([BHTManager tabBarTheming]) {
-        // Theming is ON
-        targetColor = isSelected ? BHTCurrentAccentColor() : [UIColor grayColor];
-    } else {
-        // Theming is OFF - Use semantic colors for default appearance
-        targetColor = isSelected ? UIColor.labelColor : UIColor.secondaryLabelColor;
-    }
-
-    // Ensure image is template for tinting (most tab bars use this)
-    if (currentImage && currentImage.renderingMode != targetRenderingMode) {
-        imgView.image = [currentImage imageWithRenderingMode:targetRenderingMode];
-    }
-    
-    // Apply tint color (handle potential custom apply method or direct set)
-    SEL applyTintColorSelector = @selector(applyTintColor:);
-    if ([self respondsToSelector:applyTintColorSelector]) {
-        #pragma clang diagnostic push
-        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-        [self performSelector:applyTintColorSelector withObject:targetColor];
-        #pragma clang diagnostic pop
-    } else {
-        imgView.tintColor = targetColor;
-    }
-
-    // Explicitly trigger the internal update method to apply the state
-    SEL updateSelector = NSSelectorFromString(@"_t1_updateImageViewAnimated:");
-    if ([self respondsToSelector:updateSelector]) {
-        IMP imp = [self methodForSelector:updateSelector];
+    // First, let the original logic update the image view.
+    // This should apply the "true" default appearance based on selection, trait collection, etc.
+    SEL internalUpdateSelector = NSSelectorFromString(@"_t1_updateImageViewAnimated:");
+    if ([self respondsToSelector:internalUpdateSelector]) {
+        IMP imp = [self methodForSelector:internalUpdateSelector];
         void (*func)(id, SEL, _Bool) = (void *)imp;
-        func(self, updateSelector, NO); // Call with NO animation
+        func(self, internalUpdateSelector, NO); // Call with NO animation
     } else {
-         // Fallback if the internal method isn\'t found
-         [imgView setNeedsDisplay]; 
-     }
+        // Fallback if the specific internal method isn't found, less ideal
+        [imgView setNeedsDisplay];
+    }
+
+    // Now, if theming is enabled, override with our custom theme.
+    if ([BHTManager tabBarTheming]) {
+        BOOL isSelected = [[self valueForKey:@"selected"] boolValue];
+        UIColor *targetColor = isSelected ? BHTCurrentAccentColor() : [UIColor grayColor];
+        UIImageRenderingMode targetRenderingMode = UIImageRenderingModeAlwaysTemplate;
+
+        if (imgView.image && imgView.image.renderingMode != targetRenderingMode) {
+            imgView.image = [imgView.image imageWithRenderingMode:targetRenderingMode];
+        }
+
+        SEL applyTintColorSelector = @selector(applyTintColor:);
+        if ([self respondsToSelector:applyTintColorSelector]) {
+            #pragma clang diagnostic push
+            #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+            [self performSelector:applyTintColorSelector withObject:targetColor];
+            #pragma clang diagnostic pop
+        } else {
+            imgView.tintColor = targetColor;
+        }
+        // Re-call internal update if we themed, to ensure it's applied over any defaults set by the first call
+        if ([self respondsToSelector:internalUpdateSelector]) {
+            IMP imp = [self methodForSelector:internalUpdateSelector];
+            void (*func)(id, SEL, _Bool) = (void *)imp;
+            func(self, internalUpdateSelector, NO); 
+        }
+    }
+    // If theming is OFF, we've already let the original update logic run, so defaults should be applied.
 }
 
 
@@ -2924,8 +2924,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     %orig(selected); // Call original FIRST
     #pragma clang diagnostic push
     #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-    // Always call our appearance update method
-    [self performSelector:@selector(bh_updateAppearanceBasedOnThemeSetting)]; 
+    [self performSelector:@selector(bh_applyThemeOrResetToDefault)]; 
     #pragma clang diagnostic pop
 }
 
@@ -2935,8 +2934,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     if ([self.traitCollection hasDifferentColorAppearanceComparedToTraitCollection:previousTraitCollection]) {
         #pragma clang diagnostic push
         #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-         // Always call our appearance update method on appearance change
-        [self performSelector:@selector(bh_updateAppearanceBasedOnThemeSetting)];
+        [self performSelector:@selector(bh_applyThemeOrResetToDefault)];
         #pragma clang diagnostic pop
     }
 }
@@ -2980,14 +2978,13 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 - (void)viewDidLoad {
     %orig;
-    // Apply theme/default state on initial load
     if ([self respondsToSelector:@selector(tabViews)]) {
         NSArray *tabViews = [self valueForKey:@"tabViews"];
         for (id tabView in tabViews) {
-            if ([tabView respondsToSelector:@selector(bh_updateAppearanceBasedOnThemeSetting)]) {
+            if ([tabView respondsToSelector:@selector(bh_applyThemeOrResetToDefault)]) {
                 #pragma clang diagnostic push
                 #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-                [tabView performSelector:@selector(bh_updateAppearanceBasedOnThemeSetting)];
+                [tabView performSelector:@selector(bh_applyThemeOrResetToDefault)];
                 #pragma clang diagnostic pop
             }
         }
@@ -3005,7 +3002,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 // Helper: Update all tab bar icons (Simplified)
 static void BHT_UpdateAllTabBarIcons(void) {
-    // Iterate through windows and VCs to find TabBarViewControllers
     for (UIWindow *window in UIApplication.sharedApplication.windows) {
         UIViewController *root = window.rootViewController;
         if (!root) continue;
@@ -3014,22 +3010,18 @@ static void BHT_UpdateAllTabBarIcons(void) {
             UIViewController *vc = [stack lastObject];
             [stack removeLastObject];
             
-            // Check if the current VC is the TabBarViewController
             if ([vc isKindOfClass:NSClassFromString(@"T1TabBarViewController")]) {
-                // Get its tab views
                 NSArray *tabViews = [vc valueForKey:@"tabViews"];
                 for (id tabView in tabViews) { 
-                    // Tell each tab view to update its appearance based on the current setting
-                    if ([tabView respondsToSelector:@selector(bh_updateAppearanceBasedOnThemeSetting)]) {
+                    if ([tabView respondsToSelector:@selector(bh_applyThemeOrResetToDefault)]) {
                         #pragma clang diagnostic push
                         #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-                        [tabView performSelector:@selector(bh_updateAppearanceBasedOnThemeSetting)];
+                        [tabView performSelector:@selector(bh_applyThemeOrResetToDefault)];
                         #pragma clang diagnostic pop
                     }
                 }
             }
             
-            // Add children and presented VCs to the stack to continue traversal
              for (UIViewController *child in vc.childViewControllers) {
                 [stack addObject:child];
             }
