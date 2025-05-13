@@ -3125,7 +3125,11 @@ static void BHT_applyThemeToWindow(UIWindow *window) {
         UIViewController *currentContentVC = rootVC;
         // Traverse to the most relevant visible content view controller
         if ([rootVC isKindOfClass:NSClassFromString(@"T1TabBarViewController")]) {
-            currentContentVC = [(T1TabBarViewController *)rootVC selectedViewController];
+            // T1TabBarViewController is a UITabBarController subclass.
+            // Cast to UITabBarController to access standard 'selectedViewController' property.
+            if ([rootVC isKindOfClass:[UITabBarController class]]) {
+                currentContentVC = ((UITabBarController *)rootVC).selectedViewController;
+            }
         }
         
         // If the selected VC in a tab bar is a Nav controller, go to its visible VC
