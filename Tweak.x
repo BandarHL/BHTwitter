@@ -3007,8 +3007,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 // Helper: Update all tab bar icons
 static void BHT_UpdateAllTabBarIcons(void) {
-    // No need to check toggle state here anymore, the hooks handle it.
-    // We just need to force an update.
+    // Get the current state of the toggle ONCE, outside the loop.
+    BOOL isThemingEnabled = [BHTManager tabBarTheming];
 
     for (UIWindow *window in UIApplication.sharedApplication.windows) {
         UIViewController *root = window.rootViewController;
@@ -3020,24 +3020,51 @@ static void BHT_UpdateAllTabBarIcons(void) {
             if ([vc isKindOfClass:NSClassFromString(@"T1TabBarViewController")]) {
                 NSArray *tabViews = [vc valueForKey:@"tabViews"];
                 for (id tabView in tabViews) { // Use 'id' as type might vary slightly
-                    // Force layout and redraw cycle for each tab view
-                    if ([tabView respondsToSelector:@selector(setNeedsLayout)]) {
-                        [tabView performSelector:@selector(setNeedsLayout)];
+                    
+                    if (![tabView isKindOfClass:NSClassFromString(@"T1TabView")]) continue; // Ensure it's the correct type
+
+                    UIImageView *imgView = nil;
+                    @try {
+                        imgView = [tabView valueForKey:@"imageView"];
+                    } @catch (NSException *exception) {
+                         NSLog(@"[BHTwitter TabTheme Update] Exception getting imageView: %@", exception);
+                        continue; // Skip if we can't get the image view
                     }
-                    if ([tabView respondsToSelector:@selector(layoutIfNeeded)]) {
-                         // Ensure layout happens synchronously NOW
-                         // Note: Calling layoutIfNeeded directly might be risky if complex
-                         // dependencies exist, but it's the most direct way to force immediate update.
-                         // We can try without it first if it causes issues.
-                        [tabView performSelector:@selector(layoutIfNeeded)]; 
+                     if (!imgView) {
+                        NSLog(@"[BHTwitter TabTheme Update] imageView is nil.");
+                        continue; // Skip if no image view
                     }
-                    // As a fallback or alternative, maybe trigger the internal update method?
-                    // SEL updateSelector = NSSelectorFromString(@"_t1_updateImageViewAnimated:");
-                    // if ([tabView respondsToSelector:updateSelector]) {
-                    //    IMP imp = [tabView methodForSelector:updateSelector];
-                    //    void (*func)(id, SEL, _Bool) = (void *)imp;
-                    //    func(tabView, updateSelector, NO);
-                    // }
+
+                    if (isThemingEnabled) {
+                        // Theming is ON: Apply our custom theme
+                        if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
+                            #pragma clang diagnostic push
+                            #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                            [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
+                            #pragma clang diagnostic pop
+                        }
+                    } else {
+                         // Theming is OFF: Reset to default appearance
+                         
+                         // 1. Reset tint color to nil (allow default system/app behavior)
+                         imgView.tintColor = nil; 
+                         
+                         // 2. Reset rendering mode (optional but good practice)
+                         if (imgView.image && imgView.image.renderingMode != UIImageRenderingModeAutomatic) {
+                            imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAutomatic];
+                         }
+
+                         // 3. Explicitly call the internal update method to apply the reset state
+                         SEL updateSelector = NSSelectorFromString(@"_t1_updateImageViewAnimated:");
+                         if ([tabView respondsToSelector:updateSelector]) {
+                            IMP imp = [tabView methodForSelector:updateSelector];
+                            void (*func)(id, SEL, _Bool) = (void *)imp;
+                            func(tabView, updateSelector, NO); // Call with NO animation
+                         } else {
+                             // Fallback if the internal method isn't found (less likely but safe)
+                             [imgView setNeedsDisplay]; 
+                         }
+                    }
                 }
             }
             // Add children and presented VC logic...
