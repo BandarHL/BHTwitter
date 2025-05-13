@@ -2868,15 +2868,26 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 - (void)bh_applyCurrentThemeToIcon {
     BOOL themingEnabled = [BHTManager tabBarTheming];
     UIColor *targetColor;
+    BOOL isSelected = [[self valueForKey:@"selected"] boolValue];
+
     if (themingEnabled) {
-        if ([[self valueForKey:@"selected"] boolValue]) {
+        if (isSelected) {
             targetColor = BHTCurrentAccentColor();
         } else {
-            targetColor = [UIColor grayColor];
+            targetColor = [UIColor grayColor]; // Use a standard gray for unselected in themed mode
         }
     } else {
-        targetColor = [UIColor whiteColor];
+        // Theming disabled: Revert to default colors based on selection and interface style
+        if (isSelected) {
+            // Use the function that gets the current primary color, 
+            // which should be the default blue if no theme is set.
+            targetColor = BHTCurrentAccentColor(); 
+        } else {
+            // Use a semantic color that adapts to light/dark mode for unselected state
+            targetColor = [UIColor secondaryLabelColor]; 
+        }
     }
+
     UIImageView *imgView = nil;
     @try {
         imgView = [self valueForKey:@"imageView"];
@@ -2909,17 +2920,17 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 - (void)setSelected:(_Bool)selected {
     %orig(selected);
-    // Call the new method using performSelector to ensure it's found at runtime
     [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
 }
 
-/* Potential alternative or supplementary hook if setSelected: alone isn't enough:
-- (void)_t1_updateImageViewAnimated:(_Bool)animated {
-    %orig(animated);
-    // We'd call bh_applyCurrentThemeToIcon here too, or replicate its logic if context differs.
-    [self bh_applyCurrentThemeToIcon]; 
+// Add hook for traitCollectionDidChange
+- (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
+    %orig(previousTraitCollection);
+    // Re-apply colors when interface style changes
+    if ([self.traitCollection hasDifferentColorAppearanceComparedToTraitCollection:previousTraitCollection]) {
+        [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
+    }
 }
-*/
 
 %end
 
