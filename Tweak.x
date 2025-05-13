@@ -2,11 +2,16 @@
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
 #import "SAMKeychain/AuthViewController.h"
+#import <objc/message.h> // For objc_msgSend
 #import "Colours/Colours.h"
 #import "BHTManager.h"
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
-#import <objc/message.h> // For objc_msgSend
+
+// Forward declare T1ColorSettings and its private method to satisfy the compiler
+@interface T1ColorSettings : NSObject
++ (void)_t1_applyPrimaryColorOption;
+@end
 
 // Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
