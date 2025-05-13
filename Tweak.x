@@ -6,6 +6,7 @@
 #import "BHTManager.h"
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
+#import <objc/message.h> // For objc_msgSend
 
 // Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
@@ -2995,7 +2996,9 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     }
     SEL applyTintColorSelector = @selector(applyTintColor:);
     if ([self respondsToSelector:applyTintColorSelector]) {
-        [self performSelector:applyTintColorSelector withObject:targetColor];
+        // Use objc_msgSend to avoid performSelector warnings and be more explicit.
+        // Assumes applyTintColor: returns void and takes a UIColor*.
+        ((void (*)(id, SEL, UIColor *))objc_msgSend)(self, applyTintColorSelector, targetColor);
     } else {
         imgView.tintColor = targetColor;
     }
@@ -3024,25 +3027,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 */
 
 %end
-
-// Store weak references to T1TabBarViewController instances
-// static NSHashTable *gTabBarControllers = nil; // REMOVED
-
-// Notification handler function // REMOVED
-// static void BHTTabBarAccentColorChanged(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
-//    if (gTabBarControllers) {
-//        for (T1TabBarViewController *tabBarVC in [gTabBarControllers allObjects]) {
-//            if ([tabBarVC respondsToSelector:@selector(tabViews)]) {
-//                NSArray *tabViews = [tabBarVC valueForKey:@"tabViews"]; // KVC for safety
-//                for (id tabView in tabViews) { // id type because T1TabView might not be fully known here
-//                    if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
-//                        [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
-//                    }
-//                }
-//            }
-//        }
-//    }
-//}
 
 %hook T1TabBarViewController
 
