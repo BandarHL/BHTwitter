@@ -9,15 +9,8 @@
 
 // Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
-
-// Add at the top of the file after forward declarations
-static void BHT_ApplyThemeIfNeeded(void) {
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
-        // Update tab bar icons
-        BHT_UpdateAllTabBarIcons();
-    }
-}
+static void BHT_applyThemeToWindow(UIWindow *window);
+static void BHT_ensureTheming(void);
 
 // Static helper function for recursive view traversal - DEFINED AT THE TOP
 static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
@@ -108,26 +101,27 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"tab_bar_theming"];
     }
     [BHTManager cleanCache];
-    
-    // Apply theme at launch
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        BHT_ApplyThemeIfNeeded();
-    });
-    
     if ([BHTManager FLEX]) {
         [[%c(FLEXManager) sharedManager] showExplorer];
     }
+    
+    // Apply theme immediately after launch
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            BHT_ensureTheming();
+        });
+    }
+    
     return true;
 }
 
 - (void)applicationDidBecomeActive:(id)arg1 {
     %orig;
-    
-    // Re-apply theme when app becomes active
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        BHT_ApplyThemeIfNeeded();
-    });
-    
+    // Apply/Re-apply theme elements on becoming active
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
+    }
+
     if ([BHTManager Padlock]) {
         NSDictionary *keychainData = [[keychain shared] getData];
         if (keychainData != nil) {
@@ -667,24 +661,33 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %hook TFNPagingViewController
 - (void)viewDidAppear:(_Bool)animated {
     %orig(animated);
-    // Apply theme when this controller appears
-    BHT_ApplyThemeIfNeeded();
+    
+    // Re-apply theme when this controller appears
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        BHT_ensureTheming();
+    }
 }
 %end
 
 %hook TFNNavigationController
 - (void)viewDidAppear:(_Bool)animated {
     %orig(animated);
-    // Apply theme when this controller appears
-    BHT_ApplyThemeIfNeeded();
+    
+    // Re-apply theme when this controller appears
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        BHT_ensureTheming();
+    }
 }
 %end
 
 %hook T1AppSplitViewController
 - (void)viewDidAppear:(_Bool)animated {
     %orig(animated);
-    // Apply theme when this controller appears
-    BHT_ApplyThemeIfNeeded();
+    
+    // Re-apply theme when this controller appears
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        BHT_ensureTheming();
+    }
 }
 %end
 
@@ -2865,42 +2868,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         }
     }];
     
-    // Add observer for theme color changes in UserDefaults
-    [center addObserverForName:NSUserDefaultsDidChangeNotification
-                       object:nil
-                        queue:mainQueue
-                   usingBlock:^(NSNotification * _Nonnull note) {
-        // Check if our specific key changed
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-            BHT_ApplyThemeIfNeeded();
-        }
-    }];
-    
-    // Add observer for UIApplicationDidFinishLaunchingNotification
-    [center addObserverForName:UIApplicationDidFinishLaunchingNotification
-                       object:nil
-                        queue:mainQueue
-                   usingBlock:^(NSNotification * _Nonnull note) {
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            BHT_ApplyThemeIfNeeded();
-        });
-    }];
-    
-    // Add observer for UIApplicationDidBecomeActiveNotification
-    [center addObserverForName:UIApplicationDidBecomeActiveNotification
-                       object:nil
-                        queue:mainQueue
-                   usingBlock:^(NSNotification * _Nonnull note) {
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            BHT_ApplyThemeIfNeeded();
-        });
-    }];
-    
-    // Continue with existing initialization
-    [[NSNotificationCenter defaultCenter] addObserverForName:@"BHTTabBarThemingChanged" object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification * _Nonnull note) {
-        BHT_UpdateAllTabBarIcons();
-    }];
-    
     // Initialize global Class pointers here when the tweak loads
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -2938,6 +2905,35 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     [TweetSourceHelper loadCachedCookies];
     
     %init;
+    [[NSNotificationCenter defaultCenter] addObserverForName:@"BHTTabBarThemingChanged" object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification * _Nonnull note) {
+        BHT_UpdateAllTabBarIcons();
+    }];
+    
+    // Add observers for both window and theme changes
+    [[NSNotificationCenter defaultCenter] addObserverForName:UIWindowDidBecomeKeyNotification 
+                                                    object:nil 
+                                                     queue:[NSOperationQueue mainQueue] 
+                                                usingBlock:^(NSNotification * _Nonnull note) {
+        UIWindow *window = note.object;
+        if (window && [[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+            BHT_applyThemeToWindow(window);
+        }
+    }];
+    
+    [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
+                                                    object:nil 
+                                                     queue:[NSOperationQueue mainQueue] 
+                                                usingBlock:^(NSNotification * _Nonnull note) {
+        BHT_ensureTheming();
+    }];
+    
+    // Observe theme changes
+    [[NSNotificationCenter defaultCenter] addObserverForName:@"BHTTabBarThemingChanged" 
+                                                    object:nil 
+                                                     queue:[NSOperationQueue mainQueue] 
+                                                usingBlock:^(NSNotification * _Nonnull note) {
+        BHT_ensureTheming();
+    }];
 }
 
 // MARK: - DM Avatar Images
@@ -3115,5 +3111,39 @@ static void BHT_UpdateAllTabBarIcons(void) {
                 [stack addObject:vc.presentedViewController];
             }
         }
+    }
+}
+
+static void BHT_applyThemeToWindow(UIWindow *window) {
+    if (!window) return;
+    
+    // Theme the window itself if needed
+    window.tintColor = BHTCurrentAccentColor();
+    
+    // Theme all tab bar controllers in this window
+    for (UIView *view in window.subviews) {
+        if ([view.nextResponder isKindOfClass:NSClassFromString(@"T1TabBarViewController")]) {
+            BHT_UpdateAllTabBarIcons();
+            break;
+        }
+    }
+    
+    // Theme all navigation bars in this window
+    [window.rootViewController.view.subviews enumerateObjectsUsingBlock:^(__kindof UIView * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        if ([obj isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
+            [(TFNNavigationBar *)obj updateLogoTheme];
+        }
+    }];
+}
+
+static void BHT_ensureTheming(void) {
+    if (![[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) return;
+    
+    // Apply the main color theme
+    BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
+    
+    // Apply to all windows
+    for (UIWindow *window in [UIApplication sharedApplication].windows) {
+        BHT_applyThemeToWindow(window);
     }
 }
