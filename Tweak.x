@@ -9,7 +9,6 @@
 
 // Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
-static BOOL BHT_initialThemeApplied = NO;
 
 // Static helper function for recursive view traversal - DEFINED AT THE TOP
 static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
@@ -110,13 +109,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     %orig;
     // Apply/Re-apply theme elements on becoming active
     if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        if (!BHT_initialThemeApplied) {
-            BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
-            BHT_initialThemeApplied = YES;
-        }
-        // Always update UI elements that might get reset
-        BHT_UpdateAllTabBarIcons();
-        // We might need a similar global update for Navigation Bar icons if they also get reset
+        BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
     }
 
     if ([BHTManager Padlock]) {
@@ -131,16 +124,11 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                 });
             }
         }
-        UIImageView *image = [self.window viewWithTag:909];
-        if (image != nil) {
-            [image removeFromSuperview];
-        }
     }
 }
 
 - (void)applicationWillTerminate:(id)arg1 {
     %orig;
-    BHT_initialThemeApplied = NO; // Reset flag on termination
     if ([BHTManager Padlock]) {
         [[keychain shared] saveDictionary:@{@"isAuthenticated": @NO}];
     }
@@ -664,12 +652,10 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)viewDidAppear:(_Bool)animated {
     %orig(animated);
     
-    static dispatch_once_t once;
-    dispatch_once(&once, ^ {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-            BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
-        }
-    });
+    // Re-apply theme when this controller appears
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
+    }
 }
 %end
 
@@ -677,12 +663,10 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)viewDidAppear:(_Bool)animated {
     %orig(animated);
     
-    static dispatch_once_t once;
-    dispatch_once(&once, ^ {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-            BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
-        }
-    });
+    // Re-apply theme when this controller appears
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
+    }
 }
 %end
 
@@ -690,12 +674,10 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)viewDidAppear:(_Bool)animated {
     %orig(animated);
     
-    static dispatch_once_t once;
-    dispatch_once(&once, ^ {
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-            BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
-        }
-    });
+    // Re-apply theme when this controller appears
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
+    }
 }
 %end
 
@@ -704,11 +686,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     if ([defaultName isEqualToString:@"T1ColorSettingsPrimaryColorOptionKey"]) {
         id selectedColor = [[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"];
         if (selectedColor != nil) {
-            // Ensure the value being set is an NSNumber before comparing
-            if (![value isKindOfClass:[NSNumber class]]) {
-                 // If it's not a number, let the original method handle it or log an error.
-                 return %orig;
-            }
             if ([value isEqual:selectedColor]) {
                 return %orig;
             } else {
