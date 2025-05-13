@@ -114,9 +114,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         dispatch_async(dispatch_get_main_queue(), ^ {
             NSInteger selectedOption = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
             BH_changeTwitterColor(selectedOption);
-            Class t1cs = objc_getClass("T1ColorSettings");
-            if ([t1cs respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
-                [t1cs _t1_applyPrimaryColorOption];
+            if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
+                [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
             }
         });
     }
@@ -134,9 +133,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         NSInteger selectedOption = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
         BH_changeTwitterColor(selectedOption);
 
-        Class t1cs = objc_getClass("T1ColorSettings");
-        if ([t1cs respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
-            [t1cs _t1_applyPrimaryColorOption];
+        if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
+            [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
         }
 
         BHT_UpdateAllTabBarIcons();
