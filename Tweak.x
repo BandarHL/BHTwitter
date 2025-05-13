@@ -2870,156 +2870,65 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 // MARK: - Tab Bar Icon Theming
 %hook T1TabView
 
-%new
-- (void)bh_storeOriginalPropertiesIfNeeded {
-    if (!gOriginalTabViewProperties) return; // Safety check
-    
-    // Use self (T1TabView instance) as the key
-    if ([gOriginalTabViewProperties objectForKey:self]) {
-        return; // Already stored
-    }
+// Remove previous helper methods - logic moved into the internal update hook
+// %new - (void)bh_storeOriginalPropertiesIfNeeded { ... }
+// %new - (void)bh_applyCustomTheme { ... }
+// %new - (void)bh_restoreOriginalTheme { ... }
 
-    UIImageView *imgView = nil;
-    @try {
-        imgView = [self valueForKey:@"imageView"];
-    } @catch (NSException *exception) {
-        NSLog(@"[BHTwitter TabTheme Store] Exception getting imageView: %@", exception);
-        return;
-    }
-    if (!imgView) {
-        NSLog(@"[BHTwitter TabTheme Store] imageView is nil.");
-        return;
-    }
-
-    UIColor *originalColor = imgView.tintColor; // May be nil, that's okay
-    UIImageRenderingMode originalMode = imgView.image ? imgView.image.renderingMode : UIImageRenderingModeAutomatic; 
-
-    NSDictionary *properties = @{
-        @"tintColor": (originalColor ?: [NSNull null]), // Store NSNull if color is nil
-        @"renderingMode": @(originalMode)
-    };
-
-    [gOriginalTabViewProperties setObject:properties forKey:self];
-    NSLog(@"[BHTwitter TabTheme Store] Stored properties for %@: %@", self, properties);
-}
-
-%new
-- (void)bh_applyCustomTheme { // Applies custom theme
-    // Assumes [BHTManager tabBarTheming] is TRUE
-    UIImageView *imgView = nil;
-    @try {
-        imgView = [self valueForKey:@"imageView"];
-    } @catch (NSException *exception) {
-        NSLog(@"[BHTwitter TabTheme Apply] Exception getting imageView: %@", exception);
-        return;
-    }
-    if (!imgView) {
-        NSLog(@"[BHTwitter TabTheme Apply] imageView is nil.");
-        return;
-    }
-
-    BOOL isSelected = [[self valueForKey:@"selected"] boolValue];
-    UIColor *targetColor = isSelected ? BHTCurrentAccentColor() : [UIColor grayColor];
-    UIImageRenderingMode targetRenderingMode = UIImageRenderingModeAlwaysTemplate;
-
-    if (imgView.image && imgView.image.renderingMode != targetRenderingMode) {
-        imgView.image = [imgView.image imageWithRenderingMode:targetRenderingMode];
-    }
-
-    SEL applyTintColorSelector = @selector(applyTintColor:);
-    if ([self respondsToSelector:applyTintColorSelector]) {
-        #pragma clang diagnostic push
-        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-        [self performSelector:applyTintColorSelector withObject:targetColor];
-        #pragma clang diagnostic pop
+// Hook the internal method responsible for updating the image view
+- (void)_t1_updateImageViewAnimated:(_Bool)animated {
+    if (![BHTManager tabBarTheming]) {
+        // Theming is OFF: Let the original method run completely unmodified.
+        %orig(animated);
     } else {
-        imgView.tintColor = targetColor;
-    }
+        // Theming is ON:
+        // 1. Let the original method run first to set up defaults.
+        %orig(animated);
+        
+        // 2. Now, apply our custom theme modifications.
+        UIImageView *imgView = nil;
+        @try {
+            imgView = [self valueForKey:@"imageView"];
+        } @catch (NSException *exception) {
+            NSLog(@"[BHTwitter TabTheme HookUpdate] Exception getting imageView: %@", exception);
+            return; // Don't proceed if we can't get the view
+        }
+        if (!imgView) {
+            NSLog(@"[BHTwitter TabTheme HookUpdate] imageView is nil.");
+            return; // Don't proceed if no view
+        }
 
-    SEL internalUpdateSelector = NSSelectorFromString(@"_t1_updateImageViewAnimated:");
-    if ([self respondsToSelector:internalUpdateSelector]) {
-        IMP imp = [self methodForSelector:internalUpdateSelector];
-        void (*func)(id, SEL, _Bool) = (void *)imp;
-        func(self, internalUpdateSelector, NO); 
-    }
-}
+        BOOL isSelected = [[self valueForKey:@"selected"] boolValue];
+        UIColor *targetColor = isSelected ? BHTCurrentAccentColor() : [UIColor grayColor];
+        UIImageRenderingMode targetRenderingMode = UIImageRenderingModeAlwaysTemplate;
 
-%new
-- (void)bh_restoreOriginalTheme {
-    if (!gOriginalTabViewProperties) return;
+        // Ensure rendering mode is template
+        if (imgView.image && imgView.image.renderingMode != targetRenderingMode) {
+            imgView.image = [imgView.image imageWithRenderingMode:targetRenderingMode];
+        }
 
-    NSDictionary *originalProperties = [gOriginalTabViewProperties objectForKey:self];
-    if (!originalProperties) {
-        NSLog(@"[BHTwitter TabTheme Restore] No original properties found for %@", self);
-         // Fallback: Maybe just call the internal update method and hope for the best?
-         SEL internalUpdateSelector = NSSelectorFromString(@"_t1_updateImageViewAnimated:");
-         if ([self respondsToSelector:internalUpdateSelector]) {
-             IMP imp = [self methodForSelector:internalUpdateSelector];
-             void (*func)(id, SEL, _Bool) = (void *)imp;
-             func(self, internalUpdateSelector, NO); 
-         }
-        return;
-    }
-
-    UIImageView *imgView = nil;
-    @try {
-        imgView = [self valueForKey:@"imageView"];
-    } @catch (NSException *exception) {
-        NSLog(@"[BHTwitter TabTheme Restore] Exception getting imageView: %@", exception);
-        return;
-    }
-    if (!imgView) {
-        NSLog(@"[BHTwitter TabTheme Restore] imageView is nil.");
-        return;
-    }
-
-    id storedColor = originalProperties[@"tintColor"];
-    UIColor *originalColor = ([storedColor isEqual:[NSNull null]]) ? nil : (UIColor *)storedColor;
-    UIImageRenderingMode originalMode = [originalProperties[@"renderingMode"] integerValue];
-
-    NSLog(@"[BHTwitter TabTheme Restore] Restoring properties for %@: Color=%@ Mode=%ld", self, originalColor, (long)originalMode);
-
-    if (imgView.image && imgView.image.renderingMode != originalMode) {
-        imgView.image = [imgView.image imageWithRenderingMode:originalMode];
-    }
-    imgView.tintColor = originalColor;
-
-    // Still need to trigger the update after restoring
-    SEL internalUpdateSelector = NSSelectorFromString(@"_t1_updateImageViewAnimated:");
-    if ([self respondsToSelector:internalUpdateSelector]) {
-        IMP imp = [self methodForSelector:internalUpdateSelector];
-        void (*func)(id, SEL, _Bool) = (void *)imp;
-        func(self, internalUpdateSelector, NO); 
+        // Apply tint color (use custom method if available, otherwise direct)
+        SEL applyTintColorSelector = @selector(applyTintColor:);
+        if ([self respondsToSelector:applyTintColorSelector]) {
+            #pragma clang diagnostic push
+            #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+            [self performSelector:applyTintColorSelector withObject:targetColor];
+            #pragma clang diagnostic pop
+        } else {
+            imgView.tintColor = targetColor;
+        }
+        // No need to call the update method again, we are inside it.
     }
 }
-
 
 - (void)setSelected:(_Bool)selected {
+    // Only need to call original. The update method hook will handle appearance.
     %orig(selected);
-    #pragma clang diagnostic push
-    #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-    [self performSelector:@selector(bh_storeOriginalPropertiesIfNeeded)]; // Store after %orig
-    if ([BHTManager tabBarTheming]) {
-        [self performSelector:@selector(bh_applyCustomTheme)]; 
-    } else {
-        [self performSelector:@selector(bh_restoreOriginalTheme)];
-    }
-    #pragma clang diagnostic pop
 }
 
 - (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
+     // Only need to call original. The update method hook will handle appearance.
     %orig(previousTraitCollection);
-    #pragma clang diagnostic push
-    #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-    [self performSelector:@selector(bh_storeOriginalPropertiesIfNeeded)]; // Store after %orig
-    if ([self.traitCollection hasDifferentColorAppearanceComparedToTraitCollection:previousTraitCollection]) {
-        if ([BHTManager tabBarTheming]) {
-            [self performSelector:@selector(bh_applyCustomTheme)];
-        } else {
-            [self performSelector:@selector(bh_restoreOriginalTheme)];
-        }
-    }
-    #pragma clang diagnostic pop
 }
 
 %end
@@ -3027,34 +2936,14 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 %hook T1TabBarViewController
 
 - (void)viewDidLoad {
+    // Only need to call original. Tab views will update via their methods.
     %orig;
-    if ([self respondsToSelector:@selector(tabViews)]) {
-        NSArray *tabViews = [self valueForKey:@"tabViews"];
-        for (id tabView in tabViews) {
-             if ([tabView respondsToSelector:@selector(bh_storeOriginalPropertiesIfNeeded)]) {
-                 #pragma clang diagnostic push
-                 #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-                 [tabView performSelector:@selector(bh_storeOriginalPropertiesIfNeeded)];
-                 #pragma clang diagnostic pop
-             }
-            if ([BHTManager tabBarTheming]) {
-                if ([tabView respondsToSelector:@selector(bh_applyCustomTheme)]) {
-                    #pragma clang diagnostic push
-                    #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-                    [tabView performSelector:@selector(bh_applyCustomTheme)];
-                    #pragma clang diagnostic pop
-                }
-            }
-        }
-    }
 }
 
 %end
 
-// Helper: Update all tab bar icons (Using store/restore logic)
+// Helper: Update all tab bar icons (Simplified - just triggers the update hook)
 static void BHT_UpdateAllTabBarIcons(void) {
-    BOOL isThemingCurrentlyEnabled = [BHTManager tabBarTheming];
-
     for (UIWindow *window in UIApplication.sharedApplication.windows) {
         UIViewController *root = window.rootViewController;
         if (!root) continue;
@@ -3067,31 +2956,13 @@ static void BHT_UpdateAllTabBarIcons(void) {
                 NSArray *tabViews = [vc valueForKey:@"tabViews"];
                 for (id tabView in tabViews) { 
                     if (![tabView isKindOfClass:NSClassFromString(@"T1TabView")]) continue;
-
-                    // Ensure originals are stored before deciding what to apply
-                     if ([tabView respondsToSelector:@selector(bh_storeOriginalPropertiesIfNeeded)]) {
-                         #pragma clang diagnostic push
-                         #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-                         [tabView performSelector:@selector(bh_storeOriginalPropertiesIfNeeded)];
-                         #pragma clang diagnostic pop
-                     }
-
-                    if (isThemingCurrentlyEnabled) {
-                        // Theming is ON: Apply our custom theme
-                        if ([tabView respondsToSelector:@selector(bh_applyCustomTheme)]) {
-                            #pragma clang diagnostic push
-                            #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-                            [tabView performSelector:@selector(bh_applyCustomTheme)];
-                            #pragma clang diagnostic pop
-                        }
-                    } else {
-                        // Theming is OFF: Restore original theme
-                        if ([tabView respondsToSelector:@selector(bh_restoreOriginalTheme)]) {
-                            #pragma clang diagnostic push
-                            #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-                            [tabView performSelector:@selector(bh_restoreOriginalTheme)];
-                            #pragma clang diagnostic pop
-                        }
+                    
+                    // Trigger the internal update method. Our hook will apply the correct logic.
+                    SEL internalUpdateSelector = NSSelectorFromString(@"_t1_updateImageViewAnimated:");
+                    if ([tabView respondsToSelector:internalUpdateSelector]) {
+                        IMP imp = [tabView methodForSelector:internalUpdateSelector];
+                        void (*func)(id, SEL, _Bool) = (void *)imp;
+                        func(tabView, internalUpdateSelector, NO); // Call with NO animation
                     }
                 }
             }
