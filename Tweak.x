@@ -24,7 +24,7 @@ static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *
 UIColor *BHTCurrentAccentColor(void) {
     Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
     if (!TAEColorSettingsCls) {
-        return [UIColor systemBlueColor]; // Early exit if settings class not found
+        return [UIColor systemBlueColor]; // Absolute fallback if settings class not found
     }
 
     id settings = [TAEColorSettingsCls sharedSettings];
@@ -32,32 +32,26 @@ UIColor *BHTCurrentAccentColor(void) {
     id palette = [current colorPalette];
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
 
+    UIColor *selectedColor = nil;
+
     // 1. Try BHTwitter's custom theme setting first
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        UIColor *customColor = [palette primaryColorForOption:opt];
-        if (customColor) {
-            return customColor; // Successfully got BHTwitter theme color
-        }
-        // If customColor is nil (bh_color_theme_selectedColor is set but to an invalid option),
-        // fall through to check Twitter's default theme setting.
+        selectedColor = [palette primaryColorForOption:opt];
     }
 
-    // 2. Try Twitter's own theme setting (if BHTwitter's wasn't set or was invalid)
-    if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
-        NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-        UIColor *twitterColor = [palette primaryColorForOption:opt];
-        if (twitterColor) {
-            return twitterColor; // Successfully got Twitter's theme color
-        }
-        // If twitterColor is also nil (e.g. T1ColorSettingsPrimaryColorOptionKey is invalid for palette)
-        // then fallback to systemBlueColor.
-        return [UIColor systemBlueColor];
+    // 2. If the custom color wasn't found or was invalid, default to palette option 0
+    if (!selectedColor) {
+        NSInteger defaultOption = 0; // Assuming 0 is the default blue/valid baseline
+        selectedColor = [palette primaryColorForOption:defaultOption];
     }
 
-    // 3. If NEITHER key is found, it means no theme preference is stored.
-    // Fallback to systemBlueColor as a general default.
-    return [UIColor systemBlueColor];
+    // 3. Absolute fallback if even option 0 failed
+    if (!selectedColor) {
+        selectedColor = [UIColor systemBlueColor];
+    }
+
+    return selectedColor;
 }
 
 static UIFont * _Nullable TAEStandardFontGroupReplacement(UIFont *self, SEL _cmd, CGFloat arg1, CGFloat arg2) {
