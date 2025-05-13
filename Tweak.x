@@ -11,6 +11,7 @@
 static void BHT_UpdateAllTabBarIcons(void);
 static void BHT_applyThemeToWindow(UIWindow *window);
 static void BHT_ensureTheming(void);
+static NSInteger BHT_getSelectedColorOption(void);
 
 // Static helper function for recursive view traversal - DEFINED AT THE TOP
 static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
@@ -30,21 +31,8 @@ UIColor *BHTCurrentAccentColor(void) {
     }
 
     id settings = [TAEColorSettingsCls sharedSettings];
-    id current = [settings currentColorPalette];
-    id palette = [current colorPalette];
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
-    }
-
-    if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
-        NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-        return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
-    }
-
-    return [UIColor systemBlueColor];
+    id palette = [[settings currentColorPalette] colorPalette];
+    return [palette primaryColorForOption:BHT_getSelectedColorOption()] ?: [UIColor systemBlueColor];
 }
 
 static UIFont * _Nullable TAEStandardFontGroupReplacement(UIFont *self, SEL _cmd, CGFloat arg1, CGFloat arg2) {
@@ -3147,3 +3135,65 @@ static void BHT_ensureTheming(void) {
         BHT_applyThemeToWindow(window);
     }
 }
+
+static NSInteger BHT_getSelectedColorOption(void) {
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        return [defs integerForKey:@"bh_color_theme_selectedColor"];
+    }
+    return [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+}
+
+// Hook TAEColorSettings to ensure our color is always returned
+%hook TAEColorSettings
++ (id)sharedSettings {
+    id settings = %orig;
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        // Force an update of the color palette
+        [settings setValue:@(BHT_getSelectedColorOption()) forKey:@"selectedColorOption"];
+    }
+    return settings;
+}
+
+- (void)setSelectedColorOption:(NSInteger)option {
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        %orig(BHT_getSelectedColorOption());
+    } else {
+        %orig;
+    }
+}
+
+- (NSInteger)selectedColorOption {
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        return BHT_getSelectedColorOption();
+    }
+    return %orig;
+}
+
+// Ensure our color is used for all palette requests
+- (id)currentColorPalette {
+    id palette = %orig;
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        // Force palette to use our color
+        [palette setValue:@(BHT_getSelectedColorOption()) forKey:@"selectedColorOption"];
+    }
+    return palette;
+}
+%end
+
+// Hook the color palette to ensure it always returns our themed color
+%hook TAEColorPalette
+- (UIColor *)primaryColor {
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        return [self primaryColorForOption:BHT_getSelectedColorOption()];
+    }
+    return %orig;
+}
+
+- (UIColor *)primaryColorForOption:(NSInteger)option {
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        return %orig(BHT_getSelectedColorOption());
+    }
+    return %orig;
+}
+%end
