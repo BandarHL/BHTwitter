@@ -2715,7 +2715,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 - (void)setText:(NSString *)text {
     %orig(text);
 
-    if ([BHTManager restoreVideoTimestamp] && self.text && ([self.text containsString:@":"] || [self.text containsString:@"/" || [self.text containsString:@"Live"])) { // Broaden text check slightly
+    if ([BHTManager restoreVideoTimestamp] && self.text && ([self.text containsString:@":"] || [self.text containsString:@"/"] || [self.text containsString:@"Live"])) { // Corrected line
         BOOL isInsideImmersiveCardView = NO;
         UIView *superviewCheck = self;
         _TtC14T1TwitterSwift19ImmersiveCardViewV2* cardViewInstance = nil;
