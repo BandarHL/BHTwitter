@@ -651,13 +651,16 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)viewDidAppear:(_Bool)animated {
     %orig(animated);
     
-    static dispatch_once_t once_paging; // Unique token
-    dispatch_once(&once_paging, ^ {
-        // Apply theme immediately on first appearance
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-            BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
+    // REMOVED dispatch_once wrapper
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        // Assuming BH_changeTwitterColor is available globally or via BHTManager
+        // Replace with actual call if different. Let's try BHTManager first.
+        if ([BHTManager respondsToSelector:@selector(changeTwitterColor:)]) {
+             [BHTManager changeTwitterColor:[[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]];
+        } else {
+             // BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]); // Fallback if it's a global C function
         }
-    });
+    }
 }
 %end
 
@@ -665,13 +668,15 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)viewDidAppear:(_Bool)animated {
     %orig(animated);
     
-    static dispatch_once_t once_nav; // Unique token
-    dispatch_once(&once_nav, ^ {
-        // Apply theme immediately on first appearance
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-            BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
+    // REMOVED dispatch_once wrapper
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        // Assuming BH_changeTwitterColor is available globally or via BHTManager
+        if ([BHTManager respondsToSelector:@selector(changeTwitterColor:)]) {
+             [BHTManager changeTwitterColor:[[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]];
+        } else {
+             // BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]); // Fallback
         }
-    });
+    }
 }
 %end
 
@@ -679,13 +684,15 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)viewDidAppear:(_Bool)animated {
     %orig(animated);
     
-    static dispatch_once_t once_split; // Unique token
-    dispatch_once(&once_split, ^ {
-        // Apply theme immediately on first appearance
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-            BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
+    // REMOVED dispatch_once wrapper
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        // Assuming BH_changeTwitterColor is available globally or via BHTManager
+        if ([BHTManager respondsToSelector:@selector(changeTwitterColor:)]) {
+             [BHTManager changeTwitterColor:[[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]];
+        } else {
+            // BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]); // Fallback
         }
-    });
+    }
 }
 %end
 
