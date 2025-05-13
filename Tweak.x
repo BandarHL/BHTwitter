@@ -14,19 +14,19 @@
 + (void)_t1_updateOverrideUserInterfaceStyle; // Add this line
 @end
 
-// Forward declarations for Immersive Player
-@class _TtC14T1TwitterSwift19ImmersiveCardViewV2;
-@class T1ImmersiveViewController;
-@class T1ImmersiveFullScreenViewController;
-
-// Static helper for Immersive Player timestamp
-static NSMapTable<_TtC14T1TwitterSwift19ImmersiveCardViewV2 *, UILabel *> *gCardViewToProgressLabelMap;
+// Forward declaration for the immersive view controller
+@interface T1ImmersiveFullScreenViewController : UIViewController // Assuming base class, adjust if known
+- (void)immersiveViewController:(id)immersiveViewController showHideNavigationButtons:(_Bool)showButtons;
+@end
 
 // Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
 static void BHT_applyThemeToWindow(UIWindow *window);
 static void BHT_ensureTheming(void);
 static void BHT_forceRefreshAllWindowAppearances(void); // Renamed
+
+// Static reference to the video timestamp label
+static __weak UILabel *gVideoTimestampLabel = nil;
 
 // Static helper function for recursive view traversal - DEFINED AT THE TOP
 static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
@@ -2715,73 +2715,78 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 - (void)setText:(NSString *)text {
     %orig(text);
 
-    if ([BHTManager restoreVideoTimestamp] && self.text && ([self.text containsString:@":"] || [self.text containsString:@"/"] || [self.text containsString:@"Live"])) { // Corrected line
-        BOOL isInsideImmersiveCardView = NO;
-        UIView *superviewCheck = self;
-        _TtC14T1TwitterSwift19ImmersiveCardViewV2* cardViewInstance = nil;
+    // Check if this label is the one we want to modify (e.g., video timestamp)
+    if ([BHTManager restoreVideoTimestamp] && self.text && [self.text containsString:@":"] && [self.text containsString:@"/"]) {
+        // self.hidden = NO; // Visibility will be handled by T1ImmersiveFullScreenViewController hook
+        self.alpha = 1.0;
+        self.font = [UIFont systemFontOfSize:14.0];
+        
+        [self sizeToFit];
 
-        while(superviewCheck != nil) {
-            if ([superviewCheck isKindOfClass:NSClassFromString(@"_TtC14T1TwitterSwift19ImmersiveCardViewV2")]) {
-                 isInsideImmersiveCardView = YES;
-                 cardViewInstance = (_TtC14T1TwitterSwift19ImmersiveCardViewV2*)superviewCheck;
-                 NSLog(@"[BHTwitter ImmersiveTimestampDebug] UILabel (%p, text: '%@') found ImmersiveCardViewV2 superview (%p).", self, text, cardViewInstance);
-                 break; 
-            }
-            superviewCheck = superviewCheck.superview;
+        // Store a weak reference to this label
+        gVideoTimestampLabel = self;
+
+        // Fallback if sizeToFit results in a tiny frame (e.g., if superview constraints are weird initially)
+        if (CGRectGetWidth(self.frame) < 10 || CGRectGetHeight(self.frame) < 5) {
+            self.frame = CGRectMake(10, 50, 100, 25); // Slightly larger fallback height
+        }
+    }
+}
+
+%end
+
+// MARK: - Immersive Player Timestamp Visibility Control
+
+%hook T1ImmersiveFullScreenViewController
+
+- (void)immersiveViewController:(id)immersiveViewController showHideNavigationButtons:(_Bool)showButtons {
+    %orig(immersiveViewController, showButtons);
+
+    if ([BHTManager restoreVideoTimestamp]) {
+        UILabel *timestampLabelToUpdate = nil;
+
+        // First, try the cached global reference
+        if (gVideoTimestampLabel && gVideoTimestampLabel.superview) { // Check if it's still in a view hierarchy
+            // Further check if it's within this specific player's view hierarchy
+            // This check might be overly complex or unnecessary if gVideoTimestampLabel is reliably set
+            // by the currently active player's timestamp. For now, let's assume it is.
+            timestampLabelToUpdate = gVideoTimestampLabel;
         }
 
-        if (isInsideImmersiveCardView && cardViewInstance) {
-            // Attempt to KVC for progressLabel, log success or failure
-            UILabel* kvcLabel = nil;
-            @try {
-                kvcLabel = [(id)cardViewInstance valueForKey:@"progressLabel"];
-                if (kvcLabel == self) {
-                    NSLog(@"[BHTwitter ImmersiveTimestampDebug] UILabel (%p) IS the KVC progressLabel for cardView (%p).", self, cardViewInstance);
-                    // This is our target label - make it visible and styled
-                    self.hidden = NO;
-                    self.alpha = 1.0f;
-                    self.font = [UIFont systemFontOfSize:14.0];
-                    self.textColor = [UIColor whiteColor];
-                    [self sizeToFit];
-                     NSLog(@"[BHTwitter ImmersiveTimestampDebug] UILabel (%p) FORCED VISIBLE & STYLED. Hidden: %d, Alpha: %.2f", self, self.hidden, self.alpha);
-                } else if (kvcLabel != nil) {
-                    NSLog(@"[BHTwitter ImmersiveTimestampDebug] UILabel (%p) is NOT the KVC progressLabel. KVC returned other label: %p for cardView (%p).", self, kvcLabel, cardViewInstance);
-                } else {
-                    NSLog(@"[BHTwitter ImmersiveTimestampDebug] KVC for progressLabel returned NIL for cardView (%p). Current label is (%p).", cardViewInstance, self);
-                    // If KVC failed, but we are a UILabel with matching text inside the card view, 
-                    // this might be our label. Let's try styling it anyway for debugging.
-                    if ([self.text containsString:@":"] && [self.text containsString:@"/"]) { // Be more specific for this fallback
-                        NSLog(@"[BHTwitter ImmersiveTimestampDebug] Fallback: Applying style to UILabel (%p) with text '%@' due to KVC fail but text match.", self, self.text);
-                        self.hidden = NO; 
-                        self.alpha = 1.0f;
-                        self.font = [UIFont systemFontOfSize:14.0];
-                        self.textColor = [UIColor whiteColor];
-                        [self sizeToFit];
-                        NSLog(@"[BHTwitter ImmersiveTimestampDebug] UILabel (%p) FALLBACK FORCED VISIBLE & STYLED. Hidden: %d, Alpha: %.2f", self, self.hidden, self.alpha);
+        // If gVideoTimestampLabel isn't valid or not found, try to find it in the current immersive controller's view
+        // This is a fallback and might be slow if the hierarchy is deep.
+        if (!timestampLabelToUpdate) {
+            UIView *searchView = self.view; // Or potentially immersiveViewController.view if that's more direct
+            if (immersiveViewController && [immersiveViewController respondsToSelector:@selector(view)]) {
+                searchView = [immersiveViewController view];
+            }
+
+            // Recursive search for the label
+            NSMutableArray<UILabel *> *foundLabels = [NSMutableArray array];
+            BH_EnumerateSubviewsRecursively(searchView, ^(UIView *currentView) {
+                if ([currentView isKindOfClass:[UILabel class]]) {
+                    UILabel *label = (UILabel *)currentView;
+                    if (label.text && [label.text containsString:@":"] && [label.text containsString:@"/"]) {
+                        [foundLabels addObject:label];
                     }
                 }
-            } @catch (NSException*e) {
-                NSLog(@"[BHTwitter ImmersiveTimestampDebug] KVC EXCEPTION for progressLabel on cardView (%p): %@. Current label is (%p).", cardViewInstance, e, self);
-                // Even on KVC exception, if text matches, try to style for debugging.
-                if ([self.text containsString:@":"] && [self.text containsString:@"/"]) { // Be more specific
-                    NSLog(@"[BHTwitter ImmersiveTimestampDebug] Fallback (Exception): Applying style to UILabel (%p) with text '%@'.", self, self.text);
-                    self.hidden = NO;
-                    self.alpha = 1.0f;
-                    self.font = [UIFont systemFontOfSize:14.0];
-                    self.textColor = [UIColor whiteColor];
-                    [self sizeToFit];
-                    NSLog(@"[BHTwitter ImmersiveTimestampDebug] UILabel (%p) FALLBACK (Exception) FORCED VISIBLE & STYLED. Hidden: %d, Alpha: %.2f", self, self.hidden, self.alpha);
-                }
+            });
+            // In case there are multiple such labels, this might need refinement.
+            // For now, assume the first one found (or the one most recently set by setText) is correct.
+            // If gVideoTimestampLabel was recently set by setText, it should be among foundLabels.
+            // If multiple labels match, and gVideoTimestampLabel is one of them, prefer it.
+            if ([foundLabels containsObject:gVideoTimestampLabel]) {
+                 timestampLabelToUpdate = gVideoTimestampLabel;
+            } else if (foundLabels.count > 0) {
+                // This could pick an incorrect label if multiple match criteria.
+                // Ideally, gVideoTimestampLabel is the most reliable source.
+                timestampLabelToUpdate = foundLabels.firstObject;
+                 gVideoTimestampLabel = timestampLabelToUpdate; // Cache it again if found this way
             }
-            
-            // Minimal size check, if needed, for the label we made visible
-            if (!self.hidden && (CGRectGetWidth(self.frame) < 10 || CGRectGetHeight(self.frame) < 5)) {
-                CGRect currentFrame = self.frame;
-                currentFrame.size.width = MAX(currentFrame.size.width, 50.0f); 
-                currentFrame.size.height = MAX(currentFrame.size.height, 20.0f); 
-                // self.frame = currentFrame; // Careful with direct frame manipulation if auto layout is used
-                NSLog(@"[BHTwitter ImmersiveTimestampDebug] UILabel (%p) Adjusted frame for small label to w:%.2f, h:%.2f", self, currentFrame.size.width, currentFrame.size.height);
-            }
+        }
+        
+        if (timestampLabelToUpdate) {
+            timestampLabelToUpdate.hidden = !showButtons;
         }
     }
 }
