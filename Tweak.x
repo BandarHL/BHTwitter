@@ -2864,9 +2864,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 // MARK: - Tab Bar Icon Theming
 %hook T1TabView
 
-%new
-- (void)bh_applyCurrentThemeToIcon {
-    // Assumes theming IS enabled when this is called
+%new // Renamed and logic updated
+- (void)bh_updateAppearanceBasedOnThemeSetting {
     UIImageView *imgView = nil;
     @try {
         imgView = [self valueForKey:@"imageView"];
@@ -2879,18 +2878,25 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         return;
     }
 
-    UIColor *targetColor;
     BOOL isSelected = [[self valueForKey:@"selected"] boolValue];
-    if (isSelected) {
-        targetColor = BHTCurrentAccentColor();
+    UIImage *currentImage = imgView.image;
+    UIImageRenderingMode targetRenderingMode = UIImageRenderingModeAlwaysTemplate; // Default usually uses template
+    UIColor *targetColor = nil;
+
+    if ([BHTManager tabBarTheming]) {
+        // Theming is ON
+        targetColor = isSelected ? BHTCurrentAccentColor() : [UIColor grayColor];
     } else {
-        targetColor = [UIColor grayColor];
+        // Theming is OFF - Use semantic colors for default appearance
+        targetColor = isSelected ? UIColor.labelColor : UIColor.secondaryLabelColor;
     }
-    // Ensure image is template for tinting
-    if (imgView.image && imgView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
-        imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+
+    // Ensure image is template for tinting (most tab bars use this)
+    if (currentImage && currentImage.renderingMode != targetRenderingMode) {
+        imgView.image = [currentImage imageWithRenderingMode:targetRenderingMode];
     }
-    // Apply tint color (handle potential custom apply method)
+    
+    // Apply tint color (handle potential custom apply method or direct set)
     SEL applyTintColorSelector = @selector(applyTintColor:);
     if ([self respondsToSelector:applyTintColorSelector]) {
         #pragma clang diagnostic push
@@ -2901,42 +2907,37 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         imgView.tintColor = targetColor;
     }
 
-    // Trigger an update to ensure visual change
-    SEL updateImageViewSelector = NSSelectorFromString(@"_t1_updateImageViewAnimated:");
-    if ([self respondsToSelector:updateImageViewSelector]) {
-        IMP imp = [self methodForSelector:updateImageViewSelector];
+    // Explicitly trigger the internal update method to apply the state
+    SEL updateSelector = NSSelectorFromString(@"_t1_updateImageViewAnimated:");
+    if ([self respondsToSelector:updateSelector]) {
+        IMP imp = [self methodForSelector:updateSelector];
         void (*func)(id, SEL, _Bool) = (void *)imp;
-        func(self, updateImageViewSelector, NO);
+        func(self, updateSelector, NO); // Call with NO animation
     } else {
-        [imgView setNeedsDisplay];
-    }
+         // Fallback if the internal method isn\'t found
+         [imgView setNeedsDisplay]; 
+     }
 }
 
 
 - (void)setSelected:(_Bool)selected {
     %orig(selected); // Call original FIRST
-    if ([BHTManager tabBarTheming]) { // Check if theming is enabled
-        #pragma clang diagnostic push
-        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-        // Only call our custom logic if enabled
-        [self performSelector:@selector(bh_applyCurrentThemeToIcon)]; 
-        #pragma clang diagnostic pop
-    }
-    // If disabled, %orig handles the update
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+    // Always call our appearance update method
+    [self performSelector:@selector(bh_updateAppearanceBasedOnThemeSetting)]; 
+    #pragma clang diagnostic pop
 }
 
 
 - (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
     %orig(previousTraitCollection); // Call original FIRST
     if ([self.traitCollection hasDifferentColorAppearanceComparedToTraitCollection:previousTraitCollection]) {
-        if ([BHTManager tabBarTheming]) { // Check if theming is enabled
-            #pragma clang diagnostic push
-            #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-            // Only call our custom logic if enabled
-            [self performSelector:@selector(bh_applyCurrentThemeToIcon)]; 
-            #pragma clang diagnostic pop
-        }
-        // If disabled, %orig handles the update
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+         // Always call our appearance update method on appearance change
+        [self performSelector:@selector(bh_updateAppearanceBasedOnThemeSetting)];
+        #pragma clang diagnostic pop
     }
 }
 
@@ -2979,21 +2980,18 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 - (void)viewDidLoad {
     %orig;
-    // Apply theme on initial load only if enabled
-    if ([BHTManager tabBarTheming]) { 
-        if ([self respondsToSelector:@selector(tabViews)]) {
-            NSArray *tabViews = [self valueForKey:@"tabViews"];
-            for (id tabView in tabViews) {
-                if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
-                    #pragma clang diagnostic push
-                    #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-                    [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
-                    #pragma clang diagnostic pop
-                }
+    // Apply theme/default state on initial load
+    if ([self respondsToSelector:@selector(tabViews)]) {
+        NSArray *tabViews = [self valueForKey:@"tabViews"];
+        for (id tabView in tabViews) {
+            if ([tabView respondsToSelector:@selector(bh_updateAppearanceBasedOnThemeSetting)]) {
+                #pragma clang diagnostic push
+                #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                [tabView performSelector:@selector(bh_updateAppearanceBasedOnThemeSetting)];
+                #pragma clang diagnostic pop
             }
         }
     }
-    // If disabled, the default appearance is handled by %orig
 }
 
 - (void)dealloc {
@@ -3005,11 +3003,9 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 %end
 
-// Helper: Update all tab bar icons
+// Helper: Update all tab bar icons (Simplified)
 static void BHT_UpdateAllTabBarIcons(void) {
-    // Get the current state of the toggle ONCE, outside the loop.
-    BOOL isThemingEnabled = [BHTManager tabBarTheming];
-
+    // Iterate through windows and VCs to find TabBarViewControllers
     for (UIWindow *window in UIApplication.sharedApplication.windows) {
         UIViewController *root = window.rootViewController;
         if (!root) continue;
@@ -3017,57 +3013,23 @@ static void BHT_UpdateAllTabBarIcons(void) {
         while (stack.count > 0) {
             UIViewController *vc = [stack lastObject];
             [stack removeLastObject];
+            
+            // Check if the current VC is the TabBarViewController
             if ([vc isKindOfClass:NSClassFromString(@"T1TabBarViewController")]) {
+                // Get its tab views
                 NSArray *tabViews = [vc valueForKey:@"tabViews"];
-                for (id tabView in tabViews) { // Use 'id' as type might vary slightly
-                    
-                    if (![tabView isKindOfClass:NSClassFromString(@"T1TabView")]) continue; // Ensure it's the correct type
-
-                    UIImageView *imgView = nil;
-                    @try {
-                        imgView = [tabView valueForKey:@"imageView"];
-                    } @catch (NSException *exception) {
-                         NSLog(@"[BHTwitter TabTheme Update] Exception getting imageView: %@", exception);
-                        continue; // Skip if we can't get the image view
-                    }
-                     if (!imgView) {
-                        NSLog(@"[BHTwitter TabTheme Update] imageView is nil.");
-                        continue; // Skip if no image view
-                    }
-
-                    if (isThemingEnabled) {
-                        // Theming is ON: Apply our custom theme
-                        if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
-                            #pragma clang diagnostic push
-                            #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-                            [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
-                            #pragma clang diagnostic pop
-                        }
-                    } else {
-                         // Theming is OFF: Reset to default appearance
-                         
-                         // 1. Reset tint color to nil (allow default system/app behavior)
-                         imgView.tintColor = nil; 
-                         
-                         // 2. Reset rendering mode (optional but good practice)
-                         if (imgView.image && imgView.image.renderingMode != UIImageRenderingModeAutomatic) {
-                            imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAutomatic];
-                         }
-
-                         // 3. Explicitly call the internal update method to apply the reset state
-                         SEL updateSelector = NSSelectorFromString(@"_t1_updateImageViewAnimated:");
-                         if ([tabView respondsToSelector:updateSelector]) {
-                            IMP imp = [tabView methodForSelector:updateSelector];
-                            void (*func)(id, SEL, _Bool) = (void *)imp;
-                            func(tabView, updateSelector, NO); // Call with NO animation
-                         } else {
-                             // Fallback if the internal method isn't found (less likely but safe)
-                             [imgView setNeedsDisplay]; 
-                         }
+                for (id tabView in tabViews) { 
+                    // Tell each tab view to update its appearance based on the current setting
+                    if ([tabView respondsToSelector:@selector(bh_updateAppearanceBasedOnThemeSetting)]) {
+                        #pragma clang diagnostic push
+                        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                        [tabView performSelector:@selector(bh_updateAppearanceBasedOnThemeSetting)];
+                        #pragma clang diagnostic pop
                     }
                 }
             }
-            // Add children and presented VC logic...
+            
+            // Add children and presented VCs to the stack to continue traversal
              for (UIViewController *child in vc.childViewControllers) {
                 [stack addObject:child];
             }
