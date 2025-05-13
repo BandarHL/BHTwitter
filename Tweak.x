@@ -1526,9 +1526,37 @@ static NSDate *lastCookieRefresh              = nil;
 + (NSDictionary *)loadCachedCookies;
 + (BOOL)shouldRefreshCookies;
 + (void)handleClearCacheNotification:(NSNotification *)notification;
++ (void)pruneSourceCachesIfNeeded; // New method for cache pruning
 @end
 
+#define MAX_SOURCE_CACHE_SIZE 500 // Define a maximum cache size
+
 @implementation TweetSourceHelper
+
++ (void)pruneSourceCachesIfNeeded {
+    if (tweetSources.count > MAX_SOURCE_CACHE_SIZE) {
+        // Attempt to remove a random key to make space. More sophisticated LRU could be used later if needed.
+        NSArray *keys = [tweetSources allKeys];
+        if (keys.count > 0) {
+            NSString *keyToRemove = keys[arc4random_uniform((uint32_t)keys.count)];
+            NSLog(@"[BHTwitter SourceLabelCache] Pruning cache, removing entry for tweetID: %@", keyToRemove);
+            
+            [tweetSources removeObjectForKey:keyToRemove];
+            
+            NSTimer *timeoutTimer = fetchTimeouts[keyToRemove];
+            if (timeoutTimer) {
+                [timeoutTimer invalidate];
+                [fetchTimeouts removeObjectForKey:keyToRemove];
+            }
+            [fetchRetries removeObjectForKey:keyToRemove];
+            [updateRetries removeObjectForKey:keyToRemove];
+            [updateCompleted removeObjectForKey:keyToRemove];
+            [fetchPending removeObjectForKey:keyToRemove];
+            // viewInstances and viewToTweetID are managed by view lifecycle, not pruned here directly
+            // to avoid removing data for active views.
+        }
+    }
+}
 
 + (NSDictionary *)fetchCookies {
     NSMutableDictionary *cookiesDict = [NSMutableDictionary dictionary];
@@ -1593,10 +1621,15 @@ static NSDate *lastCookieRefresh              = nil;
 + (void)fetchSourceForTweetID:(NSString *)tweetID {
     if (!tweetID) return;
     @try {
+        // Initialize dictionaries if they are nil (important after a cache clear)
         if (!tweetSources)   tweetSources   = [NSMutableDictionary dictionary];
         if (!fetchTimeouts)  fetchTimeouts  = [NSMutableDictionary dictionary];
         if (!fetchRetries)   fetchRetries   = [NSMutableDictionary dictionary];
+        if (!updateRetries)  updateRetries  = [NSMutableDictionary dictionary];
+        if (!updateCompleted) updateCompleted = [NSMutableDictionary dictionary];
         if (!fetchPending)   fetchPending   = [NSMutableDictionary dictionary];
+
+        [self pruneSourceCachesIfNeeded]; // Prune before potentially adding a new entry
 
         if (fetchPending[tweetID] || (tweetSources[tweetID] &&
             ![tweetSources[tweetID] isEqualToString:@""] &&
@@ -1904,10 +1937,12 @@ static NSDate *lastCookieRefresh              = nil;
     @try {
         NSInteger statusID = self.statusID;
         if (statusID > 0) {
-            if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
-            if (!tweetSources[@(statusID).stringValue]) {
-                tweetSources[@(statusID).stringValue] = @"";
-                [TweetSourceHelper fetchSourceForTweetID:@(statusID).stringValue];
+            if (!tweetSources) tweetSources = [NSMutableDictionary dictionary]; // Ensure initialized
+            NSString *tweetIDStr = @(statusID).stringValue;
+            if (!tweetSources[tweetIDStr]) {
+                [TweetSourceHelper pruneSourceCachesIfNeeded]; // Prune before adding
+                tweetSources[tweetIDStr] = @"";
+                [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
             }
         }
     } @catch (__unused NSException *e) {}
@@ -1959,6 +1994,7 @@ static NSDate *lastCookieRefresh              = nil;
                             viewInstances[altID]              = [NSValue valueWithNonretainedObject:self];
 
                             if (!tweetSources[altID]) {
+                                [TweetSourceHelper pruneSourceCachesIfNeeded]; // ADDING THIS CALL HERE
                                 tweetSources[altID] = @"";
                                 [TweetSourceHelper fetchSourceForTweetID:altID];
                             } else if (tweetSources[altID] && ![tweetSources[altID] isEqualToString:@""] &&
@@ -2234,6 +2270,7 @@ static NSDate *lastCookieRefresh              = nil;
                 if (tweetIDStr && tweetIDStr.length > 0) {
                         if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
                         if (!tweetSources[tweetIDStr]) {
+                        // [TweetSourceHelper pruneSourceCachesIfNeeded]; // This was correctly added by the model already in TFNAttributedTextView
                         tweetSources[tweetIDStr] = @""; // Placeholder
                             [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
                         }
