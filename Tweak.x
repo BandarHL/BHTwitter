@@ -3108,15 +3108,33 @@ static void BHT_UpdateAllTabBarIcons(void) {
 
 // Hook the tintColor setter
 - (void)setTintColor:(UIColor *)tintColor {
-    // Check if the general UI theming is enabled
-    // Using tabBarTheming flag for now, consider a dedicated flag if needed
-    if ([BHTManager tabBarTheming]) {
-        // Force the tint color to the current BHTwitter accent color
-        %orig(BHTCurrentAccentColor());
+    NSLog(@"[BHTwitter Theme Debug] TFNBarButtonItemButtonV2 setTintColor: called. Original color: %@", tintColor);
+    BOOL themingEnabled = [BHTManager tabBarTheming]; // Assuming tabBarTheming is the correct flag
+    NSLog(@"[BHTwitter Theme Debug] Theming enabled: %d", themingEnabled);
+
+    if (themingEnabled) {
+        UIColor *themeColor = BHTCurrentAccentColor();
+        NSLog(@"[BHTwitter Theme Debug] Applying theme color: %@", themeColor);
+        %orig(themeColor);
     } else {
-        // If theming is off, use the color Twitter intended
+        NSLog(@"[BHTwitter Theme Debug] Applying original color: %@", tintColor);
         %orig(tintColor);
     }
+}
+
+// Also hook didMoveToWindow to force re-application
+- (void)didMoveToWindow {
+     %orig;
+     NSLog(@"[BHTwitter Theme Debug] TFNBarButtonItemButtonV2 didMoveToWindow. Window: %@", self.window);
+     if (self.window) { // Only apply if moving to a valid window
+        // Assuming tabBarTheming is the correct flag
+        if ([BHTManager tabBarTheming]) {
+            UIColor *themeColor = BHTCurrentAccentColor();
+            NSLog(@"[BHTwitter Theme Debug] Forcing theme color in didMoveToWindow: %@", themeColor);
+            // Directly set the property again, which should trigger our setTintColor: hook
+            self.tintColor = themeColor;
+         }
+     }
 }
 
 %end
