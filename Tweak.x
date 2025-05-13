@@ -2923,7 +2923,10 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         // To be precise, you'd need to store the previous value and compare.
         // For simplicity here, we re-apply if *any* default changed, but ideally, filter.
         // Consider KVO on NSUserDefaults for 'bh_color_theme_selectedColor' if performance is critical.
-        BHT_ApplyThemeIfNeeded();
+        // **Ensure UI updates happen on the main thread**
+        dispatch_async(dispatch_get_main_queue(), ^{
+            BHT_ApplyThemeIfNeeded();
+        });
     }];
 }
 
