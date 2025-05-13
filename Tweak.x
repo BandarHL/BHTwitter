@@ -2727,7 +2727,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
         // Define padding
         CGFloat horizontalPadding = 4.0; // Further reduced (e.g., 2px on each side now)
-        CGFloat verticalPadding = 8.0;   // Kept same, adjust if vertical padding also an issue
+        CGFloat verticalPadding = 10.0;  // Increased for a slightly taller, rounder pill
 
         // Apply padding to the frame
         // Adjust origin to keep the label centered around its original position after resizing
@@ -2810,7 +2810,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 CGFloat targetAlpha = showButtons ? 1.0 : 0.0;
                 NSTimeInterval fadeInDuration = 0.2;
-                NSTimeInterval fadeOutDuration = 0.6;
+                NSTimeInterval fadeOutDuration = 0.8; // Increased for slower hide
                 NSTimeInterval animationDuration = showButtons ? fadeInDuration : fadeOutDuration;
 
                 NSLog(@"[BHTwitter TimestampLabel Animate] Text: '%@', Current Width: %f, TargetAlpha: %f, Show: %d", timestampLabelToUpdate.text, timestampLabelToUpdate.frame.size.width, targetAlpha, showButtons);
