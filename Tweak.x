@@ -45,19 +45,6 @@ UIColor *BHTCurrentAccentColor(void) {
     return [UIColor systemBlueColor];
 }
 
-// Helper function to apply the theme if needed
-static void BHT_ApplyThemeIfNeeded(void) {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    if ([defaults objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger selectedColorOption = [defaults integerForKey:@"bh_color_theme_selectedColor"];
-        // Assuming BH_changeTwitterColor exists and applies the theme globally
-        BH_changeTwitterColor(selectedColorOption); 
-        // Update tab bar icons after applying the theme
-        BHT_UpdateAllTabBarIcons();
-        // Potentially add logic here to update navigation bar icons if BH_changeTwitterColor doesn't handle it
-    }
-}
-
 static UIFont * _Nullable TAEStandardFontGroupReplacement(UIFont *self, SEL _cmd, CGFloat arg1, CGFloat arg2) {
     BH_BaseImp orig  = originalFontsIMP[NSStringFromSelector(_cmd)].pointerValue;
     NSUInteger nArgs = [[self class] instanceMethodSignatureForSelector:_cmd].numberOfArguments;
@@ -115,13 +102,22 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     if ([BHTManager FLEX]) {
         [[%c(FLEXManager) sharedManager] showExplorer];
     }
-    // Apply theme early on launch
-    BHT_ApplyThemeIfNeeded();
     return true;
 }
 
 - (void)applicationDidBecomeActive:(id)arg1 {
     %orig;
+    // Apply/Re-apply theme elements on becoming active
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        if (!BHT_initialThemeApplied) {
+            BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
+            BHT_initialThemeApplied = YES;
+        }
+        // Always update UI elements that might get reset
+        BHT_UpdateAllTabBarIcons();
+        // We might need a similar global update for Navigation Bar icons if they also get reset
+    }
+
     if ([BHTManager Padlock]) {
         NSDictionary *keychainData = [[keychain shared] getData];
         if (keychainData != nil) {
@@ -139,12 +135,11 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             [image removeFromSuperview];
         }
     }
-    // Re-apply theme when app becomes active
-    BHT_ApplyThemeIfNeeded();
 }
 
 - (void)applicationWillTerminate:(id)arg1 {
     %orig;
+    BHT_initialThemeApplied = NO; // Reset flag on termination
     if ([BHTManager Padlock]) {
         [[keychain shared] saveDictionary:@{@"isAuthenticated": @NO}];
     }
@@ -708,6 +703,11 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     if ([defaultName isEqualToString:@"T1ColorSettingsPrimaryColorOptionKey"]) {
         id selectedColor = [[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"];
         if (selectedColor != nil) {
+            // Ensure the value being set is an NSNumber before comparing
+            if (![value isKindOfClass:[NSNumber class]]) {
+                 // If it's not a number, let the original method handle it or log an error.
+                 return %orig;
+            }
             if ([value isEqual:selectedColor]) {
                 return %orig;
             } else {
@@ -789,22 +789,30 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             CGFloat height = imageView.frame.size.height;
             
             // Twitter logo is EXACTLY 29x29 with minimal tolerance
-            BOOL isTwitterLogo = fabs(width - 29.0) < 0.1 && fabs(height - 29.0) < 0.1;
+            BOOL isLikelyTwitterLogo = fabs(width - 29.0) < 2.0 && fabs(height - 29.0) < 2.0 && fabs(width - height) < 1.0;
             
-            if (isTwitterLogo) {
-                if (shouldTheme) {
+            if (isLikelyTwitterLogo) {
+                if (shouldTheme && [BHTManager tabBarTheming]) { // Also check if theming is enabled
                     // Get the original image
                     UIImage *originalImage = imageView.image;
                     if (originalImage && originalImage.renderingMode != UIImageRenderingModeAlwaysTemplate) {
                         // Create template image from original
                         UIImage *templateImage = [originalImage imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-                        imageView.image = templateImage;
+                        imageView.image = templateImage; // Setting image might trigger layout, potentially re-calling this. Guard needed?
                         imageView.tintColor = BHTCurrentAccentColor();
                     }
                 }
             }
         }
     }
+}
+
+// Also hook layoutSubviews to catch changes
+- (void)layoutSubviews {
+    %orig;
+    // Call updateLogoTheme, but perhaps with a guard to prevent infinite loops if setting the image triggers layout.
+    // A simple flag or checking if the theme is already applied might work.
+    [self updateLogoTheme];
 }
 
 %end
@@ -2833,10 +2841,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 %ctor {
     NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
     NSOperationQueue *mainQueue = [NSOperationQueue mainQueue];
-    // Declare observer variables
-    static id _PasteboardChangeObserver = nil;
-    static id _UserDefaultsChangeObserver = nil;
-    
     // Someone needs to hold reference the to Notification
     _PasteboardChangeObserver = [center addObserverForName:UIPasteboardChangedNotification object:nil queue:mainQueue usingBlock:^(NSNotification * _Nonnull note){
         
@@ -2913,20 +2917,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     [TweetSourceHelper loadCachedCookies];
     
     %init;
-    // Add observer for UserDefaults changes to re-apply theme
-    _UserDefaultsChangeObserver = [center addObserverForName:NSUserDefaultsDidChangeNotification 
-                                                      object:nil 
-                                                       queue:mainQueue 
-                                                  usingBlock:^(NSNotification *note) {
-        // Check specifically if the theme color key changed before reapplying
-        // Note: NSUserDefaultsDidChangeNotification doesn't tell *what* changed. 
-        // To be precise, you'd need to store the previous value and compare.
-        // For simplicity here, we re-apply if *any* default changed, but ideally, filter.
-        // Consider KVO on NSUserDefaults for 'bh_color_theme_selectedColor' if performance is critical.
-        // **Ensure UI updates happen on the main thread**
-        dispatch_async(dispatch_get_main_queue(), ^{
-            BHT_ApplyThemeIfNeeded();
-        });
+    [[NSNotificationCenter defaultCenter] addObserverForName:@"BHTTabBarThemingChanged" object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification * _Nonnull note) {
+        BHT_UpdateAllTabBarIcons();
     }];
 }
 
@@ -2989,10 +2981,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     }
     SEL applyTintColorSelector = @selector(applyTintColor:);
     if ([self respondsToSelector:applyTintColorSelector]) {
-        #pragma clang diagnostic push
-        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
         [self performSelector:applyTintColorSelector withObject:targetColor];
-        #pragma clang diagnostic pop
     } else {
         imgView.tintColor = targetColor;
     }
