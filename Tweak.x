@@ -3011,54 +3011,39 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 %new
 - (void)bh_applyCurrentThemeToIcon {
     UIImageView *imgView = nil;
-    UIVisualEffectView *effectView = nil;
-
     @try {
         imgView = [self valueForKey:@"imageView"];
-        effectView = [self valueForKey:@"effectView"];
     } @catch (NSException *exception) {
-        NSLog(@"[BHTwitter TabTheme] Exception getting imageView or effectView: %@", exception);
-        if (!imgView) { // If imgView is nil even after exception, we can't proceed.
-            return;
-        }
+        NSLog(@"[BHTwitter TabTheme] Exception getting imageView: %@", exception);
+        return;
     }
 
     if (!imgView) {
-        // Corrected NSLog statement
         NSLog(@"[BHTwitter TabTheme] imageView is nil for tabView: %@", self);
         return;
     }
 
     if (![BHTManager tabBarTheming]) {
         // Theming is OFF, revert to default
-        if (effectView) {
-            effectView.hidden = NO; // Show the effect view
-        }
         if (imgView.image && imgView.image.renderingMode == UIImageRenderingModeAlwaysTemplate) {
-            imgView.tintColor = nil;
+            imgView.tintColor = nil; 
         }
-        // Consider if original image rendering mode needs to be restored if we changed it.
-        // For now, assuming _t1_updateImageViewAnimated or native logic handles this when tintColor is nil.
     } else {
         // Theming is ON
-        if (effectView) {
-            effectView.hidden = YES; // Hide the effect view
-        }
-
         UIColor *targetColor;
-        if ([[self valueForKey:@"selected"] boolValue]) {
+        if ([[self valueForKey:@"selected"] boolValue]) { 
             targetColor = BHTCurrentAccentColor();
         } else {
-            targetColor = [UIColor grayColor];
+            targetColor = [UIColor grayColor]; 
         }
 
         if (imgView.image && imgView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
             imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
         }
-        imgView.tintColor = targetColor;
+        imgView.tintColor = targetColor; 
     }
 
-    // Declare selector inside the method
+    // Common update logic
     SEL updateImageViewSelector = NSSelectorFromString(@"_t1_updateImageViewAnimated:");
     if ([self respondsToSelector:updateImageViewSelector]) {
         IMP imp = [self methodForSelector:updateImageViewSelector];
