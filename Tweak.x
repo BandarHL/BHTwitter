@@ -18,7 +18,7 @@
 static void BHT_UpdateAllTabBarIcons(void);
 static void BHT_applyThemeToWindow(UIWindow *window);
 static void BHT_ensureTheming(void);
-static void BHT_forceRefreshActiveWindowAppearance(void);
+static void BHT_forceRefreshAllWindowAppearances(void); // Renamed
 
 // Static helper function for recursive view traversal - DEFINED AT THE TOP
 static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
@@ -150,7 +150,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             [%c(T1ColorSettings) _t1_updateOverrideUserInterfaceStyle];
         }
 
-        BHT_forceRefreshActiveWindowAppearance();
+        BHT_forceRefreshAllWindowAppearances(); // Call renamed function
 
         BHT_UpdateAllTabBarIcons();
         // We might need to re-add nav bar bird icon updates here if they are still problematic
@@ -3192,39 +3192,38 @@ static void BHT_ensureTheming(void) {
     }
 }
 
-static void BHT_forceRefreshActiveWindowAppearance(void) {
-    UIWindow *keyWindow = nil;
-    // Find the key window
+static void BHT_forceRefreshAllWindowAppearances(void) { // Renamed and logic adjusted
+    // 1. Update our custom elements (these seem to work reliably)
+    BHT_UpdateAllTabBarIcons(); 
+    
     for (UIWindow *window in [UIApplication sharedApplication].windows) {
-        if (window.isKeyWindow) {
-            keyWindow = window;
-            break;
-        }
-    }
-    if (!keyWindow) return;
+        if (!window.isOpaque || window.isHidden) continue; // Skip non-visible or transparent windows
 
-    // 1. Update our custom elements (as they are known to work)
-    BHT_UpdateAllTabBarIcons(); // This updates for all windows, which is fine.
-    BH_EnumerateSubviewsRecursively(keyWindow.rootViewController.view, ^(UIView *currentView) {
-        if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
-            if ([BHTManager tabBarTheming]) { // Or your relevant BHTManager flag
-                [(TFNNavigationBar *)currentView updateLogoTheme];
-            }
+        // Update our custom nav bar bird icon for this window
+        if (window.rootViewController && window.rootViewController.isViewLoaded) {
+            BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
+                if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
+                    if ([BHTManager tabBarTheming]) { 
+                        [(TFNNavigationBar *)currentView updateLogoTheme];
+                    }
+                }
+            });
         }
-    });
 
-    // 2. Attempt to "jolt" the key window's hierarchy to re-evaluate appearance.
-    UIViewController *rootVC = keyWindow.rootViewController;
-    if (rootVC && rootVC.isViewLoaded) {
-        BH_EnumerateSubviewsRecursively(rootVC.view, ^(UIView *subview) {
-            if ([subview respondsToSelector:@selector(tintColorDidChange)]) {
-                [subview tintColorDidChange];
-            }
-            // It might be too broad to call setNeedsLayout/Display on all subviews.
-            // Focus on tintColorDidChange first.
-        });
-        // After notifying subviews, a layout pass on the root might help propagate changes.
-        [rootVC.view setNeedsLayout];
-        [rootVC.view layoutIfNeeded];
+        // Attempt to "jolt" this window's hierarchy
+        UIViewController *rootVC = window.rootViewController;
+        if (rootVC && rootVC.isViewLoaded) {
+            BH_EnumerateSubviewsRecursively(rootVC.view, ^(UIView *subview) {
+                if ([subview respondsToSelector:@selector(tintColorDidChange)]) {
+                    [subview tintColorDidChange];
+                }
+                if ([subview respondsToSelector:@selector(setNeedsDisplay)]) {
+                    [subview setNeedsDisplay]; // Force redraw
+                }
+            });
+            [rootVC.view setNeedsLayout];
+            [rootVC.view layoutIfNeeded];
+            [rootVC.view setNeedsDisplay]; // Redraw the whole root view of the window
+        }
     }
 }
