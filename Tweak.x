@@ -24,7 +24,7 @@ static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *
 UIColor *BHTCurrentAccentColor(void) {
     Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
     if (!TAEColorSettingsCls) {
-        return [UIColor systemBlueColor];
+        return [UIColor systemBlueColor]; // Early exit if settings class not found
     }
 
     id settings = [TAEColorSettingsCls sharedSettings];
@@ -32,16 +32,31 @@ UIColor *BHTCurrentAccentColor(void) {
     id palette = [current colorPalette];
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
 
+    // 1. Try BHTwitter's custom theme setting first
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
+        UIColor *customColor = [palette primaryColorForOption:opt];
+        if (customColor) {
+            return customColor; // Successfully got BHTwitter theme color
+        }
+        // If customColor is nil (bh_color_theme_selectedColor is set but to an invalid option),
+        // fall through to check Twitter's default theme setting.
     }
 
+    // 2. Try Twitter's own theme setting (if BHTwitter's wasn't set or was invalid)
     if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
         NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-        return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
+        UIColor *twitterColor = [palette primaryColorForOption:opt];
+        if (twitterColor) {
+            return twitterColor; // Successfully got Twitter's theme color
+        }
+        // If twitterColor is also nil (e.g. T1ColorSettingsPrimaryColorOptionKey is invalid for palette)
+        // then fallback to systemBlueColor.
+        return [UIColor systemBlueColor];
     }
 
+    // 3. If NEITHER key is found, it means no theme preference is stored.
+    // Fallback to systemBlueColor as a general default.
     return [UIColor systemBlueColor];
 }
 
@@ -1452,6 +1467,49 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %end
 
 // MARK: Clean tracking from copied links: https://github.com/BandarHL/BHTwitter/issues/75
+%ctor {
+    NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+    NSOperationQueue *mainQueue = [NSOperationQueue mainQueue];
+    // Someone needs to hold reference the to Notification
+    _PasteboardChangeObserver = [center addObserverForName:UIPasteboardChangedNotification object:nil queue:mainQueue usingBlock:^(NSNotification * _Nonnull note){
+        
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
+            trackingParams = @{
+                @"twitter.com" : @[@"s", @"t"],
+                @"x.com" : @[@"s", @"t"],
+            };
+        });
+        
+        if ([BHTManager stripTrackingParams]) {
+            if (UIPasteboard.generalPasteboard.hasURLs) {
+                NSURL *pasteboardURL = UIPasteboard.generalPasteboard.URL;
+                NSArray<NSString*>* params = trackingParams[pasteboardURL.host];
+                
+                if ([pasteboardURL.absoluteString isEqualToString:_lastCopiedURL] == NO && params != nil && pasteboardURL.query != nil) {
+                    // to prevent endless copy loop
+                    _lastCopiedURL = pasteboardURL.absoluteString;
+                    NSURLComponents *cleanedURL = [NSURLComponents componentsWithURL:pasteboardURL resolvingAgainstBaseURL:NO];
+                    NSMutableArray<NSURLQueryItem*> *safeParams = [NSMutableArray arrayWithCapacity:0];
+                    
+                    for (NSURLQueryItem *item in cleanedURL.queryItems) {
+                        if ([params containsObject:item.name] == NO) {
+                            [safeParams addObject:item];
+                        }
+                    }
+                    cleanedURL.queryItems = safeParams.count > 0 ? safeParams : nil;
+
+                    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"tweet_url_host"]) {
+                        NSString *selectedHost = [[NSUserDefaults standardUserDefaults] objectForKey:@"tweet_url_host"];
+                        cleanedURL.host = selectedHost;
+                    }
+                    UIPasteboard.generalPasteboard.URL = cleanedURL.URL;
+                }
+            }
+        }
+    }];
+    %init;
+}
 
 // MARK: Restore Source Labels - This is still pretty experimental and may break. This restores Tweet Source Labels by using an Legacy API. by: @nyaathea
 
@@ -2996,40 +3054,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 %end
 
-// Store weak references to T1TabBarViewController instances
-// static NSHashTable *gTabBarControllers = nil; // REMOVED
-
-// Notification handler function // REMOVED
-// static void BHTTabBarAccentColorChanged(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
-//    if (gTabBarControllers) {
-//        for (T1TabBarViewController *tabBarVC in [gTabBarControllers allObjects]) {
-//            if ([tabBarVC respondsToSelector:@selector(tabViews)]) {
-//                NSArray *tabViews = [tabBarVC valueForKey:@"tabViews"]; // KVC for safety
-//                for (id tabView in tabViews) { // id type because T1TabView might not be fully known here
-//                    if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
-//                        [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
-//                    }
-//                }
-//            }
-//        }
-//    }
-//}
-
 %hook T1TabBarViewController
-
-// + (void)load { // REMOVED
-    // Initialize the hash table once
-    // static dispatch_once_t onceToken;
-    // dispatch_once(&onceToken, ^{
-        // gTabBarControllers = [NSHashTable hashTableWithOptions:NSPointerFunctionsWeakMemory];
-        // [[NSNotificationCenter defaultCenter] addObserverForName:NSUserDefaultsDidChangeNotification 
-                                                          // object:nil 
-                                                           // queue:[NSOperationQueue mainQueue] 
-                                                      // usingBlock:^(NSNotification * _Nonnull note) {
-            // BHTTabBarAccentColorChanged(NULL, NULL, NULL, NULL, NULL); 
-        // }];
-    // });
-// }
 
 - (void)viewDidLoad {
     %orig;
