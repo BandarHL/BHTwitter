@@ -9,7 +9,6 @@
 
 // Forward declaration
 static void BHT_UpdateAllTabBarIcons(void);
-static void BHT_ApplyNavBarIconTheme(void); // Forward declare new helper
 
 // Static helper function for recursive view traversal - DEFINED AT THE TOP
 static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
@@ -103,11 +102,23 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     if ([BHTManager FLEX]) {
         [[%c(FLEXManager) sharedManager] showExplorer];
     }
+    
+    // Apply theme right after launch finishes
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
+    }
+
     return true;
 }
 
 - (void)applicationDidBecomeActive:(id)arg1 {
     %orig;
+    
+    // Re-apply theme when app becomes active
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
+    }
+
     if ([BHTManager Padlock]) {
         NSDictionary *keychainData = [[keychain shared] getData];
         if (keychainData != nil) {
@@ -125,11 +136,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             [image removeFromSuperview];
         }
     }
-    // Apply themes when app becomes active, after a short delay
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        BHT_UpdateAllTabBarIcons();
-        BHT_ApplyNavBarIconTheme();
-    });
 }
 
 - (void)applicationWillTerminate:(id)arg1 {
@@ -657,12 +663,14 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)viewDidAppear:(_Bool)animated {
     %orig(animated);
     
+    /* REMOVED dispatch_once logic
     static dispatch_once_t once;
     dispatch_once(&once, ^ {
         if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
             BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
         }
     });
+    */
 }
 %end
 
@@ -670,12 +678,14 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)viewDidAppear:(_Bool)animated {
     %orig(animated);
     
+    /* REMOVED dispatch_once logic
     static dispatch_once_t once;
     dispatch_once(&once, ^ {
         if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
             BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
         }
     });
+    */
 }
 %end
 
@@ -683,12 +693,14 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)viewDidAppear:(_Bool)animated {
     %orig(animated);
     
+    /* REMOVED dispatch_once logic
     static dispatch_once_t once;
     dispatch_once(&once, ^ {
         if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
             BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
         }
     });
+    */
 }
 %end
 
@@ -713,6 +725,45 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)setPrefersLargeTitles:(BOOL)largeTitles {
     largeTitles = false;
     return %orig(largeTitles);
+}
+
+%new
+- (BOOL)shouldThemeIcon {
+    UIViewController *ancestor = [self _viewControllerForAncestor];
+    if (!ancestor) {
+        return NO;
+    }
+    
+    // Always allow onboarding
+    if ([ancestor isKindOfClass:NSClassFromString(@"ONBSignedOutViewController")]) {
+        return YES;
+    }
+    
+    // Get navigation controller
+    UINavigationController *navController = nil;
+    if ([ancestor isKindOfClass:[UINavigationController class]]) {
+        navController = (UINavigationController *)ancestor;
+    } else {
+        navController = ancestor.navigationController;
+    }
+    
+    // Check if we're on a detail view
+    if (navController && navController.viewControllers.count > 1) {
+        return NO;
+    }
+    
+    // Show on timeline navigation controller with single view
+    if ([NSStringFromClass([ancestor class]) containsString:@"TimelineNavigationController"]) {
+        return YES;
+    }
+    
+    // Show on home timeline views
+    if ([NSStringFromClass([ancestor class]) containsString:@"HomeTimelineViewController"] || 
+        [NSStringFromClass([ancestor class]) containsString:@"FeedTimelineViewController"]) {
+        return YES;
+    }
+    
+    return NO;
 }
 
 - (void)didMoveToWindow {
@@ -2017,7 +2068,7 @@ static NSDate *lastCookieRefresh              = nil;
             isLikelyTimestampForSourceLabel = YES;
         }
     }
-    
+
     // Check for date formats like "May 11, 2023 · "
     NSRegularExpression *dateRegex = [NSRegularExpression regularExpressionWithPattern:@"^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s\\d{1,2}(,\\s\\d{4})?\\s·\\s" options:0 error:nil];
     if (dateRegex && !isTimestamp) {
@@ -2101,8 +2152,8 @@ static NSDate *lastCookieRefresh              = nil;
                          hostViewModel = [ancestorView performSelector:@selector(viewModel)];
                     } else if ([ancestorView respondsToSelector:@selector(statusViewModel)]) { // Some views use statusViewModel
                          hostViewModel = [ancestorView performSelector:@selector(statusViewModel)];
-                }
-
+                            }
+                            
                     if ([hostViewModel respondsToSelector:@selector(tweet)]) {
                         mainTweetObject = [hostViewModel performSelector:@selector(tweet)];
                     } else if ([hostViewModel respondsToSelector:@selector(status)]) { // Some view models have a 'status' property
@@ -2139,7 +2190,7 @@ static NSDate *lastCookieRefresh              = nil;
                         if (!tweetIDStr || tweetIDStr.length == 0) {
                             id genericID = [mainTweetObject valueForKey:@"id"];
                             if (genericID) tweetIDStr = [genericID description];
-                        }
+                            }
                     } @catch (NSException *e) { NSLog(@"TweetSourceTweak: Exception getting alt tweet ID: %@", e); }
                     }
                     
@@ -2231,7 +2282,7 @@ static NSDate *lastCookieRefresh              = nil;
             if (isNotificationView) {
                 NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
                 BOOL modified = NO;
-
+                
                 // Replace "your post" with "your Tweet"
                 NSRange postRange = [currentText rangeOfString:@"your post"];
                 if (postRange.location != NSNotFound) {
@@ -2302,7 +2353,7 @@ static NSDate *lastCookieRefresh              = nil;
     %orig;
     if (!self.window) return;
     
-    // Check if this is the Twitter bird logo by examining view hierarchy and size
+    // Check if this is the Twitter bird logo by examining view hierarchy
     UIView *view = self;
     BOOL isNavBar = NO;
     BOOL isCorrectSize = CGSizeEqualToSize(self.frame.size, CGSizeMake(29, 29));
@@ -2317,12 +2368,11 @@ static NSDate *lastCookieRefresh              = nil;
     }
     
     if (isNavBar && isCorrectSize) {
-        // Call the helper function to apply the theme
-        BHT_ApplyNavBarIconTheme();
+        self.image = [self.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+        self.tintColor = BHTCurrentAccentColor();
     }
 }
 
-/* Remove setImage hook
 - (void)setImage:(UIImage *)image {
     if (image && [self.superview isKindOfClass:%c(TFNNavigationBar)]) {
         UIView *view = self;
@@ -2345,7 +2395,6 @@ static NSDate *lastCookieRefresh              = nil;
     }
     %orig(image);
 }
-*/
 
 %end
 
@@ -2861,12 +2910,9 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     [TweetSourceHelper loadCachedCookies];
     
     %init;
-    // Remove direct call from ctor, handled by applicationDidBecomeActive
-    /*
     [[NSNotificationCenter defaultCenter] addObserverForName:@"BHTTabBarThemingChanged" object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification * _Nonnull note) {
         BHT_UpdateAllTabBarIcons();
     }];
-    */
 }
 
 // MARK: - DM Avatar Images
@@ -3043,47 +3089,6 @@ static void BHT_UpdateAllTabBarIcons(void) {
             if (vc.presentedViewController) {
                 [stack addObject:vc.presentedViewController];
             }
-        }
-    }
-}
-
-// Helper: Apply theme to Nav Bar Icon
-static void BHT_ApplyNavBarIconTheme(void) {
-    // Iterate all windows to find the main navigation bar's icon
-    for (UIWindow *window in UIApplication.sharedApplication.windows) {
-        if (!window.isKeyWindow) continue; // Focus on the key window
-
-        NSMutableArray *viewsToCheck = [NSMutableArray arrayWithObject:window];
-        while (viewsToCheck.count > 0) {
-            UIView *currentView = [viewsToCheck lastObject];
-            [viewsToCheck removeLastObject];
-
-            if ([currentView isKindOfClass:%c(TFNNavigationBar)]) {
-                 for (UIView *subview in currentView.subviews) {
-                    if ([subview isKindOfClass:[UIImageView class]]) {
-                        UIImageView *imageView = (UIImageView *)subview;
-                        // VERY specific size check to only match Twitter logo
-                        CGFloat width = imageView.frame.size.width;
-                        CGFloat height = imageView.frame.size.height;
-                        BOOL isTwitterLogo = fabs(width - 29.0) < 0.1 && fabs(height - 29.0) < 0.1;
-
-                        if (isTwitterLogo) {
-                            // Get the original image
-                             UIImage *originalImage = imageView.image;
-                            if (originalImage && originalImage.renderingMode != UIImageRenderingModeAlwaysTemplate) {
-                                // Create template image from original
-                                UIImage *templateImage = [originalImage imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-                                imageView.image = templateImage;
-                            }
-                             // Always apply tint color in case it was reset
-                            imageView.tintColor = BHTCurrentAccentColor();
-                            return; // Found and themed, exit early
-                        }
-                    }
-                }
-            }
-             // Add subviews for traversal
-            [viewsToCheck addObjectsFromArray:currentView.subviews];
         }
     }
 }
