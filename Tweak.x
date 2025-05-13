@@ -2246,7 +2246,79 @@ static NSDate *lastCookieRefresh              = nil;
              [currentText containsString:@"your Post"] ||
              [currentText containsString:@"reposted"] ||
              [currentText containsString:@"Reposted"]) {
-        // ... (existing post/repost replacement logic, seems fine)
+        @try {
+            UIView *view = self;
+            BOOL isNotificationView = NO;
+            
+            // Walk up the view hierarchy to find notification context
+            while (view && !isNotificationView) {
+                if ([NSStringFromClass([view class]) containsString:@"Notification"] ||
+                    [NSStringFromClass([view class]) containsString:@"T1NotificationsTimeline"]) {
+                    isNotificationView = YES;
+                    break; // Exit loop once found
+                }
+                view = view.superview;
+            }
+            
+            // Only proceed if we're in a notification view
+            if (isNotificationView) {
+                NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
+                BOOL modified = NO;
+
+                // Replace "your post" with "your Tweet"
+                NSRange postRange = [currentText rangeOfString:@"your post"];
+                if (postRange.location != NSNotFound) {
+                    NSDictionary *existingAttributes = [newString attributesAtIndex:postRange.location effectiveRange:NULL];
+                    [newString replaceCharactersInRange:postRange withString:@"your Tweet"];
+                    [newString setAttributes:existingAttributes range:NSMakeRange(postRange.location, [@"your Tweet" length])];
+                    modified = YES;
+                }
+                
+                // Also check for capitalized "Post"
+                postRange = [currentText rangeOfString:@"your Post"];
+                if (postRange.location != NSNotFound) {
+                    NSDictionary *existingAttributes = [newString attributesAtIndex:postRange.location effectiveRange:NULL];
+                    [newString replaceCharactersInRange:postRange withString:@"your Tweet"];
+                    [newString setAttributes:existingAttributes range:NSMakeRange(postRange.location, [@"your Tweet" length])];
+                    modified = YES;
+                }
+                
+                // Replace "reposted" with "Retweeted"
+                NSRange repostRange = [currentText rangeOfString:@"reposted"];
+                if (repostRange.location != NSNotFound) {
+                    NSDictionary *existingAttributes = [newString attributesAtIndex:repostRange.location effectiveRange:NULL];
+                    [newString replaceCharactersInRange:repostRange withString:@"Retweeted"];
+                    [newString setAttributes:existingAttributes range:NSMakeRange(repostRange.location, [@"Retweeted" length])];
+                    modified = YES;
+                }
+                
+                // Also check for capitalized "Reposted"
+                repostRange = [currentText rangeOfString:@"Reposted"];
+                if (repostRange.location != NSNotFound) {
+                    NSDictionary *existingAttributes = [newString attributesAtIndex:repostRange.location effectiveRange:NULL];
+                    [newString replaceCharactersInRange:repostRange withString:@"Retweeted"];
+                    [newString setAttributes:existingAttributes range:NSMakeRange(repostRange.location, [@"Retweeted" length])];
+                    modified = YES;
+                }
+                
+                // Update the model only if modifications were made
+                if (modified) {
+                    // Create a new model instance with the modified attributed string
+                    // and attempt to preserve active ranges if possible
+                    TFNAttributedTextModel *newModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newString];
+                     @try {
+                        id originalActiveRanges = [model valueForKey:@"activeRanges"];
+                        if (originalActiveRanges) {
+                            [newModel setValue:originalActiveRanges forKey:@"activeRanges"];
+                         }
+                    } @catch (NSException *exception) {
+                        NSLog(@"TweetSourceTweak: Could not preserve activeRanges for post/repost replacement: %@", exception);
+                    }
+                    %orig(newModel);
+                    return; // Important: return here to avoid calling %orig again at the end
+                }
+            }
+        } @catch (__unused NSException *e) {}
     }
     
     %orig(model);
