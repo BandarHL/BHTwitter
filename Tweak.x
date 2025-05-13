@@ -3103,3 +3103,20 @@ static void BHT_UpdateAllTabBarIcons(void) {
         }
     }
 }
+
+%hook TFNBarButtonItemButtonV2
+
+// Hook the tintColor setter
+- (void)setTintColor:(UIColor *)tintColor {
+    // Check if the general UI theming is enabled
+    // Using tabBarTheming flag for now, consider a dedicated flag if needed
+    if ([BHTManager tabBarTheming]) {
+        // Force the tint color to the current BHTwitter accent color
+        %orig(BHTCurrentAccentColor());
+    } else {
+        // If theming is off, use the color Twitter intended
+        %orig(tintColor);
+    }
+}
+
+%end
