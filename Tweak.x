@@ -2726,8 +2726,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         CGRect currentFrame = self.frame;
 
         // Define padding
-        CGFloat horizontalPadding = 4.0; // Further reduced (e.g., 2px on each side now)
-        CGFloat verticalPadding = 10.0;  // Increased for a slightly taller, rounder pill
+        CGFloat horizontalPadding = 4.0; 
+        CGFloat verticalPadding = 12.0;  // Increased again for a more pronounced round pill
 
         // Apply padding to the frame
         // Adjust origin to keep the label centered around its original position after resizing
@@ -2809,27 +2809,30 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         if (timestampLabelToUpdate) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 CGFloat targetAlpha = showButtons ? 1.0 : 0.0;
-                NSTimeInterval fadeInDuration = 0.2;
-                NSTimeInterval fadeOutDuration = 0.8; // Increased for slower hide
+                NSTimeInterval fadeInDuration = 0.2; // Keep fade-in relatively quick
+                NSTimeInterval fadeOutDuration = 0.8; // Keep fade-out slower
+                
+                UIViewAnimationOptions animationOptions = UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionAllowUserInteraction;
+                if (showButtons) {
+                    animationOptions |= UIViewAnimationOptionCurveEaseIn;
+                } else {
+                    animationOptions |= UIViewAnimationOptionCurveEaseOut;
+                }
                 NSTimeInterval animationDuration = showButtons ? fadeInDuration : fadeOutDuration;
 
                 NSLog(@"[BHTwitter TimestampLabel Animate] Text: '%@', Current Width: %f, TargetAlpha: %f, Show: %d", timestampLabelToUpdate.text, timestampLabelToUpdate.frame.size.width, targetAlpha, showButtons);
 
                 if (showButtons && timestampLabelToUpdate.hidden) {
-                    // If we are showing, ensure it's unhidden before animation starts
-                    // and its alpha might be 0 from a previous fade out or initial setup.
-                    timestampLabelToUpdate.alpha = 0.0; // Start from alpha 0 for fade-in
+                    timestampLabelToUpdate.alpha = 0.0; 
                     timestampLabelToUpdate.hidden = NO;
                 } else if (!showButtons && timestampLabelToUpdate.alpha == 0.0) {
-                    // If already faded out and we want to hide, just ensure it's hidden and return.
                     timestampLabelToUpdate.hidden = YES;
                     return;
                 }
 
-
                 [UIView animateWithDuration:animationDuration
                                       delay:0.0
-                                    options:UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionAllowUserInteraction | UIViewAnimationOptionCurveEaseInOut
+                                    options:animationOptions
                                  animations:^{
                                      timestampLabelToUpdate.alpha = targetAlpha;
                                  }
