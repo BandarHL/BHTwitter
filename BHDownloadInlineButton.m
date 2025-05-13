@@ -76,7 +76,8 @@ static void _bh_callSuperIfPossible(__unsafe_unretained id self,
     id dlg = self.delegate.delegate;
     if ([dlg isKindOfClass:objc_getClass("T1SlideshowStatusView")] ||
         [dlg isKindOfClass:objc_getClass("T1ImmersiveExploreCardView")] ||
-        [dlg isKindOfClass:objc_getClass("T1TwitterSwift.ImmersiveExploreCardViewHelper")])
+        [dlg isKindOfClass:objc_getClass("T1TwitterSwift.ImmersiveExploreCardViewHelper")] ||
+        [dlg isKindOfClass:objc_getClass("T1TwitterSwift.ImmersiveCardViewHelper")])
     {
         self.tintColor = UIColor.whiteColor;
     } else {

@@ -96,113 +96,8 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     }
 }
 
-
-// Add this method to configure the table view appearance
-- (void)viewDidLoad {
-    [super viewDidLoad];
-
-
-
-
-    // Set the background color to match system background
-    self.view.backgroundColor = [UIColor systemBackgroundColor];
-
-    // Configure the table view to blend with background
-    self.table.backgroundColor = [UIColor systemBackgroundColor];
-    self.table.separatorColor = [UIColor separatorColor];
-
-    // Remove extra separators below content
-    self.table.tableFooterView = [UIView new];
-    self.table.separatorStyle = UITableViewCellSeparatorStyleNone;
-
-    if (@available(iOS 15.0, *)) {
-        self.table.sectionHeaderTopPadding = 8; 
-    }
-
-    // These ensure cells align with headers
-    self.table.separatorInset = UIEdgeInsetsMake(0, 16, 0, 0);
-    self.table.layoutMargins = UIEdgeInsetsMake(0, 16, 0, 16);
-
-
-}
-
-- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
-    NSString *title = [self tableView:tableView titleForHeaderInSection:section];
-    if (!title) {
-        return nil;
-    }
-
-    UIView *headerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 52)];
-
-    // Top separator - modified to extend full width
-    UIView *topSeparator = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 0.5)];
-    topSeparator.backgroundColor = [UIColor separatorColor];
-    topSeparator.autoresizingMask = UIViewAutoresizingFlexibleWidth; // Ensure it stays full width
-    [headerView addSubview:topSeparator];
-
-    // Header label
-    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(16, 16, tableView.frame.size.width - 32, 28)];
-    label.text = title; 
-    label.font = TwitterChirpFont(TwitterFontStyleBold); // 17pt bold
-    label.textColor = [UIColor labelColor];
-    [headerView addSubview:label];
-
-    return headerView;
-}
-- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
-    return 52; // Increased from 44 to accommodate larger text
-}
-
-- (UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section {
-    NSString *footerText = [self tableView:tableView titleForFooterInSection:section];
-    if (!footerText) {
-        return nil;
-    }
-
-    UIView *footerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 44)];
-
-    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(16, 8, tableView.frame.size.width - 32, 36)];
-    label.text = footerText;
-    label.font = TwitterChirpFont(TwitterFontStyleRegular); // 12pt regular
-    label.textColor = [UIColor secondaryLabelColor];
-    label.numberOfLines = 0;
-    [footerView addSubview:label];
-
-    return footerView;
-}
-
-- (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section {
-    NSString *footerText = [self tableView:tableView titleForFooterInSection:section];
-    if (!footerText) {
-        return CGFLOAT_MIN; // Use minimal height when no footer
-    }
-
-    // Calculate dynamic height
-    CGFloat width = tableView.frame.size.width - 32;
-    CGRect rect = [footerText boundingRectWithSize:CGSizeMake(width, CGFLOAT_MAX)
-                                         options:NSStringDrawingUsesLineFragmentOrigin
-                                        attributes:@{NSFontAttributeName: TwitterChirpFont(TwitterFontStyleRegular)}
-                                         context:nil];
-
-    return ceil(rect.size.height) + 24; // Top/bottom padding
-}
-
-// And replace with this single implementation:
-- (void)tableView:(UITableView *)tableView willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath {
-    // Remove any default separator insets
-    cell.separatorInset = UIEdgeInsetsMake(0, 0, 0, CGRectGetWidth(tableView.bounds));
-
-    // Set cell background
-    cell.backgroundColor = [UIColor systemBackgroundColor];
-
-    // Remove selection highlight if needed
-    cell.selectionStyle = UITableViewCellSelectionStyleDefault;
-}
-
-
-
 - (UITableViewStyle)tableViewStyle {
-    return UITableViewStyleGrouped;
+    return UITableViewStyleInsetGrouped;
 }
 
 - (PSSpecifier *)newSectionWithTitle:(NSString *)header footer:(NSString *)footer {
@@ -270,7 +165,6 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         PSSpecifier *mainSection = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"MAIN_SECTION_HEADER_TITLE"] footer:nil];
         PSSpecifier *twitterBlueSection = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TWITTER_BLUE_SECTION_HEADER_TITLE"] footer:[[BHTBundle sharedBundle] localizedStringForKey:@"TWITTER_BLUE_SECTION_FOOTER_TITLE"]];
         PSSpecifier *layoutSection = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"LAYOUT_CUS_SECTION_HEADER_TITLE"] footer:[[BHTBundle sharedBundle] localizedStringForKey:@"LAYOUT_CUS_SECTION_FOOTER_TITLE"]];
-        PSSpecifier *debug = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DEBUG_SECTION_HEADER_TITLE"] footer:nil];
         PSSpecifier *legalSection = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"LEGAL_SECTION_HEADER_TITLE"] footer:nil];
         PSSpecifier *developer = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DEVELOPER_SECTION_HEADER_TITLE"] footer:nil];
         PSSpecifier *other = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"PEOPLE_WHO_CONTRIBUTED_SECTION_HEADER_TITLE"] footer:[NSString stringWithFormat:@"BHTwitter v%@", [[BHTBundle sharedBundle] BHTwitterVersion]]];
@@ -281,7 +175,13 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         
         PSSpecifier *hideAds = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_ADS_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_ADS_OPTION_DETAIL_TITLE"] key:@"hide_promoted" defaultValue:true changeAction:nil];
         
+        PSSpecifier *voiceFeature = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"VOICE_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"VOICE_OPTION_DETAIL_TITLE"] key:@"voice_creation_enabled" defaultValue:false changeAction:nil];
+
         PSSpecifier *customVoice = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"UPLOAD_CUSTOM_VOICE_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE"] key:@"custom_voice_upload" defaultValue:true changeAction:nil];
+
+        PSSpecifier *dmReplyLater = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DM_REPLY_LATER_ENABLED_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DM_REPLY_LATER_ENABLED_OPTION_DETAIL_TITLE"] key:@"dm_reply_later_enabled" defaultValue:false changeAction:nil];
+
+        PSSpecifier *mediaUpload4k = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"MEDIA_UPLOAD_4K_ENABLED_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"MEDIA_UPLOAD_4K_ENABLED_OPTION_DETAIL_TITLE"] key:@"media_upload_4k_enabled" defaultValue:false changeAction:nil];
 
         PSSpecifier *hideTopics = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_TOPICS_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_TOPICS_OPTION_DETAIL_TITLE"] key:@"hide_topics" defaultValue:false changeAction:nil];
         
@@ -337,10 +237,6 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         // Layout customization section
         PSSpecifier *customDirectBackgroundView = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_DIRECT_BACKGROUND_VIEW_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_DIRECT_BACKGROUND_VIEW_DETAIL_TITLE"] dynamicRule:nil action:@selector(showCustomBackgroundViewViewController:)];
         
-        PSSpecifier *origTweetStyle = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ORIG_TWEET_STYLE_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE"] key:@"old_style" defaultValue:true changeAction:nil];
-        
-        PSSpecifier *stopHidingTabBar = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"STOP_HIDING_TAB_BAR_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"STOP_HIDING_TAB_BAR_DETAIL_TITLE"] key:@"no_tab_bar_hiding" defaultValue:false changeAction:nil];
-        
         PSSpecifier *hideViewCount = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE"] key:@"hide_view_count" defaultValue:false changeAction:nil];
 
         PSSpecifier *hideBookmarkButton = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_MARKBOOK_BUTTON_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_MARKBOOK_BUTTON_OPTION_DETAIL_TITLE"] key:@"hide_bookmark_button" defaultValue:false changeAction:nil];
@@ -354,9 +250,6 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         PSSpecifier *regularFontsPicker = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"REQULAR_FONTS_PICKER_OPTION_TITLE"] detailTitle:[[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_1"] dynamicRule:@"en_font, ==, 0" action:@selector(showRegularFontPicker:)];
         
         PSSpecifier *boldFontsPicker = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BOLD_FONTS_PICKER_OPTION_TITLE"] detailTitle:[[NSUserDefaults standardUserDefaults] objectForKey:@"bhtwitter_font_2"] dynamicRule:@"en_font, ==, 0" action:@selector(showBoldFontPicker:)];
-        
-        // debug section
-        PSSpecifier *flex = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_DETAIL_TITLE"] key:@"flex_twitter" defaultValue:false changeAction:@selector(FLEXAction:)];
         
         // legal section
         PSSpecifier *acknowledgements = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"LEGAL_BUTTON_TITLE"] detailTitle:nil dynamicRule:nil action:@selector(showAcknowledgements:)];
@@ -377,8 +270,10 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
             
             mainSection, // 0
             download,
-            hideAds,
+            voiceFeature,
             customVoice,
+            dmReplyLater,
+            mediaUpload4k,
             hideTopics,
             hideWhoToFollow,
             hideTopicsToFollow,
@@ -412,8 +307,6 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
             
             layoutSection, // 2
             customDirectBackgroundView,
-            origTweetStyle,
-            stopHidingTabBar,
             hideViewCount,
             hideBookmarkButton,
             forceFullFrame,
@@ -424,9 +317,6 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
             
             legalSection, // 3
             acknowledgements,
-            
-            debug, // 4
-            flex,
             
             developer, // 5
             bandarHL,
@@ -736,14 +626,6 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     [self presentViewController:alert animated:true completion:nil];
 }
 
-- (void)FLEXAction:(UISwitch *)sender {
-    if (sender.isOn) {
-        [[objc_getClass("FLEXManager") sharedManager] showExplorer];
-    } else {
-        [[objc_getClass("FLEXManager") sharedManager] hideExplorer];
-    }
-}
-
 
 - (void)colorPickerViewControllerDidSelectColor:(UIColorPickerViewController *)viewController {
     [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"change_msg_background"];
@@ -783,17 +665,11 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     if (self) {
         NSString *subTitle = [specifier.properties[@"subtitle"] copy];
         BOOL isBig = specifier.properties[@"big"] ? ((NSNumber *)specifier.properties[@"big"]).boolValue : NO;
-        
-        // Get the default font size and make it bold
-        UIFont *defaultFont = self.textLabel.font;
-        self.textLabel.font = TwitterChirpFont(TwitterFontStyleSemibold); // 14pt semibold
 
         // Keep subtitle style exactly as before
         self.detailTextLabel.text = subTitle;
         self.detailTextLabel.numberOfLines = isBig ? 0 : 1;
         self.detailTextLabel.textColor = [UIColor secondaryLabelColor];
-        self.detailTextLabel.font = TwitterChirpFont(TwitterFontStyleRegular); // Match footer font
-        self.selectionStyle = UITableViewCellSelectionStyleDefault; // or .None if you don't want selection highlight
     }
     return self;
 }
@@ -805,17 +681,11 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     if ((self = [super initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:reuseIdentifier specifier:specifier])) {
         NSString *subTitle = [specifier.properties[@"subtitle"] copy];
         BOOL isBig = specifier.properties[@"big"] ? ((NSNumber *)specifier.properties[@"big"]).boolValue : NO;
-        
-         // Get the default font size and make it bold
-        UIFont *defaultFont = self.textLabel.font;
-        self.textLabel.font = TwitterChirpFont(TwitterFontStyleSemibold); // 14pt semibold
 
         // Keep subtitle style exactly as before
         self.detailTextLabel.text = subTitle;
         self.detailTextLabel.numberOfLines = isBig ? 0 : 1;
         self.detailTextLabel.textColor = [UIColor secondaryLabelColor];
-        self.detailTextLabel.font = TwitterChirpFont(TwitterFontStyleRegular); // Match footer font
-        self.selectionStyle = UITableViewCellSelectionStyleDefault; // or .None if you don't want selection highlight
         
         if (specifier.properties[@"switchAction"]) {
             UISwitch *targetSwitch = ((UISwitch *)[self control]);

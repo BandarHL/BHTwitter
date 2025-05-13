@@ -59,7 +59,13 @@
 "DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "Disable video layer captions";
 
 "VOICE_OPTION_TITLE" = "Voice feature";
-"VOICE_OPTION_DETAIL_TITLE" = "Enable voice in tweet and DM.";
+"VOICE_OPTION_DETAIL_TITLE" = "Enable voice in tweet and replies.";
+
+"DM_REPLY_LATER_ENABLED_OPTION_TITLE" = "Reply Later in DMs";
+"DM_REPLY_LATER_ENABLED_OPTION_DETAIL_TITLE" = "Save your direct message replies to send at a later time.";
+
+"MEDIA_UPLOAD_4K_ENABLED_OPTION_TITLE" = "Upload Media in 4K";
+"MEDIA_UPLOAD_4K_ENABLED_OPTION_DETAIL_TITLE" = "Enable uploading of high-resolution 4K videos and images.";
 
 "VIDEO_ZOOM_OPTION_TITLE" = "Video zoom feature";
 "VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "You can zoom the video by double clicking in the center of the video.";

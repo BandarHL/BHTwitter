@@ -52,7 +52,13 @@
 "DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "nonaktifkan text video";
 
 "VOICE_OPTION_TITLE" = "Fitur Suara";
-"VOICE_OPTION_DETAIL_TITLE" = "Aktifkan fitur suara di tweet dan DM";
+"VOICE_OPTION_DETAIL_TITLE" = "Aktifkan fitur suara di tweet dan balasan";
+
+"DM_REPLY_LATER_ENABLED_OPTION_TITLE" = "Balas Nanti di DM";
+"DM_REPLY_LATER_ENABLED_OPTION_DETAIL_TITLE" = "Simpan balasan DM Anda untuk dikirim nanti.";
+
+"MEDIA_UPLOAD_4K_ENABLED_OPTION_TITLE" = "Unggah Media dalam 4K";
+"MEDIA_UPLOAD_4K_ENABLED_OPTION_DETAIL_TITLE" = "Aktifkan unggahan video dan gambar beresolusi 4K.";
 
 "VIDEO_ZOOM_OPTION_TITLE" = "Pengaturan zoom video";
 "VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "Zoom video dengan cara tap 2x pada video";

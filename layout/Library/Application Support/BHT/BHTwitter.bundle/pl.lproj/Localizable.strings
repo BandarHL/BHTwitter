@@ -59,7 +59,13 @@
 "DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "Wyłącz podpisy warstwy wideo";
 
 "VOICE_OPTION_TITLE" = "Funkcja głosowa";
-"VOICE_OPTION_DETAIL_TITLE" = "Włącz głos w tweetach i wiadomościach.";
+"VOICE_OPTION_DETAIL_TITLE" = "Włącz głos w tweetach i odpowiedzi.";
+
+"DM_REPLY_LATER_ENABLED_OPTION_TITLE" = "Odpowiedz później w wiadomościach";
+"DM_REPLY_LATER_ENABLED_OPTION_DETAIL_TITLE" = "Zapisz odpowiedzi w wiadomościach prywatnych, aby wysłać je później.";
+
+"MEDIA_UPLOAD_4K_ENABLED_OPTION_TITLE" = "Przesyłanie mediów w 4K";
+"MEDIA_UPLOAD_4K_ENABLED_OPTION_DETAIL_TITLE" = "Włącz przesyłanie filmów i zdjęć w wysokiej rozdzielczości 4K.";
 
 "VIDEO_ZOOM_OPTION_TITLE" = "Powiększanie wideo";
 "VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "Możesz powiększyć wideo klikając dwukrotnie w jego środek.";

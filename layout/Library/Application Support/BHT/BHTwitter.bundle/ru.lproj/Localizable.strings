@@ -58,7 +58,13 @@
 "DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "Отключить описания видео";
 
 "VOICE_OPTION_TITLE" = "Голосовые";
-"VOICE_OPTION_DETAIL_TITLE" = "Активирует возможность отправки голосовых твитов и сообщений";
+"VOICE_OPTION_DETAIL_TITLE" = "Активирует возможность отправки голосовых твитов и ответы";
+
+"DM_REPLY_LATER_ENABLED_OPTION_TITLE" = "Ответить позже в ЛС";
+"DM_REPLY_LATER_ENABLED_OPTION_DETAIL_TITLE" = "Сохраняйте ответы в ЛС, чтобы отправить их позже.";
+
+"MEDIA_UPLOAD_4K_ENABLED_OPTION_TITLE" = "Загрузка медиа в 4K";
+"MEDIA_UPLOAD_4K_ENABLED_OPTION_DETAIL_TITLE" = "Включить загрузку видео и изображений в высоком качестве 4K.";
 
 "VIDEO_ZOOM_OPTION_TITLE" = "Приблизить видео";
 "VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "Позволяет приблизить видео двойным касанием по центру экрана";

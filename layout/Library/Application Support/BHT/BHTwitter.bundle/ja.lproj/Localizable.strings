@@ -61,6 +61,12 @@
 "VOICE_OPTION_TITLE" = "音声ポストを有効化";
 "VOICE_OPTION_DETAIL_TITLE" = "音声ポストを有効にします。";
 
+"DM_REPLY_LATER_ENABLED_OPTION_TITLE" = "DMであとで返信";
+"DM_REPLY_LATER_ENABLED_OPTION_DETAIL_TITLE" = "DMの返信を保存して後で送信できます。";
+
+"MEDIA_UPLOAD_4K_ENABLED_OPTION_TITLE" = "4Kメディアをアップロード";
+"MEDIA_UPLOAD_4K_ENABLED_OPTION_DETAIL_TITLE" = "高解像度の4K動画や画像のアップロードを有効にします。";
+
 "VIDEO_ZOOM_OPTION_TITLE" = "動画ズーム機能の有効化";
 "VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "動画の中心部をダブルタップすることでズームイン/アウトできます。";
 

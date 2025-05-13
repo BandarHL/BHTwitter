@@ -59,7 +59,13 @@
 "DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "Désactiver les sous-titres du calque vidéo";
 
 "VOICE_OPTION_TITLE" = "Fonction vocale";
-"VOICE_OPTION_DETAIL_TITLE" = "Activer la voix dans les tweets et les messages privés.";
+"VOICE_OPTION_DETAIL_TITLE" = "Activer la voix dans les tweets et réponses.";
+
+"DM_REPLY_LATER_ENABLED_OPTION_TITLE" = "Répondre plus tard dans les messages privés";
+"DM_REPLY_LATER_ENABLED_OPTION_DETAIL_TITLE" = "Enregistrez vos réponses aux messages privés pour les envoyer plus tard.";
+
+"MEDIA_UPLOAD_4K_ENABLED_OPTION_TITLE" = "Téléverser des médias en 4K";
+"MEDIA_UPLOAD_4K_ENABLED_OPTION_DETAIL_TITLE" = "Activez le téléversement de vidéos et d’images en 4K.";
 
 "VIDEO_ZOOM_OPTION_TITLE" = "Fonction de zoom vidéo";
 "VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "Vous pouvez zoomer sur la vidéo en double-cliquant au centre de la vidéo.";

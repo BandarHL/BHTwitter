@@ -61,6 +61,12 @@
 "VOICE_OPTION_TITLE" = "Ses özelliği";
 "VOICE_OPTION_DETAIL_TITLE" = "Tweet ve DM’de ses özelliğini etkinleştir.";
 
+"DM_REPLY_LATER_ENABLED_OPTION_TITLE" = "DM’lerde Daha Sonra Yanıtla";
+"DM_REPLY_LATER_ENABLED_OPTION_DETAIL_TITLE" = "DM yanıtlarını daha sonra göndermek üzere kaydet.";
+
+"MEDIA_UPLOAD_4K_ENABLED_OPTION_TITLE" = "4K Medya Yükle";
+"MEDIA_UPLOAD_4K_ENABLED_OPTION_DETAIL_TITLE" = "Yüksek çözünürlüklü 4K video ve görselleri yüklemeyi etkinleştir.";
+
 "VIDEO_ZOOM_OPTION_TITLE" = "Video yakınlaştırma özelliği";
 "VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "Videonun ortasına çift tıklayarak videoyu yakınlaştırabilirsiniz.";
 

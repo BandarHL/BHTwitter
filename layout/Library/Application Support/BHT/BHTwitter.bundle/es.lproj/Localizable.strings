@@ -59,7 +59,13 @@
 "DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "Desactivar subtítulos";
 
 "VOICE_OPTION_TITLE" = "Función de voz";
-"VOICE_OPTION_DETAIL_TITLE" = "Activar voz en tweet y DM";
+"VOICE_OPTION_DETAIL_TITLE" = "Activar voz en tweet y respuestas";
+
+"DM_REPLY_LATER_ENABLED_OPTION_TITLE" = "Responder más tarde en los MD";
+"DM_REPLY_LATER_ENABLED_OPTION_DETAIL_TITLE" = "Guarda tus respuestas de mensaje directo para enviarlas más tarde.";
+
+"MEDIA_UPLOAD_4K_ENABLED_OPTION_TITLE" = "Subir contenido en 4K";
+"MEDIA_UPLOAD_4K_ENABLED_OPTION_DETAIL_TITLE" = "Permite subir videos e imágenes en resolución 4K.";
 
 "VIDEO_ZOOM_OPTION_TITLE" = "Función zoom en vídeos";
 "VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "Puedes hacer zoom en el vídeo haciendo doble clic en el centro del vídeo";

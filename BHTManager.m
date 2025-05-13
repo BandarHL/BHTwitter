@@ -184,9 +184,6 @@
 + (BOOL)Padlock {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"padlock"];
 }
-+ (BOOL)OldStyle {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"old_style"];
-}
 + (BOOL)changeFont {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"en_font"];
 }
@@ -241,9 +238,6 @@
 + (BOOL)alwaysFollowingPage {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"always_following_page"];
 }
-+ (BOOL)stopHidingTabBar {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"no_tab_bar_hiding"];
-}
 + (BOOL)changeBackground {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"change_msg_background"];
 }
@@ -252,6 +246,15 @@
 }
 + (BOOL)hideBookmarkButton {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_bookmark_button"];
+}
++ (BOOL)voiceCreationEnabled {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"voice_creation_enabled"];
+}
++ (BOOL)dmReplyLater {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"dm_reply_later_enabled"];
+}
++ (BOOL)mediaUpload4k {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"media_upload_4k_enabled"];
 }
 + (BOOL)customVoice {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"custom_voice_upload"];

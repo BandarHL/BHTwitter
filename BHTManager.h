@@ -33,9 +33,7 @@
 + (BOOL)HideTopics;
 + (BOOL)DisableVODCaptions;
 + (BOOL)Padlock;
-+ (BOOL)OldStyle;
 + (BOOL)changeFont;
-+ (BOOL)FLEX;
 + (BOOL)autoHighestLoad;
 + (BOOL)disableSensitiveTweetWarnings;
 + (BOOL)showScrollIndicator;
@@ -52,10 +50,12 @@
 + (BOOL)forceTweetFullFrame;
 + (BOOL)stripTrackingParams;
 + (BOOL)alwaysFollowingPage;
-+ (BOOL)stopHidingTabBar;
 + (BOOL)changeBackground;
 + (bool)backgroundImage;
 + (BOOL)hideBookmarkButton;
++ (BOOL)voiceCreationEnabled;
++ (BOOL)dmReplyLater;
++ (BOOL)mediaUpload4k;
 + (BOOL)customVoice;
 @end
 
