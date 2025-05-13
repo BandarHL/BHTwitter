@@ -22,8 +22,7 @@ while :; do
       if [ -e ./packages/com.atebits.Tweetie2.ipa ]; then
         echo -e '\033[1m\033[32mBuilding the IPA.\033[0m'
         cyan -i packages/com.atebits.Tweetie2.ipa -o packages/BHTwitter-sideloaded --ignore-encrypted \
-          -uwf .theos/obj/debug/keychainfix.dylib .theos/obj/debug/libbhFLEX.dylib \
-          .theos/obj/debug/BHTwitter.dylib layout/Library/Application\ Support/BHT/BHTwitter.bundle
+          -uwf .theos/obj/debug/keychainfix.dylib .theos/obj/debug/BHTwitter.dylib layout/Library/Application\ Support/BHT/BHTwitter.bundle
 
         echo -e '\033[1m\033[32mDone, thanks for using BHTwitter.\033[0m'
       else
@@ -60,7 +59,7 @@ while :; do
         echo -e '\033[1m\033[32mBuilding the IPA.\033[0m'
 
         cyan -i packages/com.atebits.Tweetie2.ipa -o packages/BHTwitter-trollstore.tipa --ignore-encrypted \
-          -uwf .theos/obj/debug/BHTwitter.dylib .theos/obj/debug/libbhFLEX.dylib layout/Library/Application\ Support/BHT/BHTwitter.bundle
+          -uwf .theos/obj/debug/BHTwitter.dylib layout/Library/Application\ Support/BHT/BHTwitter.bundle
 
         echo -e '\033[1m\033[32mDone, thanks for using BHTwitter.\033[0m'
       else
