@@ -2833,6 +2833,10 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 %ctor {
     NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
     NSOperationQueue *mainQueue = [NSOperationQueue mainQueue];
+    // Declare observer variables
+    static id _PasteboardChangeObserver = nil;
+    static id _UserDefaultsChangeObserver = nil;
+    
     // Someone needs to hold reference the to Notification
     _PasteboardChangeObserver = [center addObserverForName:UIPasteboardChangedNotification object:nil queue:mainQueue usingBlock:^(NSNotification * _Nonnull note){
         
@@ -2982,7 +2986,10 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     }
     SEL applyTintColorSelector = @selector(applyTintColor:);
     if ([self respondsToSelector:applyTintColorSelector]) {
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
         [self performSelector:applyTintColorSelector withObject:targetColor];
+        #pragma clang diagnostic pop
     } else {
         imgView.tintColor = targetColor;
     }
