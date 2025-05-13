@@ -28,9 +28,6 @@ static void BHT_forceRefreshAllWindowAppearances(void); // Renamed
 // Static reference to the video timestamp label
 static __weak UILabel *gVideoTimestampLabel = nil;
 
-// Associated object key for desired padded size
-static const void *BHTDesiredPaddedSizeKey = &BHTDesiredPaddedSizeKey;
-
 // Static helper function for recursive view traversal - DEFINED AT THE TOP
 static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
     if (!view || !block) return;
@@ -708,9 +705,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     %orig(animated);
     
     // Re-apply theme when this controller appears
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
         BHT_ensureTheming();
-    }
+        }
 }
 %end
 
@@ -719,9 +716,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     %orig(animated);
     
     // Re-apply theme when this controller appears
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
         BHT_ensureTheming();
-    }
+        }
 }
 %end
 
@@ -730,9 +727,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     %orig(animated);
     
     // Re-apply theme when this controller appears
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
         BHT_ensureTheming();
-    }
+        }
 }
 %end
 
@@ -2718,67 +2715,58 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 - (void)setText:(NSString *)text {
     %orig(text);
 
+    // Check if this label is the one we want to modify (e.g., video timestamp)
     if ([BHTManager restoreVideoTimestamp] && self.text && [self.text containsString:@":"] && [self.text containsString:@"/"]) {
-        self.textColor = [UIColor whiteColor];
         self.font = [UIFont systemFontOfSize:14.0];
-        // self.textAlignment will be set in layoutSubviews to ensure it's respected after layout
+        self.textColor = [UIColor whiteColor]; // White text for contrast
+        self.textAlignment = NSTextAlignmentCenter; // Center text in the pill
+        
+        // Calculate size based on current text and font
+        [self sizeToFit];
+        CGRect currentFrame = self.frame;
 
-        // Calculate desired size with padding
-        CGSize textSize = [self.text sizeWithAttributes:@{NSFontAttributeName: self.font}];
-        CGFloat horizontalPadding = 8.0; // Let's try 4px on each side
-        CGFloat verticalPadding = 8.0;   // 4px on top/bottom
+        // Define padding
+        CGFloat horizontalPadding = 4.0; // Further reduced (e.g., 2px on each side now)
+        CGFloat verticalPadding = 8.0;   // Kept same, adjust if vertical padding also an issue
+
+        // Apply padding to the frame
+        // Adjust origin to keep the label centered around its original position after resizing
+        self.frame = CGRectMake(
+            currentFrame.origin.x - horizontalPadding / 2.0f,
+            currentFrame.origin.y - verticalPadding / 2.0f,
+            currentFrame.size.width + horizontalPadding,
+            currentFrame.size.height + verticalPadding
+        );
         
-        CGSize paddedSize = CGSizeMake(textSize.width + horizontalPadding, textSize.height + verticalPadding);
-        
-        if (paddedSize.height < 22.0f) { // Ensure min height for pill shape
-            paddedSize.height = 22.0f;
+        // Ensure a minimum height for very short text (e.g., "0:01/0:05") for a good pill shape
+        if (self.frame.size.height < 22.0f) {
+            CGFloat diff = 22.0f - self.frame.size.height;
+            CGRect frame = self.frame;
+            frame.size.height = 22.0f;
+            frame.origin.y -= diff / 2.0f; // Keep it vertically centered
+            self.frame = frame;
         }
-        // Removed: if (paddedSize.width < 50.0f && [self.text length] < 10) { ... }
+        
+        // Pill styling
+        self.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5]; // Dark semi-transparent
+        self.layer.cornerRadius = self.frame.size.height / 2.0f;
+        self.layer.masksToBounds = YES;
+        
+        // Log the calculated width after styling
+        NSLog(@"[BHTwitter TimestampLabel setText] Text: '%@', Calculated Width: %f", self.text, self.frame.size.width);
 
-        // Store this desired size using an associated object
-        objc_setAssociatedObject(self, BHTDesiredPaddedSizeKey, [NSValue valueWithCGSize:paddedSize], OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        NSLog(@"[BHTwitter TimestampLabel setText (%p)] Text: '%@', Stored Padded Size: %@", self, self.text, NSStringFromCGSize(paddedSize));
-
-        // Tell Auto Layout to respect intrinsic content size strongly for width
-        [self setContentHuggingPriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisHorizontal];
-        [self setContentCompressionResistancePriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisHorizontal];
-
-        // Set initial alpha for animation
-        if (self.alpha != 1.0) { // Avoid flicker if already visible
+        // Set initial alpha to 0 for fade-in animation by the other hook
+        // Only set to 0 if it's not already visible (e.g. if controls are already shown when text is set)
+        if (self.alpha != 1.0) { // Avoid making it flicker if it was already visible
             self.alpha = 0.0;
         }
-        
+
+
+        // Store a weak reference to this label
         gVideoTimestampLabel = self;
 
-        // Request a layout update so intrinsicContentSize and layoutSubviews get called
-        [self setNeedsLayout];
-        [self setNeedsUpdateConstraints];
-    }
-}
-
-- (CGSize)intrinsicContentSize {
-    NSValue *desiredSizeValue = objc_getAssociatedObject(self, BHTDesiredPaddedSizeKey);
-    if (desiredSizeValue) {
-        CGSize desiredSize = [desiredSizeValue CGSizeValue];
-        NSLog(@"[BHTwitter TimestampLabel intrinsicContentSize (%p)] Text: '%@', Returning Padded Size: %@", self, self.text, NSStringFromCGSize(desiredSize));
-        return desiredSize;
-    }
-    return %orig;
-}
-
-- (void)layoutSubviews {
-    %orig;
-    // Check if this is our timestamp label
-    NSValue *desiredSizeValue = objc_getAssociatedObject(self, BHTDesiredPaddedSizeKey);
-    if (desiredSizeValue || self == gVideoTimestampLabel) { // Check both just in case
-        if (self.text && [self.text containsString:@":"] && [self.text containsString:@"/"]) {
-            // Apply pill styling based on current bounds (which Auto Layout has set)
-            self.textAlignment = NSTextAlignmentCenter;
-            self.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5];
-            self.layer.cornerRadius = self.bounds.size.height / 2.0f;
-            self.layer.masksToBounds = YES;
-            NSLog(@"[BHTwitter TimestampLabel layoutSubviews (%p)] Text: '%@', Applied pill to bounds: %@", self, self.text, NSStringFromCGRect(self.bounds));
-        }
+        // Remove the old fallback frame logic as the new sizing should be more robust
+        // if (CGRectGetWidth(self.frame) < 10 || CGRectGetHeight(self.frame) < 5) { ... }
     }
 }
 
@@ -2797,7 +2785,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         if (gVideoTimestampLabel && gVideoTimestampLabel.superview) {
             timestampLabelToUpdate = gVideoTimestampLabel;
         } else {
-            // Fallback search logic (can be kept, but ideally gVideoTimestampLabel is reliable)
             UIView *searchView = self.view;
             if (immersiveViewController && [immersiveViewController respondsToSelector:@selector(view)]) {
                 searchView = [immersiveViewController view];
@@ -2823,28 +2810,26 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 CGFloat targetAlpha = showButtons ? 1.0 : 0.0;
                 NSTimeInterval fadeInDuration = 0.2;
-                NSTimeInterval fadeOutDuration = 1.0; // Increased to 1.0 second
+                NSTimeInterval fadeOutDuration = 0.6;
                 NSTimeInterval animationDuration = showButtons ? fadeInDuration : fadeOutDuration;
 
-                // Removed the PRE-SET frame logic here as it's ineffective against Auto Layout
-                NSLog(@"[BHTwitter TimestampLabel Animate (%p)] Text: '%@', Current Width: %f, Current Height: %f, TargetAlpha: %f, Show: %d", timestampLabelToUpdate, timestampLabelToUpdate.text, timestampLabelToUpdate.frame.size.width, timestampLabelToUpdate.frame.size.height, targetAlpha, showButtons);
+                NSLog(@"[BHTwitter TimestampLabel Animate] Text: '%@', Current Width: %f, TargetAlpha: %f, Show: %d", timestampLabelToUpdate.text, timestampLabelToUpdate.frame.size.width, targetAlpha, showButtons);
 
                 if (showButtons && timestampLabelToUpdate.hidden) {
-                    timestampLabelToUpdate.alpha = 0.0; 
+                    // If we are showing, ensure it's unhidden before animation starts
+                    // and its alpha might be 0 from a previous fade out or initial setup.
+                    timestampLabelToUpdate.alpha = 0.0; // Start from alpha 0 for fade-in
                     timestampLabelToUpdate.hidden = NO;
-                } else if (!showButtons && timestampLabelToUpdate.alpha == 0.0 && !timestampLabelToUpdate.hidden) {
-                    // If already faded out but not yet hidden (e.g. during a quick toggle), just hide it.
+                } else if (!showButtons && timestampLabelToUpdate.alpha == 0.0) {
+                    // If already faded out and we want to hide, just ensure it's hidden and return.
                     timestampLabelToUpdate.hidden = YES;
                     return;
-                } else if (!showButtons && timestampLabelToUpdate.hidden) {
-                     // If already hidden and we want to hide, do nothing.
-                     return;
                 }
 
 
                 [UIView animateWithDuration:animationDuration
                                       delay:0.0
-                                    options:UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionAllowUserInteraction
+                                    options:UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionAllowUserInteraction | UIViewAnimationOptionCurveEaseInOut
                                  animations:^{
                                      timestampLabelToUpdate.alpha = targetAlpha;
                                  }
