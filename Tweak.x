@@ -191,6 +191,47 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         %orig(scrolling);
     }
 }
+
+// viewDidLoad and dealloc from the original T1TabBarViewController hook block
+- (void)viewDidLoad {
+    %orig;
+    // Apply theme on initial load
+    if ([self respondsToSelector:@selector(tabViews)]) {
+        NSArray *tabViews = [self valueForKey:@"tabViews"];
+        for (id tabView in tabViews) {
+            if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
+                #pragma clang diagnostic push
+                #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
+                #pragma clang diagnostic pop
+            }
+        }
+    }
+}
+
+- (void)dealloc {
+    %orig;
+}
+
+// Add _tfn_dynamicColorsDidReload: here
+- (void)_tfn_dynamicColorsDidReload:(id)arg1 {
+    %orig(arg1); // Call original first
+
+    // After original method, re-apply our theme logic to all tab views
+    // This will ensure [UIColor labelColor] is re-evaluated if theming is off
+    if ([self respondsToSelector:@selector(tabViews)]) {
+        NSArray *tabViews = [self valueForKey:@"tabViews"];
+        for (id tabView in tabViews) {
+            if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
+                #pragma clang diagnostic push
+                #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
+                #pragma clang diagnostic pop
+            }
+        }
+    }
+}
+
 %end
 
 %hook T1DirectMessageConversationEntriesViewController
