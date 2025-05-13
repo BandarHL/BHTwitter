@@ -10,6 +10,12 @@
 // Forward declaration
 static void BHT_UpdateAllTabBarIcons(void);
 
+// Static cache for the accent color
+static UIColor *gBHTAccentColorCache = nil;
+static NSInteger gBHTAccentColorCachedOption = -999; // -999 indicates uninitialized or system fallback state
+                                                 // 0 can indicate palette default option 0 is cached
+                                                 // Positive values for user selected options
+
 // Static helper function for recursive view traversal - DEFINED AT THE TOP
 static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
     if (!view || !block) return;
@@ -22,36 +28,65 @@ static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *
 // Add this before the hooks, after the imports
 
 UIColor *BHTCurrentAccentColor(void) {
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    BOOL userPreferenceExists = [defs objectForKey:@"bh_color_theme_selectedColor"] != nil;
+    NSInteger currentOptionFromPrefs = userPreferenceExists ? [defs integerForKey:@"bh_color_theme_selectedColor"] : -1; // Use -1 if key doesn't exist
+
+    // If cache is valid for the current user preference, return it
+    if (gBHTAccentColorCache != nil && userPreferenceExists && currentOptionFromPrefs == gBHTAccentColorCachedOption) {
+        return gBHTAccentColorCache;
+    }
+    // If cache is valid because it holds the palette default (option 0) AND the user hasn't set a preference, return it
+    if (gBHTAccentColorCache != nil && !userPreferenceExists && gBHTAccentColorCachedOption == 0) {
+         return gBHTAccentColorCache;
+    }
+
+    // Proceed to determine/update the color
     Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
     if (!TAEColorSettingsCls) {
-        return [UIColor systemBlueColor]; // Absolute fallback if settings class not found
+        gBHTAccentColorCache = nil; gBHTAccentColorCachedOption = -999; // Reset cache state
+        return [UIColor systemBlueColor];
     }
 
     id settings = [TAEColorSettingsCls sharedSettings];
     id current = [settings currentColorPalette];
     id palette = [current colorPalette];
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-
-    UIColor *selectedColor = nil;
-
-    // 1. Try BHTwitter's custom theme setting first
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        selectedColor = [palette primaryColorForOption:opt];
+    if (!palette) { // Check if palette is nil
+        gBHTAccentColorCache = nil; gBHTAccentColorCachedOption = -999; // Reset cache state
+        return [UIColor systemBlueColor];
     }
 
-    // 2. If the custom color wasn't found or was invalid, default to palette option 0
-    if (!selectedColor) {
-        NSInteger defaultOption = 0; // Assuming 0 is the default blue/valid baseline
-        selectedColor = [palette primaryColorForOption:defaultOption];
+    UIColor *determinedColor = nil;
+    NSInteger newCachedOption = -999;
+
+    // 1. Try BHTwitter's custom theme setting from NSUserDefaults
+    if (userPreferenceExists) {
+        determinedColor = [palette primaryColorForOption:currentOptionFromPrefs];
+        if (determinedColor) {
+            newCachedOption = currentOptionFromPrefs;
+        }
     }
 
-    // 3. Absolute fallback if even option 0 failed
-    if (!selectedColor) {
-        selectedColor = [UIColor systemBlueColor];
+    // 2. If custom color wasn't found/set or was invalid, default to palette option 0
+    if (!determinedColor) {
+        NSInteger defaultPaletteOption = 0;
+        determinedColor = [palette primaryColorForOption:defaultPaletteOption];
+        if (determinedColor) {
+            newCachedOption = defaultPaletteOption; // Cache that we are using palette default 0
+        }
     }
 
-    return selectedColor;
+    // 3. Update cache if a valid color was determined, otherwise fallback
+    if (determinedColor) {
+        gBHTAccentColorCache = determinedColor;
+        gBHTAccentColorCachedOption = newCachedOption;
+        return gBHTAccentColorCache;
+    } else {
+        // Absolute fallback if even palette option 0 failed
+        gBHTAccentColorCache = nil; 
+        gBHTAccentColorCachedOption = -999; // Reset cache state, force re-evaluation
+        return [UIColor systemBlueColor];
+    }
 }
 
 static UIFont * _Nullable TAEStandardFontGroupReplacement(UIFont *self, SEL _cmd, CGFloat arg1, CGFloat arg2) {
