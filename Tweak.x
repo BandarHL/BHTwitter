@@ -2733,14 +2733,15 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         if (paddedSize.height < 22.0f) { // Ensure min height for pill shape
             paddedSize.height = 22.0f;
         }
-        if (paddedSize.width < 50.0f && [self.text length] < 10) { // Ensure a minimum width for very short text like "0:01/0:05"
-             paddedSize.width = MAX(paddedSize.width, 50.0f);
-        }
-
+        // Removed: if (paddedSize.width < 50.0f && [self.text length] < 10) { ... }
 
         // Store this desired size using an associated object
         objc_setAssociatedObject(self, BHTDesiredPaddedSizeKey, [NSValue valueWithCGSize:paddedSize], OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        NSLog(@"[BHTwitter TimestampLabel setText] Text: '%@', Stored Padded Size: %@", self.text, NSStringFromCGSize(paddedSize));
+        NSLog(@"[BHTwitter TimestampLabel setText (%p)] Text: '%@', Stored Padded Size: %@", self, self.text, NSStringFromCGSize(paddedSize));
+
+        // Tell Auto Layout to respect intrinsic content size strongly for width
+        [self setContentHuggingPriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisHorizontal];
+        [self setContentCompressionResistancePriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisHorizontal];
 
         // Set initial alpha for animation
         if (self.alpha != 1.0) { // Avoid flicker if already visible
@@ -2759,7 +2760,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     NSValue *desiredSizeValue = objc_getAssociatedObject(self, BHTDesiredPaddedSizeKey);
     if (desiredSizeValue) {
         CGSize desiredSize = [desiredSizeValue CGSizeValue];
-        NSLog(@"[BHTwitter TimestampLabel intrinsicContentSize] Text: '%@', Returning Padded Size: %@", self.text, NSStringFromCGSize(desiredSize));
+        NSLog(@"[BHTwitter TimestampLabel intrinsicContentSize (%p)] Text: '%@', Returning Padded Size: %@", self, self.text, NSStringFromCGSize(desiredSize));
         return desiredSize;
     }
     return %orig;
@@ -2776,7 +2777,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             self.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5];
             self.layer.cornerRadius = self.bounds.size.height / 2.0f;
             self.layer.masksToBounds = YES;
-            // NSLog(@"[BHTwitter TimestampLabel layoutSubviews] Text: '%@', Applied pill to bounds: %@", self.text, NSStringFromCGRect(self.bounds));
+            NSLog(@"[BHTwitter TimestampLabel layoutSubviews (%p)] Text: '%@', Applied pill to bounds: %@", self, self.text, NSStringFromCGRect(self.bounds));
         }
     }
 }
@@ -2826,7 +2827,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
                 NSTimeInterval animationDuration = showButtons ? fadeInDuration : fadeOutDuration;
 
                 // Removed the PRE-SET frame logic here as it's ineffective against Auto Layout
-                NSLog(@"[BHTwitter TimestampLabel Animate] Text: '%@', Current Width: %f, Current Height: %f, TargetAlpha: %f, Show: %d", timestampLabelToUpdate.text, timestampLabelToUpdate.frame.size.width, timestampLabelToUpdate.frame.size.height, targetAlpha, showButtons);
+                NSLog(@"[BHTwitter TimestampLabel Animate (%p)] Text: '%@', Current Width: %f, Current Height: %f, TargetAlpha: %f, Show: %d", timestampLabelToUpdate, timestampLabelToUpdate.text, timestampLabelToUpdate.frame.size.width, timestampLabelToUpdate.frame.size.height, targetAlpha, showButtons);
 
                 if (showButtons && timestampLabelToUpdate.hidden) {
                     timestampLabelToUpdate.alpha = 0.0; 
