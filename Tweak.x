@@ -811,14 +811,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     }
 }
 
-// Also hook layoutSubviews to catch changes
-- (void)layoutSubviews {
-    %orig;
-    // Call updateLogoTheme, but perhaps with a guard to prevent infinite loops if setting the image triggers layout.
-    // A simple flag or checking if the theme is already applied might work.
-    [self updateLogoTheme];
-}
-
 %end
 
 // MARK: Save tweet as an image
@@ -3014,25 +3006,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 */
 
 %end
-
-// Store weak references to T1TabBarViewController instances
-// static NSHashTable *gTabBarControllers = nil; // REMOVED
-
-// Notification handler function // REMOVED
-// static void BHTTabBarAccentColorChanged(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
-//    if (gTabBarControllers) {
-//        for (T1TabBarViewController *tabBarVC in [gTabBarControllers allObjects]) {
-//            if ([tabBarVC respondsToSelector:@selector(tabViews)]) {
-//                NSArray *tabViews = [tabBarVC valueForKey:@"tabViews"]; // KVC for safety
-//                for (id tabView in tabViews) { // id type because T1TabView might not be fully known here
-//                    if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
-//                        [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
-//                    }
-//                }
-//            }
-//        }
-//    }
-//}
 
 %hook T1TabBarViewController
 
