@@ -3007,7 +3007,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 // Helper: Update all tab bar icons
 static void BHT_UpdateAllTabBarIcons(void) {
-    BOOL themingNowEnabled = [BHTManager tabBarTheming]; // Check current state of the toggle
+    // No need to check toggle state here anymore, the hooks handle it.
+    // We just need to force an update.
 
     for (UIWindow *window in UIApplication.sharedApplication.windows) {
         UIViewController *root = window.rootViewController;
@@ -3019,39 +3020,24 @@ static void BHT_UpdateAllTabBarIcons(void) {
             if ([vc isKindOfClass:NSClassFromString(@"T1TabBarViewController")]) {
                 NSArray *tabViews = [vc valueForKey:@"tabViews"];
                 for (id tabView in tabViews) { // Use 'id' as type might vary slightly
-                    if (themingNowEnabled) {
-                        // Theming is ON: Apply our theme
-                        if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
-                            #pragma clang diagnostic push
-                            #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-                            [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
-                            #pragma clang diagnostic pop
-                        }
-                    } else {
-                        // Theming is OFF: Revert to default by clearing tint and resetting rendering mode,
-                        // then triggering the original update method.
-                        @try {
-                             UIImageView *imgView = [tabView valueForKey:@"imageView"];
-                             if (imgView) {
-                                 imgView.tintColor = nil;
-                                 if (imgView.image) {
-                                     // Force image to re-evaluate its appearance based on no tint
-                                     imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAutomatic];
-                                 }
-                                 // Trigger original update method
-                                 SEL updateSelector = NSSelectorFromString(@"_t1_updateImageViewAnimated:");
-                                 if ([tabView respondsToSelector:updateSelector]) {
-                                     IMP imp = [tabView methodForSelector:updateSelector];
-                                     void (*func)(id, SEL, _Bool) = (void *)imp;
-                                     func(tabView, updateSelector, NO);
-                                 } else {
-                                     [imgView setNeedsDisplay]; // Fallback
-                                 }
-                             }
-                        } @catch (NSException *e) {
-                            NSLog(@"[BHTwitter TabTheme Revert Error] %@", e);
-                        }
+                    // Force layout and redraw cycle for each tab view
+                    if ([tabView respondsToSelector:@selector(setNeedsLayout)]) {
+                        [tabView performSelector:@selector(setNeedsLayout)];
                     }
+                    if ([tabView respondsToSelector:@selector(layoutIfNeeded)]) {
+                         // Ensure layout happens synchronously NOW
+                         // Note: Calling layoutIfNeeded directly might be risky if complex
+                         // dependencies exist, but it's the most direct way to force immediate update.
+                         // We can try without it first if it causes issues.
+                        [tabView performSelector:@selector(layoutIfNeeded)]; 
+                    }
+                    // As a fallback or alternative, maybe trigger the internal update method?
+                    // SEL updateSelector = NSSelectorFromString(@"_t1_updateImageViewAnimated:");
+                    // if ([tabView respondsToSelector:updateSelector]) {
+                    //    IMP imp = [tabView methodForSelector:updateSelector];
+                    //    void (*func)(id, SEL, _Bool) = (void *)imp;
+                    //    func(tabView, updateSelector, NO);
+                    // }
                 }
             }
             // Add children and presented VC logic...
