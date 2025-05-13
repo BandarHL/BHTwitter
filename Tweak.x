@@ -6,9 +6,6 @@
 #import "BHTManager.h"
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
-#import "JGProgressHUD/JGProgressHUD.h"
-#import "SAMKeychain/SAMKeychain.h"
-#import <UserNotifications/UserNotifications.h> // Needed for notification center
 
 // Forward declaration
 static void BHT_UpdateAllTabBarIcons(void);
@@ -46,6 +43,19 @@ UIColor *BHTCurrentAccentColor(void) {
     }
 
     return [UIColor systemBlueColor];
+}
+
+// Helper function to apply the theme if needed
+static void BHT_ApplyThemeIfNeeded(void) {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    if ([defaults objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger selectedColorOption = [defaults integerForKey:@"bh_color_theme_selectedColor"];
+        // Assuming BH_changeTwitterColor exists and applies the theme globally
+        BH_changeTwitterColor(selectedColorOption); 
+        // Update tab bar icons after applying the theme
+        BHT_UpdateAllTabBarIcons();
+        // Potentially add logic here to update navigation bar icons if BH_changeTwitterColor doesn't handle it
+    }
 }
 
 static UIFont * _Nullable TAEStandardFontGroupReplacement(UIFont *self, SEL _cmd, CGFloat arg1, CGFloat arg2) {
@@ -105,6 +115,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     if ([BHTManager FLEX]) {
         [[%c(FLEXManager) sharedManager] showExplorer];
     }
+    // Apply theme early on launch
+    BHT_ApplyThemeIfNeeded();
     return true;
 }
 
@@ -127,8 +139,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             [image removeFromSuperview];
         }
     }
-    // Apply theme when app becomes active
-    BHT_ApplyGlobalTheme();
+    // Re-apply theme when app becomes active
+    BHT_ApplyThemeIfNeeded();
 }
 
 - (void)applicationWillTerminate:(id)arg1 {
@@ -2658,7 +2670,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 %end
 
-// MARK: - Restore Timestamp in Immersive Video Player
+// MARK: - Timestamp Label Styling via UILabel -setText:
 
 %hook UILabel
 
@@ -2670,43 +2682,13 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         self.hidden = NO;
         self.alpha = 1.0;
         self.font = [UIFont systemFontOfSize:14.0];
-        self.tag = 12345; // Add a unique tag
-
+        
         [self sizeToFit];
 
         // Fallback if sizeToFit results in a tiny frame (e.g., if superview constraints are weird initially)
         if (CGRectGetWidth(self.frame) < 10 || CGRectGetHeight(self.frame) < 5) {
             self.frame = CGRectMake(10, 50, 100, 25); // Slightly larger fallback height
         }
-    }
-}
-
-%end
-
-%hook T1ImmersiveFullScreenViewController
-
-- (void)immersiveViewController:(T1ImmersiveViewController *)immersiveViewController showHideNavigationButtons:(_Bool)shouldShow {
-    %orig;
-
-    // Find the timestamp label using the tag
-    UIView *timestampLabel = nil;
-    
-    // Search in self.view first
-    timestampLabel = [self.view viewWithTag:12345];
-    
-    // If not found in self.view, search in self.immersive.view
-    if (!timestampLabel && self.immersive && self.immersive.isViewLoaded) {
-        timestampLabel = [self.immersive.view viewWithTag:12345];
-    }
-
-    // If found, update its visibility
-    if (timestampLabel && [timestampLabel isKindOfClass:[UILabel class]]) {
-        // Animate the change to match the controls' animation (assuming a short duration)
-        [UIView animateWithDuration:0.25 animations:^{
-            timestampLabel.alpha = shouldShow ? 1.0 : 0.0;
-        }];
-        // Or, if no animation is desired:
-        // timestampLabel.hidden = !shouldShow;
     }
 }
 
@@ -2927,8 +2909,17 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     [TweetSourceHelper loadCachedCookies];
     
     %init;
-    [[NSNotificationCenter defaultCenter] addObserverForName:@"BHTTabBarThemingChanged" object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification * _Nonnull note) {
-        BHT_UpdateAllTabBarIcons();
+    // Add observer for UserDefaults changes to re-apply theme
+    _UserDefaultsChangeObserver = [center addObserverForName:NSUserDefaultsDidChangeNotification 
+                                                      object:nil 
+                                                       queue:mainQueue 
+                                                  usingBlock:^(NSNotification *note) {
+        // Check specifically if the theme color key changed before reapplying
+        // Note: NSUserDefaultsDidChangeNotification doesn't tell *what* changed. 
+        // To be precise, you'd need to store the previous value and compare.
+        // For simplicity here, we re-apply if *any* default changed, but ideally, filter.
+        // Consider KVO on NSUserDefaults for 'bh_color_theme_selectedColor' if performance is critical.
+        BHT_ApplyThemeIfNeeded();
     }];
 }
 
@@ -3107,50 +3098,5 @@ static void BHT_UpdateAllTabBarIcons(void) {
                 [stack addObject:vc.presentedViewController];
             }
         }
-    }
-}
-
-// Notification name for theme changes
-static NSString * const BHTThemeAccentColorDidChangeNotification = @"BHTThemeAccentColorDidChangeNotification";
-
-// Central function to apply the theme globally
-static void BHT_ApplyGlobalTheme() {
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    NSInteger selectedColorOption = -1; // Default invalid value
-
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        selectedColorOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
-    } else if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
-        // Fallback to Twitter's key if ours isn't set (less likely now but good for robustness)
-        selectedColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-    }
-
-    if (selectedColorOption != -1) {
-        BH_changeTwitterColor(selectedColorOption); // Assuming BH_changeTwitterColor exists and takes an integer option
-        BHT_UpdateAllTabBarIcons(); // Update tab bar icons
-        [[NSNotificationCenter defaultCenter] postNotificationName:BHTThemeAccentColorDidChangeNotification object:nil]; // Notify other components
-    }
-}
-
-// Helper function to find the topmost view controller
-UIViewController *topMostController() {
-    UIViewController *topController = [UIApplication sharedApplication].keyWindow.rootViewController;
-    while (topController.presentedViewController) {
-        topController = topController.presentedViewController;
-    }
-    return topController;
-}
-
-// Helper function to check if device language is RTL
-BOOL isDeviceLanguageRTL() {
-    return [UIView userInterfaceLayoutDirectionForSemanticContentAttribute:UISemanticContentAttributeUnspecified] == UIUserInterfaceLayoutDirectionRightToLeft;
-}
-
-// Helper function for recursive view traversal
-static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
-    if (!view || !block) return;
-    block(view);
-    for (UIView *subview in view.subviews) {
-        BH_EnumerateSubviewsRecursively(subview, block);
     }
 }
