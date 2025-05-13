@@ -2877,14 +2877,11 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             targetColor = [UIColor grayColor]; // Use a standard gray for unselected in themed mode
         }
     } else {
-        // Theming disabled: Revert to default colors based on selection and interface style
+        // Theming disabled: Revert to default semantic colors (black/white for selected, gray for unselected)
         if (isSelected) {
-            // Use the function that gets the current primary color, 
-            // which should be the default blue if no theme is set.
-            targetColor = BHTCurrentAccentColor(); 
+            targetColor = [UIColor labelColor]; // Adapts to black/white
         } else {
-            // Use a semantic color that adapts to light/dark mode for unselected state
-            targetColor = [UIColor secondaryLabelColor]; 
+            targetColor = [UIColor secondaryLabelColor]; // Adapts to appropriate gray
         }
     }
 
