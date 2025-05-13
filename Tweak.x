@@ -6,15 +6,13 @@
 #import "BHTManager.h"
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
+#import "JGProgressHUD/JGProgressHUD.h"
+#import "SAMKeychain/SAMKeychain.h"
+#import "ThemeColor/ThemeColor.h"
+#import <UserNotifications/UserNotifications.h> // Needed for notification center
 
 // Forward declaration
 static void BHT_UpdateAllTabBarIcons(void);
-
-// Static cache for the accent color
-static UIColor *gBHTAccentColorCache = nil;
-static NSInteger gBHTAccentColorCachedOption = -999; // -999 indicates uninitialized or system fallback state
-                                                 // 0 can indicate palette default option 0 is cached
-                                                 // Positive values for user selected options
 
 // Static helper function for recursive view traversal - DEFINED AT THE TOP
 static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
@@ -28,65 +26,27 @@ static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *
 // Add this before the hooks, after the imports
 
 UIColor *BHTCurrentAccentColor(void) {
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    BOOL userPreferenceExists = [defs objectForKey:@"bh_color_theme_selectedColor"] != nil;
-    NSInteger currentOptionFromPrefs = userPreferenceExists ? [defs integerForKey:@"bh_color_theme_selectedColor"] : -1; // Use -1 if key doesn't exist
-
-    // If cache is valid for the current user preference, return it
-    if (gBHTAccentColorCache != nil && userPreferenceExists && currentOptionFromPrefs == gBHTAccentColorCachedOption) {
-        return gBHTAccentColorCache;
-    }
-    // If cache is valid because it holds the palette default (option 0) AND the user hasn't set a preference, return it
-    if (gBHTAccentColorCache != nil && !userPreferenceExists && gBHTAccentColorCachedOption == 0) {
-         return gBHTAccentColorCache;
-    }
-
-    // Proceed to determine/update the color
     Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
     if (!TAEColorSettingsCls) {
-        gBHTAccentColorCache = nil; gBHTAccentColorCachedOption = -999; // Reset cache state
         return [UIColor systemBlueColor];
     }
 
     id settings = [TAEColorSettingsCls sharedSettings];
     id current = [settings currentColorPalette];
     id palette = [current colorPalette];
-    if (!palette) { // Check if palette is nil
-        gBHTAccentColorCache = nil; gBHTAccentColorCachedOption = -999; // Reset cache state
-        return [UIColor systemBlueColor];
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
     }
 
-    UIColor *determinedColor = nil;
-    NSInteger newCachedOption = -999;
-
-    // 1. Try BHTwitter's custom theme setting from NSUserDefaults
-    if (userPreferenceExists) {
-        determinedColor = [palette primaryColorForOption:currentOptionFromPrefs];
-        if (determinedColor) {
-            newCachedOption = currentOptionFromPrefs;
-        }
+    if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
+        NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+        return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
     }
 
-    // 2. If custom color wasn't found/set or was invalid, default to palette option 0
-    if (!determinedColor) {
-        NSInteger defaultPaletteOption = 0;
-        determinedColor = [palette primaryColorForOption:defaultPaletteOption];
-        if (determinedColor) {
-            newCachedOption = defaultPaletteOption; // Cache that we are using palette default 0
-        }
-    }
-
-    // 3. Update cache if a valid color was determined, otherwise fallback
-    if (determinedColor) {
-        gBHTAccentColorCache = determinedColor;
-        gBHTAccentColorCachedOption = newCachedOption;
-        return gBHTAccentColorCache;
-    } else {
-        // Absolute fallback if even palette option 0 failed
-        gBHTAccentColorCache = nil; 
-        gBHTAccentColorCachedOption = -999; // Reset cache state, force re-evaluation
-        return [UIColor systemBlueColor];
-    }
+    return [UIColor systemBlueColor];
 }
 
 static UIFont * _Nullable TAEStandardFontGroupReplacement(UIFont *self, SEL _cmd, CGFloat arg1, CGFloat arg2) {
@@ -168,6 +128,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             [image removeFromSuperview];
         }
     }
+    // Apply theme when app becomes active
+    BHT_ApplyGlobalTheme();
 }
 
 - (void)applicationWillTerminate:(id)arg1 {
@@ -695,16 +657,12 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)viewDidAppear:(_Bool)animated {
     %orig(animated);
     
-    // REMOVED dispatch_once wrapper
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        // Assuming BH_changeTwitterColor is available globally or via BHTManager
-        // Replace with actual call if different. Let's try BHTManager first.
-        if ([BHTManager respondsToSelector:@selector(changeTwitterColor:)]) {
-             [BHTManager changeTwitterColor:[[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]];
-        } else {
-             // BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]); // Fallback if it's a global C function
+    static dispatch_once_t once;
+    dispatch_once(&once, ^ {
+        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+            BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
         }
-    }
+    });
 }
 %end
 
@@ -712,15 +670,12 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)viewDidAppear:(_Bool)animated {
     %orig(animated);
     
-    // REMOVED dispatch_once wrapper
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        // Assuming BH_changeTwitterColor is available globally or via BHTManager
-        if ([BHTManager respondsToSelector:@selector(changeTwitterColor:)]) {
-             [BHTManager changeTwitterColor:[[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]];
-        } else {
-             // BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]); // Fallback
+    static dispatch_once_t once;
+    dispatch_once(&once, ^ {
+        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+            BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
         }
-    }
+    });
 }
 %end
 
@@ -728,15 +683,12 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)viewDidAppear:(_Bool)animated {
     %orig(animated);
     
-    // REMOVED dispatch_once wrapper
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        // Assuming BH_changeTwitterColor is available globally or via BHTManager
-        if ([BHTManager respondsToSelector:@selector(changeTwitterColor:)]) {
-             [BHTManager changeTwitterColor:[[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]];
-        } else {
-            // BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]); // Fallback
+    static dispatch_once_t once;
+    dispatch_once(&once, ^ {
+        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+            BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
         }
-    }
+    });
 }
 %end
 
@@ -1496,49 +1448,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %end
 
 // MARK: Clean tracking from copied links: https://github.com/BandarHL/BHTwitter/issues/75
-%ctor {
-    NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
-    NSOperationQueue *mainQueue = [NSOperationQueue mainQueue];
-    // Someone needs to hold reference the to Notification
-    _PasteboardChangeObserver = [center addObserverForName:UIPasteboardChangedNotification object:nil queue:mainQueue usingBlock:^(NSNotification * _Nonnull note){
-        
-        static dispatch_once_t onceToken;
-        dispatch_once(&onceToken, ^{
-            trackingParams = @{
-                @"twitter.com" : @[@"s", @"t"],
-                @"x.com" : @[@"s", @"t"],
-            };
-        });
-        
-        if ([BHTManager stripTrackingParams]) {
-            if (UIPasteboard.generalPasteboard.hasURLs) {
-                NSURL *pasteboardURL = UIPasteboard.generalPasteboard.URL;
-                NSArray<NSString*>* params = trackingParams[pasteboardURL.host];
-                
-                if ([pasteboardURL.absoluteString isEqualToString:_lastCopiedURL] == NO && params != nil && pasteboardURL.query != nil) {
-                    // to prevent endless copy loop
-                    _lastCopiedURL = pasteboardURL.absoluteString;
-                    NSURLComponents *cleanedURL = [NSURLComponents componentsWithURL:pasteboardURL resolvingAgainstBaseURL:NO];
-                    NSMutableArray<NSURLQueryItem*> *safeParams = [NSMutableArray arrayWithCapacity:0];
-                    
-                    for (NSURLQueryItem *item in cleanedURL.queryItems) {
-                        if ([params containsObject:item.name] == NO) {
-                            [safeParams addObject:item];
-                        }
-                    }
-                    cleanedURL.queryItems = safeParams.count > 0 ? safeParams : nil;
-
-                    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"tweet_url_host"]) {
-                        NSString *selectedHost = [[NSUserDefaults standardUserDefaults] objectForKey:@"tweet_url_host"];
-                        cleanedURL.host = selectedHost;
-                    }
-                    UIPasteboard.generalPasteboard.URL = cleanedURL.URL;
-                }
-            }
-        }
-    }];
-    %init;
-}
 
 // MARK: Restore Source Labels - This is still pretty experimental and may break. This restores Tweet Source Labels by using an Legacy API. by: @nyaathea
 
@@ -3083,7 +2992,40 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 %end
 
+// Store weak references to T1TabBarViewController instances
+// static NSHashTable *gTabBarControllers = nil; // REMOVED
+
+// Notification handler function // REMOVED
+// static void BHTTabBarAccentColorChanged(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
+//    if (gTabBarControllers) {
+//        for (T1TabBarViewController *tabBarVC in [gTabBarControllers allObjects]) {
+//            if ([tabBarVC respondsToSelector:@selector(tabViews)]) {
+//                NSArray *tabViews = [tabBarVC valueForKey:@"tabViews"]; // KVC for safety
+//                for (id tabView in tabViews) { // id type because T1TabView might not be fully known here
+//                    if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
+//                        [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
+//                    }
+//                }
+//            }
+//        }
+//    }
+//}
+
 %hook T1TabBarViewController
+
+// + (void)load { // REMOVED
+    // Initialize the hash table once
+    // static dispatch_once_t onceToken;
+    // dispatch_once(&onceToken, ^{
+        // gTabBarControllers = [NSHashTable hashTableWithOptions:NSPointerFunctionsWeakMemory];
+        // [[NSNotificationCenter defaultCenter] addObserverForName:NSUserDefaultsDidChangeNotification 
+                                                          // object:nil 
+                                                           // queue:[NSOperationQueue mainQueue] 
+                                                      // usingBlock:^(NSNotification * _Nonnull note) {
+            // BHTTabBarAccentColorChanged(NULL, NULL, NULL, NULL, NULL); 
+        // }];
+    // });
+// }
 
 - (void)viewDidLoad {
     %orig;
@@ -3136,5 +3078,50 @@ static void BHT_UpdateAllTabBarIcons(void) {
                 [stack addObject:vc.presentedViewController];
             }
         }
+    }
+}
+
+// Notification name for theme changes
+static NSString * const BHTThemeAccentColorDidChangeNotification = @"BHTThemeAccentColorDidChangeNotification";
+
+// Central function to apply the theme globally
+static void BHT_ApplyGlobalTheme() {
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    NSInteger selectedColorOption = -1; // Default invalid value
+
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        selectedColorOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
+    } else if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
+        // Fallback to Twitter's key if ours isn't set (less likely now but good for robustness)
+        selectedColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    }
+
+    if (selectedColorOption != -1) {
+        BH_changeTwitterColor(selectedColorOption); // Assuming BH_changeTwitterColor exists and takes an integer option
+        BHT_UpdateAllTabBarIcons(); // Update tab bar icons
+        [[NSNotificationCenter defaultCenter] postNotificationName:BHTThemeAccentColorDidChangeNotification object:nil]; // Notify other components
+    }
+}
+
+// Helper function to find the topmost view controller
+UIViewController *topMostController() {
+    UIViewController *topController = [UIApplication sharedApplication].keyWindow.rootViewController;
+    while (topController.presentedViewController) {
+        topController = topController.presentedViewController;
+    }
+    return topController;
+}
+
+// Helper function to check if device language is RTL
+BOOL isDeviceLanguageRTL() {
+    return [UIView userInterfaceLayoutDirectionForSemanticContentAttribute:UISemanticContentAttributeUnspecified] == UIUserInterfaceLayoutDirectionRightToLeft;
+}
+
+// Helper function for recursive view traversal
+static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
+    if (!view || !block) return;
+    block(view);
+    for (UIView *subview in view.subviews) {
+        BH_EnumerateSubviewsRecursively(subview, block);
     }
 }
