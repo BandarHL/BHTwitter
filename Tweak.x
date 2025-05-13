@@ -2895,7 +2895,10 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     }
     SEL applyTintColorSelector = @selector(applyTintColor:);
     if ([self respondsToSelector:applyTintColorSelector]) {
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
         [self performSelector:applyTintColorSelector withObject:targetColor];
+        #pragma clang diagnostic pop
     } else {
         imgView.tintColor = targetColor;
     }
@@ -3013,3 +3016,24 @@ static void BHT_UpdateAllTabBarIcons(void) {
         }
     }
 }
+
+%hook T1TabBarViewController
+
+- (void)_tfn_dynamicColorsDidReload:(id)arg1 {
+    %orig(arg1); // Call original first
+
+    // After original method, re-apply our theme logic to all tab views
+    // This will ensure [UIColor labelColor] is re-evaluated if theming is off
+    if ([self respondsToSelector:@selector(tabViews)]) {
+        NSArray *tabViews = [self valueForKey:@"tabViews"];
+        for (id tabView in tabViews) {
+            if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
+                #pragma clang diagnostic push
+                #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
+                #pragma clang diagnostic pop
+            }
+        }
+    }
+}
+%end
