@@ -701,7 +701,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %hook NSUserDefaults
 - (void)setObject:(id)value forKey:(NSString *)defaultName {
     if ([defaultName isEqualToString:@"T1ColorSettingsPrimaryColorOptionKey"]) {
-        id bhtSelectedColorOption = [[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"];
+        id bhtSelectedColorOption = [self objectForKey:@"bh_color_theme_selectedColor"]; // Use [self objectForKey:]
         if (bhtSelectedColorOption != nil) {
             if ([value isEqual:bhtSelectedColorOption]) {
                 // Our color is being set by Twitter, allow it, cache will be updated by BHTCurrentAccentColor
@@ -715,14 +715,22 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         // If BHT color is not set, let Twitter do its thing. Clear our cache.
         cachedBHTAccentColor = nil;
         lastKnownBHTColorOption = -999;
-        return %orig;
+        %orig; // Call orig before our sweep
+        BHT_ApplyThemeToVisibleBarButtonItems(); // Sweep after Twitter's potential change
+        return;
     }
     if ([defaultName isEqualToString:@"bh_color_theme_selectedColor"]) {
         // Our specific color setting is changing, invalidate the cache.
         cachedBHTAccentColor = nil;
         lastKnownBHTColorOption = -999;
+        %orig; // Call orig before our sweep
+        BHT_ApplyThemeToVisibleBarButtonItems(); // Sweep after our theme change
+        return;
     }
-    return %orig;
+    
+    // For any other key, just call original and do nothing extra.
+    %orig;
+    return;
 }
 %end
 
