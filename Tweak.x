@@ -2717,19 +2717,53 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
     // Check if this label is the one we want to modify (e.g., video timestamp)
     if ([BHTManager restoreVideoTimestamp] && self.text && [self.text containsString:@":"] && [self.text containsString:@"/"]) {
-        // self.hidden = NO; // Visibility will be handled by T1ImmersiveFullScreenViewController hook
-        self.alpha = 1.0;
         self.font = [UIFont systemFontOfSize:14.0];
-        
+        self.textColor = [UIColor whiteColor]; // White text for contrast
+        self.textAlignment = NSTextAlignmentCenter; // Center text in the pill
+
+        // Calculate size based on current text and font
         [self sizeToFit];
+        CGRect currentFrame = self.frame;
+
+        // Define padding
+        CGFloat horizontalPadding = 16.0; // e.g., 8px on each side
+        CGFloat verticalPadding = 8.0;   // e.g., 4px on top/bottom
+
+        // Apply padding to the frame
+        // Adjust origin to keep the label centered around its original position after resizing
+        self.frame = CGRectMake(
+            currentFrame.origin.x - horizontalPadding / 2.0f,
+            currentFrame.origin.y - verticalPadding / 2.0f,
+            currentFrame.size.width + horizontalPadding,
+            currentFrame.size.height + verticalPadding
+        );
+        
+        // Ensure a minimum height for very short text (e.g., "0:01/0:05") for a good pill shape
+        if (self.frame.size.height < 22.0f) {
+            CGFloat diff = 22.0f - self.frame.size.height;
+            CGRect frame = self.frame;
+            frame.size.height = 22.0f;
+            frame.origin.y -= diff / 2.0f; // Keep it vertically centered
+            self.frame = frame;
+        }
+        
+        // Pill styling
+        self.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5]; // Dark semi-transparent
+        self.layer.cornerRadius = self.frame.size.height / 2.0f;
+        self.layer.masksToBounds = YES;
+        
+        // Set initial alpha to 0 for fade-in animation by the other hook
+        // Only set to 0 if it's not already visible (e.g. if controls are already shown when text is set)
+        if (self.alpha != 1.0) { // Avoid making it flicker if it was already visible
+            self.alpha = 0.0;
+        }
+
 
         // Store a weak reference to this label
         gVideoTimestampLabel = self;
 
-        // Fallback if sizeToFit results in a tiny frame (e.g., if superview constraints are weird initially)
-        if (CGRectGetWidth(self.frame) < 10 || CGRectGetHeight(self.frame) < 5) {
-            self.frame = CGRectMake(10, 50, 100, 25); // Slightly larger fallback height
-        }
+        // Remove the old fallback frame logic as the new sizing should be more robust
+        // if (CGRectGetWidth(self.frame) < 10 || CGRectGetHeight(self.frame) < 5) { ... }
     }
 }
 
@@ -2745,23 +2779,13 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     if ([BHTManager restoreVideoTimestamp]) {
         UILabel *timestampLabelToUpdate = nil;
 
-        // First, try the cached global reference
-        if (gVideoTimestampLabel && gVideoTimestampLabel.superview) { // Check if it's still in a view hierarchy
-            // Further check if it's within this specific player's view hierarchy
-            // This check might be overly complex or unnecessary if gVideoTimestampLabel is reliably set
-            // by the currently active player's timestamp. For now, let's assume it is.
+        if (gVideoTimestampLabel && gVideoTimestampLabel.superview) {
             timestampLabelToUpdate = gVideoTimestampLabel;
-        }
-
-        // If gVideoTimestampLabel isn't valid or not found, try to find it in the current immersive controller's view
-        // This is a fallback and might be slow if the hierarchy is deep.
-        if (!timestampLabelToUpdate) {
-            UIView *searchView = self.view; // Or potentially immersiveViewController.view if that's more direct
+        } else {
+            UIView *searchView = self.view;
             if (immersiveViewController && [immersiveViewController respondsToSelector:@selector(view)]) {
                 searchView = [immersiveViewController view];
             }
-
-            // Recursive search for the label
             NSMutableArray<UILabel *> *foundLabels = [NSMutableArray array];
             BH_EnumerateSubviewsRecursively(searchView, ^(UIView *currentView) {
                 if ([currentView isKindOfClass:[UILabel class]]) {
@@ -2771,25 +2795,42 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
                     }
                 }
             });
-            // In case there are multiple such labels, this might need refinement.
-            // For now, assume the first one found (or the one most recently set by setText) is correct.
-            // If gVideoTimestampLabel was recently set by setText, it should be among foundLabels.
-            // If multiple labels match, and gVideoTimestampLabel is one of them, prefer it.
             if ([foundLabels containsObject:gVideoTimestampLabel]) {
                  timestampLabelToUpdate = gVideoTimestampLabel;
             } else if (foundLabels.count > 0) {
-                // This could pick an incorrect label if multiple match criteria.
-                // Ideally, gVideoTimestampLabel is the most reliable source.
                 timestampLabelToUpdate = foundLabels.firstObject;
-                 gVideoTimestampLabel = timestampLabelToUpdate; // Cache it again if found this way
+                 gVideoTimestampLabel = timestampLabelToUpdate; 
             }
         }
         
         if (timestampLabelToUpdate) {
             dispatch_async(dispatch_get_main_queue(), ^{
-                timestampLabelToUpdate.hidden = !showButtons;
-                [timestampLabelToUpdate setNeedsLayout]; // Request re-layout
-                [timestampLabelToUpdate setNeedsDisplay]; // Request redraw
+                CGFloat targetAlpha = showButtons ? 1.0 : 0.0;
+                NSTimeInterval animationDuration = 0.25; // Standard animation duration
+
+                if (showButtons && timestampLabelToUpdate.hidden) {
+                    // If we are showing, ensure it's unhidden before animation starts
+                    // and its alpha might be 0 from a previous fade out or initial setup.
+                    timestampLabelToUpdate.alpha = 0.0; // Start from alpha 0 for fade-in
+                    timestampLabelToUpdate.hidden = NO;
+                } else if (!showButtons && timestampLabelToUpdate.alpha == 0.0) {
+                    // If already faded out and we want to hide, just ensure it's hidden and return.
+                    timestampLabelToUpdate.hidden = YES;
+                    return;
+                }
+
+
+                [UIView animateWithDuration:animationDuration
+                                      delay:0.0
+                                    options:UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionAllowUserInteraction
+                                 animations:^{
+                                     timestampLabelToUpdate.alpha = targetAlpha;
+                                 }
+                                 completion:^(BOOL finished) {
+                                     if (finished && !showButtons) {
+                                         timestampLabelToUpdate.hidden = YES;
+                                     }
+                                 }];
             });
         }
     }
