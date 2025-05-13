@@ -14,6 +14,14 @@
 + (void)_t1_updateOverrideUserInterfaceStyle; // Add this line
 @end
 
+// Forward declarations for Immersive Player
+@class _TtC14T1TwitterSwift19ImmersiveCardViewV2;
+@class T1ImmersiveViewController;
+@class T1ImmersiveFullScreenViewController;
+
+// Static helper for Immersive Player timestamp
+static NSMapTable<_TtC14T1TwitterSwift19ImmersiveCardViewV2 *, UILabel *> *gCardViewToProgressLabelMap;
+
 // Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
 static void BHT_applyThemeToWindow(UIWindow *window);
@@ -2709,15 +2717,35 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
     // Check if this label is the one we want to modify (e.g., video timestamp)
     if ([BHTManager restoreVideoTimestamp] && self.text && [self.text containsString:@":"] && [self.text containsString:@"/"]) {
-        self.hidden = NO;
-        self.alpha = 1.0;
-        self.font = [UIFont systemFontOfSize:14.0];
-        
-        [self sizeToFit];
+        // Check if this label is THE progressLabel from ImmersiveCardViewV2
+        BOOL isTheTargetLabel = NO;
+        UIView *superviewCheck = self;
+        while(superviewCheck != nil) {
+            if ([superviewCheck isKindOfClass:NSClassFromString(@"_TtC14T1TwitterSwift19ImmersiveCardViewV2")]) {
+                 _TtC14T1TwitterSwift19ImmersiveCardViewV2* cardView = (_TtC14T1TwitterSwift19ImmersiveCardViewV2*)superviewCheck;
+                 UILabel* kvcLabel = nil;
+                 @try { kvcLabel = [cardView valueForKey:@"progressLabel"]; } @catch (NSException*e) {}
+                 if (kvcLabel == self) {
+                     isTheTargetLabel = YES;
+                 }
+                break; 
+            }
+            superviewCheck = superviewCheck.superview;
+        }
 
-        // Fallback if sizeToFit results in a tiny frame (e.g., if superview constraints are weird initially)
-        if (CGRectGetWidth(self.frame) < 10 || CGRectGetHeight(self.frame) < 5) {
-            self.frame = CGRectMake(10, 50, 100, 25); // Slightly larger fallback height
+        if (isTheTargetLabel) {
+            self.font = [UIFont systemFontOfSize:14.0];
+            self.textColor = [UIColor whiteColor]; // Ensure it's visible on dark video backgrounds
+            
+            [self sizeToFit];
+            // Minimal size check, if needed
+            if (CGRectGetWidth(self.frame) < 10 || CGRectGetHeight(self.frame) < 5) {
+                CGRect currentFrame = self.frame;
+                currentFrame.size.width = MAX(currentFrame.size.width, 50.0f); // Use float literal
+                currentFrame.size.height = MAX(currentFrame.size.height, 20.0f); // Use float literal
+                // self.frame = currentFrame; // Be careful with direct frame manipulation if auto layout is used
+            }
+            // Visibility (hidden, alpha) is now controlled by T1ImmersiveFullScreenViewController hook
         }
     }
 }
@@ -3000,55 +3028,48 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 %new
 - (void)bh_applyCurrentThemeToIcon {
+    // Only apply theming if the setting is ON.
+    // If OFF, do nothing, and default colors will apply after app restart.
+    if (![BHTManager tabBarTheming]) {
+        return; 
+    }
+    
+    UIColor *targetColor;
+    if ([[self valueForKey:@"selected"] boolValue]) { 
+        targetColor = BHTCurrentAccentColor();
+    } else {
+        targetColor = [UIColor grayColor]; // Unselected but themed icon
+    }
+
     UIImageView *imgView = nil;
-    @try { 
+    @try {
         imgView = [self valueForKey:@"imageView"];
     } @catch (NSException *exception) {
         NSLog(@"[BHTwitter TabTheme] Exception getting imageView: %@", exception);
         return;
     }
- 
-    if (!imgView || !imgView.image) { 
-        NSLog(@"[BHTwitter TabTheme] imageView or its image is nil for tabView: %@", self);
+    if (!imgView) {
+        NSLog(@"[BHTwitter TabTheme] imageView is nil.");
         return;
     }
-
-    if ([BHTManager tabBarTheming]) {
-        // Apply BHTwitter Theme
-        UIColor *targetColor;
-        BOOL isSelected = [[self valueForKey:@"selected"] boolValue];
-
-        if (isSelected) {
-            targetColor = BHTCurrentAccentColor();
-        } else {
-            targetColor = [UIColor grayColor]; // Your desired unselected themed color
-        }
-
-        // Ensure image is a template for tinting
-        if (imgView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
-            imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-        }
-
-        // Apply the tint color
-        imgView.tintColor = targetColor;
-
-    } else {
-        // Revert to Twitter's Default Appearance
-        if (imgView.image.renderingMode == UIImageRenderingModeAlwaysTemplate) {
-            imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAutomatic];
-        }
-        imgView.tintColor = nil; 
+    if (imgView.image && imgView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
+        imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
     }
-
-    // ALWAYS call Twitter's own update method after we've prepared the image and tint.
+    SEL applyTintColorSelector = @selector(applyTintColor:);
+    if ([self respondsToSelector:applyTintColorSelector]) {
+        // Use objc_msgSend to avoid performSelector warnings and be more explicit.
+        // Assumes applyTintColor: returns void and takes a UIColor*.
+        ((void (*)(id, SEL, UIColor *))objc_msgSend)(self, applyTintColorSelector, targetColor);
+    } else {
+        imgView.tintColor = targetColor;
+    }
     SEL updateImageViewSelector = NSSelectorFromString(@"_t1_updateImageViewAnimated:");
     if ([self respondsToSelector:updateImageViewSelector]) {
         IMP imp = [self methodForSelector:updateImageViewSelector];
         void (*func)(id, SEL, _Bool) = (void *)imp;
-        func(self, updateImageViewSelector, NO); // Animated:NO for immediate effect
+        func(self, updateImageViewSelector, NO);
     } else if (imgView) {
-        [imgView setNeedsDisplay]; 
-        NSLog(@"[BHTwitter TabTheme] _t1_updateImageViewAnimated: not found on %@. Used setNeedsDisplay.", self);
+        [imgView setNeedsDisplay];
     }
 }
 
