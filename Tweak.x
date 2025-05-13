@@ -2810,8 +2810,36 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 CGFloat targetAlpha = showButtons ? 1.0 : 0.0;
                 NSTimeInterval fadeInDuration = 0.2;
-                NSTimeInterval fadeOutDuration = 0.6;
+                NSTimeInterval fadeOutDuration = 0.8; // Increased further
                 NSTimeInterval animationDuration = showButtons ? fadeInDuration : fadeOutDuration;
+
+                // --- Re-apply frame logic just before animation as a test ---
+                if (timestampLabelToUpdate.text) {
+                    // Temporarily make it visible to measure text if it was hidden for measurement
+                    BOOL wasHidden = timestampLabelToUpdate.hidden;
+                    if (wasHidden) timestampLabelToUpdate.hidden = NO;
+                    CGSize currentTextSize = [timestampLabelToUpdate.text sizeWithAttributes:@{NSFontAttributeName: timestampLabelToUpdate.font}];
+                    if (wasHidden) timestampLabelToUpdate.hidden = YES; // Restore original hidden state
+
+                    CGFloat horizontalPadding = 4.0; 
+                    CGFloat verticalPadding = 8.0;   
+                    CGRect idealFrame = timestampLabelToUpdate.frame; // Start with current as base for origin
+                    
+                    idealFrame.size.width = currentTextSize.width + horizontalPadding;
+                    idealFrame.size.height = currentTextSize.height + verticalPadding;
+
+                    // Ensure a minimum height for very short text
+                    if (idealFrame.size.height < 22.0f) {
+                        idealFrame.size.height = 22.0f;
+                    }
+                    // Adjust origin to keep it roughly centered if size changed significantly (optional, might need fine-tuning)
+                    // For now, we are mostly concerned with the width. Let's assume origin is okay.
+                    timestampLabelToUpdate.frame = idealFrame;
+                    timestampLabelToUpdate.layer.cornerRadius = idealFrame.size.height / 2.0f;
+                    // backgroundColor and masksToBounds should persist from setText
+                     NSLog(@"[BHTwitter TimestampLabel Animate PRE-SET] Text: '%@', Re-calculated Width: %f, Frame: %@", timestampLabelToUpdate.text, idealFrame.size.width, NSStringFromCGRect(idealFrame));
+                }
+                // --- End re-apply frame logic ---
 
                 NSLog(@"[BHTwitter TimestampLabel Animate] Text: '%@', Current Width: %f, TargetAlpha: %f, Show: %d", timestampLabelToUpdate.text, timestampLabelToUpdate.frame.size.width, targetAlpha, showButtons);
 
