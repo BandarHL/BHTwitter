@@ -3011,21 +3011,21 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 %new
 - (void)bh_applyCurrentThemeToIcon {
     UIImageView *imgView = nil;
-    UIVisualEffectView *effectView = nil; // Declare effectView
+    UIVisualEffectView *effectView = nil;
 
     @try {
         imgView = [self valueForKey:@"imageView"];
-        effectView = [self valueForKey:@"effectView"]; // Attempt to get effectView
+        effectView = [self valueForKey:@"effectView"];
     } @catch (NSException *exception) {
         NSLog(@"[BHTwitter TabTheme] Exception getting imageView or effectView: %@", exception);
-        // If imgView is nil, we can't proceed with image theming.
-        if (!imgView) {
+        if (!imgView) { // If imgView is nil even after exception, we can't proceed.
             return;
         }
     }
 
     if (!imgView) {
-        NSLog(@"[BHTwitter TabTheme] imageView is nil for tabView: %@\", self);
+        // Corrected NSLog statement
+        NSLog(@"[BHTwitter TabTheme] imageView is nil for tabView: %@", self);
         return;
     }
 
@@ -3058,7 +3058,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         imgView.tintColor = targetColor;
     }
 
-    // Common update logic
+    // Declare selector inside the method
     SEL updateImageViewSelector = NSSelectorFromString(@"_t1_updateImageViewAnimated:");
     if ([self respondsToSelector:updateImageViewSelector]) {
         IMP imp = [self methodForSelector:updateImageViewSelector];
@@ -3067,7 +3067,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     } else if (imgView) {
         [imgView setNeedsDisplay];
     }
-}
+} // End of bh_applyCurrentThemeToIcon
 
 - (void)setSelected:(_Bool)selected {
     %orig(selected);
