@@ -2726,8 +2726,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         CGRect currentFrame = self.frame;
 
         // Define padding
-        CGFloat horizontalPadding = 8.0; // Further reduced (e.g., 4px on each side now)
-        CGFloat verticalPadding = 8.0;   // e.g., 4px on top/bottom
+        CGFloat horizontalPadding = 4.0; // Further reduced (e.g., 2px on each side now)
+        CGFloat verticalPadding = 8.0;   // Kept same, adjust if vertical padding also an issue
 
         // Apply padding to the frame
         // Adjust origin to keep the label centered around its original position after resizing
@@ -2752,6 +2752,9 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         self.layer.cornerRadius = self.frame.size.height / 2.0f;
         self.layer.masksToBounds = YES;
         
+        // Log the calculated width after styling
+        NSLog(@"[BHTwitter TimestampLabel setText] Text: '%@', Calculated Width: %f", self.text, self.frame.size.width);
+
         // Set initial alpha to 0 for fade-in animation by the other hook
         // Only set to 0 if it's not already visible (e.g. if controls are already shown when text is set)
         if (self.alpha != 1.0) { // Avoid making it flicker if it was already visible
@@ -2806,7 +2809,11 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         if (timestampLabelToUpdate) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 CGFloat targetAlpha = showButtons ? 1.0 : 0.0;
-                NSTimeInterval animationDuration = 0.5; // Increased again for a slower fade
+                NSTimeInterval fadeInDuration = 0.2;
+                NSTimeInterval fadeOutDuration = 0.6;
+                NSTimeInterval animationDuration = showButtons ? fadeInDuration : fadeOutDuration;
+
+                NSLog(@"[BHTwitter TimestampLabel Animate] Text: '%@', Current Width: %f, TargetAlpha: %f, Show: %d", timestampLabelToUpdate.text, timestampLabelToUpdate.frame.size.width, targetAlpha, showButtons);
 
                 if (showButtons && timestampLabelToUpdate.hidden) {
                     // If we are showing, ensure it's unhidden before animation starts
