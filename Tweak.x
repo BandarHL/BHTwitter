@@ -7,8 +7,9 @@
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
 
-// Forward declaration
+// Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
+static BOOL BHT_initialThemeApplied = NO;
 
 // Static helper function for recursive view traversal - DEFINED AT THE TOP
 static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
