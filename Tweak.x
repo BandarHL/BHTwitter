@@ -3104,7 +3104,7 @@ static void BHT_UpdateAllTabBarIcons(void) {
     }
 }
 
-%hook TFNBarButtonItemButtonV2
+%hook TFNBarButtonItemButtonV2 : UIView
 
 // Hook the tintColor setter
 - (void)setTintColor:(UIColor *)tintColor {
