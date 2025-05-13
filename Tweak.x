@@ -2726,7 +2726,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         CGRect currentFrame = self.frame;
 
         // Define padding
-        CGFloat horizontalPadding = 16.0; // e.g., 8px on each side
+        CGFloat horizontalPadding = 12.0; // Reduced from 16.0 (e.g., 6px on each side now)
         CGFloat verticalPadding = 8.0;   // e.g., 4px on top/bottom
 
         // Apply padding to the frame
@@ -2806,7 +2806,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         if (timestampLabelToUpdate) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 CGFloat targetAlpha = showButtons ? 1.0 : 0.0;
-                NSTimeInterval animationDuration = 0.25; // Standard animation duration
+                NSTimeInterval animationDuration = 0.35; // Increased from 0.25 for a slightly slower fade
 
                 if (showButtons && timestampLabelToUpdate.hidden) {
                     // If we are showing, ensure it's unhidden before animation starts
