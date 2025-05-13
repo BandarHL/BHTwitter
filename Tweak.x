@@ -127,6 +127,41 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
     }
 
+    // Delayed final theming sweep for startup race conditions
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        if ([BHTManager tabBarTheming]) { // Check the master theming switch again
+             NSLog(@"[BHTwitter Theme Debug] Executing delayed final theme pass in applicationDidBecomeActive.");
+             
+             BHT_UpdateAllTabBarIcons(); // Ensure tab bar icons are correctly themed
+
+             UIColor *themeAccent = BHTCurrentAccentColor();
+             if (!themeAccent) {
+                 NSLog(@"[BHTwitter Theme Debug] No theme accent color found for delayed pass, aborting TFNBarButtonItemButtonV2 sweep.");
+                 return;
+             }
+
+             for (UIWindow *window in UIApplication.sharedApplication.windows) {
+                 // Process only visible windows, typically the key window is most important for UI elements.
+                 if (window.rootViewController.view && !window.hidden && window.isKeyWindow) { 
+                     NSLog(@"[BHTwitter Theme Debug] Sweeping window: %@", window);
+                     BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
+                         if ([currentView isKindOfClass:NSClassFromString(@"TFNBarButtonItemButtonV2")]) {
+                             TFNBarButtonItemButtonV2 *button = (TFNBarButtonItemButtonV2 *)currentView;
+                             // Check if the button is actually part of a visible hierarchy and has a frame
+                             if (button.window && !button.hidden && button.alpha > 0.01 && CGRectGetWidth(button.frame) > 0 && CGRectGetHeight(button.frame) > 0) {
+                                 NSLog(@"[BHTwitter Theme Debug] Re-theming TFNBarButtonItemButtonV2 in delayed pass: Pointer=%p, CurrentTintColor=%@", button, button.tintColor);
+                                 button.tintColor = themeAccent; // This will go through our existing hook on TFNBarButtonItemButtonV2
+                             }
+                         }
+                     });
+                 }
+             }
+             NSLog(@"[BHTwitter Theme Debug] Finished delayed TFNBarButtonItemButtonV2 sweep.");
+        } else {
+            NSLog(@"[BHTwitter Theme Debug] Delayed final theme pass skipped: tabBarTheming is OFF.");
+        }
+    });
+
     if ([BHTManager Padlock]) {
         NSDictionary *keychainData = [[keychain shared] getData];
         if (keychainData != nil) {
