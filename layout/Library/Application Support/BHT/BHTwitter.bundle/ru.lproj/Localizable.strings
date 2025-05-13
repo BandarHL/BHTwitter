@@ -134,6 +134,7 @@
 "CUSTOM_TAB_BAR_OPTION_5" = "Уведомления";
 "CUSTOM_TAB_BAR_OPTION_6" = "Сообщения";
 "CUSTOM_TAB_BAR_OPTION_7" = "Grok";
+"CUSTOM_TAB_BAR_OPTION_8" = "Видео";
 
 "TWITTER_BLUE_SECTION_FOOTER_TITLE" = "Для вступления настроек в силу может потребоваться перезапуск приложения.";
 
@@ -172,3 +173,6 @@
 "TIP_JAR" = "Угостить чашечкой кофе";
 "DONATE_VIA_PAYPAL" = "Задонатить на PayPal";
 "SOURCE_CODE" = "Исходный код BHTwitter";
+
+"PEOPLE_WHO_CONTRIBUTED_SECTION_HEADER_TITLE" = "Люди, которые внесли свой вклад";
+

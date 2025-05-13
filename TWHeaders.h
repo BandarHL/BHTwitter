@@ -8,7 +8,7 @@
 #import <objc/runtime.h>
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
-#import <MobileCoreServices/MobileCoreServices.h>
+#import <CoreServices/CoreServices.h>
 #import <AVKit/AVKit.h>
 #import <Photos/Photos.h>
 #import <SafariServices/SafariServices.h>

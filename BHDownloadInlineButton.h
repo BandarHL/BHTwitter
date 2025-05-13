@@ -5,38 +5,70 @@
 //  Created by BandarHelal on 09/04/2022.
 //
 
-#import <UIKit/UIKit.h>
+@import UIKit;
 #import "BHTManager.h"
+
+@class T1StatusInlineActionsView; // Forward declaration instead of assuming it's imported
+
+NS_ASSUME_NONNULL_BEGIN
 
 @interface BHDownloadInlineButton : UIButton
 {
     NSUInteger _displayType;
     NSUInteger _inlineActionType;
-    T1StatusInlineActionsView *_delegate;
+    __weak T1StatusInlineActionsView *_delegate; // Added weak reference
     id _buttonAnimator;
     id _viewModel;
 }
 
-+ (CGSize)buttonImageSizeUsingViewModel:(id)arg1 options:(NSUInteger)arg2 overrideButtonSize:(CGSize)arg3 account:(id)arg4;
-@property(retain, nonatomic) id buttonAnimator;
-@property(retain, nonatomic) T1StatusInlineActionsView *delegate;
-@property(nonatomic, assign) UIEdgeInsets hitTestEdgeInsets;
-@property (nonatomic, assign, readwrite) UIEdgeInsets touchInsets;
-@property(nonatomic) NSUInteger inlineActionType;
-@property(nonatomic) NSUInteger displayType;
-@property (nonatomic) id viewModel;
-- (void)setTouchInsets:(UIEdgeInsets)arg1;
-- (id)_t1_imageNamed:(id)arg1 fitSize:(CGSize)arg2 fillColor:(id)arg3;
-- (_Bool)shouldShowCount;
++ (CGSize)buttonImageSizeUsingViewModel:(id)viewModel 
+                               options:(NSUInteger)options 
+                    overrideButtonSize:(CGSize)overrideSize 
+                             account:(id)account;
+
+@property (nonatomic, weak) T1StatusInlineActionsView *delegate; // Changed to weak
+@property (nonatomic, strong, nullable) id buttonAnimator;
+@property (nonatomic, assign) UIEdgeInsets hitTestEdgeInsets;
+@property (nonatomic, assign) UIEdgeInsets touchInsets;
+@property (nonatomic, assign) NSUInteger inlineActionType;
+@property (nonatomic, assign) NSUInteger displayType;
+@property (nonatomic, strong, nullable) id viewModel;
+
+- (void)setTouchInsets:(UIEdgeInsets)touchInsets;
+- (nullable id)_t1_imageNamed:(NSString *)name 
+                     fitSize:(CGSize)fitSize 
+                   fillColor:(nullable id)fillColor;
+- (BOOL)shouldShowCount;
 - (double)extraWidth;
 - (CGFloat)trailingEdgeInset;
 - (NSUInteger)touchInsetPriority;
 - (NSUInteger)alternateInlineActionType;
 - (NSUInteger)visibility;
-- (NSString *)actionSheetTitle;
-- (_Bool)enabled;
-- (void)statusDidUpdate:(id)arg1 options:(NSUInteger)arg2 displayTextOptions:(NSUInteger)arg3 animated:(BOOL)arg4;
-- (void)statusDidUpdate:(id)arg1 options:(NSUInteger)arg2 displayTextOptions:(NSUInteger)arg3 animated:(BOOL)arg4 featureSwitches:(id)arg5;
-- (instancetype)initWithOptions:(NSUInteger)arg1 overrideSize:(id)arg2 account:(id)arg3;
-- (instancetype)initWithInlineActionType:(NSUInteger)arg1 options:(NSUInteger)arg2 overrideSize:(id)arg3 account:(id)arg4;
+- (nullable NSString *)actionSheetTitle;
+- (BOOL)enabled;
+
+// Status update methods
+- (void)statusDidUpdate:(id)status 
+                options:(NSUInteger)options 
+    displayTextOptions:(NSUInteger)displayTextOptions 
+             animated:(BOOL)animated;
+
+- (void)statusDidUpdate:(id)status 
+                options:(NSUInteger)options 
+    displayTextOptions:(NSUInteger)displayTextOptions 
+             animated:(BOOL)animated 
+      featureSwitches:(nullable id)featureSwitches;
+
+// Initializers
+- (instancetype)initWithOptions:(NSUInteger)options 
+                  overrideSize:(nullable id)overrideSize 
+                       account:(nullable id)account;
+
+- (instancetype)initWithInlineActionType:(NSUInteger)inlineActionType 
+                                options:(NSUInteger)options 
+                          overrideSize:(nullable id)overrideSize 
+                               account:(nullable id)account;
+
 @end
+
+NS_ASSUME_NONNULL_END

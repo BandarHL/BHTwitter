@@ -134,7 +134,8 @@
 "CUSTOM_TAB_BAR_OPTION_4" = "المجتمعات";
 "CUSTOM_TAB_BAR_OPTION_5" = "التنبيهات";
 "CUSTOM_TAB_BAR_OPTION_6" = "الرسائل";
-"CUSTOM_TAB_BAR_OPTION_7" = "grok";
+"CUSTOM_TAB_BAR_OPTION_7" = "Grok";
+"CUSTOM_TAB_BAR_OPTION_8" = "الفيديو";
 
 
 "TWITTER_BLUE_SECTION_FOOTER_TITLE" = "قم بإغلاق التطبيق لحفظ التغييرات .";
@@ -174,6 +175,8 @@
 "LEGAL_BUTTON_TITLE" = "الحقوق";
 
 "DEVELOPER_SECTION_HEADER_TITLE" = "المطور";
+
+"PEOPLE_WHO_CONTRIBUTED_SECTION_HEADER_TITLE" = "الأشخاص الذين ساهموا";
 
 "ADVANCED_SEARCH_TITLE" = "البحث المُتقدّم";
 "ADVANCED_SEARCH_DETAIL_TITLE" = "تفعيل خاصيّة البحث المُتقدّم في تويتر .";

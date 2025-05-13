@@ -135,6 +135,7 @@
 "CUSTOM_TAB_BAR_OPTION_5" = "Notifications";
 "CUSTOM_TAB_BAR_OPTION_6" = "Messages";
 "CUSTOM_TAB_BAR_OPTION_7" = "Grok";
+"CUSTOM_TAB_BAR_OPTION_8" = "Vidéo";
 
 "TWITTER_BLUE_SECTION_FOOTER_TITLE" = "Vous devrez peut-être redémarrer l'application Twitter pour appliquer les changements.";
 
@@ -170,6 +171,8 @@
 "LEGAL_BUTTON_TITLE" = "Remerciements";
 
 "DEVELOPER_SECTION_HEADER_TITLE" = "Développeur";
+
+"PEOPLE_WHO_CONTRIBUTED_SECTION_HEADER_TITLE" = "Personnes ayant contribué";
 
 "ADVANCED_SEARCH_TITLE" = "Recherche avancée";
 "ADVANCED_SEARCH_DETAIL_TITLE" = "Activer la recherche avancée sur Twitter.";

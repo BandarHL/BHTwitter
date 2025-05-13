@@ -135,6 +135,7 @@
 "CUSTOM_TAB_BAR_OPTION_5" = "Notificaciones";
 "CUSTOM_TAB_BAR_OPTION_6" = "Mensajes";
 "CUSTOM_TAB_BAR_OPTION_7" = "Grok";
+"CUSTOM_TAB_BAR_OPTION_8" = "Vídeo";
 
 "TWITTER_BLUE_SECTION_FOOTER_TITLE" = "Es posible que deba reiniciar la aplicación de Twitter para aplicar los cambios";
 
@@ -174,6 +175,8 @@
 
 "DEVELOPER_SECTION_HEADER_TITLE" = "Desarrollador";
 
+"PEOPLE_WHO_CONTRIBUTED_SECTION_HEADER_TITLE" = "Personas que han contribuido";
+
 "ADVANCED_SEARCH_TITLE" = "Búsqueda Avanzada";
 "ADVANCED_SEARCH_DETAIL_TITLE" = "Búsqueda avanzada habilitada en Twitter.";
 
@@ -193,3 +196,8 @@
 "APP_ICON_HEADER_TITLE" = "Elige un icono de aplicación personalizado para la pantalla de inicio de tu dispositivo. Cámbialo en cualquier momento.";
 
 "FFMPEG_DOWNLOAD_OPTION_TITLE" = "Descarga con FFmpeg";
+
+"SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE" = "Seleccione el host URL del tweet después de copiar";
+
+"UPLOAD_CUSTOM_VOICE_OPTION_TITLE" = "Subir voz personalizada";
+"UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE" = "Subir vídeo personalizado después de grabar una voz en el puesto";

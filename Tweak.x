@@ -2,6 +2,8 @@
 #import "Colours/Colours.h"
 #import "BHTManager.h"
 #import "BHTBundle/BHTBundle.h"
+#import "MobileCoreServices/MobileCoreServices.h"
+#import "MobileCoreServices/UTCoreTypes.h"
 
 static UIFont * _Nullable TAEStandardFontGroupReplacement(UIFont *self, SEL _cmd, CGFloat arg1, CGFloat arg2) {
     BH_BaseImp orig  = originalFontsIMP[NSStringFromSelector(_cmd)].pointerValue;
@@ -1134,9 +1136,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         }];
         
         if ([backingStore respondsToSelector:@selector(insertSection:atIndex:)]) {
-            [backingStore insertSection:0 atIndex:0];
+            [backingStore insertSection:0 atIndex:1];
         } else {
-            [backingStore _tfn_insertSection:0 atIndex:0];
+            [backingStore _tfn_insertSection:0 atIndex:1];
         }
         if ([backingStore respondsToSelector:@selector(insertItem:atIndexPath:)]) {
             [backingStore insertItem:bhtwitter atIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
@@ -1152,7 +1154,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     %orig;
     if ([self.sections count] == 2) {
         TFNItemsDataViewControllerBackingStore *DataViewControllerBackingStore = self.backingStore;
-        [DataViewControllerBackingStore insertSection:0 atIndex:0];
+        [DataViewControllerBackingStore insertSection:0 atIndex:1];
         [DataViewControllerBackingStore insertItem:@"Row 0 " atIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
         [DataViewControllerBackingStore insertItem:@"Row1" atIndexPath:[NSIndexPath indexPathForRow:1 inSection:0]];
     }
