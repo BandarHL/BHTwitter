@@ -66,14 +66,16 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         [self.navigationController.navigationBar setPrefersLargeTitles:false];
         [[NSUserDefaults standardUserDefaults] addObserver:self forKeyPath:@"bh_color_theme_selectedColor" options:NSKeyValueObservingOptionNew context:nil];
         [[NSUserDefaults standardUserDefaults] addObserver:self forKeyPath:@"T1ColorSettingsPrimaryColorOptionKey" options:NSKeyValueObservingOptionNew context:nil];
-        [[NSUserDefaults standardUserDefaults] addObserver:self forKeyPath:@"tab_bar_theming" options:NSKeyValueObservingOptionNew context:nil];
+        // Remove the observer for tab_bar_theming
+        // [[NSUserDefaults standardUserDefaults] addObserver:self forKeyPath:@"tab_bar_theming" options:NSKeyValueObservingOptionNew context:nil];
     }
     return self;
 }
 - (void)dealloc {
     [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:@"bh_color_theme_selectedColor"];
     [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:@"T1ColorSettingsPrimaryColorOptionKey"];
-    [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:@"tab_bar_theming"];
+    // Remove the observer for tab_bar_theming
+    // [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:@"tab_bar_theming"];
 }
 
 - (void)setupAppearance {
@@ -98,10 +100,13 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     if ([keyPath isEqualToString:@"bh_color_theme_selectedColor"] || [keyPath isEqualToString:@"T1ColorSettingsPrimaryColorOptionKey"]) {
         [self setupAppearance];
     }
+    // Remove the handling for tab_bar_theming notification
+    /*
     if ([keyPath isEqualToString:@"tab_bar_theming"]) {
         // Post notification to update tab bar icons
         [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTTabBarThemingChanged" object:nil];
     }
+    */
 }
 
 
@@ -365,7 +370,12 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         
         PSSpecifier *dmAvatars = [self newSwitchCellWithTitle:@"DM Avatars" detailTitle:@"Only show avatars for the last message in a group from the same sender" key:@"dm_avatars" defaultValue:true changeAction:nil];
         
-        PSSpecifier *tabBarTheming = [self newSwitchCellWithTitle:@"Tab Bar Theming" detailTitle:@"Apply accent color to tab bar icons" key:@"tab_bar_theming" defaultValue:true changeAction:nil];
+        PSSpecifier *tabBarTheming = [self newButtonCellWithTitle:@"Tab Bar Theming" 
+                                                  detailTitle:[[NSUserDefaults standardUserDefaults] boolForKey:@"tab_bar_theming"] ? 
+                                                             @"Enabled" : 
+                                                             @"Disabled (Requires Restart)" 
+                                                 dynamicRule:nil 
+                                                      action:@selector(showTabBarThemingOptions:)];
         
         PSSpecifier *hideViewCount = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE"] key:@"hide_view_count" defaultValue:false changeAction:nil];
 
@@ -942,6 +952,55 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
     }
     
     return nil;
+}
+
+- (void)showTabBarThemingOptions:(PSSpecifier *)specifier {
+    BOOL currentlyEnabled = [[NSUserDefaults standardUserDefaults] boolForKey:@"tab_bar_theming"];
+    
+    if (!currentlyEnabled) {
+        // Enabling the feature
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Tab Bar Theming" 
+                                                                       message:@"Enable tab bar icon theming? Changes take effect immediately."
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+                                                                
+        [alert addAction:[UIAlertAction actionWithTitle:@"Enable" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"tab_bar_theming"];
+            [[NSUserDefaults standardUserDefaults] synchronize];
+            [specifier setProperty:@"Enabled" forKey:@"subtitle"];
+            [self reloadSpecifier:specifier animated:YES];
+            // Post notification to update immediately when enabling
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTTabBarThemingChanged" object:nil];
+        }]];
+        
+        [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+        [self presentViewController:alert animated:YES completion:nil];
+        
+    } else {
+        // Disabling the feature
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Tab Bar Theming" 
+                                                                       message:@"Disable tab bar icon theming? This requires restarting the app to restore default icon colors."
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        
+        [alert addAction:[UIAlertAction actionWithTitle:@"Disable & Restart" style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
+            [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"tab_bar_theming"];
+            [[NSUserDefaults standardUserDefaults] synchronize];
+            [specifier setProperty:@"Disabled (Requires Restart)" forKey:@"subtitle"];
+            [self reloadSpecifier:specifier animated:NO]; // No animation before exit
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                exit(0);
+            });
+        }]];
+        
+        [alert addAction:[UIAlertAction actionWithTitle:@"Disable Without Restart" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"tab_bar_theming"];
+            [[NSUserDefaults standardUserDefaults] synchronize];
+            [specifier setProperty:@"Disabled (Requires Restart)" forKey:@"subtitle"];
+            [self reloadSpecifier:specifier animated:YES];
+        }]];
+        
+        [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+        [self presentViewController:alert animated:YES completion:nil];
+    }
 }
 @end
 
