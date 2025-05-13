@@ -21,51 +21,43 @@ static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *
 
 // Add this before the hooks, after the imports
 
+// Static cache for the accent color and the option it was derived from
+static UIColor *cachedBHTAccentColor = nil;
+static NSInteger lastKnownBHTColorOption = -999; // Sentinel for uninitialized
+
 UIColor *BHTCurrentAccentColor(void) {
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    NSInteger currentOption = -1; // Default to an invalid option
+
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        currentOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
+    } else if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
+        currentOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    }
+
+    // If cached color exists and the option hasn't changed, return cached color
+    if (cachedBHTAccentColor && currentOption == lastKnownBHTColorOption && currentOption != -1) {
+        return cachedBHTAccentColor;
+    }
+
     Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
     if (!TAEColorSettingsCls) {
-        NSLog(@"[BHTwitter] BHTCurrentAccentColor: TAEColorSettings class not found.");
-        return nil; // Changed from systemBlueColor
+        cachedBHTAccentColor = [UIColor systemBlueColor]; // Cache default
+        lastKnownBHTColorOption = -1; // Mark as derived from default
+        return [UIColor systemBlueColor];
     }
 
     id settings = [TAEColorSettingsCls sharedSettings];
-    if (!settings) {
-        NSLog(@"[BHTwitter] BHTCurrentAccentColor: TAEColorSettings sharedSettings is nil.");
-        return nil;
-    }
     id current = [settings currentColorPalette];
-    if (!current) {
-        NSLog(@"[BHTwitter] BHTCurrentAccentColor: currentColorPalette is nil.");
-        return nil;
-    }
     id palette = [current colorPalette];
-    if (!palette) {
-        NSLog(@"[BHTwitter] BHTCurrentAccentColor: colorPalette is nil.");
-        return nil;
-    }
+    
+    UIColor *determinedColor = [palette primaryColorForOption:currentOption] ?: [UIColor systemBlueColor];
 
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    // Update cache
+    cachedBHTAccentColor = determinedColor;
+    lastKnownBHTColorOption = currentOption;
 
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        UIColor *chosenColor = [palette primaryColorForOption:opt];
-        if (!chosenColor) {
-            NSLog(@"[BHTwitter] BHTCurrentAccentColor: primaryColorForOption returned nil for bh_color_theme_selectedColor option %ld.", (long)opt);
-        }
-        return chosenColor; // No explicit nil check, as primaryColorForOption can return nil
-    }
-
-    if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
-        NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-        UIColor *chosenColor = [palette primaryColorForOption:opt];
-        if (!chosenColor) {
-            NSLog(@"[BHTwitter] BHTCurrentAccentColor: primaryColorForOption returned nil for T1ColorSettingsPrimaryColorOptionKey option %ld.", (long)opt);
-        }
-        return chosenColor; // No explicit nil check
-    }
-
-    NSLog(@"[BHTwitter] BHTCurrentAccentColor: No BHTwitter or T1 color option found in UserDefaults.");
-    return nil; // Changed from systemBlueColor
+    return determinedColor;
 }
 
 static UIFont * _Nullable TAEStandardFontGroupReplacement(UIFont *self, SEL _cmd, CGFloat arg1, CGFloat arg2) {
@@ -707,15 +699,26 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %hook NSUserDefaults
 - (void)setObject:(id)value forKey:(NSString *)defaultName {
     if ([defaultName isEqualToString:@"T1ColorSettingsPrimaryColorOptionKey"]) {
-        id selectedColor = [[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"];
-        if (selectedColor != nil) {
-            if ([value isEqual:selectedColor]) {
+        id bhtSelectedColorOption = [[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"];
+        if (bhtSelectedColorOption != nil) {
+            if ([value isEqual:bhtSelectedColorOption]) {
+                // Our color is being set by Twitter, allow it, cache will be updated by BHTCurrentAccentColor
                 return %orig;
             } else {
+                // Twitter is trying to set a DIFFERENT color than our BHT choice, block it.
+                // No need to clear cache here as our BHT preference remains.
                 return;
             }
         }
+        // If BHT color is not set, let Twitter do its thing. Clear our cache.
+        cachedBHTAccentColor = nil;
+        lastKnownBHTColorOption = -999;
         return %orig;
+    }
+    if ([defaultName isEqualToString:@"bh_color_theme_selectedColor"]) {
+        // Our specific color setting is changing, invalidate the cache.
+        cachedBHTAccentColor = nil;
+        lastKnownBHTColorOption = -999;
     }
     return %orig;
 }
@@ -2244,15 +2247,7 @@ static NSDate *lastCookieRefresh              = nil;
                             [sourceSuffix appendAttributedString:[[NSAttributedString alloc] initWithString:separator attributes:baseAttributes]];
                             
                             NSMutableDictionary *sourceAttributes = [baseAttributes mutableCopy];
-                            UIColor *accentColor = BHTCurrentAccentColor();
-                            if (accentColor) { // Check if accentColor is not nil
-                                [sourceAttributes setObject:accentColor forKey:NSForegroundColorAttributeName];
-                            } else {
-                                // If accentColor is nil, don't set NSForegroundColorAttributeName for the source label,
-                                // or set it to a default non-blue color like [UIColor grayColor] or [UIColor labelColor].
-                                // For now, let's not set it, to see what happens.
-                                NSLog(@"[BHTwitter] TFNAttributedTextView: Accent color is nil, not applying custom color to source label.");
-                            }
+                            [sourceAttributes setObject:BHTCurrentAccentColor() forKey:NSForegroundColorAttributeName];
                             [sourceSuffix appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttributes]];
                             
                             [newString appendAttributedString:sourceSuffix];
