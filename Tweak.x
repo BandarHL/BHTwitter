@@ -2720,13 +2720,16 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         // Check if this label is THE progressLabel from ImmersiveCardViewV2
         BOOL isTheTargetLabel = NO;
         UIView *superviewCheck = self;
+        _TtC14T1TwitterSwift19ImmersiveCardViewV2* foundCardViewForLabel = nil;
         while(superviewCheck != nil) {
             if ([superviewCheck isKindOfClass:NSClassFromString(@"_TtC14T1TwitterSwift19ImmersiveCardViewV2")]) {
-                 _TtC14T1TwitterSwift19ImmersiveCardViewV2* cardView = (_TtC14T1TwitterSwift19ImmersiveCardViewV2*)superviewCheck;
+                 foundCardViewForLabel = (_TtC14T1TwitterSwift19ImmersiveCardViewV2*)superviewCheck;
                  UILabel* kvcLabel = nil;
-                 @try { kvcLabel = [(id)cardView valueForKey:@"progressLabel"]; } @catch (NSException*e) {}
+                 @try { kvcLabel = [(id)foundCardViewForLabel valueForKey:@"progressLabel"]; } @catch (NSException*e) {}
                  if (kvcLabel == self) {
                      isTheTargetLabel = YES;
+                     NSLog(@"[BHTwitter ImmersiveTimestamp] UILabel -setText: Identified target progressLabel (%p) for cardView (%p). Text: %@", self, foundCardViewForLabel, text);
+                     NSLog(@"[BHTwitter ImmersiveTimestamp] UILabel -setText: Initial hidden: %d, alpha: %.2f", self.hidden, self.alpha);
                  }
                 break; 
             }
@@ -2744,8 +2747,10 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
                 currentFrame.size.width = MAX(currentFrame.size.width, 50.0f); // Use float literal
                 currentFrame.size.height = MAX(currentFrame.size.height, 20.0f); // Use float literal
                 // self.frame = currentFrame; // Be careful with direct frame manipulation if auto layout is used
+                NSLog(@"[BHTwitter ImmersiveTimestamp] UILabel -setText: Adjusted frame for small label to w:%.2f, h:%.2f", currentFrame.size.width, currentFrame.size.height);
             }
             // Visibility (hidden, alpha) is now controlled by T1ImmersiveFullScreenViewController hook
+            NSLog(@"[BHTwitter ImmersiveTimestamp] UILabel -setText: Styled target progressLabel (%p). Current hidden: %d, alpha: %.2f", self, self.hidden, self.alpha);
         }
     }
 }
