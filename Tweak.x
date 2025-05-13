@@ -2659,7 +2659,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 %end
 
-// MARK: - Timestamp Label Styling via UILabel -setText:
+// MARK: - Restore Timestamp in Immersive Video Player
 
 %hook UILabel
 
@@ -2671,13 +2671,43 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         self.hidden = NO;
         self.alpha = 1.0;
         self.font = [UIFont systemFontOfSize:14.0];
-        
+        self.tag = 12345; // Add a unique tag
+
         [self sizeToFit];
 
         // Fallback if sizeToFit results in a tiny frame (e.g., if superview constraints are weird initially)
         if (CGRectGetWidth(self.frame) < 10 || CGRectGetHeight(self.frame) < 5) {
             self.frame = CGRectMake(10, 50, 100, 25); // Slightly larger fallback height
         }
+    }
+}
+
+%end
+
+%hook T1ImmersiveFullScreenViewController
+
+- (void)immersiveViewController:(T1ImmersiveViewController *)immersiveViewController showHideNavigationButtons:(_Bool)shouldShow {
+    %orig;
+
+    // Find the timestamp label using the tag
+    UIView *timestampLabel = nil;
+    
+    // Search in self.view first
+    timestampLabel = [self.view viewWithTag:12345];
+    
+    // If not found in self.view, search in self.immersive.view
+    if (!timestampLabel && self.immersive && self.immersive.isViewLoaded) {
+        timestampLabel = [self.immersive.view viewWithTag:12345];
+    }
+
+    // If found, update its visibility
+    if (timestampLabel && [timestampLabel isKindOfClass:[UILabel class]]) {
+        // Animate the change to match the controls' animation (assuming a short duration)
+        [UIView animateWithDuration:0.25 animations:^{
+            timestampLabel.alpha = shouldShow ? 1.0 : 0.0;
+        }];
+        // Or, if no animation is desired:
+        // timestampLabel.hidden = !shouldShow;
     }
 }
 
