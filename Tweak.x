@@ -2786,7 +2786,11 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         }
         
         if (timestampLabelToUpdate) {
-            timestampLabelToUpdate.hidden = !showButtons;
+            dispatch_async(dispatch_get_main_queue(), ^{
+                timestampLabelToUpdate.hidden = !showButtons;
+                [timestampLabelToUpdate setNeedsLayout]; // Request re-layout
+                [timestampLabelToUpdate setNeedsDisplay]; // Request redraw
+            });
         }
     }
 }
