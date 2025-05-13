@@ -2866,25 +2866,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 %new
 - (void)bh_applyCurrentThemeToIcon {
-    BOOL themingEnabled = [BHTManager tabBarTheming];
-    UIColor *targetColor;
-    BOOL isSelected = [[self valueForKey:@"selected"] boolValue];
-
-    if (themingEnabled) {
-        if (isSelected) {
-            targetColor = BHTCurrentAccentColor();
-        } else {
-            targetColor = [UIColor grayColor]; // Use a standard gray for unselected in themed mode
-        }
-    } else {
-        // Theming disabled: Revert to default semantic colors (black/white for selected, gray for unselected)
-        if (isSelected) {
-            targetColor = [UIColor labelColor]; // Adapts to black/white
-        } else {
-            targetColor = [UIColor secondaryLabelColor]; // Adapts to appropriate gray
-        }
-    }
-
     UIImageView *imgView = nil;
     @try {
         imgView = [self valueForKey:@"imageView"];
@@ -2896,28 +2877,72 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         NSLog(@"[BHTwitter TabTheme] imageView is nil.");
         return;
     }
+
+    // === Check if theming is disabled FIRST ===
+    if (![BHTManager tabBarTheming]) {
+        // Theming disabled: Remove our tint and let original logic handle colors.
+        imgView.tintColor = nil; 
+        // We might need to reset rendering mode if setting tintColor=nil isn't enough,
+        // but let's try this first.
+        // if (imgView.image) {
+        //    imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAutomatic]; // Or Original
+        // }
+        
+        // Trigger an update to apply the default appearance
+        SEL updateImageViewSelector = NSSelectorFromString(@"_t1_updateImageViewAnimated:");
+        if ([self respondsToSelector:updateImageViewSelector]) {
+            IMP imp = [self methodForSelector:updateImageViewSelector];
+            void (*func)(id, SEL, _Bool) = (void *)imp;
+            func(self, updateImageViewSelector, NO);
+        } else {
+            [imgView setNeedsDisplay];
+        }
+        return; // *** Exit early ***
+    }
+
+    // === Theming is ENABLED ===
+    UIColor *targetColor;
+    BOOL isSelected = [[self valueForKey:@"selected"] boolValue];
+
+    if (isSelected) {
+        targetColor = BHTCurrentAccentColor();
+    } else {
+        targetColor = [UIColor grayColor];
+    }
+
+    // Ensure image is template FOR THEMING
     if (imgView.image && imgView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
         imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
     }
+
+    // Apply tint color
     SEL applyTintColorSelector = @selector(applyTintColor:);
     if ([self respondsToSelector:applyTintColorSelector]) {
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
         [self performSelector:applyTintColorSelector withObject:targetColor];
+        #pragma clang diagnostic pop
     } else {
         imgView.tintColor = targetColor;
     }
+
+    // Update state
     SEL updateImageViewSelector = NSSelectorFromString(@"_t1_updateImageViewAnimated:");
     if ([self respondsToSelector:updateImageViewSelector]) {
         IMP imp = [self methodForSelector:updateImageViewSelector];
         void (*func)(id, SEL, _Bool) = (void *)imp;
         func(self, updateImageViewSelector, NO);
-    } else if (imgView) {
+    } else {
         [imgView setNeedsDisplay];
     }
 }
 
 - (void)setSelected:(_Bool)selected {
     %orig(selected);
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
     [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
+    #pragma clang diagnostic pop
 }
 
 // Add hook for traitCollectionDidChange
@@ -2925,7 +2950,10 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     %orig(previousTraitCollection);
     // Re-apply colors when interface style changes
     if ([self.traitCollection hasDifferentColorAppearanceComparedToTraitCollection:previousTraitCollection]) {
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
         [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
+        #pragma clang diagnostic pop
     }
 }
 
