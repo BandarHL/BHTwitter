@@ -2866,8 +2866,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     // Someone needs to hold reference the to Notification
     _PasteboardChangeObserver = [center addObserverForName:UIPasteboardChangedNotification object:nil queue:mainQueue usingBlock:^(NSNotification * _Nonnull note){
         
-        static dispatch_once_t pasteboard_once_token;
-        dispatch_once(&pasteboard_once_token, ^{
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
             trackingParams = @{
                 @"twitter.com" : @[@"s", @"t"],
                 @"x.com" : @[@"s", @"t"],
@@ -2880,6 +2880,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
                 NSArray<NSString*>* params = trackingParams[pasteboardURL.host];
                 
                 if ([pasteboardURL.absoluteString isEqualToString:_lastCopiedURL] == NO && params != nil && pasteboardURL.query != nil) {
+                    // to prevent endless copy loop
                     _lastCopiedURL = pasteboardURL.absoluteString;
                     NSURLComponents *cleanedURL = [NSURLComponents componentsWithURL:pasteboardURL resolvingAgainstBaseURL:NO];
                     NSMutableArray<NSURLQueryItem*> *safeParams = [NSMutableArray arrayWithCapacity:0];
@@ -2901,19 +2902,29 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         }
     }];
     
-    static dispatch_once_t global_class_pointers_token;
-    dispatch_once(&global_class_pointers_token, ^{
+    // Initialize global Class pointers here when the tweak loads
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
         gGuideContainerVCClass = NSClassFromString(@"T1TwitterSwift.GuideContainerViewController");
         if (!gGuideContainerVCClass) gGuideContainerVCClass = NSClassFromString(@"T1TwitterSwift_GuideContainerViewController");
+
         gTombstoneCellClass = NSClassFromString(@"T1TwitterSwift.ConversationTombstoneCell");
         if (!gTombstoneCellClass) gTombstoneCellClass = NSClassFromString(@"T1TwitterSwift_ConversationTombstoneCell");
+
         gExploreHeroCellClass = NSClassFromString(@"T1ExploreEventSummaryHeroTableViewCell");
+        
+        // Initialize T1ProfileHeaderViewController class pointer
         gT1ProfileHeaderViewControllerClass = NSClassFromString(@"T1ProfileHeaderViewController");
+        
+        // Initialize Dash specific class pointers
         gDashAvatarImageViewClass = NSClassFromString(@"TwitterDash.DashAvatarImageView");
         gDashDrawerAvatarImageViewClass = NSClassFromString(@"TwitterDash.DashDrawerAvatarImageView");
+        
+        // The full name for the hosting controller is very long and specific.
         gDashHostingControllerClass = NSClassFromString(@"_TtGC7SwiftUI19UIHostingControllerGV10TFNUISwift22HostingEnvironmentViewV11TwitterDash18DashNavigationView__");
     });
     
+    // Initialize dictionaries for Tweet Source Labels restoration
     if (!tweetSources)      tweetSources      = [NSMutableDictionary dictionary];
     if (!viewToTweetID)     viewToTweetID     = [NSMutableDictionary dictionary];
     if (!fetchTimeouts)     fetchTimeouts     = [NSMutableDictionary dictionary];
@@ -2924,60 +2935,39 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     if (!fetchPending)      fetchPending      = [NSMutableDictionary dictionary];
     if (!cookieCache)       cookieCache       = [NSMutableDictionary dictionary];
     
+    // Load cached cookies at initialization
     [TweetSourceHelper loadCachedCookies];
     
-    %init; // Using the general %init as found in the file.
-
-    // Consolidated observer for TabBarThemingChanged
-    [[NSNotificationCenter defaultCenter] addObserverForName:@"BHTTabBarThemingChanged" 
+    %init;
+    [[NSNotificationCenter defaultCenter] addObserverForName:@"BHTTabBarThemingChanged" object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification * _Nonnull note) {
+        BHT_UpdateAllTabBarIcons();
+    }];
+    
+    // Add observers for both window and theme changes
+    [[NSNotificationCenter defaultCenter] addObserverForName:UIWindowDidBecomeKeyNotification 
                                                     object:nil 
                                                      queue:[NSOperationQueue mainQueue] 
                                                 usingBlock:^(NSNotification * _Nonnull note) {
-        if ([BHTManager tabBarTheming]) {
-            NSInteger selectedOption = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
-            BH_changeTwitterColor(selectedOption);
-        } else {
-            BH_changeTwitterColor(0); // Assuming 0 is default Blue. TODO: Confirm.
+        UIWindow *window = note.object;
+        if (window && [[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+            BHT_applyThemeToWindow(window);
         }
-
-        if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
-            [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
-        }
-        if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_updateOverrideUserInterfaceStyle)]) {
-            [%c(T1ColorSettings) _t1_updateOverrideUserInterfaceStyle];
-        }
-        BHT_forceRefreshAllWindowAppearances();
     }];
     
-    // Observer for application becoming active
     [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
                                                     object:nil 
                                                      queue:[NSOperationQueue mainQueue] 
                                                 usingBlock:^(NSNotification * _Nonnull note) {
-        // When app becomes active, ensure the theme is consistent with settings.
-        BOOL themingEnabled = [BHTManager tabBarTheming];
-        NSInteger colorOptionToApply;
-
-        if (themingEnabled && [[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-             colorOptionToApply = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
-        } else {
-            // If theming is off, or on but no color selected (should not happen if UI handles it),
-            // apply default color.
-            colorOptionToApply = 0; // Default color (e.g., Blue)
-        }
-        BH_changeTwitterColor(colorOptionToApply);
-
-        if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
-            [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
-        }
-        if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_updateOverrideUserInterfaceStyle)]) {
-            [%c(T1ColorSettings) _t1_updateOverrideUserInterfaceStyle];
-        }
-        BHT_forceRefreshAllWindowAppearances();
+        BHT_ensureTheming();
     }];
     
-    // The UIWindowDidBecomeKeyNotification observer was removed as BHT_forceRefreshAllWindowAppearances handles all windows,
-    // and UIApplicationDidBecomeActiveNotification along with the specific toggle notification should cover most cases.
+    // Observe theme changes
+    [[NSNotificationCenter defaultCenter] addObserverForName:@"BHTTabBarThemingChanged" 
+                                                    object:nil 
+                                                     queue:[NSOperationQueue mainQueue] 
+                                                usingBlock:^(NSNotification * _Nonnull note) {
+        BHT_ensureTheming();
+    }];
 }
 
 // MARK: - DM Avatar Images
@@ -3011,48 +3001,56 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 %new
 - (void)bh_applyCurrentThemeToIcon {
     UIImageView *imgView = nil;
-    @try {
+    @try { 
         imgView = [self valueForKey:@"imageView"];
     } @catch (NSException *exception) {
         NSLog(@"[BHTwitter TabTheme] Exception getting imageView: %@", exception);
         return;
     }
-
-    if (!imgView) {
-        NSLog(@"[BHTwitter TabTheme] imageView is nil for tabView: %@", self);
+ 
+    if (!imgView || !imgView.image) { 
+        NSLog(@"[BHTwitter TabTheme] imageView or its image is nil for tabView: %@", self);
         return;
     }
 
-    if (![BHTManager tabBarTheming]) {
-        // Theming is OFF, revert to default
-        if (imgView.image && imgView.image.renderingMode == UIImageRenderingModeAlwaysTemplate) {
-            imgView.tintColor = nil; 
-        }
-    } else {
-        // Theming is ON
+    if ([BHTManager tabBarTheming]) {
+        // Apply BHTwitter Theme
         UIColor *targetColor;
-        if ([[self valueForKey:@"selected"] boolValue]) { 
+        BOOL isSelected = [[self valueForKey:@"selected"] boolValue];
+
+        if (isSelected) {
             targetColor = BHTCurrentAccentColor();
         } else {
-            targetColor = [UIColor grayColor]; 
+            targetColor = [UIColor grayColor]; // Your desired unselected themed color
         }
 
-        if (imgView.image && imgView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
+        // Ensure image is a template for tinting
+        if (imgView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
             imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
         }
-        imgView.tintColor = targetColor; 
+
+        // Apply the tint color
+        imgView.tintColor = targetColor;
+
+    } else {
+        // Revert to Twitter's Default Appearance
+        if (imgView.image.renderingMode == UIImageRenderingModeAlwaysTemplate) {
+            imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAutomatic];
+        }
+        imgView.tintColor = nil; 
     }
 
-    // Common update logic
+    // ALWAYS call Twitter's own update method after we've prepared the image and tint.
     SEL updateImageViewSelector = NSSelectorFromString(@"_t1_updateImageViewAnimated:");
     if ([self respondsToSelector:updateImageViewSelector]) {
         IMP imp = [self methodForSelector:updateImageViewSelector];
         void (*func)(id, SEL, _Bool) = (void *)imp;
-        func(self, updateImageViewSelector, NO);
+        func(self, updateImageViewSelector, NO); // Animated:NO for immediate effect
     } else if (imgView) {
-        [imgView setNeedsDisplay];
+        [imgView setNeedsDisplay]; 
+        NSLog(@"[BHTwitter TabTheme] _t1_updateImageViewAnimated: not found on %@. Used setNeedsDisplay.", self);
     }
-} // End of bh_applyCurrentThemeToIcon
+}
 
 - (void)setSelected:(_Bool)selected {
     %orig(selected);

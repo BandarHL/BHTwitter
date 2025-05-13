@@ -865,23 +865,41 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 - (void)tabBarThemingAction:(UISwitch *)sender {
     BOOL enabled = sender.isOn;
     NSString *key = @"tab_bar_theming";
-    // PSSpecifier *specifier = [self specifierForID:key]; // This line is not strictly necessary for the new logic
+    PSSpecifier *specifier = [self specifierForID:key];
 
-    // Save the new state to NSUserDefaults
-    [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:key];
-    [[NSUserDefaults standardUserDefaults] synchronize];
+    if (enabled) {
+        // Enabling: Save and apply immediately
+        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:key];
+        [[NSUserDefaults standardUserDefaults] synchronize];
+        // Post notification to update immediately
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTTabBarThemingChanged" object:nil];
+    } else {
+        // Disabling: Show restart prompt
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Restart Required"
+                                                                       message:@"Disabling tab bar theming requires restarting the app to restore default icon colors."
+                                                                preferredStyle:UIAlertControllerStyleAlert];
 
-    // Post notification to update immediately, regardless of whether it's being enabled or disabled
-    [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTTabBarThemingChanged" object:nil];
-    
-    // The UIAlertController for restart when disabling is now removed.
-    // The theming system will handle reverting to default colors live.
+        [alert addAction:[UIAlertAction actionWithTitle:@"Restart Now" style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
+            [[NSUserDefaults standardUserDefaults] setBool:NO forKey:key];
+            [[NSUserDefaults standardUserDefaults] synchronize];
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                exit(0);
+            });
+        }]];
+
+        [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
+            // Flip the switch back visually if cancelled
+            [sender setOn:YES animated:YES];
+        }]];
+
+        [self presentViewController:alert animated:YES completion:nil];
+    }
 }
 
 - (void)squareAvatarsAction:(UISwitch *)sender {
     BOOL enabled = sender.isOn;
     NSString *key = @"square_avatars";
-    // PSSpecifier *specifier = [self specifierForID:key]; // Not strictly needed here
+    PSSpecifier *specifier = [self specifierForID:key];
     BOOL previousValue = !enabled; // The value before the switch was flipped
 
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Restart Required"
