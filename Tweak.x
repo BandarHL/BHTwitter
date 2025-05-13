@@ -8,7 +8,7 @@
 #import "BHTBundle/BHTBundle.h"
 #import "JGProgressHUD/JGProgressHUD.h"
 #import "SAMKeychain/SAMKeychain.h"
-#import "ThemeColor/ThemeColor.h"
+#import "ThemeColor/BHColorThemeViewController.h"
 #import <UserNotifications/UserNotifications.h> // Needed for notification center
 
 // Forward declaration
