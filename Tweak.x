@@ -11,12 +11,14 @@
 // Forward declare T1ColorSettings and its private method to satisfy the compiler
 @interface T1ColorSettings : NSObject
 + (void)_t1_applyPrimaryColorOption;
++ (void)_t1_updateOverrideUserInterfaceStyle; // Add this line
 @end
 
 // Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
 static void BHT_applyThemeToWindow(UIWindow *window);
 static void BHT_ensureTheming(void);
+static void BHT_forceRefreshActiveWindowAppearance(void);
 
 // Static helper function for recursive view traversal - DEFINED AT THE TOP
 static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
@@ -122,6 +124,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
                 [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
             }
+            if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_updateOverrideUserInterfaceStyle)]) {
+                [%c(T1ColorSettings) _t1_updateOverrideUserInterfaceStyle];
+            }
         });
     }
     
@@ -141,6 +146,11 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
             [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
         }
+        if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_updateOverrideUserInterfaceStyle)]) {
+            [%c(T1ColorSettings) _t1_updateOverrideUserInterfaceStyle];
+        }
+
+        BHT_forceRefreshActiveWindowAppearance();
 
         BHT_UpdateAllTabBarIcons();
         // We might need to re-add nav bar bird icon updates here if they are still problematic
@@ -3179,5 +3189,42 @@ static void BHT_ensureTheming(void) {
     // Apply to all windows
     for (UIWindow *window in [UIApplication sharedApplication].windows) {
         BHT_applyThemeToWindow(window);
+    }
+}
+
+static void BHT_forceRefreshActiveWindowAppearance(void) {
+    UIWindow *keyWindow = nil;
+    // Find the key window
+    for (UIWindow *window in [UIApplication sharedApplication].windows) {
+        if (window.isKeyWindow) {
+            keyWindow = window;
+            break;
+        }
+    }
+    if (!keyWindow) return;
+
+    // 1. Update our custom elements (as they are known to work)
+    BHT_UpdateAllTabBarIcons(); // This updates for all windows, which is fine.
+    BH_EnumerateSubviewsRecursively(keyWindow.rootViewController.view, ^(UIView *currentView) {
+        if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
+            if ([BHTManager tabBarTheming]) { // Or your relevant BHTManager flag
+                [(TFNNavigationBar *)currentView updateLogoTheme];
+            }
+        }
+    });
+
+    // 2. Attempt to "jolt" the key window's hierarchy to re-evaluate appearance.
+    UIViewController *rootVC = keyWindow.rootViewController;
+    if (rootVC && rootVC.isViewLoaded) {
+        BH_EnumerateSubviewsRecursively(rootVC.view, ^(UIView *subview) {
+            if ([subview respondsToSelector:@selector(tintColorDidChange)]) {
+                [subview tintColorDidChange];
+            }
+            // It might be too broad to call setNeedsLayout/Display on all subviews.
+            // Focus on tintColorDidChange first.
+        });
+        // After notifying subviews, a layout pass on the root might help propagate changes.
+        [rootVC.view setNeedsLayout];
+        [rootVC.view layoutIfNeeded];
     }
 }
