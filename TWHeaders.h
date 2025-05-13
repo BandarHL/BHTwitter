@@ -611,3 +611,15 @@ static UIViewController * _Nonnull topMostController() {
 @interface T1ConversationFooterTextView : TFNAttributedTextView
 @property(nonatomic, readonly) id viewModel;
 @end
+
+@interface TAEColorPalette : NSObject
+- (UIColor *)primaryColor;
+- (UIColor *)primaryColorForOption:(NSInteger)option;
+@end
+
+@interface TAEColorSettings : NSObject
++ (instancetype)sharedSettings;
+- (id)currentColorPalette;
+- (void)setSelectedColorOption:(NSInteger)option;
+- (NSInteger)selectedColorOption;
+@end
