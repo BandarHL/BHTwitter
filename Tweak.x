@@ -2724,7 +2724,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             if ([superviewCheck isKindOfClass:NSClassFromString(@"_TtC14T1TwitterSwift19ImmersiveCardViewV2")]) {
                  _TtC14T1TwitterSwift19ImmersiveCardViewV2* cardView = (_TtC14T1TwitterSwift19ImmersiveCardViewV2*)superviewCheck;
                  UILabel* kvcLabel = nil;
-                 @try { kvcLabel = [cardView valueForKey:@"progressLabel"]; } @catch (NSException*e) {}
+                 @try { kvcLabel = [(id)cardView valueForKey:@"progressLabel"]; } @catch (NSException*e) {}
                  if (kvcLabel == self) {
                      isTheTargetLabel = YES;
                  }
