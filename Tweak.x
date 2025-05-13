@@ -9,6 +9,7 @@
 
 // Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
+static void BHT_ApplyThemeToVisibleBarButtonItems(void);
 
 // Static helper function for recursive view traversal - DEFINED AT THE TOP
 static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
@@ -124,43 +125,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     %orig;
     // Apply/Re-apply theme elements on becoming active
     if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        // This call now triggers the UI sweep via the modified BH_changeTwitterColor
         BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
     }
-
-    // Delayed final theming sweep for startup race conditions
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        if ([BHTManager tabBarTheming]) { // Check the master theming switch again
-             NSLog(@"[BHTwitter Theme Debug] Executing delayed final theme pass in applicationDidBecomeActive.");
-             
-             BHT_UpdateAllTabBarIcons(); // Ensure tab bar icons are correctly themed
-
-             UIColor *themeAccent = BHTCurrentAccentColor();
-             if (!themeAccent) {
-                 NSLog(@"[BHTwitter Theme Debug] No theme accent color found for delayed pass, aborting TFNBarButtonItemButtonV2 sweep.");
-                 return;
-             }
-
-             for (UIWindow *window in UIApplication.sharedApplication.windows) {
-                 // Process only visible windows, typically the key window is most important for UI elements.
-                 if (window.rootViewController.view && !window.hidden && window.isKeyWindow) { 
-                     NSLog(@"[BHTwitter Theme Debug] Sweeping window: %@", window);
-                     BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
-                         if ([currentView isKindOfClass:NSClassFromString(@"TFNBarButtonItemButtonV2")]) {
-                             TFNBarButtonItemButtonV2 *button = (TFNBarButtonItemButtonV2 *)currentView;
-                             // Check if the button is actually part of a visible hierarchy and has a frame
-                             if (button.window && !button.hidden && button.alpha > 0.01 && CGRectGetWidth(button.frame) > 0 && CGRectGetHeight(button.frame) > 0) {
-                                 NSLog(@"[BHTwitter Theme Debug] Re-theming TFNBarButtonItemButtonV2 in delayed pass: Pointer=%p, CurrentTintColor=%@", button, button.tintColor);
-                                 button.tintColor = themeAccent; // This will go through our existing hook on TFNBarButtonItemButtonV2
-                             }
-                         }
-                     });
-                 }
-             }
-             NSLog(@"[BHTwitter Theme Debug] Finished delayed TFNBarButtonItemButtonV2 sweep.");
-        } else {
-            NSLog(@"[BHTwitter Theme Debug] Delayed final theme pass skipped: tabBarTheming is OFF.");
-        }
-    });
 
     if ([BHTManager Padlock]) {
         NSDictionary *keychainData = [[keychain shared] getData];
@@ -3146,3 +3113,67 @@ static void BHT_UpdateAllTabBarIcons(void) {
 }
 
 %end
+
+// --- Define NEW Helper Function (Place near other static helpers/defs) ---
+
+static void BHT_ApplyThemeToVisibleBarButtonItems(void) {
+    // Ensure this runs on the main thread
+    if (![NSThread isMainThread]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            BHT_ApplyThemeToVisibleBarButtonItems();
+        });
+        return;
+    }
+
+    if ([BHTManager tabBarTheming]) { // Check the master theming switch
+         NSLog(@"[BHTwitter Theme Debug] Executing BHT_ApplyThemeToVisibleBarButtonItems sweep.");
+
+         // 1. Update Tab Bar Icons
+         BHT_UpdateAllTabBarIcons();
+
+         // 2. Update TFNBarButtonItemButtonV2 instances
+         UIColor *themeAccent = BHTCurrentAccentColor(); // Use cached color
+         if (!themeAccent) {
+             NSLog(@"[BHTwitter Theme Debug] No theme accent color found for sweep.");
+             return;
+         }
+
+         for (UIWindow *window in UIApplication.sharedApplication.windows) {
+             if (window.rootViewController.view && !window.hidden && window.isKeyWindow) {
+                 NSLog(@"[BHTwitter Theme Debug] Sweeping window for BarButtonItems: %@", window);
+                 BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
+                     if ([currentView isKindOfClass:NSClassFromString(@"TFNBarButtonItemButtonV2")]) {
+                         TFNBarButtonItemButtonV2 *button = (TFNBarButtonItemButtonV2 *)currentView;
+                         // Check if the button is actually part of a visible hierarchy
+                         if (button.window && !button.hidden && button.alpha > 0.01 && CGRectGetWidth(button.frame) > 0) {
+                             NSLog(@"[BHTwitter Theme Debug] Re-theming TFNBarButtonItemButtonV2 in sweep: Pointer=%p", button);
+                             button.tintColor = themeAccent; // Triggers our hook
+                         }
+                     }
+                     // Potentially add checks for other themed elements here if needed
+                 });
+             }
+         }
+         NSLog(@"[BHTwitter Theme Debug] Finished BHT_ApplyThemeToVisibleBarButtonItems sweep.");
+    } else {
+        NSLog(@"[BHTwitter Theme Debug] BHT_ApplyThemeToVisibleBarButtonItems sweep skipped: tabBarTheming is OFF.");
+    }
+}
+
+// --- Modify existing BH_changeTwitterColor ---
+
+static void BH_changeTwitterColor(NSInteger colorID) {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];
+
+    // Invalidate the accent color cache since the base setting is changing
+    cachedBHTAccentColor = nil;
+    lastKnownBHTColorOption = -999;
+
+    [defaults setObject:@(colorID) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    [colorSettings setPrimaryColorOption:colorID];
+
+    // *** ADD THIS CALL ***
+    // Perform the UI sweep AFTER changing the base color setting
+    BHT_ApplyThemeToVisibleBarButtonItems();
+}
