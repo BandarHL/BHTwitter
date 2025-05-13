@@ -2820,6 +2820,9 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     [TweetSourceHelper loadCachedCookies];
     
     %init;
+    [[NSNotificationCenter defaultCenter] addObserverForName:@"BHTTabBarThemingChanged" object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification * _Nonnull note) {
+        BHT_UpdateAllTabBarIcons();
+    }];
 }
 
 // MARK: - DM Avatar Images

@@ -370,12 +370,11 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         
         PSSpecifier *dmAvatars = [self newSwitchCellWithTitle:@"DM Avatars" detailTitle:@"Only show avatars for the last message in a group from the same sender" key:@"dm_avatars" defaultValue:true changeAction:nil];
         
-        PSSpecifier *tabBarTheming = [self newButtonCellWithTitle:@"Tab Bar Theming" 
-                                                  detailTitle:[[NSUserDefaults standardUserDefaults] boolForKey:@"tab_bar_theming"] ? 
-                                                             @"Enabled" : 
-                                                             @"Disabled (Requires Restart)" 
-                                                 dynamicRule:nil 
-                                                      action:@selector(showTabBarThemingOptions:)];
+        PSSpecifier *tabBarTheming = [self newSwitchCellWithTitle:@"Tab Bar Theming" 
+                                                        detailTitle:@"Apply accent color to tab bar icons" 
+                                                                key:@"tab_bar_theming" 
+                                                       defaultValue:true 
+                                                       changeAction:@selector(tabBarThemingAction:)];
         
         PSSpecifier *hideViewCount = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE"] key:@"hide_view_count" defaultValue:false changeAction:nil];
 
@@ -404,12 +403,11 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         
         PSSpecifier *restoreFollowButton = [self newSwitchCellWithTitle:@"Restore Follow Button" detailTitle:@"Restores the normal Follow button instead of Subscribe (also hides Subscribe button)" key:@"restore_follow_button" defaultValue:false changeAction:nil];
         
-        PSSpecifier *squareAvatars = [self newButtonCellWithTitle:@"Square Avatars" 
-                                                      detailTitle:[[NSUserDefaults standardUserDefaults] boolForKey:@"square_avatars"] ? 
-                                                                 @"Enabled (Requires Restart)" : 
-                                                                 @"Disabled (Requires Restart)" 
-                                                     dynamicRule:nil 
-                                                          action:@selector(showSquareAvatarsOptions:)];
+        PSSpecifier *squareAvatars = [self newSwitchCellWithTitle:@"Square Avatars" 
+                                                        detailTitle:@"Requires app restart"
+                                                                key:@"square_avatars"
+                                                       defaultValue:false 
+                                                       changeAction:@selector(squareAvatarsAction:)];
         
         PSSpecifier *restoreVideoTimestamp = [self newSwitchCellWithTitle:@"Restore Video Timestamp" detailTitle:@"Shows video timestamp that may be hidden in some views" key:@"restore_video_timestamp" defaultValue:false changeAction:nil];
 
@@ -864,143 +862,84 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
     [picker dismissViewControllerAnimated:true completion:nil];
 }
 
-- (void)showSquareAvatarsOptions:(PSSpecifier *)specifier {
-    // Get current setting
-    BOOL currentlyEnabled = [[NSUserDefaults standardUserDefaults] boolForKey:@"square_avatars"];
-    
-    // Create alert
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Square Avatars" 
-                                                                   message:currentlyEnabled ? 
-                                                                           @"Square Avatars is currently enabled. Would you like to disable it? This requires restarting the app to take effect." : 
-                                                                           @"Would you like to enable Square Avatars? This requires restarting the app to take effect."
-                                                            preferredStyle:UIAlertControllerStyleAlert];
-    
-    // If currently OFF, add action to enable and restart
-    if (!currentlyEnabled) {
-        [alert addAction:[UIAlertAction actionWithTitle:@"Enable" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-            // Save the preference
-            [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"square_avatars"];
+- (void)tabBarThemingAction:(UISwitch *)sender {
+    BOOL enabled = sender.isOn;
+    NSString *key = @"tab_bar_theming";
+    PSSpecifier *specifier = [self specifierForID:key];
+
+    if (enabled) {
+        // Enabling: Save and apply immediately
+        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:key];
+        [[NSUserDefaults standardUserDefaults] synchronize];
+        // Post notification to update immediately
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTTabBarThemingChanged" object:nil];
+    } else {
+        // Disabling: Show restart prompt
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Restart Required"
+                                                                       message:@"Disabling tab bar theming requires restarting the app to restore default icon colors."
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+
+        [alert addAction:[UIAlertAction actionWithTitle:@"Restart Now" style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
+            [[NSUserDefaults standardUserDefaults] setBool:NO forKey:key];
             [[NSUserDefaults standardUserDefaults] synchronize];
-            
-            // Update the button subtitle
-            [specifier setProperty:@"Enabled (Requires Restart)" forKey:@"subtitle"];
-            [self reloadSpecifier:specifier animated:YES];
-            
-            // Restart the app
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
                 exit(0);
             });
         }]];
-        
-        // Remove "Enable Without Restart" option
-    } 
-    // If currently ON, add action to disable
-    else {
-        [alert addAction:[UIAlertAction actionWithTitle:@"Disable" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-            // Save the preference
-            [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"square_avatars"];
+
+        [alert addAction:[UIAlertAction actionWithTitle:@"Later" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            [[NSUserDefaults standardUserDefaults] setBool:NO forKey:key];
             [[NSUserDefaults standardUserDefaults] synchronize];
-            
-            // Update the button subtitle
-            [specifier setProperty:@"Disabled (Requires Restart)" forKey:@"subtitle"];
-            [self reloadSpecifier:specifier animated:YES];
-            
-            // Restart the app
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                exit(0);
-            });
         }]];
-        
-        // Remove the "Disable Without Restart" option
+
+        [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
+            // Flip the switch back visually if cancelled
+            [sender setOn:YES animated:YES];
+        }]];
+
+        [self presentViewController:alert animated:YES completion:nil];
     }
-    
-    // Cancel action
-    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
-    
-    // Present the alert
+}
+
+- (void)squareAvatarsAction:(UISwitch *)sender {
+    BOOL enabled = sender.isOn;
+    NSString *key = @"square_avatars";
+    PSSpecifier *specifier = [self specifierForID:key];
+    BOOL previousValue = !enabled; // The value before the switch was flipped
+
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Restart Required"
+                                                                   message:@"Changing the avatar style requires restarting the app."
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+
+    [alert addAction:[UIAlertAction actionWithTitle:@"Restart Now" style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
+        [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:key];
+        [[NSUserDefaults standardUserDefaults] synchronize];
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            exit(0);
+        });
+    }]];
+
+    [alert addAction:[UIAlertAction actionWithTitle:@"Later" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:key];
+        [[NSUserDefaults standardUserDefaults] synchronize];
+    }]];
+
+    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
+        // Flip the switch back visually if cancelled
+        [sender setOn:previousValue animated:YES];
+    }]];
+
     [self presentViewController:alert animated:YES completion:nil];
 }
 
-- (void)reloadSpecifier:(PSSpecifier *)specifier animated:(BOOL)animated {
-    // Find the index path for the specifier
-    NSIndexPath *indexPath = [self indexPathForSpecifier:specifier];
-    if (indexPath) {
-        // Reload just that specific row
-        [self.table reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:animated ? UITableViewRowAnimationFade : UITableViewRowAnimationNone];
-    }
-}
-
-- (NSIndexPath *)indexPathForSpecifier:(PSSpecifier *)specifier {
-    if (!specifier) return nil;
-    
-    NSArray *specifiers = [self specifiers];
-    NSUInteger sectionIndex = 0;
-    NSUInteger rowIndex = 0;
-    NSUInteger lastRowIndex = 0;
-    
-    for (PSSpecifier *currentSpecifier in specifiers) {
-        if ([currentSpecifier.identifier isEqualToString:@"square_avatars"] || [currentSpecifier propertyForKey:@"id"] == specifier.identifier) {
-            return [NSIndexPath indexPathForRow:rowIndex inSection:sectionIndex];
-        }
-        
-        if (currentSpecifier.cellType == PSGroupCell) {
-            sectionIndex++;
-            lastRowIndex = rowIndex;
-        } else {
-            rowIndex++;
+// Need helper to find specifier by key for switch actions
+- (PSSpecifier *)specifierForID:(NSString *)identifier {
+    for (PSSpecifier *specifier in [self specifiers]) {
+        if ([[specifier propertyForKey:@"key"] isEqualToString:identifier]) {
+            return specifier;
         }
     }
-    
     return nil;
-}
-
-- (void)showTabBarThemingOptions:(PSSpecifier *)specifier {
-    BOOL currentlyEnabled = [[NSUserDefaults standardUserDefaults] boolForKey:@"tab_bar_theming"];
-    
-    if (!currentlyEnabled) {
-        // Enabling the feature
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Tab Bar Theming" 
-                                                                       message:@"Enable tab bar icon theming? Changes take effect immediately."
-                                                                preferredStyle:UIAlertControllerStyleAlert];
-                                                                
-        [alert addAction:[UIAlertAction actionWithTitle:@"Enable" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-            [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"tab_bar_theming"];
-            [[NSUserDefaults standardUserDefaults] synchronize];
-            [specifier setProperty:@"Enabled" forKey:@"subtitle"];
-            [self reloadSpecifier:specifier animated:YES];
-            // Post notification to update immediately when enabling
-            [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTTabBarThemingChanged" object:nil];
-        }]];
-        
-        [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
-        [self presentViewController:alert animated:YES completion:nil];
-        
-    } else {
-        // Disabling the feature
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Tab Bar Theming" 
-                                                                       message:@"Disable tab bar icon theming? This requires restarting the app to restore default icon colors."
-                                                                preferredStyle:UIAlertControllerStyleAlert];
-        
-        [alert addAction:[UIAlertAction actionWithTitle:@"Disable & Restart" style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
-            [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"tab_bar_theming"];
-            [[NSUserDefaults standardUserDefaults] synchronize];
-            [specifier setProperty:@"Disabled (Requires Restart)" forKey:@"subtitle"];
-            [self reloadSpecifier:specifier animated:NO]; // No animation before exit
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                exit(0);
-            });
-        }]];
-        
-        [alert addAction:[UIAlertAction actionWithTitle:@"Disable Without Restart" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-            [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"tab_bar_theming"];
-            [[NSUserDefaults standardUserDefaults] synchronize];
-            [specifier setProperty:@"Disabled (Requires Restart)" forKey:@"subtitle"];
-            [self reloadSpecifier:specifier animated:YES];
-        }]];
-        
-        [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
-        [self presentViewController:alert animated:YES completion:nil];
-    }
 }
 @end
 
