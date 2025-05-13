@@ -12,6 +12,7 @@
 static void BHT_UpdateAllTabBarIcons(void);
 static void BHT_applyThemeToWindow(UIWindow *window);
 static void BHT_ensureTheming(void);
+static void BHT_forceUIRefresh(UIWindow *window); // Forward declare the new function
 
 // Static helper function for recursive view traversal - DEFINED AT THE TOP
 static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
@@ -108,8 +109,12 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     
     // Apply theme immediately after launch
     if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            BHT_ensureTheming();
+        // We will call BH_changeTwitterColor directly in applicationDidBecomeActive
+        // and then trigger a more focused UI refresh.
+        // The dispatch_async might still be useful for the initial BH_changeTwitterColor if it interacts with UI.
+        dispatch_async(dispatch_get_main_queue(), ^ {
+            BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
+            // BHT_forceUIRefresh for all windows will be called via applicationDidBecomeActive or a slight delay here.
         });
     }
     
@@ -119,8 +124,15 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)applicationDidBecomeActive:(id)arg1 {
     %orig;
     // Apply/Re-apply theme elements on becoming active
+    // BH_changeTwitterColor is called on launch. Here, we'll focus on ensuring UI refresh.
+    // The new BHT_forceUIRefresh will be called here later.
+
     if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
         BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
+        // Force refresh for all windows
+        for (UIWindow *window in [UIApplication sharedApplication].windows) {
+            BHT_forceUIRefresh(window);
+        }
     }
 
     if ([BHTManager Padlock]) {
@@ -3156,5 +3168,55 @@ static void BHT_ensureTheming(void) {
     // Apply to all windows
     for (UIWindow *window in [UIApplication sharedApplication].windows) {
         BHT_applyThemeToWindow(window);
+    }
+}
+
+// New function to force UI refresh for a given window
+static void BHT_forceUIRefresh(UIWindow *window) {
+    if (!window) return;
+
+    // 1. Ensure our explicitly themed elements are up-to-date
+    // Update tab bar icons (BHT_UpdateAllTabBarIcons iterates all windows, so it's a bit broad here but covers the case)
+    if ([BHTManager tabBarTheming]) { // Check if theming is enabled
+        BHT_UpdateAllTabBarIcons();
+    }
+
+    // Update navigation bar bird icons
+    BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
+        if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
+            if ([BHTManager tabBarTheming]) { // Assuming nav bird theming is tied to tabBarTheming general flag or similar
+                [(TFNNavigationBar *)currentView updateLogoTheme];
+            }
+        }
+    });
+
+    // 2. Attempt to refresh the main visible content hierarchy
+    UIViewController *rootVC = window.rootViewController;
+    if (rootVC) {
+        UIViewController *currentContentVC = rootVC;
+
+        // Traverse to the most relevant *visible* content view controller
+        if ([rootVC isKindOfClass:[UITabBarController class]]) {
+            currentContentVC = ((UITabBarController *)rootVC).selectedViewController;
+        }
+        // If the selected VC in a tab bar is a Nav controller, go to its *visible* VC
+        if ([currentContentVC isKindOfClass:[UINavigationController class]]) {
+            currentContentVC = ((UINavigationController *)currentContentVC).visibleViewController;
+        }
+        // If it's a presented VC, that's the one we care about
+        if (currentContentVC.presentedViewController) {
+            currentContentVC = currentContentVC.presentedViewController;
+            // And if that presented VC is a Nav controller, get its visible VC
+            if ([currentContentVC isKindOfClass:[UINavigationController class]]) {
+                currentContentVC = ((UINavigationController *)currentContentVC).visibleViewController;
+            }
+        }
+
+        // If we have a valid, loaded content view, tell it to redraw and re-layout.
+        if (currentContentVC && currentContentVC.isViewLoaded) {
+            [currentContentVC.view setNeedsDisplay];
+            [currentContentVC.view setNeedsLayout];
+            [currentContentVC.view layoutIfNeeded]; // Force immediate layout
+        }
     }
 }
