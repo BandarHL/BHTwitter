@@ -2957,18 +2957,24 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 - (void)viewDidAppear:(BOOL)animated {
     %orig(animated);
     T1ImmersiveFullScreenViewController *activePlayerVC = self;
-    NSLog(@"[BHTwitter Timestamp] VC %@: viewDidAppear.", activePlayerVC);
+    NSLog(@"[BHTwitter Timestamp] VC %@: viewDidAppear (SYNC).", activePlayerVC);
 
     if ([BHTManager restoreVideoTimestamp]) {
         if (!playerToTimestampMap) { 
             playerToTimestampMap = [NSMapTable weakToStrongObjectsMapTable];
-            NSLog(@"[BHTwitter Timestamp] VC %@: Re-initialized playerToTimestampMap in viewDidAppear (should not happen often).", activePlayerVC);
+            NSLog(@"[BHTwitter Timestamp] VC %@: Re-initialized playerToTimestampMap in viewDidAppear (SYNC - should be rare).", activePlayerVC);
         }
         
-        dispatch_async(dispatch_get_main_queue(), ^{
-            NSLog(@"[BHTwitter Timestamp] VC %@: viewDidAppear (dispatch_async) - calling showHideNavigationButtons:NO as baseline.", activePlayerVC);
-            [self immersiveViewController:self showHideNavigationButtons:NO];
-        });
+        // Synchronously find/prepare the label for this VC instance.
+        // This ensures it's ready before we try to set its initial visibility.
+        BOOL labelFoundAndPrepared = [self BHT_findAndPrepareTimestampLabelForVC:activePlayerVC];
+        NSLog(@"[BHTwitter Timestamp] VC %@: viewDidAppear (SYNC) - labelFoundAndPrepared: %d", activePlayerVC, labelFoundAndPrepared);
+
+        // Now, set its initial visibility (typically hidden).
+        // The immersiveViewController:showHideNavigationButtons: method will use the map entry.
+        // We call it directly to enforce the initial state.
+        NSLog(@"[BHTwitter Timestamp] VC %@: viewDidAppear (SYNC) - calling showHideNavigationButtons:NO as baseline.", activePlayerVC);
+        [self immersiveViewController:self showHideNavigationButtons:NO];
     }
 }
 
