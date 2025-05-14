@@ -148,10 +148,11 @@
     [[NSUserDefaults standardUserDefaults] setInteger:CUSTOM_THEME_ID forKey:@"bh_color_theme_selectedColor"];
     [[NSNotificationCenter defaultCenter] postNotificationName:BHTColorThemeDidChangeNotificationName object:nil];
     
-    [self.colorCollectionView reloadData];
-    [self triggerFullThemeUpdate];
-
-    [viewController dismissViewControllerAnimated:YES completion:nil];
+    [viewController dismissViewControllerAnimated:YES completion:^{
+        // Reload data and trigger theme update AFTER the picker is dismissed
+        [self.colorCollectionView reloadData];
+        [self triggerFullThemeUpdate];
+    }];
 }
 
 // Helper method to trigger full theme update for tab bar etc.
