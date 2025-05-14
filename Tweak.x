@@ -934,11 +934,11 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             T1StatusCell *tweetView;
             
             if ([actionsView.superview isKindOfClass:%c(T1StandardStatusView)]) { // normal tweet in the time line
-                tweetView = [(T1StandardStatusView *)actionsView.superview eventHandler];
+                tweetView = (T1StatusCell *)[(T1StandardStatusView *)actionsView.superview eventHandler];
             } else if ([actionsView.superview isKindOfClass:%c(T1TweetDetailsFocalStatusView)]) { // Focus tweet
-                tweetView = [(T1TweetDetailsFocalStatusView *)actionsView.superview eventHandler];
+                tweetView = (T1StatusCell *)[(T1TweetDetailsFocalStatusView *)actionsView.superview eventHandler];
             } else if ([actionsView.superview isKindOfClass:%c(T1ConversationFocalStatusView)]) { // Focus tweet
-                tweetView = [(T1ConversationFocalStatusView *)actionsView.superview eventHandler];
+                tweetView = (T1StatusCell *)[(T1ConversationFocalStatusView *)actionsView.superview eventHandler];
             } else {
                 return %orig;
             }
@@ -962,15 +962,15 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)didLongPressActionButton:(UILongPressGestureRecognizer *)gestureRecognizer {
     if ([BHTManager tweetToImage]) {
         if (gestureRecognizer.state == UIGestureRecognizerStateBegan) {
-            T1StatusInlineActionsView *actionsView = self.delegate;
+            T1StatusInlineActionsView *actionsView = (T1StatusInlineActionsView *)self.delegate;
             T1StatusCell *tweetView;
             
             if ([actionsView.superview isKindOfClass:%c(T1StandardStatusView)]) { // normal tweet in the time line
-                tweetView = [(T1StandardStatusView *)actionsView.superview eventHandler];
+                tweetView = (T1StatusCell *)[(T1StandardStatusView *)actionsView.superview eventHandler];
             } else if ([actionsView.superview isKindOfClass:%c(T1TweetDetailsFocalStatusView)]) { // Focus tweet
-                tweetView = [(T1TweetDetailsFocalStatusView *)actionsView.superview eventHandler];
+                tweetView = (T1StatusCell *)[(T1TweetDetailsFocalStatusView *)actionsView.superview eventHandler];
             } else if ([actionsView.superview isKindOfClass:%c(T1ConversationFocalStatusView)]) { // Focus tweet
-                tweetView = [(T1ConversationFocalStatusView *)actionsView.superview eventHandler];
+                tweetView = (T1StatusCell *)[(T1ConversationFocalStatusView *)actionsView.superview eventHandler];
             } else {
                 return %orig;
             }

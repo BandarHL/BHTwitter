@@ -525,13 +525,6 @@ typedef FLEXAlertAction * _Nonnull (^FLEXAlertActionHandler)(void(^handler)(NSAr
 + (instancetype)sharedSettings;
 @end
 
-static void BH_changeTwitterColor(NSInteger colorID) {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];
-    
-    [defaults setObject:@(colorID) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-    [colorSettings setPrimaryColorOption:colorID];
-}
 static UIImage *BH_imageFromView(UIView *view) {
     TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];
     bool opaque = [colorSettings.currentColorPalette isDark] ? true : false;

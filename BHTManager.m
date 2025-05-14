@@ -310,6 +310,10 @@
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"tab_bar_theming"];
 }
 
++ (BOOL)noTabBarHiding {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"no_tab_bar_hiding"];
+}
+
 + (void)clearSourceLabelCache {
     NSLog(@"BHTManager: Posting BHTClearSourceLabelCacheNotification");
     [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTClearSourceLabelCacheNotification" object:nil];

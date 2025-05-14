@@ -32,7 +32,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign) UIEdgeInsets hitTestEdgeInsets;
 @property (nonatomic, assign) UIEdgeInsets touchInsets;
 @property (nonatomic, assign) NSUInteger inlineActionType;
-@property (nonatomic, assign) NSUInteger displayType;
+@property (nonatomic, assign) int displayType;
 @property (nonatomic, strong, nullable) id viewModel;
 
 - (void)setTouchInsets:(UIEdgeInsets)touchInsets;
@@ -42,9 +42,9 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)shouldShowCount;
 - (double)extraWidth;
 - (CGFloat)trailingEdgeInset;
-- (NSUInteger)touchInsetPriority;
-- (NSUInteger)alternateInlineActionType;
-- (NSUInteger)visibility;
+- (int)touchInsetPriority;
+- (int)alternateInlineActionType;
+- (int)visibility;
 - (nullable NSString *)actionSheetTitle;
 - (BOOL)enabled;
 
