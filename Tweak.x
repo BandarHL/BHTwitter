@@ -1136,6 +1136,36 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %end
 
 %hook T1HomeTimelineItemsViewController
+- (void)viewDidLoad {
+    %orig;
+    // Re-apply theme instantly when timeline screen loads to ensure color setting is respected
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger selectedOption = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
+        // Directly set the primary color option in TAEColorSettings to force Twitter's accent system
+        id taeSettings = [%c(TAEColorSettings) sharedSettings];
+        if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
+            [taeSettings setPrimaryColorOption:selectedOption];
+            NSLog(@"[BHTwitter ThemeForce] Set primaryColorOption to %ld in TAEColorSettings on timeline load", (long)selectedOption);
+        }
+        // Also update user defaults to ensure consistency
+        [[NSUserDefaults standardUserDefaults] setObject:@(selectedOption) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+        BH_changeTwitterColor(selectedOption);
+        if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
+            [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
+        }
+        if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_updateOverrideUserInterfaceStyle)]) {
+            [%c(T1ColorSettings) _t1_updateOverrideUserInterfaceStyle];
+        }
+        // Additional call to ensure TAEColorSettings applies the theme
+        if ([taeSettings respondsToSelector:@selector(applyCurrentColorPalette)]) {
+            [taeSettings performSelector:@selector(applyCurrentColorPalette)];
+        }
+        BHT_forceRefreshAllWindowAppearances(); // Force refresh all UI elements
+        BHT_UpdateAllTabBarIcons();
+        NSLog(@"[BHTwitter ThemeRefresh] Theme reapplied instantly on timeline load");
+    }
+}
+
 - (void)_t1_initializeFleets {
     if ([BHTManager hideSpacesBar]) {
         return;
