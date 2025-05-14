@@ -2880,15 +2880,16 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 CGFloat targetAlpha = showButtons ? 1.0 : 0.0;
                 NSTimeInterval fadeInDuration = 0.2; // Keep fade-in relatively quick
-                NSTimeInterval fadeOutDuration = 0.3; // Shorten fade-out duration to reduce flicker
+                NSTimeInterval fadeOutDuration = 0.3; // Short fade-out duration
                 
-                UIViewAnimationOptions animationOptions = UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionAllowUserInteraction;
+                UIViewAnimationOptions animationOptions = UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionAllowUserInteraction | UIViewAnimationOptionOverrideInheritedDuration | UIViewAnimationOptionOverrideInheritedCurve;
                 if (showButtons) {
                     animationOptions |= UIViewAnimationOptionCurveEaseIn;
                 } else {
                     animationOptions |= UIViewAnimationOptionCurveEaseOut;
                 }
                 NSTimeInterval animationDuration = showButtons ? fadeInDuration : fadeOutDuration;
+                NSTimeInterval delay = showButtons ? 0.0 : 0.1; // Slight delay on hide to sync with player UI
 
                 NSLog(@"[BHTwitter TimestampLabel Animate] Text: '%@', Current Width: %f, TargetAlpha: %f, Show: %d", timestampLabelToUpdate.text, timestampLabelToUpdate.frame.size.width, targetAlpha, showButtons);
 
@@ -2901,7 +2902,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
                 }
 
                 [UIView animateWithDuration:animationDuration
-                                      delay:0.0
+                                      delay:delay
                                     options:animationOptions
                                  animations:^{
                                      timestampLabelToUpdate.alpha = targetAlpha;
