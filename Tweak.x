@@ -2836,7 +2836,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     %orig(immersiveViewController, showButtons);
 
     if ([BHTManager restoreVideoTimestamp]) {
-        UILabel *timestampLabelToUpdate = nil;
+        __block UILabel *timestampLabelToUpdate = nil;
 
         if (gVideoTimestampLabel && gVideoTimestampLabel.superview) {
             timestampLabelToUpdate = gVideoTimestampLabel;
