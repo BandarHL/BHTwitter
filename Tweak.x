@@ -3424,3 +3424,15 @@ static void BHT_forceRefreshAllWindowAppearances(void) { // Renamed and logic ad
     self.tintColor = BHTCurrentAccentColor();
 }
 %end
+
+// MARK: Theme TFNBarButtonItemButtonV2
+@interface TFNBarButtonItemButtonV2 : UIView
+@property (nonatomic, strong) UIColor *tintColor;
+@end
+
+%hook TFNBarButtonItemButtonV2
+- (void)didMoveToWindow {
+    %orig;
+    self.tintColor = BHTCurrentAccentColor();
+}
+%end
