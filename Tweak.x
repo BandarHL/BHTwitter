@@ -2818,14 +2818,11 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         }
 
         if (isInImmersiveCardView) {
-            // Removed styling to avoid conflicts with native animations
+            // Restore sizeToFit to ensure the label has a frame based on its content
+            [self sizeToFit];
             
-            // Set initial visibility to match the player's UI state
-            // Do not force alpha to 1.0; let T1ImmersiveFullScreenViewController manage it
-            if (self.alpha != 1.0) {
-                self.alpha = 0.0;
-            }
-            self.hidden = NO; // Ensure it's not hidden by default, let the controller manage visibility
+            // Removed explicit alpha and hidden settings here.
+            // Let T1ImmersiveFullScreenViewController manage its visibility and alpha entirely.
 
             // Store a weak reference to this label
             gVideoTimestampLabel = self;
