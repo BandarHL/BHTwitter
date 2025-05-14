@@ -131,6 +131,21 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             BHT_forceRefreshAllWindowAppearances(); // Force refresh all UI elements
             BHT_UpdateAllTabBarIcons();
             // Add a delayed refresh to catch late-loading UI elements with shorter delay
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
+                    [taeSettings setPrimaryColorOption:selectedOption];
+                }
+                BH_changeTwitterColor(selectedOption);
+                if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
+                    [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
+                }
+                if ([taeSettings respondsToSelector:@selector(applyCurrentColorPalette)]) {
+                    [taeSettings performSelector:@selector(applyCurrentColorPalette)];
+                }
+                BHT_forceRefreshAllWindowAppearances();
+                NSLog(@"[BHTwitter ThemeRefresh] Delayed theme refresh applied after 0.1 seconds");
+            });
+            // Add another delayed refresh for even later UI initialization with shorter delay
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
                 if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
                     [taeSettings setPrimaryColorOption:selectedOption];
@@ -144,21 +159,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                 }
                 BHT_forceRefreshAllWindowAppearances();
                 NSLog(@"[BHTwitter ThemeRefresh] Delayed theme refresh applied after 0.3 seconds");
-            });
-            // Add another delayed refresh for even later UI initialization with shorter delay
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.8 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
-                    [taeSettings setPrimaryColorOption:selectedOption];
-                }
-                BH_changeTwitterColor(selectedOption);
-                if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
-                    [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
-                }
-                if ([taeSettings respondsToSelector:@selector(applyCurrentColorPalette)]) {
-                    [taeSettings performSelector:@selector(applyCurrentColorPalette)];
-                }
-                BHT_forceRefreshAllWindowAppearances();
-                NSLog(@"[BHTwitter ThemeRefresh] Delayed theme refresh applied after 0.8 seconds");
             });
         });
     }
@@ -3447,40 +3447,5 @@ static void BHT_forceRefreshAllWindowAppearances(void) { // Renamed and logic ad
 
 - (void)setTintColor:(UIColor *)tintColor {
     %orig(BHTCurrentAccentColor());
-}
-%end
-
-// MARK: Force Theme on Timeline Load
-%hook T1HomeTimelineItemsViewController
-- (void)viewDidLoad {
-    %orig;
-    // Re-apply theme immediately when timeline loads to ensure color consistency
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            NSInteger selectedOption = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
-            // Directly set the primary color option in TAEColorSettings to force Twitter's accent system
-            id taeSettings = [%c(TAEColorSettings) sharedSettings];
-            if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
-                [taeSettings setPrimaryColorOption:selectedOption];
-                NSLog(@"[BHTwitter ThemeForce] Set primaryColorOption to %ld in TAEColorSettings on timeline load", (long)selectedOption);
-            }
-            // Also update user defaults to ensure consistency
-            [[NSUserDefaults standardUserDefaults] setObject:@(selectedOption) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-            BH_changeTwitterColor(selectedOption);
-            if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
-                [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
-            }
-            if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_updateOverrideUserInterfaceStyle)]) {
-                [%c(T1ColorSettings) _t1_updateOverrideUserInterfaceStyle];
-            }
-            // Additional call to ensure TAEColorSettings applies the theme
-            if ([taeSettings respondsToSelector:@selector(applyCurrentColorPalette)]) {
-                [taeSettings performSelector:@selector(applyCurrentColorPalette)];
-            }
-            BHT_forceRefreshAllWindowAppearances(); // Force refresh all UI elements
-            BHT_UpdateAllTabBarIcons();
-            NSLog(@"[BHTwitter ThemeRefresh] Theme reapplied on timeline load");
-        });
-    }
 }
 %end
