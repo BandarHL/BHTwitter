@@ -958,7 +958,6 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         BOOL isBig = specifier.properties[@"big"] ? ((NSNumber *)specifier.properties[@"big"]).boolValue : NO;
         
         // Get the default font size and make it bold
-        UIFont *defaultFont = self.textLabel.font;
         self.textLabel.font = TwitterChirpFont(TwitterFontStyleSemibold); // 14pt semibold
         
         // Keep subtitle style exactly as before
@@ -979,7 +978,6 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         BOOL isBig = specifier.properties[@"big"] ? ((NSNumber *)specifier.properties[@"big"]).boolValue : NO;
         
         // Get the default font size and make it bold
-        UIFont *defaultFont = self.textLabel.font;
         self.textLabel.font = TwitterChirpFont(TwitterFontStyleSemibold); // 14pt semibold
 
         // Keep subtitle style exactly as before

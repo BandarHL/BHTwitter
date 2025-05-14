@@ -42,6 +42,7 @@ static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *
 // Define a constant for the custom theme ID (must match BHColorThemeViewController.m)
 #define CUSTOM_THEME_ID 7
 #define CUSTOM_THEME_HEX_KEY @"bh_color_theme_customColorHex"
+#define BHTColorThemeDidChangeNotificationName @"BHTColorThemeDidChangeNotification" // ADDED
 
 UIColor *BHTCurrentAccentColor(void) {
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
@@ -93,8 +94,17 @@ UIColor *BHTCurrentAccentColor(void) {
     return [palette primaryColorForOption:selectedOption] ?: [UIColor systemBlueColor];
 }
 
-static void BH_changeTwitterColor(NSInteger selectedOption) {
+static void BH_changeTwitterColor(void) { // MODIFIED: Removed selectedOption argument
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSInteger selectedOption = -1;
+
+    if ([defaults objectForKey:@"bh_color_theme_selectedColor"]) {
+        selectedOption = [defaults integerForKey:@"bh_color_theme_selectedColor"];
+    }
+
+    if (selectedOption == -1) { // No theme selected or key missing, perhaps default to Twitter blue (option 1)
+        selectedOption = 1; 
+    }
     
     if (selectedOption == CUSTOM_THEME_ID) {
         // For custom color, we still need to set T1ColorSettingsPrimaryColorOptionKey
@@ -190,7 +200,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         // The dispatch_async might still be useful for the initial BH_changeTwitterColor if it interacts with UI.
         dispatch_async(dispatch_get_main_queue(), ^ {
             NSInteger selectedOption = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
-            BH_changeTwitterColor(selectedOption);
+            BH_changeTwitterColor();
             if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
                 [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
             }
@@ -211,7 +221,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
     if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger selectedOption = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
-        BH_changeTwitterColor(selectedOption);
+        BH_changeTwitterColor();
 
         if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
             [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
@@ -3200,6 +3210,14 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     //                                             usingBlock:^(NSNotification * _Nonnull note) {
     //     BHT_ensureTheming(); // This was likely too broad, direct update is better.
     // }];
+
+    // ADDED: Observer for theme changes from BHColorThemeViewController
+    [[NSNotificationCenter defaultCenter] addObserverForName:BHTColorThemeDidChangeNotificationName
+                                                    object:nil
+                                                     queue:[NSOperationQueue mainQueue]
+                                                usingBlock:^(NSNotification * _Nonnull note) {
+        BH_changeTwitterColor(); // Call the updated function
+    }];
 }
 
 // MARK: - DM Avatar Images
@@ -3265,16 +3283,16 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             targetColor = [UIColor grayColor]; // Unselected but themed icon
         }
         
-        if (imgView.image && imgView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
-            imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-        }
+    if (imgView.image && imgView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
+        imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+    }
         
-        SEL applyTintColorSelector = @selector(applyTintColor:);
-        if ([self respondsToSelector:applyTintColorSelector]) {
+    SEL applyTintColorSelector = @selector(applyTintColor:);
+    if ([self respondsToSelector:applyTintColorSelector]) {
             ((void (*)(id, SEL, UIColor *))objc_msgSend)(self, applyTintColorSelector, targetColor);
-        } else {
-            imgView.tintColor = targetColor;
-        }
+    } else {
+        imgView.tintColor = targetColor;
+    }
     }
 
     // Always call Twitter's internal update method to refresh the visual state
@@ -3427,7 +3445,7 @@ static void BHT_ensureTheming(void) {
     if (![[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) return;
     
     // Apply the main color theme
-    BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
+    BH_changeTwitterColor();
     
     // Apply to all windows
     for (UIWindow *window in [UIApplication sharedApplication].windows) {

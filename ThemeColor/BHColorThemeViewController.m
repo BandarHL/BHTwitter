@@ -15,6 +15,7 @@
 // Define a constant for the custom theme ID
 #define CUSTOM_THEME_ID 7
 #define CUSTOM_THEME_HEX_KEY @"bh_color_theme_customColorHex"
+#define BHTColorThemeDidChangeNotificationName @"BHTColorThemeDidChangeNotification"
 
 @interface BHColorThemeViewController () <UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout, UIColorPickerViewControllerDelegate>
 @property (nonatomic, strong) UICollectionView *colorCollectionView;
@@ -132,7 +133,7 @@
         // Predefined color selected
         [[NSUserDefaults standardUserDefaults] setInteger:colorItem.colorID forKey:@"bh_color_theme_selectedColor"];
         [[NSUserDefaults standardUserDefaults] removeObjectForKey:CUSTOM_THEME_HEX_KEY];
-        BH_changeTwitterColor(colorItem.colorID);
+        [[NSNotificationCenter defaultCenter] postNotificationName:BHTColorThemeDidChangeNotificationName object:nil];
         [self.colorCollectionView reloadData];
         [self triggerFullThemeUpdate];
     }
@@ -146,7 +147,7 @@
 
     [[NSUserDefaults standardUserDefaults] setObject:hexString forKey:CUSTOM_THEME_HEX_KEY];
     [[NSUserDefaults standardUserDefaults] setInteger:CUSTOM_THEME_ID forKey:@"bh_color_theme_selectedColor"];
-    BH_changeTwitterColor(CUSTOM_THEME_ID);
+    [[NSNotificationCenter defaultCenter] postNotificationName:BHTColorThemeDidChangeNotificationName object:nil];
     
     [self.colorCollectionView reloadData];
     [self triggerFullThemeUpdate];
