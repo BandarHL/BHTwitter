@@ -19,12 +19,6 @@
 - (void)immersiveViewController:(id)immersiveViewController showHideNavigationButtons:(_Bool)showButtons;
 @end
 
-// Add our custom methods to the class interface
-@interface T1ImmersiveFullScreenViewController (BHTTimestamp)
-- (void)BHT_findAndStyleTimestampLabel;
-- (BOOL)BHT_areControlsVisible;
-@end
-
 // Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
 static void BHT_applyThemeToWindow(UIWindow *window);
@@ -2809,9 +2803,10 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 - (void)setText:(NSString *)text {
     %orig(text);
 
-    // Only identify potential timestamp labels - let the controller do the styling
+    // This hook now only serves to ensure that if a label *could* be a timestamp,
+    // it exists in the view hierarchy. The actual identification, styling, and 
+    // management of gVideoTimestampLabel is handled by T1ImmersiveFullScreenViewController hooks.
     if ([BHTManager restoreVideoTimestamp] && self.text && [self.text containsString:@":"] && [self.text containsString:@"/"]) {
-        // Check if in correct context (ImmersiveCardView)
         UIView *parentView = self.superview;
         BOOL isInImmersiveCardView = NO;
         while (parentView) {
@@ -2823,18 +2818,140 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             }
             parentView = parentView.superview;
         }
-
-        if (isInImmersiveCardView) {
-            // Just store a reference to this potential timestamp label for later styling
-            // Don't style it yet or add the associated object - let the controller handle that
-            gVideoTimestampLabel = self;
-        }
+        // No action needed here other than letting the original setText run.
+        // gVideoTimestampLabel should not be set here.
     }
 }
 
 %end
 
 // MARK: - Immersive Player Timestamp Visibility Control
+
+%hook T1ImmersiveFullScreenViewController
+
+- (void)immersiveViewController:(id)immersiveViewController showHideNavigationButtons:(_Bool)showButtons {
+    %orig(immersiveViewController, showButtons);
+
+    if ([BHTManager restoreVideoTimestamp]) {
+        // Always attempt to find the label in the current context
+        __block UILabel *currentTimestampLabel = nil;
+        UIView *searchView = self.view; // Start search from self.view
+
+        // If immersiveViewController is provided and is the same as self, use its view for a more targeted search
+        // This can be helpful if the method is called in a context where `self` is not the active player VC
+        if (immersiveViewController && [immersiveViewController respondsToSelector:@selector(view)] && immersiveViewController == self) {
+            searchView = [immersiveViewController view];
+        }
+
+        BH_EnumerateSubviewsRecursively(searchView, ^(UIView *currentView) {
+            if ([currentView isKindOfClass:[UILabel class]]) {
+                UILabel *label = (UILabel *)currentView;
+                // More specific check for timestamp format
+                if (label.text && [label.text containsString:@":"] && [label.text containsString:@"/"] && label.superview && [NSStringFromClass([label.superview class]) containsString:@"Immersive"]) {
+                    currentTimestampLabel = label;
+                    // No break here, take the last one found, or refine if multiple valid ones exist
+                }
+            }
+        });
+
+        if (currentTimestampLabel) {
+            // Style if not already styled
+            if (![objc_getAssociatedObject(currentTimestampLabel, "BHT_StyledTimestamp") boolValue]) {
+                currentTimestampLabel.font = [UIFont systemFontOfSize:14.0];
+                currentTimestampLabel.textColor = [UIColor whiteColor];
+                currentTimestampLabel.textAlignment = NSTextAlignmentCenter;
+                currentTimestampLabel.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5];
+
+                [currentTimestampLabel sizeToFit];
+                CGRect currentFrame = currentTimestampLabel.frame;
+                CGFloat horizontalPadding = 2.0;
+                CGFloat verticalPadding = 12.0;
+                CGRect newFrame = CGRectMake(
+                    currentFrame.origin.x - horizontalPadding / 2.0f,
+                    currentFrame.origin.y - verticalPadding / 2.0f,
+                    currentFrame.size.width + horizontalPadding,
+                    currentFrame.size.height + verticalPadding
+                );
+                if (newFrame.size.height < 22.0f) {
+                    CGFloat diff = 22.0f - newFrame.size.height;
+                    newFrame.size.height = 22.0f;
+                    newFrame.origin.y -= diff / 2.0f;
+                }
+                currentTimestampLabel.frame = newFrame;
+                currentTimestampLabel.layer.cornerRadius = currentTimestampLabel.frame.size.height / 2.0f;
+                currentTimestampLabel.layer.masksToBounds = YES;
+                objc_setAssociatedObject(currentTimestampLabel, "BHT_StyledTimestamp", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            }
+
+            // Update global reference
+            gVideoTimestampLabel = currentTimestampLabel;
+
+            // Set visibility based on showButtons
+            if (showButtons) {
+                gVideoTimestampLabel.alpha = 1.0;
+                gVideoTimestampLabel.hidden = NO;
+            } else {
+                gVideoTimestampLabel.hidden = YES;
+                gVideoTimestampLabel.alpha = 0.0;
+            }
+        } else {
+            // If no label found in the current context, ensure any old gVideoTimestampLabel is hidden
+            if (gVideoTimestampLabel && gVideoTimestampLabel.superview != searchView) { // Check if it belongs to a different view
+                 gVideoTimestampLabel.hidden = YES;
+                 gVideoTimestampLabel.alpha = 0.0;
+                 // Optionally nil out gVideoTimestampLabel if it's definitely stale
+                 // gVideoTimestampLabel = nil;
+            }
+        }
+    }
+}
+
+// Handle visibility when view appears
+- (void)viewDidAppear:(BOOL)animated {
+    %orig(animated);
+    
+    if ([BHTManager restoreVideoTimestamp]) {
+        gVideoTimestampLabel = nil; // Reset global reference
+
+        // Call the main logic assuming controls are initially hidden.
+        // This will find/style the label and set its initial visibility correctly.
+        // If controls are actually visible by default through some other mechanism,
+        // the system should call `showHideNavigationButtons` again with `YES`.
+        [self immersiveViewController:self showHideNavigationButtons:NO];
+    }
+}
+
+// Add a hook for player state changes
+- (void)playerViewController:(id)playerViewController playerStateDidChange:(NSInteger)state {
+    %orig;
+    
+    if ([BHTManager restoreVideoTimestamp] && gVideoTimestampLabel && gVideoTimestampLabel.superview) {
+        // Check if this state change should update visibility
+        BOOL shouldBeVisible = NO;
+        
+        // Try to determine if controls are visible based on player state or controls
+        if ([self respondsToSelector:@selector(playerControlsView)]) {
+            id playerControls = [self valueForKey:@"playerControlsView"];
+            if ([playerControls respondsToSelector:@selector(alpha)]) {
+                shouldBeVisible = [(UIView *)playerControls alpha] > 0.0;
+            }
+        }
+        
+        // Update visibility to match controls
+        if (shouldBeVisible && gVideoTimestampLabel.hidden) {
+            gVideoTimestampLabel.alpha = 1.0;
+            gVideoTimestampLabel.hidden = NO;
+        } else if (!shouldBeVisible && !gVideoTimestampLabel.hidden) {
+            gVideoTimestampLabel.hidden = YES;
+            gVideoTimestampLabel.alpha = 0.0;
+        }
+    }
+}
+
+%end
+
+// MARK: - Square Avatars (TFNAvatarImageView)
+
 @interface TFNAvatarImageView : UIView // Assuming it's a UIView subclass, adjust if necessary
 - (void)setStyle:(NSInteger)style;
 - (NSInteger)style;
@@ -3360,271 +3477,5 @@ static void BHT_forceRefreshAllWindowAppearances(void) { // Renamed and logic ad
 - (void)setTintColor:(UIColor *)tintColor {
     %orig(BHTCurrentAccentColor());
 }
-%end
-
-// MARK: - Immersive Player Timestamp Visibility Control
-
-%hook T1ImmersiveFullScreenViewController
-
-// Find and initialize timestamp as early as possible
-- (void)viewDidLoad {
-    %orig;
-    
-    if ([BHTManager restoreVideoTimestamp]) {
-        // Set up a timer to repeatedly check for the timestamp label during initial loading
-        // This helps with immediate discovery when a video is first loaded
-        static int attempts = 0;
-        attempts = 0; // Reset for each new video
-        
-        [NSTimer scheduledTimerWithTimeInterval:0.1 repeats:YES block:^(NSTimer *timer) {
-            if (attempts >= 20 || (gVideoTimestampLabel && gVideoTimestampLabel.superview)) {
-                [timer invalidate];
-                return;
-            }
-            
-            attempts++;
-            [self BHT_findAndStyleTimestampLabel];
-            
-            // Check if controls are visible
-            BOOL controlsVisible = [self BHT_areControlsVisible];
-            if (gVideoTimestampLabel) {
-                gVideoTimestampLabel.hidden = !controlsVisible;
-                gVideoTimestampLabel.alpha = controlsVisible ? 1.0 : 0.0;
-            }
-        }];
-    }
-}
-
-%new
-- (void)BHT_findAndStyleTimestampLabel {
-    if (![BHTManager restoreVideoTimestamp]) return;
-    
-    // Find all potential timestamp labels
-    NSMutableArray<UILabel *> *foundLabels = [NSMutableArray array];
-    BH_EnumerateSubviewsRecursively(self.view, ^(UIView *currentView) {
-        if ([currentView isKindOfClass:[UILabel class]]) {
-            UILabel *label = (UILabel *)currentView;
-            if (label.text && [label.text containsString:@":"] && [label.text containsString:@"/"]) {
-                [foundLabels addObject:label];
-            }
-        }
-    });
-    
-    // Find the best candidate
-    UILabel *bestCandidate = nil;
-    for (UILabel *label in foundLabels) {
-        if ([objc_getAssociatedObject(label, "BHT_StyledTimestamp") boolValue]) {
-            bestCandidate = label;
-            break;
-        }
-    }
-    
-    // If we didn't find a styled label, use the first one
-    if (!bestCandidate && foundLabels.count > 0) {
-        bestCandidate = foundLabels[0];
-    }
-    
-    // Style and save if we found a label
-    if (bestCandidate) {
-        if (![objc_getAssociatedObject(bestCandidate, "BHT_StyledTimestamp") boolValue]) {
-            // Style the label
-            bestCandidate.font = [UIFont systemFontOfSize:14.0];
-            bestCandidate.textColor = [UIColor whiteColor];
-            bestCandidate.textAlignment = NSTextAlignmentCenter;
-            bestCandidate.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5];
-            
-            // Calculate and apply frame with padding
-            [bestCandidate sizeToFit];
-            CGRect currentFrame = bestCandidate.frame;
-            CGFloat horizontalPadding = 2.0;
-            CGFloat verticalPadding = 12.0;
-            
-            CGRect newFrame = CGRectMake(
-                currentFrame.origin.x - horizontalPadding / 2.0f,
-                currentFrame.origin.y - verticalPadding / 2.0f,
-                currentFrame.size.width + horizontalPadding,
-                currentFrame.size.height + verticalPadding
-            );
-            
-            if (newFrame.size.height < 22.0f) {
-                CGFloat diff = 22.0f - newFrame.size.height;
-                newFrame.size.height = 22.0f;
-                newFrame.origin.y -= diff / 2.0f;
-            }
-            
-            bestCandidate.frame = newFrame;
-            bestCandidate.layer.cornerRadius = bestCandidate.frame.size.height / 2.0f;
-            bestCandidate.layer.masksToBounds = YES;
-            
-            // Mark as styled
-            objc_setAssociatedObject(bestCandidate, "BHT_StyledTimestamp", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        }
-        
-        // Save our reference
-        gVideoTimestampLabel = bestCandidate;
-    }
-}
-
-%new
-- (BOOL)BHT_areControlsVisible {
-    if ([self respondsToSelector:@selector(playerControlsView)]) {
-        id playerControls = [self valueForKey:@"playerControlsView"];
-        if ([playerControls respondsToSelector:@selector(alpha)]) {
-            return [(UIView *)playerControls alpha] > 0.0;
-        }
-    }
-    return NO;
-}
-
-// Original method that handles manual taps on the video
-- (void)immersiveViewController:(id)immersiveViewController showHideNavigationButtons:(_Bool)showButtons {
-    %orig(immersiveViewController, showButtons);
-
-    if ([BHTManager restoreVideoTimestamp]) {
-        // Always check for timestamp label when controls visibility changes
-        [self BHT_findAndStyleTimestampLabel];
-        
-        if (gVideoTimestampLabel && gVideoTimestampLabel.superview) {
-            // Force-make visible again if we're showing controls, regardless of previous state
-            if (showButtons) {
-                // First set alpha to 1 then unhide - this prevents flickering when becoming visible
-                gVideoTimestampLabel.alpha = 1.0;
-                gVideoTimestampLabel.hidden = NO;
-            } else {
-                // When hiding, just hide immediately without animation
-                gVideoTimestampLabel.hidden = YES;
-                gVideoTimestampLabel.alpha = 0.0;
-            }
-        }
-    }
-}
-
-// Handle view appearance
-- (void)viewDidAppear:(BOOL)animated {
-    %orig(animated);
-    
-    if ([BHTManager restoreVideoTimestamp]) {
-        // Find and style the timestamp
-        [self BHT_findAndStyleTimestampLabel];
-        
-        // Set initial visibility
-        BOOL controlsVisible = [self BHT_areControlsVisible];
-        if (gVideoTimestampLabel && gVideoTimestampLabel.superview) {
-            if (controlsVisible) {
-                gVideoTimestampLabel.alpha = 1.0;
-                gVideoTimestampLabel.hidden = NO;
-            } else {
-                gVideoTimestampLabel.hidden = YES;
-                gVideoTimestampLabel.alpha = 0.0;
-            }
-        }
-    }
-}
-
-// Handle player state changes
-- (void)playerViewController:(id)playerViewController playerStateDidChange:(NSInteger)state {
-    %orig;
-    
-    if ([BHTManager restoreVideoTimestamp]) {
-        // Find and style the timestamp if we don't have one
-        if (!gVideoTimestampLabel || !gVideoTimestampLabel.superview) {
-            [self BHT_findAndStyleTimestampLabel];
-        }
-        
-        if (gVideoTimestampLabel && gVideoTimestampLabel.superview) {
-            // Update visibility based on control state
-            BOOL shouldBeVisible = [self BHT_areControlsVisible];
-            
-            if (shouldBeVisible && gVideoTimestampLabel.hidden) {
-                gVideoTimestampLabel.alpha = 1.0;
-                gVideoTimestampLabel.hidden = NO;
-            } else if (!shouldBeVisible && !gVideoTimestampLabel.hidden) {
-                gVideoTimestampLabel.hidden = YES;
-                gVideoTimestampLabel.alpha = 0.0;
-            }
-        }
-    }
-}
-
-%end
-
-// Hook for the TikTok-style swipe controller to handle swipe navigation
-%hook T1ImmersiveExplorePageViewController
-
-// Called when user swipes to a new page
-- (void)pageViewController:(UIPageViewController *)pageViewController didFinishAnimating:(BOOL)finished previousViewControllers:(NSArray<UIViewController *> *)previousViewControllers transitionCompleted:(BOOL)completed {
-    %orig;
-    
-    if ([BHTManager restoreVideoTimestamp] && completed) {
-        // Reset the global reference since we've navigated to a new video
-        gVideoTimestampLabel = nil;
-        
-        // Find the current immersive view controller
-        UIViewController *currentVC = pageViewController.viewControllers.firstObject;
-        if ([currentVC isKindOfClass:%c(T1ImmersiveFullScreenViewController)]) {
-            T1ImmersiveFullScreenViewController *immersiveVC = (T1ImmersiveFullScreenViewController *)currentVC;
-            
-            // Search for the timestamp in the new controller
-            // Use the same helper to find and style it
-            [immersiveVC BHT_findAndStyleTimestampLabel];
-            
-            // Set visibility based on current control state
-            BOOL controlsVisible = [immersiveVC BHT_areControlsVisible];
-            if (gVideoTimestampLabel && gVideoTimestampLabel.superview) {
-                if (controlsVisible) {
-                    gVideoTimestampLabel.alpha = 1.0;
-                    gVideoTimestampLabel.hidden = NO;
-                } else {
-                    gVideoTimestampLabel.hidden = YES;
-                    gVideoTimestampLabel.alpha = 0.0;
-                }
-            }
-        }
-    }
-}
-
-%end
-
-// Hook the video card view for TikTok-style feed
-%hook T1ImmersiveExploreCardView
-
-// Handle double-taps or other interactions
-- (void)viewDidAppear:(BOOL)animated {
-    %orig;
-    
-    if ([BHTManager restoreVideoTimestamp]) {
-        // Reset timestamp when a new card appears
-        gVideoTimestampLabel = nil;
-        
-        // Find a parent immersive controller
-        UIViewController *immersiveVC = nil;
-        UIResponder *responder = (UIResponder *)self;
-        while ((responder = [responder nextResponder])) {
-            if ([responder isKindOfClass:%c(T1ImmersiveFullScreenViewController)]) {
-                immersiveVC = (UIViewController *)responder;
-                break;
-            }
-        }
-        
-        // If we found an immersive controller, find and style the timestamp
-        if (immersiveVC && [immersiveVC isKindOfClass:%c(T1ImmersiveFullScreenViewController)]) {
-            T1ImmersiveFullScreenViewController *fullScreenVC = (T1ImmersiveFullScreenViewController *)immersiveVC;
-            [fullScreenVC BHT_findAndStyleTimestampLabel];
-            
-            // Set visibility based on current control state
-            BOOL controlsVisible = [fullScreenVC BHT_areControlsVisible];
-            if (gVideoTimestampLabel && gVideoTimestampLabel.superview) {
-                if (controlsVisible) {
-                    gVideoTimestampLabel.alpha = 1.0;
-                    gVideoTimestampLabel.hidden = NO;
-                } else {
-                    gVideoTimestampLabel.hidden = YES;
-                    gVideoTimestampLabel.alpha = 0.0;
-                }
-            }
-        }
-    }
-}
-
 %end
 
