@@ -146,8 +146,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             }
             BHT_forceRefreshAllWindowAppearances(); // Force refresh all UI elements
             BHT_UpdateAllTabBarIcons();
-            // Add a delayed refresh to catch late-loading UI elements
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            // Add a delayed refresh to catch late-loading UI elements with shorter delay
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
                 if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
                     [taeSettings setPrimaryColorOption:selectedOption];
                 }
@@ -159,10 +159,10 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                     [taeSettings performSelector:@selector(applyCurrentColorPalette)];
                 }
                 BHT_forceRefreshAllWindowAppearances();
-                NSLog(@"[BHTwitter ThemeRefresh] Delayed theme refresh applied after 1 second");
+                NSLog(@"[BHTwitter ThemeRefresh] Delayed theme refresh applied after 0.3 seconds");
             });
-            // Add another delayed refresh for even later UI initialization
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            // Add another delayed refresh for even later UI initialization with shorter delay
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.8 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
                 if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
                     [taeSettings setPrimaryColorOption:selectedOption];
                 }
@@ -174,7 +174,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                     [taeSettings performSelector:@selector(applyCurrentColorPalette)];
                 }
                 BHT_forceRefreshAllWindowAppearances();
-                NSLog(@"[BHTwitter ThemeRefresh] Delayed theme refresh applied after 3 seconds");
+                NSLog(@"[BHTwitter ThemeRefresh] Delayed theme refresh applied after 0.8 seconds");
             });
         });
     }
@@ -211,21 +211,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         BHT_forceRefreshAllWindowAppearances(); // Force refresh all UI elements
 
         BHT_UpdateAllTabBarIcons();
-        // Add a delayed refresh to catch any late-loading UI elements on resume
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
-                [taeSettings setPrimaryColorOption:selectedOption];
-            }
-            BH_changeTwitterColor(selectedOption);
-            if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
-                [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
-            }
-            if ([taeSettings respondsToSelector:@selector(applyCurrentColorPalette)]) {
-                [taeSettings performSelector:@selector(applyCurrentColorPalette)];
-            }
-            BHT_forceRefreshAllWindowAppearances();
-            NSLog(@"[BHTwitter ThemeRefresh] Delayed theme refresh applied after 1 second on resume");
-        });
     }
 
     if ([BHTManager Padlock]) {
