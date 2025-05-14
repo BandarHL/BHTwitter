@@ -2,19 +2,33 @@
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
 #import "SAMKeychain/AuthViewController.h"
-#import <objc/message.h>
+#import <objc/message.h> // For objc_msgSend
 #import "Colours/Colours.h"
 #import "BHTManager.h"
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
 
+// Forward declare T1ColorSettings and its private method to satisfy the compiler
+@interface T1ColorSettings : NSObject
++ (void)_t1_applyPrimaryColorOption;
++ (void)_t1_updateOverrideUserInterfaceStyle; // Add this line
+@end
+
+// Forward declaration for the immersive view controller
+@interface T1ImmersiveFullScreenViewController : UIViewController // Assuming base class, adjust if known
+- (void)immersiveViewController:(id)immersiveViewController showHideNavigationButtons:(_Bool)showButtons;
+@end
+
+// Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
 static void BHT_applyThemeToWindow(UIWindow *window);
 static void BHT_ensureTheming(void);
 static void BHT_forceRefreshAllWindowAppearances(void); // Renamed
 
+// Static reference to the video timestamp label
 static __weak UILabel *gVideoTimestampLabel = nil;
 
+// Static helper function for recursive view traversal - DEFINED AT THE TOP
 static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
     if (!view || !block) return;
     block(view);
@@ -22,6 +36,8 @@ static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *
         BH_EnumerateSubviewsRecursively(subview, block);
     }
 }
+
+// Add this before the hooks, after the imports
 
 UIColor *BHTCurrentAccentColor(void) {
     Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
@@ -113,7 +129,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             id taeSettings = [%c(TAEColorSettings) sharedSettings];
             if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
                 [taeSettings setPrimaryColorOption:selectedOption];
-                NSLog(@"[BHTwitter ThemeForce] Set primaryColorOption to %ld in TAEColorSettings", (long)selectedOption);
             }
             // Also update user defaults to ensure consistency
             [[NSUserDefaults standardUserDefaults] setObject:@(selectedOption) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
@@ -158,8 +173,24 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                     [taeSettings performSelector:@selector(applyCurrentColorPalette)];
                 }
                 BHT_forceRefreshAllWindowAppearances();
-                NSLog(@"[BHTwitter ThemeRefresh] Delayed theme refresh applied after 0.3 seconds");
             });
+<<<<<<< HEAD
+            // Add another delayed refresh for even later UI initialization with shorter delay
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.8 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
+                    [taeSettings setPrimaryColorOption:selectedOption];
+                }
+                BH_changeTwitterColor(selectedOption);
+                if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
+                    [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
+                }
+                if ([taeSettings respondsToSelector:@selector(applyCurrentColorPalette)]) {
+                    [taeSettings performSelector:@selector(applyCurrentColorPalette)];
+                }
+                BHT_forceRefreshAllWindowAppearances();
+            });
+=======
+>>>>>>> 8b1f349bae118885316185fa11fcae9d35b8c03f
         });
     }
     
@@ -168,17 +199,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 - (void)applicationDidBecomeActive:(id)arg1 {
     %orig;
-    // Re-apply theme on becoming active with reinforced consistency
+    // Re-apply theme on becoming active without setting primary color option
     if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger selectedOption = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
-        // Directly set the primary color option in TAEColorSettings to force Twitter's accent system
-        id taeSettings = [%c(TAEColorSettings) sharedSettings];
-        if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
-            [taeSettings setPrimaryColorOption:selectedOption];
-            NSLog(@"[BHTwitter ThemeForce] Set primaryColorOption to %ld in TAEColorSettings on resume", (long)selectedOption);
-        }
-        // Also update user defaults to ensure consistency
-        [[NSUserDefaults standardUserDefaults] setObject:@(selectedOption) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
         BH_changeTwitterColor(selectedOption);
 
         if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
@@ -186,10 +209,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         }
         if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_updateOverrideUserInterfaceStyle)]) {
             [%c(T1ColorSettings) _t1_updateOverrideUserInterfaceStyle];
-        }
-        // Additional call to ensure TAEColorSettings applies the theme
-        if ([taeSettings respondsToSelector:@selector(applyCurrentColorPalette)]) {
-            [taeSettings performSelector:@selector(applyCurrentColorPalette)];
         }
 
         BHT_forceRefreshAllWindowAppearances(); // Force refresh all UI elements
@@ -2804,23 +2823,18 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
     // Check if this label is the one we want to modify (e.g., video timestamp)
     if ([BHTManager restoreVideoTimestamp] && self.text && [self.text containsString:@":"] && [self.text containsString:@"/"]) {
-        // Log the text and view hierarchy to debug the context
-        NSLog(@"[BHTwitter TimestampDebug] Potential timestamp detected: '%@'", self.text);
+        // Apply styling if in the correct context (ImmersiveCardView)
         UIView *parentView = self.superview;
-        NSMutableArray *hierarchy = [NSMutableArray array];
         BOOL isInImmersiveCardView = NO;
         while (parentView) {
             NSString *className = NSStringFromClass([parentView class]);
-            [hierarchy addObject:className];
             if ([className isEqualToString:@"T1TwitterSwift.ImmersiveCardView"]) {
                 isInImmersiveCardView = YES;
+                break;
             }
-            NSLog(@"[BHTwitter TimestampDebug] Parent view: '%@'", className);
             parentView = parentView.superview;
         }
-        NSLog(@"[BHTwitter TimestampDebug] Full hierarchy: %@", hierarchy);
 
-        // Apply styling if in the correct context (ImmersiveCardView)
         if (isInImmersiveCardView) {
             self.font = [UIFont systemFontOfSize:14.0];
             self.textColor = [UIColor whiteColor]; // White text for contrast
@@ -2857,9 +2871,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             self.layer.cornerRadius = self.frame.size.height / 2.0f;
             self.layer.masksToBounds = YES;
             
-            // Log the calculated width after styling
-            NSLog(@"[BHTwitter TimestampLabel setText] Text: '%@', Calculated Width: %f", self.text, self.frame.size.width);
-
             // Set initial visibility to match the player's UI state
             // Do not force alpha to 1.0; let T1ImmersiveFullScreenViewController manage it
             if (self.alpha != 1.0) {
@@ -2911,9 +2922,19 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         
         if (timestampLabelToUpdate) {
             dispatch_async(dispatch_get_main_queue(), ^{
-                // Do not manipulate alpha or hidden properties to avoid flicker
-                // Rely entirely on the view's native visibility handling
-                NSLog(@"[BHTwitter TimestampLabel Visibility] Text: '%@', Current Width: %f, ShowButtons: %d, Current Alpha: %f, Hidden: %d", timestampLabelToUpdate.text, timestampLabelToUpdate.frame.size.width, showButtons, timestampLabelToUpdate.alpha, timestampLabelToUpdate.hidden);
+                // Set visibility without custom animation to avoid flicker
+                // Use a minimal delay on hide to better sync with native fade behavior
+                CGFloat targetAlpha = showButtons ? 1.0 : 0.0;
+                if (showButtons) {
+                    timestampLabelToUpdate.alpha = targetAlpha;
+                    timestampLabelToUpdate.hidden = !showButtons;
+                } else {
+                    // Immediately set alpha to 0 to reduce flicker, then hide after a tiny delay
+                    timestampLabelToUpdate.alpha = 0.0;
+                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.05 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                        timestampLabelToUpdate.hidden = !showButtons;
+                    });
+                }
             });
         }
     }
