@@ -3433,6 +3433,8 @@ static void BHT_forceRefreshAllWindowAppearances(void) { // Renamed and logic ad
 %hook TFNBarButtonItemButtonV2
 - (void)didMoveToWindow {
     %orig;
-    self.tintColor = BHTCurrentAccentColor();
+    if ([self respondsToSelector:@selector(setTintColor:)]) {
+        [self setTintColor:BHTCurrentAccentColor()];
+    }
 }
 %end
