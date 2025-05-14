@@ -20,7 +20,6 @@
 // Declare other methods if their signatures are needed for direct calls or performSelector
 - (void)playerViewController:(id)playerViewController playerStateDidChange:(NSInteger)state; // Assuming this method exists
 @end
-@end
 
 // Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
