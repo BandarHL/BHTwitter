@@ -55,7 +55,7 @@
     NSString *customColorLabel = [[BHTBundle sharedBundle] localizedStringForKey:@"THEME_OPTION_CUSTOM"];
     UIColor *customColorPlaceholder = [UIColor colorWithWhite:0.8 alpha:1.0]; // Placeholder color
     [self.colors addObject:[[BHColorThemeItem alloc] initWithColorID:CUSTOM_THEME_ID name:customColorLabel color:customColorPlaceholder]];
-
+    
     self.navigationController.navigationBar.prefersLargeTitles = NO;
     self.view.backgroundColor = [UIColor systemBackgroundColor];
     [self.view addSubview:self.headerLabel];
@@ -100,7 +100,7 @@
                     cell.colorLabel.backgroundColor = customColor;
                 }
             }
-            cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
+                    cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
         } else {
             cell.colorLabel.backgroundColor = currCellItem.color;
         }
@@ -116,7 +116,7 @@
 
 - (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath {
     BHColorThemeItem *colorItem = self.colors[indexPath.row];
-
+    
     if (colorItem.colorID == CUSTOM_THEME_ID) {
         UIColorPickerViewController *colorPicker = [[UIColorPickerViewController alloc] init];
         colorPicker.delegate = self;
@@ -143,7 +143,7 @@
 - (void)colorPickerViewController:(UIColorPickerViewController *)viewController didSelectColor:(UIColor *)color continuously:(BOOL)continuously API_AVAILABLE(ios(14.0)){
     NSLog(@"[BHTwitterColorPicker] Delegate method didSelectColor:continuously: called. Continuously: %d", continuously);
     if (!continuously) {
-        UIColor *selectedColor = viewController.selectedColor; // Or simply use the 'color' parameter
+        UIColor *selectedColor = color; // Use the 'color' parameter directly
         NSString *hexString = [selectedColor hexString];
         NSLog(@"[BHTwitterColorPicker] didSelectColor (final) - Selected Color: %@, Hex: %@", selectedColor, hexString);
 

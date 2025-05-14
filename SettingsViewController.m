@@ -106,7 +106,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         } else if ([defaults objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
             // No BHTwitter theme, or custom was invalid, try Twitter's own key
             colorOptionToUse = [defaults integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-        } else {
+    } else {
             // Absolute fallback to Twitter's default (usually option 1 for Blue)
             colorOptionToUse = 1; 
         }
@@ -394,8 +394,8 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         
         PSSpecifier *tabBarTheming = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CLASSIC_TAB_BAR_SETTINGS_TITLE"]
                                                         detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CLASSIC_TAB_BAR_SETTINGS_DETAIL"]
-                                                                key:@"tab_bar_theming"
-                                                       defaultValue:true
+                                                                key:@"tab_bar_theming" 
+                                                       defaultValue:true 
                                                        changeAction:@selector(tabBarThemingAction:)];
         
         PSSpecifier *hideViewCount = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE"] key:@"hide_view_count" defaultValue:false changeAction:nil];
@@ -891,26 +891,26 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_TITLE"]
                                                                    message:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC"]
-                                                            preferredStyle:UIAlertControllerStyleAlert];
+                                                                preferredStyle:UIAlertControllerStyleAlert];
 
     [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_NOW_BUTTON_TITLE"]
                                               style:UIAlertActionStyleDestructive
                                             handler:^(UIAlertAction * _Nonnull action) {
         [[NSUserDefaults standardUserDefaults] setBool:newState forKey:key];
-        [[NSUserDefaults standardUserDefaults] synchronize];
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            exit(0);
-        });
-    }]];
+            [[NSUserDefaults standardUserDefaults] synchronize];
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                exit(0);
+            });
+        }]];
 
     [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"]
                                               style:UIAlertActionStyleCancel
                                             handler:^(UIAlertAction * _Nonnull action) {
         // Revert the switch to its previous state if canceled
         [sender setOn:previousState animated:YES];
-    }]];
+        }]];
 
-    [self presentViewController:alert animated:YES completion:nil];
+        [self presentViewController:alert animated:YES completion:nil];
 }
 
 - (void)squareAvatarsAction:(UISwitch *)sender {
