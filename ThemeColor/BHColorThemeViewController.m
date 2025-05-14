@@ -140,17 +140,40 @@
 
 //MARK: - UIColorPickerViewControllerDelegate
 
-- (void)colorPickerViewControllerDidFinishPicking:(UIColorPickerViewController *)viewController API_AVAILABLE(ios(14.0)){
-    UIColor *selectedColor = viewController.selectedColor;
-    NSString *hexString = [selectedColor hexString];
+- (void)colorPickerViewController:(UIColorPickerViewController *)viewController didSelectColor:(UIColor *)color continuously:(BOOL)continuously API_AVAILABLE(ios(14.0)){
+    NSLog(@"[BHTwitterColorPicker] Delegate method didSelectColor:continuously: called. Continuously: %d", continuously);
+    if (!continuously) {
+        UIColor *selectedColor = viewController.selectedColor; // Or simply use the 'color' parameter
+        NSString *hexString = [selectedColor hexString];
+        NSLog(@"[BHTwitterColorPicker] didSelectColor (final) - Selected Color: %@, Hex: %@", selectedColor, hexString);
 
-    [[NSUserDefaults standardUserDefaults] setObject:hexString forKey:CUSTOM_THEME_HEX_KEY];
-    [[NSUserDefaults standardUserDefaults] setInteger:CUSTOM_THEME_ID forKey:@"bh_color_theme_selectedColor"];
-    [[NSUserDefaults standardUserDefaults] synchronize];
-    [[NSNotificationCenter defaultCenter] postNotificationName:BHTColorThemeDidChangeNotificationName object:nil];
-    
+        if (hexString && hexString.length > 0) { // Ensure we have a valid hex string
+            [[NSUserDefaults standardUserDefaults] setObject:hexString forKey:CUSTOM_THEME_HEX_KEY];
+            [[NSUserDefaults standardUserDefaults] setInteger:CUSTOM_THEME_ID forKey:@"bh_color_theme_selectedColor"];
+            [[NSUserDefaults standardUserDefaults] synchronize];
+            [[NSNotificationCenter defaultCenter] postNotificationName:BHTColorThemeDidChangeNotificationName object:nil];
+            
+            // Reload data and trigger theme update
+            // This might happen while the picker is still visible, or as it dismisses itself.
+            [self.colorCollectionView reloadData];
+            [self triggerFullThemeUpdate];
+        } else {
+            NSLog(@"[BHTwitterColorPicker] didSelectColor (final) - Invalid hexString, not updating theme.");
+        }
+    }
+}
+
+- (void)colorPickerViewControllerDidFinishPicking:(UIColorPickerViewController *)viewController API_AVAILABLE(ios(14.0)){
+    NSLog(@"[BHTwitterColorPicker] Delegate method colorPickerViewControllerDidFinishPicking called.");
+    // This method might still be called when the picker is dismissed (e.g., by dragging down the sheet).
+    // We don't need to re-process the color here if didSelectColor:continuously: already handled it.
+    // The main purpose here is to ensure dismissal and a final UI refresh if needed.
+
+    // It's possible the color was already processed by didSelectColor:continuously:
+    // However, we can ensure a reload and theme update happens on dismissal too,
+    // just in case.
     [viewController dismissViewControllerAnimated:YES completion:^{
-        // Reload data and trigger theme update AFTER the picker is dismissed
+        NSLog(@"[BHTwitterColorPicker] Picker dismissed from DidFinishPicking. Reloading data.");
         [self.colorCollectionView reloadData];
         [self triggerFullThemeUpdate];
     }];
