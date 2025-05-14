@@ -71,10 +71,10 @@
 
 "DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE" = "No sensitive content warnings";
 
-"HIDE_GROK_ANALYZE_BUTTON_TITLE" = "Hide Grok Analyze Button";
+"HIDE_GROK_ANALYZE_BUTTON_TITLE" = "Hide grok analyze buttons";
 "HIDE_GROK_ANALYZE_BUTTON_DETAIL_TITLE" = "Hides the Grok Analyze button in tweet detail and on the Timeline.";
 
-"SQUARE_AVATARS_TITLE" = "Square Avatars";
+"SQUARE_AVATARS_TITLE" = "Square avatars";
 "SQUARE_AVATARS_DETAIL_TITLE" = "Enables square avatars in the Twitter app for everyone. Requires restart.";
 
 
@@ -177,10 +177,10 @@
 "STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "Don't hide the tab bar when you scroll.";
 
 "DM_AVATARS_TITLE" = "Restore DM Avatars";
-"DM_AVATARS_DETAIL_TITLE" = "Restores the avatars for every chat. not just group chats.";
+"DM_AVATARS_DETAIL_TITLE" = "Show avatars for every chat.";
 
 "CLASSIC_TAB_BAR_SETTINGS_TITLE" = "Classic Tab Icons";
-"CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "Applies accent color to the current selected tab like old Twitter. Restart required.";
+"CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "Applies accent color to the currently selected tab. Restart required.";
 
 "DISABLE_RTL_OPTION_TITLE" = "Use left-to-right layout";
 "DISABLE_RTL_OPTION_DETAIL_TITLE" = "Force a LTR layout, even for RTL languages.";
@@ -209,7 +209,7 @@
 "FLEX_OPTION_DETAIL_TITLE" = "Use FLEX to debug Twitter.";
 
 "CLEAR_SOURCE_LABEL_CACHE_TITLE" = "Clear source label cache";
-"CLEAR_SOURCE_LABEL_CACHE_DETAIL_TITLE" = "Forces refetching of source label cache for troubleshooting.";
+"CLEAR_SOURCE_LABEL_CACHE_DETAIL_TITLE" = "Forces refetching of source label cache.";
 
 
 /*Developers*/
@@ -292,7 +292,7 @@
 "RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_OFF" = "To disable and restore default icons, please restart Twitter.";
 "CLASSIC_TAB_BAR_DISABLED_NOTIFICATION_NAME" = "BHTClassicTabBarSettingChangedNotification";
 
-"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC" = "Changing this requires restarting Twitter.";
+"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC" = "Changing the Icons requires restarting Twitter.";
 
 /* Square Avatars */
 "RESTART_REQUIRED_ALERT_MESSAGE_SQUARE_AVATARS" = "Changing the style requires restarting the app.";
