@@ -611,3 +611,7 @@ static UIViewController * _Nonnull topMostController() {
 @interface T1ConversationFooterTextView : TFNAttributedTextView
 @property(nonatomic, readonly) id viewModel;
 @end
+
+@interface TFNBarButtonItemButtonV2 : UIView
+@property (nonatomic, strong) UIColor *tintColor;
+@end

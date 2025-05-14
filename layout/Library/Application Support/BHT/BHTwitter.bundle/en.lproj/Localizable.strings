@@ -13,6 +13,9 @@
 "OK_BUTTON_TITLE" = "OK";
 "CANCEL_BUTTON_TITLE" = "Cancel";
 
+/* Restart Now Button */
+"RESTART_NOW_BUTTON_TITLE" = "Restart Now";
+
 
 /*Main menu start*/
 
@@ -20,10 +23,10 @@
 "MAIN_SECTION_HEADER_TITLE" = "General";
 
 "VOICE_OPTION_TITLE" = "Voice Tweets";
-"VOICE_OPTION_DETAIL_TITLE" = "Turn Voice Tweets on or off (iOS only).";
+"VOICE_OPTION_DETAIL_TITLE" = "Turn Voice Tweets on or off.";
 
 "UPLOAD_CUSTOM_VOICE_OPTION_TITLE" = "Voice Tweets";
-"UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE" = "Turn Voice Tweets on or off (iOS only).";
+"UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE" = "Turn Voice Tweets on or off.";
 
 "HIDE_TOPICS_OPTION_TITLE" = "No topic Tweets";
 "HIDE_TOPICS_OPTION_DETAIL_TITLE" = "Remove Tweets tied to suggested topics.";
@@ -46,13 +49,13 @@
 "TWEETS_SECTION_HEADER_TITLE" = "Tweets";
 
 "ORIG_TWEET_STYLE_OPTION_TITLE" = "Disable the compact Tweet style";
-"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "Show likes, retweets, and replies on a separate line instead of inline with their buttons.";
+"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "Show likes, retweets, and replies in a separate line instead of inline with their buttons.";
 
 "TWEET_TO_IMAGE_OPTION_TITLE" = "Save Tweet as image";
 "TWEET_TO_IMAGE_OPTION_DETAIL_TITLE" = "Long-press share to export Tweets as images.";
 
-"ENABLE_TWEET_LABELS_OPTION_TITLE" = "Show Tweet source labels (beta)";
-"ENABLE_TWEET_LABELS_OPTION_DETAIL_TITLE" = "Shows what client the Tweet was made from (by @nyaathea).";
+"ENABLE_TWEET_LABELS_OPTION_TITLE" = "Show Tweet source labels";
+"ENABLE_TWEET_LABELS_OPTION_DETAIL_TITLE" = "Shows what client the Tweet was made from. (e.g Twitter for iPhone)";
 
 "LIKE_CONFIRM_OPTION_TITLE" = "Confirm likes";
 "LIKE_CONFIRM_OPTION_DETAIL_TITLE" = "Ask before liking a Tweet.";
@@ -67,6 +70,12 @@
 "HIDE_MARKBOOK_BUTTON_OPTION_DETAIL_TITLE" = "Remove the bookmark button from Tweets.";
 
 "DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE" = "No sensitive content warnings";
+
+"HIDE_GROK_ANALYZE_BUTTON_TITLE" = "Hide grok analyze buttons";
+"HIDE_GROK_ANALYZE_BUTTON_DETAIL_TITLE" = "Hides the Grok Analyze button in tweet detail and on the Timeline.";
+
+"SQUARE_AVATARS_TITLE" = "Square avatars";
+"SQUARE_AVATARS_DETAIL_TITLE" = "Enables square avatars in the Twitter app for everyone. Requires restart.";
 
 
 /*Profiles*/
@@ -84,14 +93,20 @@
 "HIDE_WHO_FOLLOW_OPTION" = "No 'Who to follow'";
 "HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE" = "Remove follow suggestions from profiles.";
 
-"DISABLE_MEDIA_TAB_OPTION_TITLE" = "No separate Media tabs";
-"DISABLE_MEDIA_TAB_OPTION_DETAIL_TITLE" = "Merges the Photos and Videos tabs into one.";
+"DISABLE_MEDIA_TAB_OPTION_TITLE" = "Unseperate the Media tabs";
+"DISABLE_MEDIA_TAB_OPTION_DETAIL_TITLE" = "Merges the Photos and Videos tabs like how it was before.";
 
 "DISABLE_ARTICLES_OPTION_TITLE" = "No Articles tab";
 "DISABLE_ARTICLES_OPTION_DETAIL_TITLE" = "Hide the Articles tab in profiles.";
 
 "DISABLE_HIGHLIGHTS_OPTION_TITLE" = "No Highlights tab";
 "DISABLE_HIGHLIGHTS_OPTION_DETAIL_TITLE" = "Hide the Highlights tab in profiles.";
+
+"HIDE_FOLLOW_BUTTON_TITLE" = "Hide Follow Button";
+"HIDE_FOLLOW_BUTTON_DETAIL_TITLE" = "Hides the Follow button in tweet detail view.";
+
+"RESTORE_FOLLOW_BUTTON_TITLE" = "Restore Follow Button";
+"RESTORE_FOLLOW_BUTTON_DETAIL_TITLE" = "Restores the normal Follow button instead of Subscribe on profiles.";
 
 
 /*Search*/
@@ -114,7 +129,8 @@
 
 "FORCE_TWEET_FULL_FRAME_TITLE" = "Large images";
 
-"DISABLE_IMMERSIVE_PLAYER_TITLE" = "Turn off immersive player";
+"RESTORE_VIDEO_TIMESTAMP_TITLE" = "Restore video timestamp";
+"RESTORE_VIDEO_TIMESTAMP_DETAIL_TITLE" = "Shows video timestamp on the Immersive Player.";
 
 
 /*Twitter Blue*/
@@ -158,7 +174,13 @@
 "HIDE_SPACE_OPTION_TITLE" = "Hide the Spaces bar";
 
 "STOP_HIDING_TAB_BAR_TITLE" = "Keep the tab bar visible";
-"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "Don't hide the tab bar when you scroll (can cause issues).";
+"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "Don't hide the tab bar when you scroll.";
+
+"DM_AVATARS_TITLE" = "Restore DM Avatars";
+"DM_AVATARS_DETAIL_TITLE" = "Show avatars for every chat.";
+
+"CLASSIC_TAB_BAR_SETTINGS_TITLE" = "Classic Tab Icons";
+"CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "Applies accent color to the currently selected tab. Restart required.";
 
 "DISABLE_RTL_OPTION_TITLE" = "Use left-to-right layout";
 "DISABLE_RTL_OPTION_DETAIL_TITLE" = "Force a LTR layout, even for RTL languages.";
@@ -185,6 +207,9 @@
 
 "FLEX_OPTION_TITLE" = "FLEX debug mode";
 "FLEX_OPTION_DETAIL_TITLE" = "Use FLEX to debug Twitter.";
+
+"CLEAR_SOURCE_LABEL_CACHE_TITLE" = "Clear source label cache";
+"CLEAR_SOURCE_LABEL_CACHE_DETAIL_TITLE" = "Forces refetching of source label cache.";
 
 
 /*Developers*/
@@ -247,7 +272,6 @@
 
 
 
-
 /*Deprecated*/
 "TRUSTED_FRIENSS_OPTION_TITLE" = "Twitter Circles";
 
@@ -262,3 +286,13 @@
 
 "VIDEO_ZOOM_OPTION_TITLE" = "Zoom on videos";
 "VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "Double-tap to zoom in and out.";
+
+"RESTART_REQUIRED_ALERT_TITLE" = "Restart Required";
+"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_ON" = "You will need to restart Twitter for this to take effect.";
+"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_OFF" = "To disable and restore default icons, please restart Twitter.";
+"CLASSIC_TAB_BAR_DISABLED_NOTIFICATION_NAME" = "BHTClassicTabBarSettingChangedNotification";
+
+"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC" = "Changing the Icons requires restarting Twitter.";
+
+/* Square Avatars */
+"RESTART_REQUIRED_ALERT_MESSAGE_SQUARE_AVATARS" = "Changing the style requires restarting the app.";

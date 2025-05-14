@@ -2,10 +2,40 @@
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
 #import "SAMKeychain/AuthViewController.h"
+#import <objc/message.h> // For objc_msgSend
 #import "Colours/Colours.h"
 #import "BHTManager.h"
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
+
+// Forward declare T1ColorSettings and its private method to satisfy the compiler
+@interface T1ColorSettings : NSObject
++ (void)_t1_applyPrimaryColorOption;
++ (void)_t1_updateOverrideUserInterfaceStyle; // Add this line
+@end
+
+// Forward declaration for the immersive view controller
+@interface T1ImmersiveFullScreenViewController : UIViewController // Assuming base class, adjust if known
+- (void)immersiveViewController:(id)immersiveViewController showHideNavigationButtons:(_Bool)showButtons;
+@end
+
+// Forward declarations
+static void BHT_UpdateAllTabBarIcons(void);
+static void BHT_applyThemeToWindow(UIWindow *window);
+static void BHT_ensureTheming(void);
+static void BHT_forceRefreshAllWindowAppearances(void); // Renamed
+
+// Static reference to the video timestamp label
+static __weak UILabel *gVideoTimestampLabel = nil;
+
+// Static helper function for recursive view traversal - DEFINED AT THE TOP
+static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
+    if (!view || !block) return;
+    block(view);
+    for (UIView *subview in view.subviews) {
+        BH_EnumerateSubviewsRecursively(subview, block);
+    }
+}
 
 // Add this before the hooks, after the imports
 
@@ -83,16 +113,91 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"disableSensitiveTweetWarnings"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"disable_immersive_player"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"custom_voice_upload"];
+        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"dm_avatars"];
+        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"tab_bar_theming"];
     }
     [BHTManager cleanCache];
     if ([BHTManager FLEX]) {
         [[%c(FLEXManager) sharedManager] showExplorer];
     }
+    
+    // Apply theme immediately after launch with reinforced consistency
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        dispatch_async(dispatch_get_main_queue(), ^ {
+            NSInteger selectedOption = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
+            // Directly set the primary color option in TAEColorSettings to force Twitter's accent system
+            id taeSettings = [%c(TAEColorSettings) sharedSettings];
+            if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
+                [taeSettings setPrimaryColorOption:selectedOption];
+            }
+            // Also update user defaults to ensure consistency
+            [[NSUserDefaults standardUserDefaults] setObject:@(selectedOption) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+            BH_changeTwitterColor(selectedOption);
+            if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
+                [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
+            }
+            if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_updateOverrideUserInterfaceStyle)]) {
+                [%c(T1ColorSettings) _t1_updateOverrideUserInterfaceStyle];
+            }
+            // Additional call to ensure TAEColorSettings applies the theme
+            if ([taeSettings respondsToSelector:@selector(applyCurrentColorPalette)]) {
+                [taeSettings performSelector:@selector(applyCurrentColorPalette)];
+            }
+            BHT_forceRefreshAllWindowAppearances(); // Force refresh all UI elements
+            BHT_UpdateAllTabBarIcons();
+            // Add a delayed refresh to catch late-loading UI elements with shorter delay
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
+                    [taeSettings setPrimaryColorOption:selectedOption];
+                }
+                BH_changeTwitterColor(selectedOption);
+                if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
+                    [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
+                }
+                if ([taeSettings respondsToSelector:@selector(applyCurrentColorPalette)]) {
+                    [taeSettings performSelector:@selector(applyCurrentColorPalette)];
+                }
+                BHT_forceRefreshAllWindowAppearances();
+            });
+            // Add another delayed refresh for even later UI initialization with shorter delay
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
+                    [taeSettings setPrimaryColorOption:selectedOption];
+                }
+                BH_changeTwitterColor(selectedOption);
+                if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
+                    [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
+                }
+                if ([taeSettings respondsToSelector:@selector(applyCurrentColorPalette)]) {
+                    [taeSettings performSelector:@selector(applyCurrentColorPalette)];
+                }
+                BHT_forceRefreshAllWindowAppearances();
+            });
+        });
+    }
+    
     return true;
 }
 
 - (void)applicationDidBecomeActive:(id)arg1 {
     %orig;
+    // Re-apply theme on becoming active without setting primary color option
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger selectedOption = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
+        BH_changeTwitterColor(selectedOption);
+
+        if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
+            [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
+        }
+        if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_updateOverrideUserInterfaceStyle)]) {
+            [%c(T1ColorSettings) _t1_updateOverrideUserInterfaceStyle];
+        }
+
+        BHT_forceRefreshAllWindowAppearances(); // Force refresh all UI elements
+
+        BHT_UpdateAllTabBarIcons();
+    }
+
     if ([BHTManager Padlock]) {
         NSDictionary *keychainData = [[keychain shared] getData];
         if (keychainData != nil) {
@@ -104,10 +209,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                     [self.window.rootViewController presentViewController:auth animated:true completion:nil];
                 });
             }
-        }
-        UIImageView *image = [self.window viewWithTag:909];
-        if (image != nil) {
-            [image removeFromSuperview];
         }
     }
 }
@@ -160,8 +261,24 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     
     return %orig;
 }
-%end
 
+- (void)setTabBarOpacity:(double)opacity {
+    if ([BHTManager stopHidingTabBar]) {
+        %orig(1.0);
+    } else {
+        %orig(opacity);
+    }
+}
+
+// Combined with stopHidingTabBar
+- (void)setTabBarScrolling:(BOOL)scrolling {
+    if ([BHTManager stopHidingTabBar]) {
+        %orig(NO); // Force scrolling to NO if fading is prevented
+    } else {
+        %orig(scrolling);
+    }
+}
+%end
 
 %hook T1DirectMessageConversationEntriesViewController
 - (void)viewDidLoad {
@@ -621,12 +738,10 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)viewDidAppear:(_Bool)animated {
     %orig(animated);
     
-    static dispatch_once_t once;
-    dispatch_once(&once, ^ {
+    // Re-apply theme when this controller appears
         if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-            BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
+        BHT_ensureTheming();
         }
-    });
 }
 %end
 
@@ -634,12 +749,10 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)viewDidAppear:(_Bool)animated {
     %orig(animated);
     
-    static dispatch_once_t once;
-    dispatch_once(&once, ^ {
+    // Re-apply theme when this controller appears
         if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-            BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
+        BHT_ensureTheming();
         }
-    });
 }
 %end
 
@@ -647,12 +760,10 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)viewDidAppear:(_Bool)animated {
     %orig(animated);
     
-    static dispatch_once_t once;
-    dispatch_once(&once, ^ {
+    // Re-apply theme when this controller appears
         if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-            BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
+        BHT_ensureTheming();
         }
-    });
 }
 %end
 
@@ -742,22 +853,35 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             CGFloat height = imageView.frame.size.height;
             
             // Twitter logo is EXACTLY 29x29 with minimal tolerance
-            BOOL isTwitterLogo = fabs(width - 29.0) < 0.1 && fabs(height - 29.0) < 0.1;
+            BOOL isLikelyTwitterLogo = fabs(width - 29.0) < 2.0 && fabs(height - 29.0) < 2.0 && fabs(width - height) < 1.0;
             
-            if (isTwitterLogo) {
-                if (shouldTheme) {
+            if (isLikelyTwitterLogo) {
+                // MODIFIED: Use classicTabBarEnabled
+                if (shouldTheme && [BHTManager classicTabBarEnabled]) { 
                     // Get the original image
                     UIImage *originalImage = imageView.image;
                     if (originalImage && originalImage.renderingMode != UIImageRenderingModeAlwaysTemplate) {
                         // Create template image from original
                         UIImage *templateImage = [originalImage imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-                        imageView.image = templateImage;
+                        imageView.image = templateImage; // Setting image might trigger layout, potentially re-calling this. Guard needed?
                         imageView.tintColor = BHTCurrentAccentColor();
                     }
                 }
+                // If classicTabBarEnabled is false, the bird icon should naturally revert
+                // or be handled by BHT_forceRefreshAllWindowAppearances if needed.
+                // For now, no explicit 'else' to revert here, assuming default behavior is okay
+                // or other refresh mechanisms will handle it.
             }
         }
     }
+}
+
+// Also hook layoutSubviews to catch changes
+- (void)layoutSubviews {
+    %orig;
+    // Call updateLogoTheme, but perhaps with a guard to prevent infinite loops if setting the image triggers layout.
+    // A simple flag or checking if the theme is already applied might work.
+    [self updateLogoTheme];
 }
 
 %end
@@ -768,15 +892,19 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)didLongPressActionButton:(UILongPressGestureRecognizer *)gestureRecognizer {
     if ([BHTManager tweetToImage]) {
         if (gestureRecognizer.state == UIGestureRecognizerStateBegan) {
-            T1StatusInlineActionsView *actionsView = (T1StatusInlineActionsView *)self.delegate;
+            id delegate = self.delegate;
+            if (![delegate isKindOfClass:%c(TTAStatusInlineActionsView)]) {
+                return %orig;
+            }
+            TTAStatusInlineActionsView *actionsView = (TTAStatusInlineActionsView *)delegate;
             T1StatusCell *tweetView;
             
             if ([actionsView.superview isKindOfClass:%c(T1StandardStatusView)]) { // normal tweet in the time line
-                tweetView = [(T1StandardStatusView *)actionsView.superview eventHandler];
+                tweetView = (T1StatusCell *)[(T1StandardStatusView *)actionsView.superview eventHandler];
             } else if ([actionsView.superview isKindOfClass:%c(T1TweetDetailsFocalStatusView)]) { // Focus tweet
-                tweetView = [(T1TweetDetailsFocalStatusView *)actionsView.superview eventHandler];
+                tweetView = (T1StatusCell *)[(T1TweetDetailsFocalStatusView *)actionsView.superview eventHandler];
             } else if ([actionsView.superview isKindOfClass:%c(T1ConversationFocalStatusView)]) { // Focus tweet
-                tweetView = [(T1ConversationFocalStatusView *)actionsView.superview eventHandler];
+                tweetView = (T1StatusCell *)[(T1ConversationFocalStatusView *)actionsView.superview eventHandler];
             } else {
                 return %orig;
             }
@@ -800,15 +928,19 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)didLongPressActionButton:(UILongPressGestureRecognizer *)gestureRecognizer {
     if ([BHTManager tweetToImage]) {
         if (gestureRecognizer.state == UIGestureRecognizerStateBegan) {
-            T1StatusInlineActionsView *actionsView = self.delegate;
+            id delegate = self.delegate;
+            if (![delegate isKindOfClass:%c(T1StatusInlineActionsView)]) {
+                return %orig;
+            }
+            T1StatusInlineActionsView *actionsView = (T1StatusInlineActionsView *)delegate;
             T1StatusCell *tweetView;
             
             if ([actionsView.superview isKindOfClass:%c(T1StandardStatusView)]) { // normal tweet in the time line
-                tweetView = [(T1StandardStatusView *)actionsView.superview eventHandler];
+                tweetView = (T1StatusCell *)[(T1StandardStatusView *)actionsView.superview eventHandler];
             } else if ([actionsView.superview isKindOfClass:%c(T1TweetDetailsFocalStatusView)]) { // Focus tweet
-                tweetView = [(T1TweetDetailsFocalStatusView *)actionsView.superview eventHandler];
+                tweetView = (T1StatusCell *)[(T1TweetDetailsFocalStatusView *)actionsView.superview eventHandler];
             } else if ([actionsView.superview isKindOfClass:%c(T1ConversationFocalStatusView)]) { // Focus tweet
-                tweetView = [(T1ConversationFocalStatusView *)actionsView.superview eventHandler];
+                tweetView = (T1StatusCell *)[(T1ConversationFocalStatusView *)actionsView.superview eventHandler];
             } else {
                 return %orig;
             }
@@ -1412,49 +1544,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %end
 
 // MARK: Clean tracking from copied links: https://github.com/BandarHL/BHTwitter/issues/75
-%ctor {
-    NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
-    NSOperationQueue *mainQueue = [NSOperationQueue mainQueue];
-    // Someone needs to hold reference the to Notification
-    _PasteboardChangeObserver = [center addObserverForName:UIPasteboardChangedNotification object:nil queue:mainQueue usingBlock:^(NSNotification * _Nonnull note){
-        
-        static dispatch_once_t onceToken;
-        dispatch_once(&onceToken, ^{
-            trackingParams = @{
-                @"twitter.com" : @[@"s", @"t"],
-                @"x.com" : @[@"s", @"t"],
-            };
-        });
-        
-        if ([BHTManager stripTrackingParams]) {
-            if (UIPasteboard.generalPasteboard.hasURLs) {
-                NSURL *pasteboardURL = UIPasteboard.generalPasteboard.URL;
-                NSArray<NSString*>* params = trackingParams[pasteboardURL.host];
-                
-                if ([pasteboardURL.absoluteString isEqualToString:_lastCopiedURL] == NO && params != nil && pasteboardURL.query != nil) {
-                    // to prevent endless copy loop
-                    _lastCopiedURL = pasteboardURL.absoluteString;
-                    NSURLComponents *cleanedURL = [NSURLComponents componentsWithURL:pasteboardURL resolvingAgainstBaseURL:NO];
-                    NSMutableArray<NSURLQueryItem*> *safeParams = [NSMutableArray arrayWithCapacity:0];
-                    
-                    for (NSURLQueryItem *item in cleanedURL.queryItems) {
-                        if ([params containsObject:item.name] == NO) {
-                            [safeParams addObject:item];
-                        }
-                    }
-                    cleanedURL.queryItems = safeParams.count > 0 ? safeParams : nil;
-
-                    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"tweet_url_host"]) {
-                        NSString *selectedHost = [[NSUserDefaults standardUserDefaults] objectForKey:@"tweet_url_host"];
-                        cleanedURL.host = selectedHost;
-                    }
-                    UIPasteboard.generalPasteboard.URL = cleanedURL.URL;
-                }
-            }
-        }
-    }];
-    %init;
-}
 
 // MARK: Restore Source Labels - This is still pretty experimental and may break. This restores Tweet Source Labels by using an Legacy API. by: @nyaathea
 
@@ -1483,9 +1572,38 @@ static NSDate *lastCookieRefresh              = nil;
 + (void)cacheCookies:(NSDictionary *)cookies;
 + (NSDictionary *)loadCachedCookies;
 + (BOOL)shouldRefreshCookies;
++ (void)handleClearCacheNotification:(NSNotification *)notification;
++ (void)pruneSourceCachesIfNeeded; // New method for cache pruning
 @end
 
+#define MAX_SOURCE_CACHE_SIZE 500 // Define a maximum cache size
+
 @implementation TweetSourceHelper
+
++ (void)pruneSourceCachesIfNeeded {
+    if (tweetSources.count > MAX_SOURCE_CACHE_SIZE) {
+        // Attempt to remove a random key to make space. More sophisticated LRU could be used later if needed.
+        NSArray *keys = [tweetSources allKeys];
+        if (keys.count > 0) {
+            NSString *keyToRemove = keys[arc4random_uniform((uint32_t)keys.count)];
+            NSLog(@"[BHTwitter SourceLabelCache] Pruning cache, removing entry for tweetID: %@", keyToRemove);
+            
+            [tweetSources removeObjectForKey:keyToRemove];
+            
+            NSTimer *timeoutTimer = fetchTimeouts[keyToRemove];
+            if (timeoutTimer) {
+                [timeoutTimer invalidate];
+                [fetchTimeouts removeObjectForKey:keyToRemove];
+            }
+            [fetchRetries removeObjectForKey:keyToRemove];
+            [updateRetries removeObjectForKey:keyToRemove];
+            [updateCompleted removeObjectForKey:keyToRemove];
+            [fetchPending removeObjectForKey:keyToRemove];
+            // viewInstances and viewToTweetID are managed by view lifecycle, not pruned here directly
+            // to avoid removing data for active views.
+        }
+    }
+}
 
 + (NSDictionary *)fetchCookies {
     NSMutableDictionary *cookiesDict = [NSMutableDictionary dictionary];
@@ -1550,10 +1668,15 @@ static NSDate *lastCookieRefresh              = nil;
 + (void)fetchSourceForTweetID:(NSString *)tweetID {
     if (!tweetID) return;
     @try {
+        // Initialize dictionaries if they are nil (important after a cache clear)
         if (!tweetSources)   tweetSources   = [NSMutableDictionary dictionary];
         if (!fetchTimeouts)  fetchTimeouts  = [NSMutableDictionary dictionary];
         if (!fetchRetries)   fetchRetries   = [NSMutableDictionary dictionary];
+        if (!updateRetries)  updateRetries  = [NSMutableDictionary dictionary];
+        if (!updateCompleted) updateCompleted = [NSMutableDictionary dictionary];
         if (!fetchPending)   fetchPending   = [NSMutableDictionary dictionary];
+
+        [self pruneSourceCachesIfNeeded]; // Prune before potentially adding a new entry
 
         if (fetchPending[tweetID] || (tweetSources[tweetID] &&
             ![tweetSources[tweetID] isEqualToString:@""] &&
@@ -1811,6 +1934,50 @@ static NSDate *lastCookieRefresh              = nil;
     } @catch (__unused NSException *e) {}
 }
 
++ (void)handleClearCacheNotification:(NSNotification *)notification {
+    NSLog(@"TweetSourceTweak: Clearing source label cache via notification.");
+    // Invalidate all pending timeout timers
+    if (fetchTimeouts) {
+        for (NSTimer *timer in [fetchTimeouts allValues]) {
+            [timer invalidate];
+        }
+        [fetchTimeouts removeAllObjects];
+    }
+
+    // Clear actual source data and control flags
+    if (tweetSources) [tweetSources removeAllObjects];
+    if (viewToTweetID) [viewToTweetID removeAllObjects];     // Ensuring these are cleared
+    if (viewInstances) [viewInstances removeAllObjects];     // Ensuring these are cleared
+    if (fetchPending) [fetchPending removeAllObjects];
+    if (fetchRetries) [fetchRetries removeAllObjects];
+    if (updateRetries) [updateRetries removeAllObjects];
+    if (updateCompleted) [updateCompleted removeAllObjects];
+
+    // Force cookie refresh
+    if (cookieCache) [cookieCache removeAllObjects];
+    lastCookieRefresh = nil;
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    [defaults removeObjectForKey:@"TweetSourceTweak_CookieCache"];
+    [defaults removeObjectForKey:@"TweetSourceTweak_LastCookieRefresh"];
+    [defaults synchronize];
+    
+    // Re-initialize essential dictionaries
+    if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
+    if (!viewToTweetID) viewToTweetID = [NSMutableDictionary dictionary];   // Ensuring these are re-initialized
+    if (!viewInstances) viewInstances = [NSMutableDictionary dictionary];   // Ensuring these are re-initialized
+    if (!fetchTimeouts) fetchTimeouts = [NSMutableDictionary dictionary];
+    if (!fetchPending) fetchPending = [NSMutableDictionary dictionary];
+    if (!fetchRetries) fetchRetries = [NSMutableDictionary dictionary];         // RESTORING THIS LINE
+    if (!updateRetries) updateRetries = [NSMutableDictionary dictionary];     // RESTORING THIS LINE
+    if (!updateCompleted) updateCompleted = [NSMutableDictionary dictionary]; // RESTORING THIS LINE
+    if (!cookieCache) cookieCache = [NSMutableDictionary dictionary];           // RESTORING THIS LINE
+
+    // Trigger a poll to potentially refetch for visible items
+    // This needs to be done carefully to avoid immediate thundering herd.
+    // A short delay might be good.
+    [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:0.5]; // RESTORING THIS LINE
+}
+
 @end
 // --- End Helper Implementation ---
 
@@ -1821,10 +1988,12 @@ static NSDate *lastCookieRefresh              = nil;
     @try {
         NSInteger statusID = self.statusID;
         if (statusID > 0) {
-            if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
-            if (!tweetSources[@(statusID).stringValue]) {
-                tweetSources[@(statusID).stringValue] = @"";
-                [TweetSourceHelper fetchSourceForTweetID:@(statusID).stringValue];
+            if (!tweetSources) tweetSources = [NSMutableDictionary dictionary]; // Ensure initialized
+            NSString *tweetIDStr = @(statusID).stringValue;
+            if (!tweetSources[tweetIDStr]) {
+                [TweetSourceHelper pruneSourceCachesIfNeeded]; // Prune before adding
+                tweetSources[tweetIDStr] = @"";
+                [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
             }
         }
     } @catch (__unused NSException *e) {}
@@ -1876,6 +2045,7 @@ static NSDate *lastCookieRefresh              = nil;
                             viewInstances[altID]              = [NSValue valueWithNonretainedObject:self];
 
                             if (!tweetSources[altID]) {
+                                [TweetSourceHelper pruneSourceCachesIfNeeded]; // ADDING THIS CALL HERE
                                 tweetSources[altID] = @"";
                                 [TweetSourceHelper fetchSourceForTweetID:altID];
                             } else if (tweetSources[altID] && ![tweetSources[altID] isEqualToString:@""] &&
@@ -1913,188 +2083,309 @@ static NSDate *lastCookieRefresh              = nil;
         NSString *tweetID      = userInfo[@"tweetID"];
         if (tweetID && tweetSources[tweetID] && ![tweetSources[tweetID] isEqualToString:@""]) {
             NSValue *viewValue = viewInstances[tweetID];
-            UIView  *target    = viewValue ? [viewValue nonretainedObjectValue] : nil;
-            if (target) {
-                NSString *currentTweetID = viewToTweetID[@((uintptr_t)target)];
+            UIView  *targetView    = viewValue ? [viewValue nonretainedObjectValue] : nil; // Renamed to targetView for clarity
+            if (targetView && targetView == self) { // Ensure we are updating the correct instance
+                NSString *currentTweetID = viewToTweetID[@((uintptr_t)targetView)];
                 if (currentTweetID && [currentTweetID isEqualToString:tweetID]) {
-                    [self enumerateSubviewsRecursively:^(UIView *subview) {
+                    BH_EnumerateSubviewsRecursively(targetView, ^(UIView *subview) { // Use the static helper
                         if ([subview isKindOfClass:%c(TFNAttributedTextView)]) {
                             TFNAttributedTextView *textView = (TFNAttributedTextView *)subview;
                             TFNAttributedTextModel *model = [textView valueForKey:@"_textModel"];
                             if (model && model.attributedString.string) {
                                 NSString *text = model.attributedString.string;
+                                // Check for typical timestamp patterns or if the source might need to be appended/updated
                                 if ([text containsString:@"PM"] || [text containsString:@"AM"] ||
-                                    [text rangeOfString:@"\\d{1,2}[:.]\\d{1,2}" options:NSRegularExpressionSearch].location != NSNotFound) {
-                                    // Force a refresh of the text model
+                                    [text rangeOfString:@"\\\\d{1,2}[:.]\\\\d{1,2}" options:NSRegularExpressionSearch].location != NSNotFound) {
+                                    
+                                    // Check if this specific TFNAttributedTextView is NOT part of a quoted status view
+                                    BOOL isSafeToUpdate = YES;
+                                    UIView *parentCheck = textView;
+                                    while(parentCheck && parentCheck != targetView) { // Traverse up to the main focal view
+                                        if ([NSStringFromClass([parentCheck class]) isEqualToString:@"T1QuotedStatusView"]) {
+                                            isSafeToUpdate = NO;
+                                            break;
+                                        }
+                                        parentCheck = parentCheck.superview;
+                                    }
+
+                                    if (isSafeToUpdate) {
+                                        // Force a refresh of the text model.
+                                        // This will trigger setTextModel: again, where the source appending logic resides.
                                     [textView setTextModel:nil];
                                     [textView setTextModel:model];
                                 }
                             }
                         }
-                    }];
+                        }
+                    });
                 }
             }
         }
-    } @catch (__unused NSException *e) {}
-}
-
-%new
-- (void)enumerateSubviewsRecursively:(void (^)(UIView *))block {
-    block(self);
-    for (UIView *subview in self.subviews) {
-        if ([subview isKindOfClass:%c(UIView)]) {
-            [self enumerateSubviewsRecursively:block];
-        }
+    } @catch (NSException *e) {
+         NSLog(@"TweetSourceTweak: Exception in handleTweetSourceUpdated for T1ConversationFocalStatusView: %@", e);
     }
 }
+
+// %new - (void)enumerateSubviewsRecursively:(void (^)(UIView *))block {
+// This method is now replaced by the static C function BH_EnumerateSubviewsRecursively
+// }
 
 + (void)load {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        [[NSNotificationCenter defaultCenter] addObserver:self
-                                                 selector:@selector(handleTweetSourceUpdated:)
+        // Observe for our own update notifications
+        [[NSNotificationCenter defaultCenter] addObserver:self // Target is the class itself for class methods
+                                                 selector:@selector(handleTweetSourceUpdatedNotificationDispatch:) // A new dispatcher
                                                      name:@"TweetSourceUpdated"
                                                    object:nil];
         [TweetSourceHelper performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:3.0];
         [[NSNotificationCenter defaultCenter] addObserver:[TweetSourceHelper class]
                                                  selector:@selector(handleAppForeground:)
-                                                     name:@"UIApplicationDidBecomeActiveNotification"
+                                                     name:UIApplicationDidBecomeActiveNotification // Use the correct constant
+                                                   object:nil];
+        // Add observer for cache clearing
+        [[NSNotificationCenter defaultCenter] addObserver:[TweetSourceHelper class]
+                                                 selector:@selector(handleClearCacheNotification:)
+                                                     name:@"BHTClearSourceLabelCacheNotification"
                                                    object:nil];
     });
 }
+
+// New class method to dispatch instance method calls
+%new + (void)handleTweetSourceUpdatedNotificationDispatch:(NSNotification *)notification {
+    NSDictionary *userInfo = notification.userInfo;
+    NSString *tweetID = userInfo[@"tweetID"];
+    if (tweetID) {
+        NSValue *viewValue = viewInstances[tweetID]; // viewInstances is a global static
+        T1ConversationFocalStatusView *targetInstance = viewValue ? [viewValue nonretainedObjectValue] : nil;
+        if (targetInstance && [targetInstance isKindOfClass:[self class]]) { // Check if it's an instance of T1ConversationFocalStatusView
+            // Use performSelector for %new instance method from %new class method
+            if ([targetInstance respondsToSelector:@selector(handleTweetSourceUpdated:)]) {
+                [targetInstance performSelector:@selector(handleTweetSourceUpdated:) withObject:notification];
+            } else {
+                NSLog(@"TweetSourceTweak: ERROR - T1ConversationFocalStatusView instance does not respond to handleTweetSourceUpdated:");
+            }
+        }
+    }
+}
+
 
 %end
 
 %hook TFNAttributedTextView
 - (void)setTextModel:(TFNAttributedTextModel *)model {
-    // --- BHTwitter style: Only run if toggle is ON ---
-    if (![BHTManager RestoreTweetLabels]) {
-        %orig;
-        return;
-    }
-    if (!model || !model.attributedString) {
-        %orig;
+    if (![BHTManager RestoreTweetLabels] || !model || !model.attributedString) {
+        %orig(model);
         return;
     }
 
     NSString *currentText = model.attributedString.string;
     BOOL isTimestamp = NO;
+    BOOL isLikelyTimestampForSourceLabel = NO;
     
-    // Check if this is a timestamp format
-    if ([currentText containsString:@"PM"] || [currentText containsString:@"AM"]) {
-        isTimestamp = YES;
-    } else {
-        NSRegularExpression *timeRegex = [NSRegularExpression regularExpressionWithPattern:@"\\d{1,2}[:.]\\d{1,2}"
-                                                                                   options:0
-                                                                                     error:nil];
+    // More specific regex pattern to identify genuine timestamps in the correct format
+    NSRegularExpression *timeRegex = [NSRegularExpression regularExpressionWithPattern:@"^\\d{1,2}:\\d{2}(\\s(AM|PM))?\\s·\\s" options:0 error:nil];
+    if (timeRegex) {
         NSRange range = [timeRegex rangeOfFirstMatchInString:currentText options:0 range:NSMakeRange(0, currentText.length)];
-        if (range.location != NSNotFound) isTimestamp = YES;
+        if (range.location != NSNotFound) {
+            isTimestamp = YES;
+            isLikelyTimestampForSourceLabel = YES;
+        }
     }
 
-    // Handle source labels
-    if (isTimestamp) {
+    // Check for date formats like "May 11, 2023 · "
+    NSRegularExpression *dateRegex = [NSRegularExpression regularExpressionWithPattern:@"^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s\\d{1,2}(,\\s\\d{4})?\\s·\\s" options:0 error:nil];
+    if (dateRegex && !isTimestamp) {
+        NSRange range = [dateRegex rangeOfFirstMatchInString:currentText options:0 range:NSMakeRange(0, currentText.length)];
+        if (range.location != NSNotFound) {
+            isTimestamp = YES;
+            isLikelyTimestampForSourceLabel = YES;
+        }
+    }
+
+    // More general check but less certain
+    if (!isTimestamp && ([currentText containsString:@"PM"] || [currentText containsString:@"AM"])) {
+        isTimestamp = YES;
+        // Double check for correct format with dot separator
+        if ([currentText containsString:@" · "]) {
+            isLikelyTimestampForSourceLabel = YES;
+        }
+    }
+
+    // Only proceed if we believe this is a proper timestamp header
+    if (isTimestamp && isLikelyTimestampForSourceLabel) {
         @try {
-            UIView *view = self;
-            id tweetViewModel = nil;
-            BOOL isDetailView = NO;
+            BOOL isInQuotedStatusView = NO;
+            id mainTweetObject = nil; // The actual tweet model (e.g., TFNTwitterStatus)
+
+            // Get ancestor hierarchy to determine if this is in a valid location
+            UIView *ancestorView = self;
+            BOOL isInValidContainer = NO;
             
-            // Walk up the view hierarchy to find the tweet view model and check if we're in a detail view
-            while (view && (!tweetViewModel || !isDetailView)) {
-                if ([NSStringFromClass([view class]) containsString:@"TweetDetails"] ||
-                    [NSStringFromClass([view class]) containsString:@"ConversationFocal"]) {
-                    isDetailView = YES;
+            while (ancestorView) {
+                NSString *className = NSStringFromClass([ancestorView class]);
+                
+                // Skip source labels in quoted tweets
+                if ([className isEqualToString:@"T1QuotedStatusView"]) {
+                    isInQuotedStatusView = YES;
+                    break;
                 }
                 
-                if ([view respondsToSelector:@selector(viewModel)]) {
-                    tweetViewModel = [view performSelector:@selector(viewModel)];
+                // Check if this is inside a reply container
+                if ([className containsString:@"ReplyView"] || 
+                    [className containsString:@"CommentView"] ||
+                    [className containsString:@"RepliesTableView"]) {
+                    // This is likely a reply timestamp, not the main tweet timestamp
+                    isInValidContainer = NO;
+                    break;
                 }
-                view = view.superview;
+                
+                // These are the main valid containers for tweet headers
+                if ([className containsString:@"TweetDetailsFocalStatusView"] ||
+                    [className containsString:@"ConversationFocalStatusView"] ||
+                    [className containsString:@"T1StandardStatusView"] ||
+                    [className containsString:@"StatusHeaderView"]) {
+                    isInValidContainer = YES;
+                    break;
+                }
+                
+                ancestorView = ancestorView.superview;
             }
             
-            // Only proceed if we're in a detail view
-            if (!isDetailView) {
-                %orig;
+            // Exit if this is not in a valid container or is in a quoted tweet
+            if (isInQuotedStatusView || !isInValidContainer) {
+                %orig(model);
                 return;
             }
 
-            if ([tweetViewModel respondsToSelector:@selector(tweet)]) {
-                id tweet = [tweetViewModel performSelector:@selector(tweet)];
-                if (tweet) {
-                    NSInteger statusID = 0;
-                    @try {
-                        statusID = [[tweet valueForKey:@"statusID"] integerValue];
-                    } @catch (__unused NSException *e) {
-                        // Try alternative IDs if statusID fails
-                        NSString *altID = [tweet valueForKey:@"rest_id"] ?: [tweet valueForKey:@"id_str"] ?: [tweet valueForKey:@"id"];
-                        if (altID) {
-                            if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
-                            if (!tweetSources[altID]) {
-                                tweetSources[altID] = @"";
-                                [TweetSourceHelper fetchSourceForTweetID:altID];
+            // Continue with existing code to find mainTweetObject...
+            ancestorView = self;
+            while (ancestorView) {
+                if ([NSStringFromClass([ancestorView class]) isEqualToString:@"T1QuotedStatusView"]) {
+                    isInQuotedStatusView = YES;
+                    break; 
+                }
+                // Check if this ancestor is the main tweet container and can provide the tweet model
+                // T1ConversationFocalStatusView, T1TweetDetailsFocalStatusView often hold the primary view model
+                if ([NSStringFromClass([ancestorView class]) containsString:@"ConversationFocalStatusView"] ||
+                    [NSStringFromClass([ancestorView class]) containsString:@"TweetDetailsFocalStatusView"] ||
+                    [NSStringFromClass([ancestorView class]) isEqualToString:@"T1StandardStatusView"]) { // Also check T1StandardStatusView which might be the top-level in some contexts
+                    
+                    id hostViewModel = nil;
+                    if ([ancestorView respondsToSelector:@selector(viewModel)]) {
+                         hostViewModel = [ancestorView performSelector:@selector(viewModel)];
+                    } else if ([ancestorView respondsToSelector:@selector(statusViewModel)]) { // Some views use statusViewModel
+                         hostViewModel = [ancestorView performSelector:@selector(statusViewModel)];
                             }
                             
-                            if (tweetSources[altID] && ![tweetSources[altID] isEqualToString:@""]) {
-                                NSString *sourceText = tweetSources[altID];
-                                NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
-                                
-                                // Get existing attributes from the timestamp
-                                NSDictionary *existingAttributes = nil;
-                                if (newString.length > 0) {
-                                    existingAttributes = [newString attributesAtIndex:0 effectiveRange:NULL];
+                    if ([hostViewModel respondsToSelector:@selector(tweet)]) {
+                        mainTweetObject = [hostViewModel performSelector:@selector(tweet)];
+                    } else if ([hostViewModel respondsToSelector:@selector(status)]) { // Some view models have a 'status' property
+                         mainTweetObject = [hostViewModel performSelector:@selector(status)];
+            }
+            
+                    if (mainTweetObject) {
+                        break;
+                    }
+                }
+                ancestorView = ancestorView.superview;
+            }
+
+            if (isInQuotedStatusView) {
+                %orig(model);
+                return;
+            }
+
+            if (mainTweetObject) {
+                NSString *tweetIDStr = nil;
+                    @try {
+                    id statusIDVal = [mainTweetObject valueForKey:@"statusID"];
+                    if (statusIDVal && [statusIDVal respondsToSelector:@selector(longLongValue)] && [statusIDVal longLongValue] > 0) {
+                        tweetIDStr = [statusIDVal stringValue];
+                    }
+                } @catch (NSException *e) { NSLog(@"TweetSourceTweak: Exception getting statusID: %@", e); }
+                            
+                if (!tweetIDStr || tweetIDStr.length == 0) {
+                    @try {
+                        tweetIDStr = [mainTweetObject valueForKey:@"rest_id"];
+                        if (!tweetIDStr || tweetIDStr.length == 0) {
+                             tweetIDStr = [mainTweetObject valueForKey:@"id_str"];
                                 }
-                                
-                                // Add separator and source text
-                                NSMutableAttributedString *appended = [[NSMutableAttributedString alloc] init];
-                                [appended appendAttributedString:[[NSAttributedString alloc] initWithString:@" · " attributes:existingAttributes]];
-                                
-                                // Use current accent color for source text
-                                NSMutableDictionary *sourceAttributes = [existingAttributes mutableCopy];
-                                [sourceAttributes setObject:BHTCurrentAccentColor() forKey:NSForegroundColorAttributeName];
-                                [appended appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttributes]];
-                                
-                                [newString appendAttributedString:appended];
-                                [model setValue:newString forKey:@"attributedString"];
+                        if (!tweetIDStr || tweetIDStr.length == 0) {
+                            id genericID = [mainTweetObject valueForKey:@"id"];
+                            if (genericID) tweetIDStr = [genericID description];
                             }
-                        }
+                    } @catch (NSException *e) { NSLog(@"TweetSourceTweak: Exception getting alt tweet ID: %@", e); }
                     }
                     
-                    if (statusID > 0) {
-                        NSString *tweetIDStr = @(statusID).stringValue;
+                if (tweetIDStr && tweetIDStr.length > 0) {
                         if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
                         if (!tweetSources[tweetIDStr]) {
-                            tweetSources[tweetIDStr] = @"";
+                        // [TweetSourceHelper pruneSourceCachesIfNeeded]; // This was correctly added by the model already in TFNAttributedTextView
+                        tweetSources[tweetIDStr] = @""; // Placeholder
                             [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
                         }
                         
-                        if (tweetSources[tweetIDStr] && ![tweetSources[tweetIDStr] isEqualToString:@""]) {
                             NSString *sourceText = tweetSources[tweetIDStr];
-                            NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
+                    if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@"Source Unavailable"] && ![sourceText isEqualToString:@""]) {
+                        NSString *separator = @" · ";
+                        NSString *fullSourceStringWithSeparator = [separator stringByAppendingString:sourceText];
                             
-                            // Get existing attributes from the timestamp
-                            NSDictionary *existingAttributes = nil;
-                            if (newString.length > 0) {
-                                existingAttributes = [newString attributesAtIndex:0 effectiveRange:NULL];
+                        // Check if the source string (with separator) is already part of the current text
+                        if ([model.attributedString.string rangeOfString:fullSourceStringWithSeparator].location == NSNotFound) {
+                            NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
+                            NSString *originalContentForRegex = newString.string;
+
+                            // Remove " · X Views" before appending source label
+                            NSRegularExpression *viewCountRegex = [NSRegularExpression regularExpressionWithPattern:@"\\s·\\s*\\d{1,3}(?:,\\d{3})*(?:\\.\\d+)?[KMGT]?\\s*View(s)?"
+                                                                                                           options:NSRegularExpressionCaseInsensitive
+                                                                                                             error:nil];
+                            if (viewCountRegex) {
+                                NSArray<NSTextCheckingResult *> *matches = [viewCountRegex matchesInString:originalContentForRegex
+                                                                                                  options:0
+                                                                                                    range:NSMakeRange(0, originalContentForRegex.length)];
+                                if (matches.count > 0) {
+                                    NSTextCheckingResult *lastMatch = [matches lastObject];
+                                    [newString replaceCharactersInRange:lastMatch.range withString:@""];
+                                }
                             }
                             
-                            // Add separator and source text
-                            NSMutableAttributedString *appended = [[NSMutableAttributedString alloc] init];
-                            [appended appendAttributedString:[[NSAttributedString alloc] initWithString:@" · " attributes:existingAttributes]];
+                            NSDictionary *baseAttributes;
+                            if (model.attributedString.length > 0) {
+                                 baseAttributes = [model.attributedString attributesAtIndex:0 effectiveRange:NULL];
+                            } else {
+                                 baseAttributes = @{NSFontAttributeName: [UIFont systemFontOfSize:12], NSForegroundColorAttributeName: [UIColor grayColor]};
+                            }
                             
-                            // Use current accent color for source text
-                            NSMutableDictionary *sourceAttributes = [existingAttributes mutableCopy];
+                            NSMutableAttributedString *sourceSuffix = [[NSMutableAttributedString alloc] init];
+                            [sourceSuffix appendAttributedString:[[NSAttributedString alloc] initWithString:separator attributes:baseAttributes]];
+                            
+                            NSMutableDictionary *sourceAttributes = [baseAttributes mutableCopy];
                             [sourceAttributes setObject:BHTCurrentAccentColor() forKey:NSForegroundColorAttributeName];
-                            [appended appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttributes]];
+                            [sourceSuffix appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttributes]];
                             
-                            [newString appendAttributedString:appended];
-                            [model setValue:newString forKey:@"attributedString"];
+                            [newString appendAttributedString:sourceSuffix];
+                           
+                            // Use standard initializer and set activeRanges via KVC if available
+                            TFNAttributedTextModel *newModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newString];
+                            @try {
+                                id originalActiveRanges = [model valueForKey:@"activeRanges"];
+                                if (originalActiveRanges) {
+                                    [newModel setValue:originalActiveRanges forKey:@"activeRanges"];
+            }
+                            } @catch (NSException *exception) {
+                                NSLog(@"TweetSourceTweak: Could not get/set activeRanges via KVC: %@", exception);
+                            }
+                            %orig(newModel);
+                            return;
                         }
                     }
                 }
             }
-        } @catch (__unused NSException *e) {}
-    }
-    // Handle post/tweet text replacements
-    else if ([currentText containsString:@"your post"] || 
+        } @catch (NSException *e) {
+             NSLog(@"TweetSourceTweak: Exception in TFNAttributedTextView -setTextModel: %@", e);
+        }
+    } else if ([currentText containsString:@"your post"] || 
              [currentText containsString:@"your Post"] ||
              [currentText containsString:@"reposted"] ||
              [currentText containsString:@"Reposted"]) {
@@ -2107,6 +2398,7 @@ static NSDate *lastCookieRefresh              = nil;
                 if ([NSStringFromClass([view class]) containsString:@"Notification"] ||
                     [NSStringFromClass([view class]) containsString:@"T1NotificationsTimeline"]) {
                     isNotificationView = YES;
+                    break; // Exit loop once found
                 }
                 view = view.superview;
             }
@@ -2114,6 +2406,7 @@ static NSDate *lastCookieRefresh              = nil;
             // Only proceed if we're in a notification view
             if (isNotificationView) {
                 NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
+                BOOL modified = NO;
                 
                 // Replace "your post" with "your Tweet"
                 NSRange postRange = [currentText rangeOfString:@"your post"];
@@ -2121,6 +2414,7 @@ static NSDate *lastCookieRefresh              = nil;
                     NSDictionary *existingAttributes = [newString attributesAtIndex:postRange.location effectiveRange:NULL];
                     [newString replaceCharactersInRange:postRange withString:@"your Tweet"];
                     [newString setAttributes:existingAttributes range:NSMakeRange(postRange.location, [@"your Tweet" length])];
+                    modified = YES;
                 }
                 
                 // Also check for capitalized "Post"
@@ -2129,6 +2423,7 @@ static NSDate *lastCookieRefresh              = nil;
                     NSDictionary *existingAttributes = [newString attributesAtIndex:postRange.location effectiveRange:NULL];
                     [newString replaceCharactersInRange:postRange withString:@"your Tweet"];
                     [newString setAttributes:existingAttributes range:NSMakeRange(postRange.location, [@"your Tweet" length])];
+                    modified = YES;
                 }
                 
                 // Replace "reposted" with "Retweeted"
@@ -2137,6 +2432,7 @@ static NSDate *lastCookieRefresh              = nil;
                     NSDictionary *existingAttributes = [newString attributesAtIndex:repostRange.location effectiveRange:NULL];
                     [newString replaceCharactersInRange:repostRange withString:@"Retweeted"];
                     [newString setAttributes:existingAttributes range:NSMakeRange(repostRange.location, [@"Retweeted" length])];
+                    modified = YES;
                 }
                 
                 // Also check for capitalized "Reposted"
@@ -2145,10 +2441,25 @@ static NSDate *lastCookieRefresh              = nil;
                     NSDictionary *existingAttributes = [newString attributesAtIndex:repostRange.location effectiveRange:NULL];
                     [newString replaceCharactersInRange:repostRange withString:@"Retweeted"];
                     [newString setAttributes:existingAttributes range:NSMakeRange(repostRange.location, [@"Retweeted" length])];
+                    modified = YES;
                 }
                 
-                // Update the model with our modified string
-                [model setValue:newString forKey:@"attributedString"];
+                // Update the model only if modifications were made
+                if (modified) {
+                    // Create a new model instance with the modified attributed string
+                    // and attempt to preserve active ranges if possible
+                    TFNAttributedTextModel *newModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newString];
+                     @try {
+                        id originalActiveRanges = [model valueForKey:@"activeRanges"];
+                        if (originalActiveRanges) {
+                            [newModel setValue:originalActiveRanges forKey:@"activeRanges"];
+                         }
+                    } @catch (NSException *exception) {
+                        NSLog(@"TweetSourceTweak: Could not preserve activeRanges for post/repost replacement: %@", exception);
+                    }
+                    %orig(newModel);
+                    return; // Important: return here to avoid calling %orig again at the end
+                }
             }
         } @catch (__unused NSException *e) {}
     }
@@ -2158,20 +2469,6 @@ static NSDate *lastCookieRefresh              = nil;
 %end
 
 // --- Initialisation ---
-%ctor {
-    if (!tweetSources)      tweetSources      = [NSMutableDictionary dictionary];
-    if (!viewToTweetID)     viewToTweetID     = [NSMutableDictionary dictionary];
-    if (!fetchTimeouts)     fetchTimeouts     = [NSMutableDictionary dictionary];
-    if (!viewInstances)     viewInstances     = [NSMutableDictionary dictionary];
-    if (!fetchRetries)      fetchRetries      = [NSMutableDictionary dictionary];
-    if (!updateRetries)     updateRetries     = [NSMutableDictionary dictionary];
-    if (!updateCompleted)   updateCompleted   = [NSMutableDictionary dictionary];
-    if (!fetchPending)      fetchPending      = [NSMutableDictionary dictionary];
-    if (!cookieCache)       cookieCache       = [NSMutableDictionary dictionary];
-    
-    // Load cached cookies at initialization
-    [TweetSourceHelper loadCachedCookies];
-}
 
 // MARK: Bird Icon Theming - Dirty hax for making the Nav Bird Icon themeable again.
 
@@ -2252,5 +2549,906 @@ static NSDate *lastCookieRefresh              = nil;
     }
     
     return original;
+}
+%end
+
+// MARK: - Hide Grok Analyze Button (TTAStatusAuthorView)
+
+@interface TTAStatusAuthorView : UIView
+- (id)grokAnalyzeButton;
+@end
+
+%hook TTAStatusAuthorView
+
+- (id)grokAnalyzeButton {
+    UIView *button = %orig;
+    if (button && [BHTManager hideGrokAnalyze]) {
+        button.hidden = YES;
+    }
+    return button;
+}
+
+%end
+
+// MARK: - Hide Grok Analyze & Subscribe Buttons on Detail View (UIControl)
+
+// Minimal interface for TFNButton, used by UIControl hook and FollowButton logic
+@class TFNButton;
+
+%hook UIControl
+// Grok Analyze and Subscribe button
+- (void)addTarget:(id)target action:(SEL)action forControlEvents:(UIControlEvents)controlEvents {
+    if (action == @selector(didTapGrokAnalyze)) {
+        if ([self isKindOfClass:NSClassFromString(@"TFNButton")] && [BHTManager hideGrokAnalyze]) {
+            self.hidden = YES;
+        }
+    } else if (action == @selector(_didTapSubscribe)) {
+        if ([self isKindOfClass:NSClassFromString(@"TFNButton")] && [BHTManager restoreFollowButton]) {
+            self.alpha = 0.0;
+            self.userInteractionEnabled = NO;
+        }
+    }
+    %orig(target, action, controlEvents);
+}
+
+%end
+
+// MARK: - Hide Follow Button (T1ConversationFocalStatusView)
+
+// Minimal interface for T1ConversationFocalStatusView
+@class T1ConversationFocalStatusView;
+
+// Helper function to recursively find and hide a TFNButton by accessibilityIdentifier
+static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString *targetAccessibilityId) {
+    if ([viewToSearch isKindOfClass:NSClassFromString(@"TFNButton")]) {
+        TFNButton *button = (TFNButton *)viewToSearch;
+        if ([button.accessibilityIdentifier isEqualToString:targetAccessibilityId]) {
+            button.hidden = YES;
+            return YES;
+        }
+    }
+    for (UIView *subview in viewToSearch.subviews) {
+        if (findAndHideButtonWithAccessibilityId(subview, targetAccessibilityId)) {
+            return YES;
+        }
+    }
+    return NO;
+}
+
+%hook T1ConversationFocalStatusView
+
+- (void)didMoveToWindow {
+    %orig;
+    if ([BHTManager hideFollowButton]) {
+        findAndHideButtonWithAccessibilityId(self, @"FollowButton");
+    }
+}
+
+%end
+
+// MARK: - Restore Follow Button (TUIFollowControl) & Hide SuperFollow (T1SuperFollowControl)
+
+@interface TUIFollowControl : UIControl
+- (void)setVariant:(NSUInteger)variant;
+- (NSUInteger)variant; // Ensure getter is declared
+@end
+
+%hook TUIFollowControl
+
+- (void)setVariant:(NSUInteger)variant {
+    if ([BHTManager restoreFollowButton]) {
+        NSUInteger subscribeVariantID = 1;
+        NSUInteger desiredFollowVariantID = 32;
+        if (variant == subscribeVariantID) {
+            %orig(desiredFollowVariantID);
+        } else {
+            %orig(variant);
+        }
+    } else {
+        %orig;
+    }
+}
+
+// This hook makes the control ALWAYS REPORT its variant as 32
+- (NSUInteger)variant {
+    if ([BHTManager restoreFollowButton]) {
+        // This makes the control ALWAYS REPORT its variant as 32
+        // to influence layout decisions that might cause the ellipsis issue.
+        return 32;
+    }
+    return %orig;
+}
+
+%end
+
+// Forward declare T1SuperFollowControl if its interface is not fully defined yet
+@class T1SuperFollowControl;
+
+// Helper function to recursively find and hide T1SuperFollowControl instances
+static void findAndHideSuperFollowControl(UIView *viewToSearch) {
+    if ([viewToSearch isKindOfClass:NSClassFromString(@"T1SuperFollowControl")]) {
+        viewToSearch.hidden = YES;
+        viewToSearch.alpha = 0.0;
+    }
+    for (UIView *subview in viewToSearch.subviews) {
+        findAndHideSuperFollowControl(subview);
+    }
+}
+
+@class T1ProfileHeaderViewController; // Forward declaration instead of interface definition
+
+// It's good practice to also declare the class we are looking for, even if just minimally
+@interface T1SuperFollowControl : UIView
+@end
+
+// Add global class pointer for T1ProfileHeaderViewController
+static Class gT1ProfileHeaderViewControllerClass = nil;
+// Add global class pointers for Dash specific views
+static Class gDashAvatarImageViewClass = nil;
+static Class gDashDrawerAvatarImageViewClass = nil; 
+static Class gDashHostingControllerClass = nil;
+static Class gGuideContainerVCClass = nil;
+static Class gTombstoneCellClass = nil;
+static Class gExploreHeroCellClass = nil;
+
+// Helper function to find the UIViewController managing a UIView
+static UIViewController* getViewControllerForView(UIView *view) {
+    UIResponder *responder = view;
+    while ((responder = [responder nextResponder])) {
+        if ([responder isKindOfClass:[UIViewController class]]) {
+            return (UIViewController *)responder;
+        }
+        // Stop if we reach top-level objects like UIWindow or UIApplication without finding a VC
+        if ([responder isKindOfClass:[UIWindow class]] || [responder isKindOfClass:[UIApplication class]]) {
+            break;
+        }
+    }
+    return nil;
+}
+
+// Helper function to check if a view is inside T1ProfileHeaderViewController
+static BOOL isViewInsideT1ProfileHeaderViewController(UIView *view) {
+    if (!gT1ProfileHeaderViewControllerClass) {
+        return NO; 
+    }
+    UIViewController *vc = getViewControllerForView(view);
+    if (!vc) return NO;
+
+    UIViewController *parent = vc; // Start with the direct VC
+    while (parent) {
+        if ([parent isKindOfClass:gT1ProfileHeaderViewControllerClass]) return YES;
+        parent = parent.parentViewController;
+    }
+    UIViewController *presenting = vc.presentingViewController; // Check presenting chain from direct VC
+    while(presenting){
+        if([presenting isKindOfClass:gT1ProfileHeaderViewControllerClass]) return YES;
+        if(presenting.presentingViewController){
+            // Check containers in the presenting chain
+            if([presenting isKindOfClass:[UINavigationController class]]){
+                UINavigationController *nav = (UINavigationController*)presenting;
+                for(UIViewController *childVc in nav.viewControllers){
+                    if([childVc isKindOfClass:gT1ProfileHeaderViewControllerClass]) return YES;
+                }
+            }
+            presenting = presenting.presentingViewController;
+        } else {
+            // Final check on the root of the presenting chain for container
+            if([presenting isKindOfClass:[UINavigationController class]]){
+                 UINavigationController *nav = (UINavigationController*)presenting;
+                 for(UIViewController *childVc in nav.viewControllers){
+                     if([childVc isKindOfClass:gT1ProfileHeaderViewControllerClass]) return YES;
+                 }
+            }
+            break; 
+        }
+    }
+    return NO;
+}
+
+// Helper function to check if a view is inside the Dash Hosting Controller
+static BOOL isViewInsideDashHostingController(UIView *view) {
+    if (!gDashHostingControllerClass) {
+        return NO;
+    }
+    UIViewController *vc = getViewControllerForView(view);
+    if (!vc) return NO;
+
+    UIViewController *parent = vc; // Start with the direct VC
+    while (parent) {
+        if ([parent isKindOfClass:gDashHostingControllerClass]) return YES;
+        parent = parent.parentViewController;
+    }
+    UIViewController *presenting = vc.presentingViewController; // Check presenting chain from direct VC
+    while(presenting){
+        if([presenting isKindOfClass:gDashHostingControllerClass]) return YES;
+        if(presenting.presentingViewController){
+            // Check containers in the presenting chain
+            if([presenting isKindOfClass:[UINavigationController class]]){
+                UINavigationController *nav = (UINavigationController*)presenting;
+                for(UIViewController *childVc in nav.viewControllers){
+                    if([childVc isKindOfClass:gDashHostingControllerClass]) return YES;
+                }
+            }
+            presenting = presenting.presentingViewController;
+        } else {
+             // Final check on the root of the presenting chain for container
+             if([presenting isKindOfClass:[UINavigationController class]]){
+                 UINavigationController *nav = (UINavigationController*)presenting;
+                 for(UIViewController *childVc in nav.viewControllers){
+                     if([childVc isKindOfClass:gDashHostingControllerClass]) return YES;
+                 }
+            }
+            break; 
+        }
+    }
+    return NO;
+}
+
+%hook T1ProfileHeaderViewController
+
+- (void)viewDidLayoutSubviews { // Or viewWillAppear:, depending on when controls are added
+    %orig;
+    // Search for and hide T1SuperFollowControl within this view controller's view
+    if ([BHTManager restoreFollowButton] && self.isViewLoaded) { // Ensure the view is loaded
+        findAndHideSuperFollowControl(self.view);
+    }
+}
+
+%end
+
+// MARK: - Timestamp Label Styling via UILabel -setText:
+
+%hook UILabel
+
+- (void)setText:(NSString *)text {
+    %orig(text);
+
+    // Check if this label is the one we want to modify (e.g., video timestamp)
+    if ([BHTManager restoreVideoTimestamp] && self.text && [self.text containsString:@":"] && [self.text containsString:@"/"]) {
+        // Apply styling if in the correct context (ImmersiveCardView)
+        UIView *parentView = self.superview;
+        BOOL isInImmersiveCardView = NO;
+        while (parentView) {
+            NSString *className = NSStringFromClass([parentView class]);
+            if ([className isEqualToString:@"T1TwitterSwift.ImmersiveCardView"]) {
+                isInImmersiveCardView = YES;
+                break;
+            }
+            parentView = parentView.superview;
+        }
+
+        if (isInImmersiveCardView) {
+            self.font = [UIFont systemFontOfSize:14.0];
+            self.textColor = [UIColor whiteColor]; // White text for contrast
+            self.textAlignment = NSTextAlignmentCenter; // Center text in the pill
+            
+            // Calculate size based on current text and font
+            [self sizeToFit];
+            CGRect currentFrame = self.frame;
+
+            // Define padding - reduced horizontal padding for a narrower pill
+            CGFloat horizontalPadding = 2.0; // Reduced from 4.0 to make the pill less wide
+            CGFloat verticalPadding = 12.0; // Keep vertical padding for pronounced round pill
+
+            // Apply padding to the frame
+            // Adjust origin to keep the label centered around its original position after resizing
+            self.frame = CGRectMake(
+                currentFrame.origin.x - horizontalPadding / 2.0f,
+                currentFrame.origin.y - verticalPadding / 2.0f,
+                currentFrame.size.width + horizontalPadding,
+                currentFrame.size.height + verticalPadding
+            );
+            
+            // Ensure a minimum height for very short text (e.g., "0:01/0:05") for a good pill shape
+            if (self.frame.size.height < 22.0f) {
+                CGFloat diff = 22.0f - self.frame.size.height;
+                CGRect frame = self.frame;
+                frame.size.height = 22.0f;
+                frame.origin.y -= diff / 2.0f; // Keep it vertically centered
+                self.frame = frame;
+            }
+            
+            // Pill styling
+            self.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5]; // Dark semi-transparent
+            self.layer.cornerRadius = self.frame.size.height / 2.0f;
+            self.layer.masksToBounds = YES;
+            
+            // Set initial visibility to match the player's UI state
+            // Do not force alpha to 1.0; let T1ImmersiveFullScreenViewController manage it
+            if (self.alpha != 1.0) {
+                self.alpha = 0.0;
+            }
+            self.hidden = NO; // Ensure it's not hidden by default, let the controller manage visibility
+
+            // Store a weak reference to this label
+            gVideoTimestampLabel = self;
+        }
+    }
+}
+
+%end
+
+// MARK: - Immersive Player Timestamp Visibility Control
+
+%hook T1ImmersiveFullScreenViewController
+
+- (void)immersiveViewController:(id)immersiveViewController showHideNavigationButtons:(_Bool)showButtons {
+    %orig(immersiveViewController, showButtons);
+
+    if ([BHTManager restoreVideoTimestamp]) {
+        UILabel *timestampLabelToUpdate = nil;
+
+        if (gVideoTimestampLabel && gVideoTimestampLabel.superview) {
+            timestampLabelToUpdate = gVideoTimestampLabel;
+        } else {
+            UIView *searchView = self.view;
+            if (immersiveViewController && [immersiveViewController respondsToSelector:@selector(view)]) {
+                searchView = [immersiveViewController view];
+            }
+            NSMutableArray<UILabel *> *foundLabels = [NSMutableArray array];
+            BH_EnumerateSubviewsRecursively(searchView, ^(UIView *currentView) {
+                if ([currentView isKindOfClass:[UILabel class]]) {
+                    UILabel *label = (UILabel *)currentView;
+                    if (label.text && [label.text containsString:@":"] && [label.text containsString:@"/"]) {
+                        [foundLabels addObject:label];
+                    }
+                }
+            });
+            if ([foundLabels containsObject:gVideoTimestampLabel]) {
+                 timestampLabelToUpdate = gVideoTimestampLabel;
+            } else if (foundLabels.count > 0) {
+                timestampLabelToUpdate = foundLabels.firstObject;
+                 gVideoTimestampLabel = timestampLabelToUpdate; 
+            }
+        }
+        
+        if (timestampLabelToUpdate) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                // Set visibility without custom animation to avoid flicker
+                // Use a minimal delay on hide to better sync with native fade behavior
+                CGFloat targetAlpha = showButtons ? 1.0 : 0.0;
+                if (showButtons) {
+                    timestampLabelToUpdate.alpha = targetAlpha;
+                    timestampLabelToUpdate.hidden = !showButtons;
+                } else {
+                    // Immediately set alpha to 0 to reduce flicker, then hide after a tiny delay
+                    timestampLabelToUpdate.alpha = 0.0;
+                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.05 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                        timestampLabelToUpdate.hidden = !showButtons;
+                    });
+                }
+            });
+        }
+    }
+}
+
+%end
+
+// MARK: - Square Avatars (TFNAvatarImageView)
+
+@interface TFNAvatarImageView : UIView // Assuming it's a UIView subclass, adjust if necessary
+- (void)setStyle:(NSInteger)style;
+- (NSInteger)style;
+@end
+
+%hook TFNAvatarImageView
+
+- (void)setStyle:(NSInteger)style {
+    if ([BHTManager squareAvatars]) {
+        CGFloat activeCornerRadius;
+        NSString *selfClassName = NSStringFromClass([self class]); // Get class name as string
+
+        BOOL isDashAvatar = [selfClassName isEqualToString:@"TwitterDash.DashAvatarImageView"];
+        BOOL isDashDrawerAvatar = [selfClassName isEqualToString:@"TwitterDash.DashDrawerAvatarImageView"];
+        
+        BOOL inDashHostingContext = isViewInsideDashHostingController(self);
+
+        if (isDashDrawerAvatar) {
+            // DashDrawerAvatarImageView always gets 8.0f regardless of context
+            activeCornerRadius = 8.0f;
+        } else if (isDashAvatar && inDashHostingContext) {
+            // Regular DashAvatarImageView in hosting context gets 8.0f
+            activeCornerRadius = 8.0f;
+        } else if (isViewInsideT1ProfileHeaderViewController(self)) {
+            // Avatars in profile header get 8.0f
+            activeCornerRadius = 8.0f;
+        } else {
+            // Default for all other avatars is 12.0f
+            activeCornerRadius = 12.0f;
+        }
+
+        %orig(3); // Call original with forced style 3
+
+        // Force slightly rounded square on the main TFNAvatarImageView layer
+        self.layer.cornerRadius = activeCornerRadius; 
+        self.layer.masksToBounds = YES; // Ensure the main view clips
+
+        // Find TIPImageViewObserver and force it to be slightly rounded
+        for (NSUInteger i = 0; i < self.subviews.count; i++) {
+            UIView *subview = [self.subviews objectAtIndex:i];
+            NSString *subviewClassString = NSStringFromClass([subview class]);
+            if ([subviewClassString isEqualToString:@"TIPImageViewObserver"]) {
+                subview.layer.cornerRadius = activeCornerRadius;
+                subview.layer.mask = nil;
+                subview.clipsToBounds = YES;        // View property
+                subview.layer.masksToBounds = YES;  // Layer property
+                subview.contentMode = UIViewContentModeScaleAspectFill; // Set contentMode
+
+                // Check for subviews of TIPImageViewObserver
+                if (subview.subviews.count > 0) {
+                    for (NSUInteger j = 0; j < subview.subviews.count; j++) {
+                        UIView *tipSubview = [subview.subviews objectAtIndex:j];
+                        tipSubview.layer.cornerRadius = activeCornerRadius;
+                        tipSubview.layer.mask = nil;
+                        tipSubview.clipsToBounds = YES;
+                        tipSubview.layer.masksToBounds = YES;
+                        tipSubview.contentMode = UIViewContentModeScaleAspectFill; // Set contentMode
+                    }
+                }
+                break; // Assuming only one TIPImageViewObserver, exit loop
+            }
+        }
+    } else {
+        %orig;
+    }
+}
+
+- (NSInteger)style {
+    if ([BHTManager squareAvatars]) {
+        return 3;
+    }
+    return %orig;
+}
+
+%end
+
+// --- UIImage Hook Implementation ---
+%hook UIImage
+
+// Hook the specific TFN rounding method
+- (UIImage *)tfn_roundImageWithTargetDimensions:(CGSize)targetDimensions targetContentMode:(UIViewContentMode)targetContentMode {
+    if ([BHTManager squareAvatars]) {
+        if (targetDimensions.width <= 0 || targetDimensions.height <= 0) {
+            return self; // Avoid issues with zero/negative size
+        }
+
+        CGFloat cornerRadius = 12.0f;
+        CGRect imageRect = CGRectMake(0, 0, targetDimensions.width, targetDimensions.height);
+
+        // Ensure cornerRadius is not too large for the dimensions
+        CGFloat minSide = MIN(targetDimensions.width, targetDimensions.height);
+        if (cornerRadius > minSide / 2.0f) {
+            cornerRadius = minSide / 2.0f; // Cap radius to avoid weird shapes
+        }
+        
+        UIGraphicsBeginImageContextWithOptions(targetDimensions, NO, self.scale); // Use self.scale for retina, NO for opaque if image has alpha
+        if (!UIGraphicsGetCurrentContext()) {
+            UIGraphicsEndImageContext(); // Defensive call
+            return self;
+        }
+        
+        [[UIBezierPath bezierPathWithRoundedRect:imageRect cornerRadius:cornerRadius] addClip];
+        [self drawInRect:imageRect];
+        
+        UIImage *roundedImage = UIGraphicsGetImageFromCurrentImageContext();
+        UIGraphicsEndImageContext();
+        
+        if (roundedImage) {
+            return roundedImage;
+        } else {
+            return self; // Fallback to original image if rounding fails
+        }
+    } else {
+        return %orig;
+    }
+}
+
+%end
+
+// --- TFNCircularAvatarShadowLayer Hook Implementation ---
+%hook TFNCircularAvatarShadowLayer
+
+- (void)setHidden:(BOOL)hidden {
+    if ([BHTManager squareAvatars]) {
+        %orig(YES); // Always hide this layer when square avatars are enabled
+    } else {
+        %orig;
+    }
+}
+
+%end
+
+
+// MARK: - Combined constructor to initialize all hooks and features
+%ctor {
+    NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+    NSOperationQueue *mainQueue = [NSOperationQueue mainQueue];
+    // Someone needs to hold reference the to Notification
+    _PasteboardChangeObserver = [center addObserverForName:UIPasteboardChangedNotification object:nil queue:mainQueue usingBlock:^(NSNotification * _Nonnull note){
+        
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
+            trackingParams = @{
+                @"twitter.com" : @[@"s", @"t"],
+                @"x.com" : @[@"s", @"t"],
+            };
+        });
+        
+        if ([BHTManager stripTrackingParams]) {
+            if (UIPasteboard.generalPasteboard.hasURLs) {
+                NSURL *pasteboardURL = UIPasteboard.generalPasteboard.URL;
+                NSArray<NSString*>* params = trackingParams[pasteboardURL.host];
+                
+                if ([pasteboardURL.absoluteString isEqualToString:_lastCopiedURL] == NO && params != nil && pasteboardURL.query != nil) {
+                    // to prevent endless copy loop
+                    _lastCopiedURL = pasteboardURL.absoluteString;
+                    NSURLComponents *cleanedURL = [NSURLComponents componentsWithURL:pasteboardURL resolvingAgainstBaseURL:NO];
+                    NSMutableArray<NSURLQueryItem*> *safeParams = [NSMutableArray arrayWithCapacity:0];
+                    
+                    for (NSURLQueryItem *item in cleanedURL.queryItems) {
+                        if ([params containsObject:item.name] == NO) {
+                            [safeParams addObject:item];
+                        }
+                    }
+                    cleanedURL.queryItems = safeParams.count > 0 ? safeParams : nil;
+
+                    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"tweet_url_host"]) {
+                        NSString *selectedHost = [[NSUserDefaults standardUserDefaults] objectForKey:@"tweet_url_host"];
+                        cleanedURL.host = selectedHost;
+                    }
+                    UIPasteboard.generalPasteboard.URL = cleanedURL.URL;
+                }
+            }
+        }
+    }];
+    
+    // Initialize global Class pointers here when the tweak loads
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        gGuideContainerVCClass = NSClassFromString(@"T1TwitterSwift.GuideContainerViewController");
+        if (!gGuideContainerVCClass) gGuideContainerVCClass = NSClassFromString(@"T1TwitterSwift_GuideContainerViewController");
+
+        gTombstoneCellClass = NSClassFromString(@"T1TwitterSwift.ConversationTombstoneCell");
+        if (!gTombstoneCellClass) gTombstoneCellClass = NSClassFromString(@"T1TwitterSwift_ConversationTombstoneCell");
+
+        gExploreHeroCellClass = NSClassFromString(@"T1ExploreEventSummaryHeroTableViewCell");
+        
+        // Initialize T1ProfileHeaderViewController class pointer
+        gT1ProfileHeaderViewControllerClass = NSClassFromString(@"T1ProfileHeaderViewController");
+        
+        // Initialize Dash specific class pointers
+        gDashAvatarImageViewClass = NSClassFromString(@"TwitterDash.DashAvatarImageView");
+        gDashDrawerAvatarImageViewClass = NSClassFromString(@"TwitterDash.DashDrawerAvatarImageView");
+        
+        // The full name for the hosting controller is very long and specific.
+        gDashHostingControllerClass = NSClassFromString(@"_TtGC7SwiftUI19UIHostingControllerGV10TFNUISwift22HostingEnvironmentViewV11TwitterDash18DashNavigationView__");
+    });
+    
+    // Initialize dictionaries for Tweet Source Labels restoration
+    if (!tweetSources)      tweetSources      = [NSMutableDictionary dictionary];
+    if (!viewToTweetID)     viewToTweetID     = [NSMutableDictionary dictionary];
+    if (!fetchTimeouts)     fetchTimeouts     = [NSMutableDictionary dictionary];
+    if (!viewInstances)     viewInstances     = [NSMutableDictionary dictionary];
+    if (!fetchRetries)      fetchRetries      = [NSMutableDictionary dictionary];
+    if (!updateRetries)     updateRetries     = [NSMutableDictionary dictionary];
+    if (!updateCompleted)   updateCompleted   = [NSMutableDictionary dictionary];
+    if (!fetchPending)      fetchPending      = [NSMutableDictionary dictionary];
+    if (!cookieCache)       cookieCache       = [NSMutableDictionary dictionary];
+    
+    // Load cached cookies at initialization
+    [TweetSourceHelper loadCachedCookies];
+    
+    %init;
+    // REMOVED: Observer for BHTClassicTabBarSettingChanged (and its new equivalent CLASSIC_TAB_BAR_DISABLED_NOTIFICATION_NAME)
+    // The logic for handling classic tab bar changes is now fully managed by restart.
+    
+    // Add observers for both window and theme changes
+    [[NSNotificationCenter defaultCenter] addObserverForName:UIWindowDidBecomeVisibleNotification 
+                                                    object:nil 
+                                                     queue:[NSOperationQueue mainQueue] 
+                                                usingBlock:^(NSNotification * _Nonnull note) {
+        UIWindow *window = note.object;
+        if (window && [[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+            BHT_applyThemeToWindow(window);
+        }
+    }];
+    
+    [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
+                                                    object:nil 
+                                                     queue:[NSOperationQueue mainQueue] 
+                                                usingBlock:^(NSNotification * _Nonnull note) {
+        BHT_ensureTheming();
+    }];
+    
+    // Observe theme changes
+    // REMOVED: Observer for BHTTabBarThemingChanged (second instance)
+    // [[NSNotificationCenter defaultCenter] addObserverForName:@\"BHTTabBarThemingChanged\" 
+    //                                                 object:nil 
+    //                                                  queue:[NSOperationQueue mainQueue] 
+    //                                             usingBlock:^(NSNotification * _Nonnull note) {
+    //     BHT_ensureTheming(); // This was likely too broad, direct update is better.
+    // }];
+}
+
+// MARK: - DM Avatar Images
+%hook T1DirectMessageEntryViewModel
+- (BOOL)shouldShowAvatarImage {
+    if (![BHTManager dmAvatars]) {
+        return %orig;
+    }
+    
+    if (self.isOutgoingMessage) {
+        return NO; // Don't show avatar for your own messages
+    }
+    // For incoming messages, only show avatar if it's the last message in a group from that sender
+    return [[self valueForKey:@"lastEntryInGroup"] boolValue];
+}
+
+- (BOOL)isAvatarImageEnabled {
+    if (![BHTManager dmAvatars]) {
+        return %orig;
+    }
+    
+    // Always return YES so that space is allocated for the avatar,
+    // allowing shouldShowAvatarImage to control actual visibility.
+    return YES;
+}
+%end
+
+// MARK: - Tab Bar Icon Theming
+%hook T1TabView
+
+%new
+- (void)bh_applyCurrentThemeToIcon {
+    UIImageView *imgView = nil;
+    @try {
+        imgView = [self valueForKey:@"imageView"];
+    } @catch (NSException *exception) {
+        NSLog(@"[BHTwitter TabTheme] Exception getting imageView: %@", exception);
+        return;
+    }
+    if (!imgView) {
+        NSLog(@"[BHTwitter TabTheme] imageView is nil.");
+        return;
+    }
+
+    // MODIFIED: Logic for enabling/disabling theme
+    if (![BHTManager classicTabBarEnabled]) {
+        // Revert to default appearance
+        imgView.tintColor = nil; 
+        if (imgView.image) {
+            // Attempt to set to a mode that respects original colors, or automatic.
+            // UIImageRenderingModeAutomatic might be best if original isn't template.
+            // If Twitter's default icons are always template, this might not show them correctly
+            // without knowing their default non-themed tint color.
+            // For now, assume nil tintColor and automatic rendering mode is the goal.
+            imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAutomatic];
+        }
+    } else {
+        // Apply custom theme (existing logic)
+        UIColor *targetColor;
+        if ([[self valueForKey:@"selected"] boolValue]) { 
+            targetColor = BHTCurrentAccentColor();
+        } else {
+            targetColor = [UIColor grayColor]; // Unselected but themed icon
+        }
+        
+    if (imgView.image && imgView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
+        imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+    }
+        
+    SEL applyTintColorSelector = @selector(applyTintColor:);
+    if ([self respondsToSelector:applyTintColorSelector]) {
+            ((void (*)(id, SEL, UIColor *))objc_msgSend)(self, applyTintColorSelector, targetColor);
+    } else {
+        imgView.tintColor = targetColor;
+    }
+    }
+
+    // Always call Twitter's internal update method to refresh the visual state
+    SEL updateImageViewSelector = NSSelectorFromString(@"_t1_updateImageViewAnimated:");
+    if ([self respondsToSelector:updateImageViewSelector]) {
+        IMP imp = [self methodForSelector:updateImageViewSelector];
+        void (*func)(id, SEL, _Bool) = (void *)imp;
+        func(self, updateImageViewSelector, NO); // Animate NO for immediate change
+    } else if (imgView) {
+        [imgView setNeedsDisplay]; // Fallback if the specific update method isn't found
+    }
+}
+
+- (void)setSelected:(_Bool)selected {
+    %orig(selected);
+    [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
+}
+
+// Optional: Hook _t1_updateImageViewAnimated if setSelected is not enough
+// or if other state changes (like theme color change) need to trigger this.
+/*
+- (void)_t1_updateImageViewAnimated:(_Bool)animated {
+    %orig(animated);
+    [self bh_applyCurrentThemeToIcon]; 
+}
+*/
+
+%end
+
+%hook T1TabBarViewController
+
+// + (void)load { // REMOVED
+    // Initialize the hash table once
+    // static dispatch_once_t onceToken;
+    // dispatch_once(&onceToken, ^{
+        // gTabBarControllers = [NSHashTable hashTableWithOptions:NSPointerFunctionsWeakMemory];
+        // [[NSNotificationCenter defaultCenter] addObserverForName:NSUserDefaultsDidChangeNotification 
+                                                          // object:nil 
+                                                           // queue:[NSOperationQueue mainQueue] 
+                                                      // usingBlock:^(NSNotification * _Nonnull note) {
+            // BHTTabBarAccentColorChanged(NULL, NULL, NULL, NULL, NULL); 
+        // }];
+    // });
+// }
+
+- (void)viewDidLoad {
+    %orig;
+    // if (gTabBarControllers) { // REMOVED
+        // [gTabBarControllers addObject:self]; // REMOVED
+    // }
+    // Apply theme on initial load
+    if ([self respondsToSelector:@selector(tabViews)]) {
+        NSArray *tabViews = [self valueForKey:@"tabViews"];
+        for (id tabView in tabViews) {
+            if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
+                [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
+            }
+        }
+    }
+}
+
+- (void)dealloc {
+    // if (gTabBarControllers) { // REMOVED
+        // [gTabBarControllers removeObject:self]; // REMOVED
+    // }
+    %orig;
+}
+
+%end
+
+// Helper: Update all tab bar icons
+static void BHT_UpdateAllTabBarIcons(void) {
+    // Iterate all windows and view controllers to find T1TabBarViewController
+    for (UIWindow *window in UIApplication.sharedApplication.windows) {
+        UIViewController *root = window.rootViewController;
+        if (!root) continue;
+        NSMutableArray *stack = [NSMutableArray arrayWithObject:root];
+        while (stack.count > 0) {
+            UIViewController *vc = [stack lastObject];
+            [stack removeLastObject];
+            if ([vc isKindOfClass:NSClassFromString(@"T1TabBarViewController")]) {
+                NSArray *tabViews = [vc valueForKey:@"tabViews"];
+                for (id tabView in tabViews) {
+                    if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
+                        [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
+                    }
+                }
+            }
+            // Add children
+            for (UIViewController *child in vc.childViewControllers) {
+                [stack addObject:child];
+            }
+            if (vc.presentedViewController) {
+                [stack addObject:vc.presentedViewController];
+            }
+        }
+    }
+}
+
+static void BHT_applyThemeToWindow(UIWindow *window) {
+    if (!window) return;
+
+    // 1. Update our custom themed elements first
+    // Update our custom tab bar icons
+    if ([window.rootViewController isKindOfClass:NSClassFromString(@"T1TabBarViewController")]) {
+        // Ensure BHT_UpdateAllTabBarIcons properly targets the tabViews of this specific window's rootVC
+        // If BHT_UpdateAllTabBarIcons iterates all T1TabBarViewControllers globally, this direct call might be okay,
+        // but targeting is safer if possible.
+        BHT_UpdateAllTabBarIcons(); 
+    }
+
+    // Update our custom nav bar bird icon by recursively finding TFNNavigationBars
+    BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
+        if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
+            // updateLogoTheme should internally use BHTCurrentAccentColor()
+            [(TFNNavigationBar *)currentView updateLogoTheme];
+        }
+    });
+
+    // 2. Force a refresh of the currently visible content view hierarchy.
+    // This is an attempt to make Twitter's own views re-evaluate the (now changed) accent color.
+    UIViewController *rootVC = window.rootViewController;
+    if (rootVC) {
+        UIViewController *currentContentVC = rootVC;
+        // Traverse to the most relevant visible content view controller
+        if ([rootVC isKindOfClass:NSClassFromString(@"T1TabBarViewController")]) {
+            // T1TabBarViewController is a UITabBarController subclass.
+            // Cast to UITabBarController to access standard 'selectedViewController' property.
+            if ([rootVC isKindOfClass:[UITabBarController class]]) {
+                currentContentVC = ((UITabBarController *)rootVC).selectedViewController;
+            }
+        }
+        
+        // If the selected VC in a tab bar is a Nav controller, go to its visible VC
+        if ([currentContentVC isKindOfClass:[UINavigationController class]]) {
+            currentContentVC = [(UINavigationController *)currentContentVC visibleViewController];
+        }
+
+        // If we have a valid, loaded content view, tell it to redraw and re-layout.
+        if (currentContentVC && currentContentVC.isViewLoaded) {
+            [currentContentVC.view setNeedsDisplay];
+            [currentContentVC.view setNeedsLayout];
+            // Optionally, for a more immediate effect, though it can be costly if overused:
+            // [currentContentVC.view layoutIfNeeded]; 
+        }
+    }
+}
+
+static void BHT_ensureTheming(void) {
+    if (![[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) return;
+    
+    // Apply the main color theme
+    BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
+    
+    // Apply to all windows
+    for (UIWindow *window in [UIApplication sharedApplication].windows) {
+        BHT_applyThemeToWindow(window);
+    }
+}
+
+static void BHT_forceRefreshAllWindowAppearances(void) { // Renamed and logic adjusted
+    // 1. Update our custom elements (these seem to work reliably)
+    BHT_UpdateAllTabBarIcons(); 
+    
+    for (UIWindow *window in [UIApplication sharedApplication].windows) {
+        if (!window.isOpaque || window.isHidden) continue; // Skip non-visible or transparent windows
+
+        // Update our custom nav bar bird icon for this window
+        if (window.rootViewController && window.rootViewController.isViewLoaded) {
+            BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
+                if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
+                    if ([BHTManager classicTabBarEnabled]) { // MODIFIED: Used classicTabBarEnabled
+                        [(TFNNavigationBar *)currentView updateLogoTheme];
+                    }
+                }
+            });
+        }
+
+        // Attempt to "jolt" this window's hierarchy
+        UIViewController *rootVC = window.rootViewController;
+        if (rootVC && rootVC.isViewLoaded) {
+            BH_EnumerateSubviewsRecursively(rootVC.view, ^(UIView *subview) {
+                if ([subview respondsToSelector:@selector(tintColorDidChange)]) {
+                    [subview tintColorDidChange];
+                }
+                if ([subview respondsToSelector:@selector(setNeedsDisplay)]) {
+                    [subview setNeedsDisplay]; // Force redraw
+                }
+            });
+            [rootVC.view setNeedsLayout];
+            [rootVC.view layoutIfNeeded];
+            [rootVC.view setNeedsDisplay]; // Redraw the whole root view of the window
+        }
+    }
+}
+
+// MARK: Theme TFNBarButtonItemButtonV2
+%hook TFNBarButtonItemButtonV2
+- (void)didMoveToWindow {
+    %orig;
+    if (self.window) {
+        self.tintColor = BHTCurrentAccentColor();
+    }
+}
+
+- (void)setTintColor:(UIColor *)tintColor {
+    %orig(BHTCurrentAccentColor());
 }
 %end

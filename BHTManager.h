@@ -61,5 +61,21 @@
 + (BOOL)disableMediaTab;
 + (BOOL)disableArticles;
 + (BOOL)disableHighlights;
+
+// New feature toggles
++ (BOOL)hideGrokAnalyze;
++ (BOOL)hideFollowButton;
++ (BOOL)restoreFollowButton;
++ (BOOL)squareAvatars;
++ (BOOL)restoreVideoTimestamp;
++ (BOOL)dmAvatars;
++ (BOOL)classicTabBarEnabled;
++ (BOOL)noTabBarHiding;
+
+// Prevent Tab Bar Fade
++ (BOOL)preventTabBarFade;
+
++ (void)clearSourceLabelCache;
+
 @end
 

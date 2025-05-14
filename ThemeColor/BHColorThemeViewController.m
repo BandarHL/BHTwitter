@@ -151,6 +151,72 @@
     
     [[NSUserDefaults standardUserDefaults] setInteger:colorItem.colorID forKey:@"bh_color_theme_selectedColor"];
     BH_changeTwitterColor(colorItem.colorID);
+
+    // Manually trigger tab bar icon refresh
+    Class t1TabBarVCClass = NSClassFromString(@"T1TabBarViewController");
+    if (t1TabBarVCClass) {
+        UIWindow *window = nil;
+        if (@available(iOS 13.0, *)) {
+            for (UIWindowScene *scene in UIApplication.sharedApplication.connectedScenes) {
+                if (scene.activationState == UISceneActivationStateForegroundActive && [scene isKindOfClass:[UIWindowScene class]]) {
+                    // Check if the scene's delegate responds to window selector or if the scene itself has windows
+                    if ([scene.delegate respondsToSelector:@selector(window)]) {
+                         window = [(id)scene.delegate window];
+                    } else if ([scene respondsToSelector:@selector(windows)]) {
+                        // For scenes directly managing windows (e.g. iPad with multiple windows)
+                        for (UIWindow *sceneWindow in [(id)scene windows]) {
+                            if (sceneWindow.isKeyWindow) {
+                                window = sceneWindow;
+                                break;
+                            }
+                        }
+                        // Fallback to the first window if no key window is found (less ideal)
+                        if (!window && [[(id)scene windows] count] > 0) {
+                            window = [[(id)scene windows] firstObject];
+                        }
+                    }
+                    if(window) break; 
+                }
+            }
+        } else {
+            #pragma GCC diagnostic push
+            #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            window = UIApplication.sharedApplication.keyWindow;
+            #pragma GCC diagnostic pop
+        }
+
+        if (window && window.rootViewController) {
+            NSMutableArray *controllersToVisit = [NSMutableArray arrayWithObject:window.rootViewController];
+            while (controllersToVisit.count > 0) {
+                UIViewController *currentVC = [controllersToVisit firstObject];
+                [controllersToVisit removeObjectAtIndex:0];
+
+                if ([currentVC isKindOfClass:t1TabBarVCClass]) {
+                    if ([currentVC respondsToSelector:@selector(tabViews)]) {
+                        NSArray *tabViews = [currentVC valueForKey:@"tabViews"];
+                        for (id tabView in tabViews) {
+                            if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
+                                [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
+                            }
+                        }
+                    }
+                }
+
+                if (currentVC.presentedViewController) {
+                    [controllersToVisit addObject:currentVC.presentedViewController];
+                }
+                if ([currentVC isKindOfClass:[UINavigationController class]]) {
+                    [controllersToVisit addObjectsFromArray:((UINavigationController*)currentVC).viewControllers];
+                }
+                if ([currentVC isKindOfClass:[UITabBarController class]]) {
+                    [controllersToVisit addObjectsFromArray:((UITabBarController*)currentVC).viewControllers];
+                }
+                for (UIViewController *childVC in currentVC.childViewControllers) {
+                    [controllersToVisit addObject:childVC];
+                }
+            }
+        }
+    }
 }
 
 - (UIEdgeInsets)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout insetForSectionAtIndex:(NSInteger)section {
