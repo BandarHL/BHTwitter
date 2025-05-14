@@ -2818,40 +2818,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         }
 
         if (isInImmersiveCardView) {
-            self.font = [UIFont systemFontOfSize:14.0];
-            self.textColor = [UIColor whiteColor]; // White text for contrast
-            self.textAlignment = NSTextAlignmentCenter; // Center text in the pill
-            
-            // Calculate size based on current text and font
-            [self sizeToFit];
-            CGRect currentFrame = self.frame;
-
-            // Define padding - reduced horizontal padding for a narrower pill
-            CGFloat horizontalPadding = 2.0; // Reduced from 4.0 to make the pill less wide
-            CGFloat verticalPadding = 12.0; // Keep vertical padding for pronounced round pill
-
-            // Apply padding to the frame
-            // Adjust origin to keep the label centered around its original position after resizing
-            self.frame = CGRectMake(
-                currentFrame.origin.x - horizontalPadding / 2.0f,
-                currentFrame.origin.y - verticalPadding / 2.0f,
-                currentFrame.size.width + horizontalPadding,
-                currentFrame.size.height + verticalPadding
-            );
-            
-            // Ensure a minimum height for very short text (e.g., "0:01/0:05") for a good pill shape
-            if (self.frame.size.height < 22.0f) {
-                CGFloat diff = 22.0f - self.frame.size.height;
-                CGRect frame = self.frame;
-                frame.size.height = 22.0f;
-                frame.origin.y -= diff / 2.0f; // Keep it vertically centered
-                self.frame = frame;
-            }
-            
-            // Pill styling
-            self.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5]; // Dark semi-transparent
-            self.layer.cornerRadius = self.frame.size.height / 2.0f;
-            self.layer.masksToBounds = YES;
+            // Removed styling to avoid conflicts with native animations
             
             // Set initial visibility to match the player's UI state
             // Do not force alpha to 1.0; let T1ImmersiveFullScreenViewController manage it
