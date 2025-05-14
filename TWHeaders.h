@@ -615,3 +615,14 @@ static UIViewController * _Nonnull topMostController() {
 @interface TFNBarButtonItemButtonV2 : UIView
 @property (nonatomic, strong) UIColor *tintColor;
 @end
+
+// Forward declare T1ColorSettings and its private method to satisfy the compiler
+@interface T1ColorSettings : NSObject
++ (void)_t1_applyPrimaryColorOption;
++ (void)_t1_updateOverrideUserInterfaceStyle; // Add this line
+@end
+
+// Forward declaration for the immersive view controller
+@interface T1ImmersiveFullScreenViewController : UIViewController // Assuming base class, adjust if known
+- (void)immersiveViewController:(id)immersiveViewController showHideNavigationButtons:(_Bool)showButtons;
+@end
