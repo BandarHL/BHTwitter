@@ -3411,30 +3411,14 @@ static void BHT_forceRefreshAllWindowAppearances(void) { // Renamed and logic ad
 
 // MARK: Theme TFNBarButtonItemButtonV2
 %hook TFNBarButtonItemButtonV2
+- (void)didMoveToWindow {
+    %orig;
+    if (self.window) {
+        self.tintColor = BHTCurrentAccentColor();
+    }
+}
+
 - (void)setTintColor:(UIColor *)tintColor {
     %orig(BHTCurrentAccentColor());
-}
-
-- (UIColor *)tintColor {
-    return BHTCurrentAccentColor();
-}
-
-- (void)didMoveToWindow {
-    %orig;
-    self.tintColor = BHTCurrentAccentColor();
-}
-%end
-
-// MARK: Theme TFNBarButtonItemButtonV2
-@interface TFNBarButtonItemButtonV2 : UIView
-@property (nonatomic, strong) UIColor *tintColor;
-@end
-
-%hook TFNBarButtonItemButtonV2
-- (void)didMoveToWindow {
-    %orig;
-    if ([self respondsToSelector:@selector(setTintColor:)]) {
-        [self setTintColor:BHTCurrentAccentColor()];
-    }
 }
 %end
