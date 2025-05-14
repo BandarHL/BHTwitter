@@ -121,11 +121,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         [[%c(FLEXManager) sharedManager] showExplorer];
     }
     
-    // Apply theme immediately after launch
+    // Apply theme immediately after launch with reinforced consistency
     if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        // We will call BH_changeTwitterColor directly in applicationDidBecomeActive
-        // and then trigger a more focused UI refresh.
-        // The dispatch_async might still be useful for the initial BH_changeTwitterColor if it interacts with UI.
         dispatch_async(dispatch_get_main_queue(), ^ {
             NSInteger selectedOption = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
             BH_changeTwitterColor(selectedOption);
@@ -135,6 +132,12 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_updateOverrideUserInterfaceStyle)]) {
                 [%c(T1ColorSettings) _t1_updateOverrideUserInterfaceStyle];
             }
+            // Additional call to ensure TAEColorSettings applies the theme
+            if ([%c(TAEColorSettings) respondsToSelector:@selector(applyCurrentColorPalette)]) {
+                [[%c(TAEColorSettings) sharedSettings] applyCurrentColorPalette];
+            }
+            BHT_forceRefreshAllWindowAppearances(); // Force refresh all UI elements
+            BHT_UpdateAllTabBarIcons();
         });
     }
     
@@ -143,10 +146,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 - (void)applicationDidBecomeActive:(id)arg1 {
     %orig;
-    // Apply/Re-apply theme elements on becoming active
-    // BH_changeTwitterColor is called on launch. Here, we'll focus on ensuring UI refresh.
-    // The new BHT_forceUIRefresh will be called here later.
-
+    // Re-apply theme on becoming active with reinforced consistency
     if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger selectedOption = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
         BH_changeTwitterColor(selectedOption);
@@ -157,11 +157,14 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_updateOverrideUserInterfaceStyle)]) {
             [%c(T1ColorSettings) _t1_updateOverrideUserInterfaceStyle];
         }
+        // Additional call to ensure TAEColorSettings applies the theme
+        if ([%c(TAEColorSettings) respondsToSelector:@selector(applyCurrentColorPalette)]) {
+            [[%c(TAEColorSettings) sharedSettings] applyCurrentColorPalette];
+        }
 
-        BHT_forceRefreshAllWindowAppearances(); // Call renamed function
+        BHT_forceRefreshAllWindowAppearances(); // Force refresh all UI elements
 
         BHT_UpdateAllTabBarIcons();
-        // We might need to re-add nav bar bird icon updates here if they are still problematic
     }
 
     if ([BHTManager Padlock]) {
