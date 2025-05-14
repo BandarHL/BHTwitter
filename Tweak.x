@@ -1,8 +1,8 @@
 #import <UIKit/UIKit.h>
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
-#import "SAMKeychain/AuthViewController.h"
 #import <objc/message.h> // For objc_msgSend
+#import "SAMKeychain/AuthViewController.h"
 #import "Colours/Colours.h"
 #import "BHTManager.h"
 #import <math.h>
@@ -2818,50 +2818,53 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         }
 
         if (isInImmersiveCardView) {
-            self.font = [UIFont systemFontOfSize:14.0];
-            self.textColor = [UIColor whiteColor]; // White text for contrast
-            self.textAlignment = NSTextAlignmentCenter; // Center text in the pill
-            
-            // Calculate size based on current text and font
-            [self sizeToFit];
-            CGRect currentFrame = self.frame;
+            // Check if we've already styled this label to avoid multiple applications
+            if (![objc_getAssociatedObject(self, "BHT_StyledTimestamp") boolValue]) {
+                // Mark as styled to prevent repeated styling
+                objc_setAssociatedObject(self, "BHT_StyledTimestamp", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                
+                // Apply all styling at once
+                self.font = [UIFont systemFontOfSize:14.0];
+                self.textColor = [UIColor whiteColor]; // White text for contrast
+                self.textAlignment = NSTextAlignmentCenter; // Center text in the pill
+                self.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5]; // Dark semi-transparent
+                
+                // Calculate size based on current text and font
+                [self sizeToFit];
+                CGRect currentFrame = self.frame;
 
-            // Define padding - reduced horizontal padding for a narrower pill
-            CGFloat horizontalPadding = 2.0; // Reduced from 4.0 to make the pill less wide
-            CGFloat verticalPadding = 12.0; // Keep vertical padding for pronounced round pill
+                // Define padding - reduced horizontal padding for a narrower pill
+                CGFloat horizontalPadding = 2.0; // Reduced from 4.0 to make the pill less wide
+                CGFloat verticalPadding = 12.0; // Keep vertical padding for pronounced round pill
 
-            // Apply padding to the frame
-            // Adjust origin to keep the label centered around its original position after resizing
-            self.frame = CGRectMake(
-                currentFrame.origin.x - horizontalPadding / 2.0f,
-                currentFrame.origin.y - verticalPadding / 2.0f,
-                currentFrame.size.width + horizontalPadding,
-                currentFrame.size.height + verticalPadding
-            );
-            
-            // Ensure a minimum height for very short text (e.g., "0:01/0:05") for a good pill shape
-            if (self.frame.size.height < 22.0f) {
-                CGFloat diff = 22.0f - self.frame.size.height;
-                CGRect frame = self.frame;
-                frame.size.height = 22.0f;
-                frame.origin.y -= diff / 2.0f; // Keep it vertically centered
-                self.frame = frame;
+                // Apply padding to the frame - do this all at once
+                CGRect newFrame = CGRectMake(
+                    currentFrame.origin.x - horizontalPadding / 2.0f,
+                    currentFrame.origin.y - verticalPadding / 2.0f,
+                    currentFrame.size.width + horizontalPadding,
+                    currentFrame.size.height + verticalPadding
+                );
+                
+                // Ensure a minimum height for very short text for a good pill shape
+                if (newFrame.size.height < 22.0f) {
+                    CGFloat diff = 22.0f - newFrame.size.height;
+                    newFrame.size.height = 22.0f;
+                    newFrame.origin.y -= diff / 2.0f; // Keep it vertically centered
+                }
+                
+                // Set the frame once
+                self.frame = newFrame;
+                
+                // Pill styling
+                self.layer.cornerRadius = self.frame.size.height / 2.0f;
+                self.layer.masksToBounds = YES;
+                
+                // Initialize visibility state - match player UI visibility
+                // but don't force any specific state that might cause flickering
+                
+                // Store a weak reference to this label
+                gVideoTimestampLabel = self;
             }
-            
-            // Pill styling
-            self.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5]; // Dark semi-transparent
-            self.layer.cornerRadius = self.frame.size.height / 2.0f;
-            self.layer.masksToBounds = YES;
-            
-            // Set initial visibility to match the player's UI state
-            // Do not force alpha to 1.0; let T1ImmersiveFullScreenViewController manage it
-            if (self.alpha != 1.0) {
-                self.alpha = 0.0;
-            }
-            self.hidden = NO; // Ensure it's not hidden by default, let the controller manage visibility
-
-            // Store a weak reference to this label
-            gVideoTimestampLabel = self;
         }
     }
 }
@@ -2903,16 +2906,16 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         }
         
         if (timestampLabelToUpdate) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                CGFloat targetAlpha = showButtons ? 1.0 : 0.0;
-                if (showButtons) {
-                    timestampLabelToUpdate.alpha = targetAlpha;
-                    timestampLabelToUpdate.hidden = !showButtons;
-                } else {
-                    timestampLabelToUpdate.alpha = 0.0;
-                    timestampLabelToUpdate.hidden = YES; // Directly hide when showButtons is false
-                }
-            });
+            // Use a single property change and do it synchronously to prevent flickering
+            if (showButtons) {
+                // First set alpha to 1 then unhide - this prevents flickering when becoming visible
+                timestampLabelToUpdate.alpha = 1.0;
+                timestampLabelToUpdate.hidden = NO;
+            } else {
+                // When hiding, just hide immediately without animation
+                timestampLabelToUpdate.hidden = YES;
+                timestampLabelToUpdate.alpha = 0.0;
+            }
         }
     }
 }
