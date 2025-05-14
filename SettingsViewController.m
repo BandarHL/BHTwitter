@@ -360,7 +360,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         
         PSSpecifier *stopHidingTabBar = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"STOP_HIDING_TAB_BAR_TITLE"] detailTitle:@"Keeps the tab bar visible and prevents fading" key:@"no_tab_bar_hiding" defaultValue:false changeAction:nil];
         
-        PSSpecifier *dmAvatars = [self newSwitchCellWithTitle:@"DM Avatars" detailTitle:@"Only show avatars for the last message in a group from the same sender" key:@"dm_avatars" defaultValue:true changeAction:nil];
+        PSSpecifier *dmAvatars = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DM_AVATARS_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DM_AVATARS_DETAIL_TITLE"] key:@"dm_avatars" defaultValue:true changeAction:nil];
         
         PSSpecifier *tabBarTheming = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CLASSIC_TAB_BAR_SETTINGS_TITLE"]
                                                         detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CLASSIC_TAB_BAR_SETTINGS_DETAIL"]
@@ -389,25 +389,25 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         PSSpecifier *disableHighlights = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_HIGHLIGHTS_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_HIGHLIGHTS_OPTION_DETAIL_TITLE"] key:@"disableHighlights" defaultValue:false changeAction:nil];
 
         // New UI Customization toggles
-        PSSpecifier *hideGrokAnalyze = [self newSwitchCellWithTitle:@"Hide Grok Analyze Button" detailTitle:@"Hides the Grok Analyze button in tweets" key:@"hide_grok_analyze" defaultValue:false changeAction:nil];
+        PSSpecifier *hideGrokAnalyze = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_GROK_ANALYZE_BUTTON_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_GROK_ANALYZE_BUTTON_DETAIL_TITLE"] key:@"hide_grok_analyze" defaultValue:false changeAction:nil];
         
-        PSSpecifier *hideFollowButton = [self newSwitchCellWithTitle:@"Hide Follow Button" detailTitle:@"Hides the Follow button in conversation view" key:@"hide_follow_button" defaultValue:false changeAction:nil];
+        PSSpecifier *hideFollowButton = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_FOLLOW_BUTTON_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_FOLLOW_BUTTON_DETAIL_TITLE"] key:@"hide_follow_button" defaultValue:false changeAction:nil];
         
-        PSSpecifier *restoreFollowButton = [self newSwitchCellWithTitle:@"Restore Follow Button" detailTitle:@"Restores the normal Follow button instead of Subscribe (also hides Subscribe button)" key:@"restore_follow_button" defaultValue:false changeAction:nil];
+        PSSpecifier *restoreFollowButton = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTORE_FOLLOW_BUTTON_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTORE_FOLLOW_BUTTON_DETAIL_TITLE"] key:@"restore_follow_button" defaultValue:false changeAction:nil];
         
-        PSSpecifier *squareAvatars = [self newSwitchCellWithTitle:@"Square Avatars" 
-                                                        detailTitle:@"Requires app restart"
+        PSSpecifier *squareAvatars = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SQUARE_AVATARS_TITLE"] 
+                                                        detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SQUARE_AVATARS_DETAIL_TITLE"]
                                                                 key:@"square_avatars"
                                                        defaultValue:false 
                                                        changeAction:@selector(squareAvatarsAction:)];
         
-        PSSpecifier *restoreVideoTimestamp = [self newSwitchCellWithTitle:@"Restore Video Timestamp" detailTitle:@"Shows video timestamp that may be hidden in some views" key:@"restore_video_timestamp" defaultValue:false changeAction:nil];
+        PSSpecifier *restoreVideoTimestamp = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTORE_VIDEO_TIMESTAMP_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTORE_VIDEO_TIMESTAMP_DETAIL_TITLE"] key:@"restore_video_timestamp" defaultValue:false changeAction:nil];
 
         // debug section
         PSSpecifier *flex = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_DETAIL_TITLE"] key:@"flex_twitter" defaultValue:false changeAction:@selector(FLEXAction:)];
         
-        PSSpecifier *clearSourceCache = [self newButtonCellWithTitle:@"Clear Source Label Cache"
-                                                       detailTitle:@"Forces refetching of all tweet source labels."
+        PSSpecifier *clearSourceCache = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CLEAR_SOURCE_LABEL_CACHE_TITLE"]
+                                                       detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CLEAR_SOURCE_LABEL_CACHE_DETAIL_TITLE"]
                                                        dynamicRule:nil
                                                             action:@selector(showClearSourceCacheConfirmation:)];
         
@@ -805,21 +805,21 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 }
 
 - (void)showClearSourceCacheConfirmation:(PSSpecifier *)specifier {
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Clear Source Label Cache"
-                                                                   message:@"Are you sure you want to clear the tweet source label cache? This will require labels to be re-fetched and may take some time."
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CLEAR_SOURCE_LABEL_CACHE_TITLE"]
+                                                                   message:[[BHTBundle sharedBundle] localizedStringForKey:@"CLEAR_SOURCE_LABEL_CACHE_DETAIL_TITLE"]
                                                             preferredStyle:UIAlertControllerStyleAlert];
     
-    [alert addAction:[UIAlertAction actionWithTitle:@"Clear Cache" style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CLEAR_CACHE_BUTTON_TITLE"] style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
         [BHTManager clearSourceLabelCache];
         
-        UIAlertController *doneAlert = [UIAlertController alertControllerWithTitle:@"Cache Cleared"
-                                                                       message:@"Tweet source label cache has been cleared. Labels will be re-fetched as you browse."
+        UIAlertController *doneAlert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CACHE_CLEARED_TITLE"]
+                                                                       message:[[BHTBundle sharedBundle] localizedStringForKey:@"CACHE_CLEARED_MESSAGE"]
                                                                 preferredStyle:UIAlertControllerStyleAlert];
-        [doneAlert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+        [doneAlert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"OK_BUTTON_TITLE"] style:UIAlertActionStyleDefault handler:nil]];
         [self presentViewController:doneAlert animated:YES completion:nil];
     }]];
     
-    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"] style:UIAlertActionStyleCancel handler:nil]];
     [self presentViewController:alert animated:YES completion:nil];
 }
 
@@ -889,11 +889,11 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
     PSSpecifier *specifier = [self specifierForID:key];
     BOOL previousValue = !enabled; // The value before the switch was flipped
 
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Restart Required"
-                                                                   message:@"Changing the avatar style requires restarting the app."
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_TITLE"]
+                                                                   message:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_MESSAGE_SQUARE_AVATARS"]
                                                             preferredStyle:UIAlertControllerStyleAlert];
 
-    [alert addAction:[UIAlertAction actionWithTitle:@"Restart Now" style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_NOW_BUTTON_TITLE"] style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
         [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:key];
         [[NSUserDefaults standardUserDefaults] synchronize];
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
@@ -901,7 +901,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         });
     }]];
 
-    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"] style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
         // Flip the switch back visually if cancelled
         [sender setOn:previousValue animated:YES];
     }]];
