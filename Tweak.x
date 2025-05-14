@@ -3602,139 +3602,80 @@ static UILabel *gVideoTimestampLabel = nil;
 - (void)setText:(NSString *)text {
     %orig(text);
 
-    // Check if this label is the one we want to modify (e.g., video timestamp)
-    if ([BHTManager restoreVideoTimestamp] && self.text && [self.text containsString:@":"] && [self.text containsString:@"/"]) {
-        // Only proceed with styling if we haven't already styled this label
+    // Skip processing if not in a context where we need to style the label
+    if (![BHTManager restoreVideoTimestamp]) {
+        return;
+    }
+
+    // Quick path: if this is our already styled label, we don't need to do anything else
+    if (self == gVideoTimestampLabel) {
+        return;
+    }
+
+    // Now we need to check if this is a timestamp label we should style
+    if (self.text && [self.text containsString:@":"] && [self.text containsString:@"/"]) {
+        // Check if already styled
         BOOL isAlreadyStyled = [objc_getAssociatedObject(self, "BHT_StyledTimestamp") boolValue];
-        if (!isAlreadyStyled) {
-            // Log the text and view hierarchy to debug the context
-            NSLog(@"[BHTwitter TimestampDebug] Potential timestamp detected: '%@'", self.text);
-            UIView *parentView = self.superview;
-            NSMutableArray *hierarchy = [NSMutableArray array];
-            BOOL isInImmersiveCardView = NO;
-            while (parentView) {
-                NSString *className = NSStringFromClass([parentView class]);
-                [hierarchy addObject:className];
-                if ([className isEqualToString:@"T1TwitterSwift.ImmersiveCardView"] || 
-                    [className hasSuffix:@".ImmersiveCardView"]) {
-                    isInImmersiveCardView = YES;
-                    break;
-                }
-                parentView = parentView.superview;
+        if (isAlreadyStyled) {
+            return;
+        }
+
+        // Check if in ImmersiveCardView context
+        UIView *parentView = self.superview;
+        BOOL isInImmersiveCardView = NO;
+        
+        while (parentView) {
+            NSString *className = NSStringFromClass([parentView class]);
+            if ([className isEqualToString:@"T1TwitterSwift.ImmersiveCardView"] || 
+                [className hasSuffix:@".ImmersiveCardView"]) {
+                isInImmersiveCardView = YES;
+                break;
             }
-            NSLog(@"[BHTwitter TimestampDebug] Full hierarchy: %@", hierarchy);
+            parentView = parentView.superview;
+        }
 
-            // Apply styling if in the correct context (ImmersiveCardView)
-            if (isInImmersiveCardView) {
-                // Store initial visibility state
-                BOOL wasHidden = self.hidden;
-                CGFloat originalAlpha = self.alpha;
-                
-                // 1. Style the label
-                self.font = [UIFont systemFontOfSize:14.0];
-                self.textColor = [UIColor whiteColor]; // White text for contrast
-                self.textAlignment = NSTextAlignmentCenter; // Center text in the pill
-                self.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5]; // Dark semi-transparent
-
-                // 2. Calculate size based on current text and font
-                [self sizeToFit];
-                CGRect currentFrame = self.frame;
-
-                // 3. Define padding
-                CGFloat horizontalPadding = 4.0; 
-                CGFloat verticalPadding = 12.0;  // For a more pronounced round pill
-
-                // 4. Apply padding to the frame
-                CGRect newFrame = CGRectMake(
-                    currentFrame.origin.x - horizontalPadding / 2.0f,
-                    currentFrame.origin.y - verticalPadding / 2.0f,
-                    currentFrame.size.width + horizontalPadding,
-                    currentFrame.size.height + verticalPadding
-                );
-
-                // 5. Ensure a minimum height for good pill shape
-                if (newFrame.size.height < 22.0f) {
-                    CGFloat diff = 22.0f - newFrame.size.height;
-                    newFrame.size.height = 22.0f;
-                    newFrame.origin.y -= diff / 2.0f; // Keep it vertically centered
-                }
-                
-                // 6. Apply the new frame
-                self.frame = newFrame;
-                
-                // 7. Add rounded corners
-                self.layer.cornerRadius = newFrame.size.height / 2.0f;
-                self.layer.masksToBounds = YES;
-
-                // 8. Log styling info
-                NSLog(@"[BHTwitter TimestampLabel] Styled label: Text='%@', Width=%f, Height=%f", 
-                      self.text, newFrame.size.width, newFrame.size.height);
-
-                // 9. Restore original visibility state
-                // Critical: set alpha BEFORE hidden to prevent flicker
-                self.alpha = originalAlpha;
-                self.hidden = wasHidden;
-
-                // 10. Mark as styled to avoid redundant styling
-                objc_setAssociatedObject(self, "BHT_StyledTimestamp", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-                
-                // 11. Store a weak reference to this label
-                gVideoTimestampLabel = self;
+        // Apply styling if in the correct context
+        if (isInImmersiveCardView) {
+            // Apply visual styling only
+            self.font = [UIFont systemFontOfSize:14.0];
+            self.textColor = [UIColor whiteColor];
+            self.textAlignment = NSTextAlignmentCenter;
+            self.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5];
+            
+            // Calculate size based on current text and font
+            [self sizeToFit];
+            CGRect currentFrame = self.frame;
+            
+            // Apply padding
+            CGFloat horizontalPadding = 4.0;
+            CGFloat verticalPadding = 12.0;
+            
+            CGRect newFrame = CGRectMake(
+                currentFrame.origin.x - horizontalPadding / 2.0f,
+                currentFrame.origin.y - verticalPadding / 2.0f,
+                currentFrame.size.width + horizontalPadding,
+                currentFrame.size.height + verticalPadding
+            );
+            
+            // Ensure minimum height
+            if (newFrame.size.height < 22.0f) {
+                CGFloat diff = 22.0f - newFrame.size.height;
+                newFrame.size.height = 22.0f;
+                newFrame.origin.y -= diff / 2.0f;
             }
+            
+            self.frame = newFrame;
+            self.layer.cornerRadius = newFrame.size.height / 2.0f;
+            self.layer.masksToBounds = YES;
+            
+            // Mark as styled
+            objc_setAssociatedObject(self, "BHT_StyledTimestamp", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            
+            // Store reference
+            gVideoTimestampLabel = self;
         }
-    }
-}
-
-// Optimize visibility changes to prevent flickering
-- (void)setHidden:(BOOL)hidden {
-    // Only intercept for our timestamp label
-    if (self == gVideoTimestampLabel && [BHTManager restoreVideoTimestamp]) {
-        // Critical: If showing, set alpha before unhiding
-        if (!hidden && self.hidden) {
-            // First adjust alpha while still hidden
-            self.alpha = (hidden ? 0.0 : 1.0);
-            // Then change hidden state
-            %orig(hidden);
-        } 
-        // If hiding, set hidden after reducing alpha
-        else if (hidden && !self.hidden) {
-            // First reduce alpha
-            self.alpha = 0.0;
-            // Then hide
-            %orig(hidden);
-        }
-        else {
-            // No state change, just pass through
-            %orig(hidden);
-        }
-    } else {
-        %orig(hidden);
-    }
-}
-
-- (void)setAlpha:(CGFloat)alpha {
-    // Only intercept for our timestamp label
-    if (self == gVideoTimestampLabel && [BHTManager restoreVideoTimestamp]) {
-        // If becoming fully transparent, set alpha first, then hidden
-        if (alpha == 0.0 && self.alpha > 0.0) {
-            %orig(alpha);
-            self.hidden = YES;
-        }
-        // If becoming visible, set hidden first, then alpha
-        else if (alpha > 0.0 && self.alpha == 0.0) {
-            self.hidden = NO;
-            %orig(alpha);
-        }
-        else {
-            // Standard alpha change
-            %orig(alpha);
-        }
-    } else {
-        %orig(alpha);
     }
 }
 
 %end
-
-// MARK: - Square Avatars (TFNAvatarImageView)
 
