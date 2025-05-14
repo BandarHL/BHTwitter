@@ -2831,55 +2831,46 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 %hook T1ImmersiveFullScreenViewController
 
-- (void)immersiveViewController:(id)passedImmersiveViewController showHideNavigationButtons:(_Bool)showButtons {
-    %orig(passedImmersiveViewController, showButtons); // Call original first
-
-    // We operate on `self`, which is the instance of T1ImmersiveFullScreenViewController this hook is called on.
-    T1ImmersiveFullScreenViewController *activePlayerVC = self;
-
-    if (![BHTManager restoreVideoTimestamp]) {
-        if (playerToTimestampMap) {
-            UILabel *existingLabel = [playerToTimestampMap objectForKey:activePlayerVC];
-            if (existingLabel) {
-                existingLabel.hidden = YES;
-                [playerToTimestampMap removeObjectForKey:activePlayerVC];
-            }
-        }
-        return;
-    }
-
-    if (!playerToTimestampMap) { // Should be initialized by %ctor, defensive
-        playerToTimestampMap = [NSMapTable weakToStrongObjectsMapTable];
+// Helper method to find, style, and map the timestamp label for a given VC instance
+%new - (BOOL)BHT_findAndPrepareTimestampLabelForVC:(T1ImmersiveFullScreenViewController *)activePlayerVC {
+    if (!playerToTimestampMap || !activePlayerVC || !activePlayerVC.isViewLoaded) {
+        NSLog(@"[BHTwitter Timestamp] BHT_findAndPrepareTimestampLabelForVC: Pre-condition failed (map: %@, vc: %@, viewLoaded: %d)", playerToTimestampMap, activePlayerVC, activePlayerVC.isViewLoaded);
+        return NO;
     }
 
     UILabel *timestampLabel = [playerToTimestampMap objectForKey:activePlayerVC];
 
-    // Conditions to re-find the label: not in map, or in map but not in superview, or text is no longer a timestamp (recycled cell)
-    BOOL needsToFindLabel = (!timestampLabel || !timestampLabel.superview || ![timestampLabel.superview isDescendantOfView:activePlayerVC.view]);
-    if (timestampLabel && timestampLabel.superview && (![timestampLabel.text containsString:@":"] || ![timestampLabel.text containsString:@"/"])) {
-        needsToFindLabel = YES;
-        timestampLabel = nil; // Stale reference due to text change
+    BOOL needsFreshFind = (!timestampLabel || !timestampLabel.superview || ![timestampLabel.superview isDescendantOfView:activePlayerVC.view]);
+    if (timestampLabel && timestampLabel.superview && 
+        (![timestampLabel.text containsString:@":"] || ![timestampLabel.text containsString:@"/"])) {
+        needsFreshFind = YES;
+        NSLog(@"[BHTwitter Timestamp] VC %@: Label %@ found with non-timestamp text: \"%@\". Forcing re-find.", activePlayerVC, timestampLabel, timestampLabel.text);
         [playerToTimestampMap removeObjectForKey:activePlayerVC];
+        timestampLabel = nil;
     }
-
-    if (needsToFindLabel) {
+    
+    if (needsFreshFind) {
+        NSLog(@"[BHTwitter Timestamp] VC %@: Needs fresh find for label.", activePlayerVC);
         __block UILabel *foundCandidate = nil;
         UIView *searchView = activePlayerVC.view;
 
         BH_EnumerateSubviewsRecursively(searchView, ^(UIView *currentView) {
-            if (foundCandidate) return; // Stop if already found one that meets criteria
+            if (foundCandidate) return;
             if ([currentView isKindOfClass:[UILabel class]]) {
                 UILabel *label = (UILabel *)currentView;
                 UIView *v = label.superview;
-                BOOL inImmersiveCardView = NO;
-                while(v && v != searchView.window && v != searchView) { // Traverse up to window or current VC view
-                    if([NSStringFromClass([v class]) containsString:@"ImmersiveCardView"]){
-                        inImmersiveCardView = YES;
+                BOOL inImmersiveCardViewContext = NO;
+                while(v && v != searchView.window && v != searchView) {
+                    NSString *className = NSStringFromClass([v class]);
+                    if ([className isEqualToString:@"T1TwitterSwift.ImmersiveCardView"] || [className hasSuffix:@".ImmersiveCardView"]) {
+                        inImmersiveCardViewContext = YES;
                         break;
                     }
                     v = v.superview;
                 }
-                if (inImmersiveCardView && label.text && [label.text containsString:@":"] && [label.text containsString:@"/"]) {
+
+                if (inImmersiveCardViewContext && label.text && [label.text containsString:@":"] && [label.text containsString:@"/"]) {
+                    NSLog(@"[BHTwitter Timestamp] VC %@: Candidate label found: Text='%@', Superview=%@", activePlayerVC, label.text, NSStringFromClass(label.superview.class));
                     foundCandidate = label;
                 }
             }
@@ -2888,104 +2879,135 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         if (foundCandidate) {
             timestampLabel = foundCandidate;
             [playerToTimestampMap setObject:timestampLabel forKey:activePlayerVC];
-
-            if (![objc_getAssociatedObject(timestampLabel, "BHT_StyledTimestamp") boolValue]) {
-                timestampLabel.font = [UIFont systemFontOfSize:14.0];
-                timestampLabel.textColor = [UIColor whiteColor];
-                timestampLabel.textAlignment = NSTextAlignmentCenter;
-                timestampLabel.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5];
-
-                [timestampLabel sizeToFit];
-                CGRect currentFrame = timestampLabel.frame;
-                CGFloat horizontalPadding = 2.0;
-                CGFloat verticalPadding = 12.0;
-                CGRect newFrame = CGRectMake(
-                    currentFrame.origin.x - horizontalPadding / 2.0f,
-                    currentFrame.origin.y - verticalPadding / 2.0f,
-                    currentFrame.size.width + horizontalPadding,
-                    currentFrame.size.height + verticalPadding
-                );
-                if (newFrame.size.height < 22.0f) {
-                    CGFloat diff = 22.0f - newFrame.size.height;
-                    newFrame.size.height = 22.0f;
-                    newFrame.origin.y -= diff / 2.0f;
-                }
-                timestampLabel.frame = newFrame;
-                timestampLabel.layer.cornerRadius = timestampLabel.frame.size.height / 2.0f;
-                timestampLabel.layer.masksToBounds = YES;
-                objc_setAssociatedObject(timestampLabel, "BHT_StyledTimestamp", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-            }
+            NSLog(@"[BHTwitter Timestamp] VC %@: Associated label %@ in map.", activePlayerVC, timestampLabel);
         } else {
-            // No suitable label found in this VC's hierarchy, remove any old mapping for this VC
-            [playerToTimestampMap removeObjectForKey:activePlayerVC];
+            if ([playerToTimestampMap objectForKey:activePlayerVC]) {
+                 NSLog(@"[BHTwitter Timestamp] VC %@: No label found, removing existing map entry.", activePlayerVC);
+                [playerToTimestampMap removeObjectForKey:activePlayerVC];
+            }
+            return NO;
         }
     }
 
-    // Final check on timestampLabel (it might have been found or retrieved from map)
-    timestampLabel = [playerToTimestampMap objectForKey:activePlayerVC]; // Re-fetch in case it was just added
-    if (timestampLabel && timestampLabel.superview && [timestampLabel isDescendantOfView:activePlayerVC.view]) {
-        if (showButtons) {
-            timestampLabel.alpha = 1.0;
-            timestampLabel.hidden = NO;
-        } else {
-            timestampLabel.hidden = YES;
-            timestampLabel.alpha = 0.0;
+    if (timestampLabel && ![objc_getAssociatedObject(timestampLabel, "BHT_StyledTimestamp") boolValue]) {
+        NSLog(@"[BHTwitter Timestamp] VC %@: Styling label %@.", activePlayerVC, timestampLabel);
+        timestampLabel.font = [UIFont systemFontOfSize:14.0];
+        timestampLabel.textColor = [UIColor whiteColor];
+        timestampLabel.textAlignment = NSTextAlignmentCenter;
+        timestampLabel.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5];
+
+        [timestampLabel sizeToFit];
+        CGRect currentFrame = timestampLabel.frame;
+        CGFloat horizontalPadding = 2.0; // Padding on EACH side
+        CGFloat verticalPadding = 12.0; // TOTAL vertical padding (6.0 on each side)
+        
+        CGRect newFrame = CGRectMake(
+            currentFrame.origin.x - horizontalPadding, 
+            currentFrame.origin.y - (verticalPadding / 2.0f),
+            currentFrame.size.width + (horizontalPadding * 2),
+            currentFrame.size.height + verticalPadding
+        );
+
+        if (newFrame.size.height < 22.0f) {
+            CGFloat heightDiff = 22.0f - newFrame.size.height;
+            newFrame.size.height = 22.0f;
+            newFrame.origin.y -= heightDiff / 2.0f;
         }
+        timestampLabel.frame = newFrame;
+        timestampLabel.layer.cornerRadius = newFrame.size.height / 2.0f;
+        timestampLabel.layer.masksToBounds = YES;
+        objc_setAssociatedObject(timestampLabel, "BHT_StyledTimestamp", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    return (timestampLabel != nil && timestampLabel.superview != nil); // Ensure it's also in a superview
+}
+
+- (void)immersiveViewController:(id)passedImmersiveViewController showHideNavigationButtons:(_Bool)showButtons {
+    %orig(passedImmersiveViewController, showButtons);
+    T1ImmersiveFullScreenViewController *activePlayerVC = self;
+    NSLog(@"[BHTwitter Timestamp] VC %@: Called showHideNavigationButtons: %d", activePlayerVC, showButtons);
+
+    if (![BHTManager restoreVideoTimestamp]) {
+        if (playerToTimestampMap) {
+            UILabel *labelToManage = [playerToTimestampMap objectForKey:activePlayerVC];
+            if (labelToManage) {
+                labelToManage.hidden = YES;
+                NSLog(@"[BHTwitter Timestamp] VC %@: Hiding label (feature disabled).", activePlayerVC);
+            }
+        }
+        return;
+    }
+    
+    BOOL labelReady = [self BHT_findAndPrepareTimestampLabelForVC:activePlayerVC];
+
+    if (labelReady) {
+        UILabel *timestampLabel = [playerToTimestampMap objectForKey:activePlayerVC];
+        if (timestampLabel) { 
+            if (showButtons) {
+                timestampLabel.alpha = 1.0;
+                timestampLabel.hidden = NO;
+                NSLog(@"[BHTwitter Timestamp] VC %@: SHOWING label %@.", activePlayerVC, timestampLabel);
+            } else {
+                timestampLabel.hidden = YES;
+                timestampLabel.alpha = 0.0;
+                NSLog(@"[BHTwitter Timestamp] VC %@: HIDING label %@.", activePlayerVC, timestampLabel);
+            }
+        } else {
+             NSLog(@"[BHTwitter Timestamp] VC %@: Label was ready but map returned nil.", activePlayerVC);
+        }
+    } else {
+         NSLog(@"[BHTwitter Timestamp] VC %@: Label not ready after findAndPrepare.", activePlayerVC);
     }
 }
 
 - (void)viewDidAppear:(BOOL)animated {
     %orig(animated);
-    
+    T1ImmersiveFullScreenViewController *activePlayerVC = self;
+    NSLog(@"[BHTwitter Timestamp] VC %@: viewDidAppear.", activePlayerVC);
+
     if ([BHTManager restoreVideoTimestamp]) {
-        if (!playerToTimestampMap) { // Defensive initialization
+        if (!playerToTimestampMap) { 
             playerToTimestampMap = [NSMapTable weakToStrongObjectsMapTable];
+            NSLog(@"[BHTwitter Timestamp] VC %@: Re-initialized playerToTimestampMap in viewDidAppear (should not happen often).", activePlayerVC);
         }
-        // When a player VC appears, ensure its timestamp is processed.
-        // Call with showButtons:NO as a baseline. If controls are meant to be visible,
-        // the app's own logic should trigger another call with showButtons:YES.
-        // This primarily helps set up the label for a newly appeared/swiped-to VC.
-        [self immersiveViewController:self showHideNavigationButtons:NO];
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+            NSLog(@"[BHTwitter Timestamp] VC %@: viewDidAppear (dispatch_async) - calling showHideNavigationButtons:NO as baseline.", activePlayerVC);
+            [self immersiveViewController:self showHideNavigationButtons:NO];
+        });
     }
 }
 
 - (void)playerViewController:(id)playerViewController playerStateDidChange:(NSInteger)state {
     %orig(playerViewController, state);
+    T1ImmersiveFullScreenViewController *activePlayerVC = self;
+    NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange: %ld", activePlayerVC, (long)state);
 
     if (![BHTManager restoreVideoTimestamp] || !playerToTimestampMap) return;
 
-    T1ImmersiveFullScreenViewController *activePlayerVC = self;
     UILabel *timestampLabel = [playerToTimestampMap objectForKey:activePlayerVC];
 
     if (timestampLabel && timestampLabel.superview && [timestampLabel isDescendantOfView:activePlayerVC.view]) {
-        BOOL shouldBeVisible = NO;
-        // Attempt to determine controls visibility. This is a simplified check.
-        // A more robust solution might involve inspecting a specific controls view property if known.
+        BOOL controlsAreLikelyVisible = NO;
         if ([activePlayerVC respondsToSelector:@selector(playerControlsView)]) { 
             UIView *playerControls = [activePlayerVC valueForKey:@"playerControlsView"];
             if (playerControls && [playerControls respondsToSelector:@selector(alpha)]) {
-                shouldBeVisible = playerControls.alpha > 0.0f;
+                controlsAreLikelyVisible = playerControls.alpha > 0.0f;
+                NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - playerControls.alpha: %f", activePlayerVC, playerControls.alpha);
             }
-        } else {
-            // Fallback: if player is paused, assume controls might be visible
-            // This needs knowledge of Twitter's player states. Let's assume state 2 is paused.
-            // This is speculative and might need adjustment or a more reliable way to check controls visibility.
-            // if (state == 2 /* Hypothetical paused state */) { 
-            //    shouldBeVisible = YES;
-            // }
         }
         
-        // If we couldn't determine from controls view, we might leave visibility as is,
-        // or rely on the next showHideNavigationButtons call.
-        // For now, only update if we have a clear signal from playerControlsView alpha.
-        if ([activePlayerVC respondsToSelector:@selector(playerControlsView)]) { 
-             if (shouldBeVisible) {
-                timestampLabel.alpha = 1.0;
-                timestampLabel.hidden = NO;
-            } else {
+        if (controlsAreLikelyVisible && timestampLabel.hidden) {
+            NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Controls detected visible, label was hidden. Showing label.", activePlayerVC);
+            timestampLabel.alpha = 1.0;
+            timestampLabel.hidden = NO;
+        } else if (!controlsAreLikelyVisible && !timestampLabel.hidden) {
+            // Only hide if controls are *definitively* not visible based on alpha.
+            // Otherwise, trust showHideNavigationButtons which is the primary driver.
+             if ([activePlayerVC respondsToSelector:@selector(playerControlsView)] && [activePlayerVC valueForKey:@"playerControlsView"]) { // Ensure we check based on controlsView presence
+                NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Controls detected NOT visible, label was visible. Hiding label.", activePlayerVC);
                 timestampLabel.hidden = YES;
                 timestampLabel.alpha = 0.0;
-            }
+             }
         }
     }
 }
