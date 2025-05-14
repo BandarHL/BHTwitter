@@ -15,14 +15,15 @@
 @end
 
 // Forward declaration for the immersive view controller
-@interface T1ImmersiveFullScreenViewController (BHTwitter)
-- (BOOL)BHT_findAndPrepareTimestampLabelForVC:(T1ImmersiveFullScreenViewController *)activePlayerVC; // Declare our new method
-@end
-
 @interface T1ImmersiveFullScreenViewController : UIViewController // Assuming base class, adjust if known
 - (void)immersiveViewController:(id)immersiveViewController showHideNavigationButtons:(_Bool)showButtons;
 // Declare other methods if their signatures are needed for direct calls or performSelector
 - (void)playerViewController:(id)playerViewController playerStateDidChange:(NSInteger)state; // Assuming this method exists
+@end
+
+// Now declare the category, after the main interface is known
+@interface T1ImmersiveFullScreenViewController (BHTwitter)
+- (BOOL)BHT_findAndPrepareTimestampLabelForVC:(T1ImmersiveFullScreenViewController *)activePlayerVC; // Declare our new method
 @end
 
 // Forward declarations
