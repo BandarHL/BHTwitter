@@ -15,7 +15,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface BHDownloadInlineButton : UIButton
 {
-    NSUInteger _displayType;
+    int _displayType;
     NSUInteger _inlineActionType;
     __weak T1StatusInlineActionsView *_delegate; // Added weak reference
     id _buttonAnimator;
