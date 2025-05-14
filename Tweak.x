@@ -2,33 +2,19 @@
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
 #import "SAMKeychain/AuthViewController.h"
-#import <objc/message.h> // For objc_msgSend
+#import <objc/message.h>
 #import "Colours/Colours.h"
 #import "BHTManager.h"
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
 
-// Forward declare T1ColorSettings and its private method to satisfy the compiler
-@interface T1ColorSettings : NSObject
-+ (void)_t1_applyPrimaryColorOption;
-+ (void)_t1_updateOverrideUserInterfaceStyle; // Add this line
-@end
-
-// Forward declaration for the immersive view controller
-@interface T1ImmersiveFullScreenViewController : UIViewController // Assuming base class, adjust if known
-- (void)immersiveViewController:(id)immersiveViewController showHideNavigationButtons:(_Bool)showButtons;
-@end
-
-// Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
 static void BHT_applyThemeToWindow(UIWindow *window);
 static void BHT_ensureTheming(void);
 static void BHT_forceRefreshAllWindowAppearances(void); // Renamed
 
-// Static reference to the video timestamp label
 static __weak UILabel *gVideoTimestampLabel = nil;
 
-// Static helper function for recursive view traversal - DEFINED AT THE TOP
 static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
     if (!view || !block) return;
     block(view);
@@ -36,8 +22,6 @@ static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *
         BH_EnumerateSubviewsRecursively(subview, block);
     }
 }
-
-// Add this before the hooks, after the imports
 
 UIColor *BHTCurrentAccentColor(void) {
     Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
