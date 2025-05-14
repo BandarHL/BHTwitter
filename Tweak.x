@@ -2880,7 +2880,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 CGFloat targetAlpha = showButtons ? 1.0 : 0.0;
                 NSTimeInterval fadeInDuration = 0.2; // Keep fade-in relatively quick
-                NSTimeInterval fadeOutDuration = 0.8; // Keep fade-out slower
+                NSTimeInterval fadeOutDuration = 0.3; // Shorten fade-out duration to reduce flicker
                 
                 UIViewAnimationOptions animationOptions = UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionAllowUserInteraction;
                 if (showButtons) {
