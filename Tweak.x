@@ -2771,20 +2771,18 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
     // Check if this label is the one we want to modify (e.g., video timestamp)
     if ([BHTManager restoreVideoTimestamp] && self.text && [self.text containsString:@":"] && [self.text containsString:@"/"]) {
-        // Ensure this is within a video player context by checking the view hierarchy
+        // Ensure this is within T1ImmersiveFullScreenViewController context by checking the view hierarchy
         UIView *parentView = self.superview;
-        BOOL isInVideoPlayerContext = NO;
+        BOOL isInImmersiveViewController = NO;
         while (parentView) {
-            NSString *className = NSStringFromClass([parentView class]);
-            if ([parentView isKindOfClass:%c(T1ImmersiveFullScreenViewController)] || [className containsString:@"Video"] || [className containsString:@"Player"]) {
-                isInVideoPlayerContext = YES;
+            if ([parentView isKindOfClass:%c(T1ImmersiveFullScreenViewController)]) {
+                isInImmersiveViewController = YES;
                 break;
             }
             parentView = parentView.superview;
         }
         
-        // Broaden the check to include cases where the label might not be directly in a video context but still a timestamp
-        if (isInVideoPlayerContext || (self.text.length > 0 && [self.text rangeOfString:@"^[0-9]+:[0-9]+/[0-9]+:[0-9]+$" options:NSRegularExpressionSearch].location != NSNotFound)) {
+        if (isInImmersiveViewController) {
             self.font = [UIFont systemFontOfSize:14.0];
             self.textColor = [UIColor whiteColor]; // White text for contrast
             self.textAlignment = NSTextAlignmentCenter; // Center text in the pill
