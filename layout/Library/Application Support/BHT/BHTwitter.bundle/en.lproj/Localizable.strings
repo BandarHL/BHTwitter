@@ -230,7 +230,7 @@
 "THEME_OPTION_6" = "Green";
 
 /* Custom Color for Theme */
-"THEME_OPTION_CUSTOM" = "Custom Color...";
+"THEME_OPTION_CUSTOM" = "Custom";
 "THEME_OPTION_CURRENT_CUSTOM_COLOR" = "Current Custom Color: %@"; // %@ will be the hex string
 
 /*Tab bar*/

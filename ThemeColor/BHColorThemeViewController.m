@@ -92,18 +92,17 @@
 
     if (currCellItem.colorID == CUSTOM_THEME_ID) {
         // Special handling for the custom color cell
-        NSString *customHex = [[NSUserDefaults standardUserDefaults] stringForKey:CUSTOM_THEME_HEX_KEY];
-        if (selectedColorID == CUSTOM_THEME_ID && customHex) {
-            cell.colorLabel.backgroundColor = [UIColor colorFromHexString:customHex];
-            cell.colorLabel.text = [NSString stringWithFormat:[[BHTBundle sharedBundle] localizedStringForKey:@"THEME_OPTION_CURRENT_CUSTOM_COLOR"], customHex];
+        if (selectedColorID == CUSTOM_THEME_ID) {
+            NSString *customHex = [[NSUserDefaults standardUserDefaults] stringForKey:CUSTOM_THEME_HEX_KEY];
+            if (customHex && customHex.length > 0) {
+                UIColor *customColor = [UIColor colorFromHexString:customHex];
+                if (customColor) {
+                    cell.colorLabel.backgroundColor = customColor;
+                }
+            }
             cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
         } else {
-            // Reset to placeholder if not selected or no hex
             cell.colorLabel.backgroundColor = currCellItem.color;
-            cell.colorLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"THEME_OPTION_CUSTOM"];
-            if (selectedColorID == CUSTOM_THEME_ID) {
-                 cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
-            }
         }
     } else {
         // Predefined colors
