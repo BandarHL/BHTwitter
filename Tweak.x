@@ -2908,14 +2908,11 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
                 // Use a minimal delay on hide to better sync with native fade behavior
                 CGFloat targetAlpha = showButtons ? 1.0 : 0.0;
                 if (showButtons) {
-                    timestampLabelToUpdate.alpha = targetAlpha;
-                    timestampLabelToUpdate.hidden = !showButtons;
+                    timestampLabelToUpdate.hidden = NO;
+                    timestampLabelToUpdate.alpha = 1.0;
                 } else {
-                    // Immediately set alpha to 0 to reduce flicker, then hide after a tiny delay
                     timestampLabelToUpdate.alpha = 0.0;
-                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.05 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                        timestampLabelToUpdate.hidden = !showButtons;
-                    });
+                    timestampLabelToUpdate.hidden = YES;
                 }
             });
         }
