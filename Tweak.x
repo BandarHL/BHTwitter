@@ -15,6 +15,10 @@
 @end
 
 // Forward declaration for the immersive view controller
+@interface T1ImmersiveFullScreenViewController (BHTwitter)
+- (BOOL)BHT_findAndPrepareTimestampLabelForVC:(T1ImmersiveFullScreenViewController *)activePlayerVC; // Declare our new method
+@end
+
 @interface T1ImmersiveFullScreenViewController : UIViewController // Assuming base class, adjust if known
 - (void)immersiveViewController:(id)immersiveViewController showHideNavigationButtons:(_Bool)showButtons;
 // Declare other methods if their signatures are needed for direct calls or performSelector
@@ -2914,7 +2918,20 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         return;
     }
     
-    BOOL labelReady = [self BHT_findAndPrepareTimestampLabelForVC:activePlayerVC];
+    SEL findAndPrepareSelector = NSSelectorFromString(@"BHT_findAndPrepareTimestampLabelForVC:");
+    BOOL labelReady = NO;
+
+    if ([self respondsToSelector:findAndPrepareSelector]) {
+        NSMethodSignature *signature = [self methodSignatureForSelector:findAndPrepareSelector];
+        NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+        [invocation setSelector:findAndPrepareSelector];
+        [invocation setTarget:self];
+        [invocation setArgument:&activePlayerVC atIndex:2]; // Arguments start at index 2 (0 = self, 1 = _cmd)
+        [invocation invoke];
+        [invocation getReturnValue:&labelReady];
+    } else {
+        NSLog(@"[BHTwitter Timestamp] VC %@: ERROR - Does not respond to selector BHT_findAndPrepareTimestampLabelForVC:", activePlayerVC);
+    }
 
     if (labelReady) {
         UILabel *timestampLabel = [playerToTimestampMap objectForKey:activePlayerVC];
