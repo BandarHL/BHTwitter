@@ -26,7 +26,7 @@ static void BHT_ensureTheming(void);
 static void BHT_forceRefreshAllWindowAppearances(void); // Renamed
 
 // Static reference to the video timestamp label
-static __weak UILabel *gVideoTimestampLabel = nil;
+static UILabel *gVideoTimestampLabel = nil;
 
 // Static helper function for recursive view traversal - DEFINED AT THE TOP
 static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
@@ -2803,14 +2803,15 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 - (void)setText:(NSString *)text {
     %orig(text);
 
-    // Check if this label is the one we want to modify (e.g., video timestamp)
+    // Only identify potential timestamp labels - let the controller do the styling
     if ([BHTManager restoreVideoTimestamp] && self.text && [self.text containsString:@":"] && [self.text containsString:@"/"]) {
-        // Apply styling if in the correct context (ImmersiveCardView)
+        // Check if in correct context (ImmersiveCardView)
         UIView *parentView = self.superview;
         BOOL isInImmersiveCardView = NO;
         while (parentView) {
             NSString *className = NSStringFromClass([parentView class]);
-            if ([className isEqualToString:@"T1TwitterSwift.ImmersiveCardView"]) {
+            if ([className isEqualToString:@"T1TwitterSwift.ImmersiveCardView"] || 
+                [className containsString:@"ImmersiveCardView"]) {
                 isInImmersiveCardView = YES;
                 break;
             }
@@ -2818,53 +2819,9 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         }
 
         if (isInImmersiveCardView) {
-            // Check if we've already styled this label to avoid multiple applications
-            if (![objc_getAssociatedObject(self, "BHT_StyledTimestamp") boolValue]) {
-                // Mark as styled to prevent repeated styling
-                objc_setAssociatedObject(self, "BHT_StyledTimestamp", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-                
-                // Apply all styling at once
-                self.font = [UIFont systemFontOfSize:14.0];
-                self.textColor = [UIColor whiteColor]; // White text for contrast
-                self.textAlignment = NSTextAlignmentCenter; // Center text in the pill
-                self.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5]; // Dark semi-transparent
-                
-                // Calculate size based on current text and font
-                [self sizeToFit];
-                CGRect currentFrame = self.frame;
-
-                // Define padding - reduced horizontal padding for a narrower pill
-                CGFloat horizontalPadding = 2.0; // Reduced from 4.0 to make the pill less wide
-                CGFloat verticalPadding = 12.0; // Keep vertical padding for pronounced round pill
-
-                // Apply padding to the frame - do this all at once
-                CGRect newFrame = CGRectMake(
-                    currentFrame.origin.x - horizontalPadding / 2.0f,
-                    currentFrame.origin.y - verticalPadding / 2.0f,
-                    currentFrame.size.width + horizontalPadding,
-                    currentFrame.size.height + verticalPadding
-                );
-                
-                // Ensure a minimum height for very short text for a good pill shape
-                if (newFrame.size.height < 22.0f) {
-                    CGFloat diff = 22.0f - newFrame.size.height;
-                    newFrame.size.height = 22.0f;
-                    newFrame.origin.y -= diff / 2.0f; // Keep it vertically centered
-                }
-                
-                // Set the frame once
-                self.frame = newFrame;
-                
-                // Pill styling
-                self.layer.cornerRadius = self.frame.size.height / 2.0f;
-                self.layer.masksToBounds = YES;
-                
-                // Initialize visibility state - match player UI visibility
-                // but don't force any specific state that might cause flickering
-                
-                // Store a weak reference to this label
-                gVideoTimestampLabel = self;
-            }
+            // Just store a reference to this potential timestamp label for later styling
+            // Don't style it yet or add the associated object - let the controller handle that
+            gVideoTimestampLabel = self;
         }
     }
 }
@@ -2884,29 +2841,73 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         if (gVideoTimestampLabel && gVideoTimestampLabel.superview) {
             timestampLabelToUpdate = gVideoTimestampLabel;
         } else {
+            // Our reference was lost, search for it again
             UIView *searchView = self.view;
             if (immersiveViewController && [immersiveViewController respondsToSelector:@selector(view)]) {
                 searchView = [immersiveViewController view];
             }
+            
+            // Find timestamp label in the view hierarchy
             NSMutableArray<UILabel *> *foundLabels = [NSMutableArray array];
             BH_EnumerateSubviewsRecursively(searchView, ^(UIView *currentView) {
                 if ([currentView isKindOfClass:[UILabel class]]) {
                     UILabel *label = (UILabel *)currentView;
                     if (label.text && [label.text containsString:@":"] && [label.text containsString:@"/"]) {
                         [foundLabels addObject:label];
+                        // Check if label was previously styled
+                        if ([objc_getAssociatedObject(label, "BHT_StyledTimestamp") boolValue]) {
+                            timestampLabelToUpdate = label;
+                        }
                     }
                 }
             });
-            if ([foundLabels containsObject:gVideoTimestampLabel]) {
-                 timestampLabelToUpdate = gVideoTimestampLabel;
-            } else if (foundLabels.count > 0) {
+            
+            // If we didn't find our previously styled label
+            if (!timestampLabelToUpdate && foundLabels.count > 0) {
                 timestampLabelToUpdate = foundLabels.firstObject;
-                 gVideoTimestampLabel = timestampLabelToUpdate; 
+                
+                // Style this label if it hasn't been styled yet
+                if (![objc_getAssociatedObject(timestampLabelToUpdate, "BHT_StyledTimestamp") boolValue]) {
+                    // Apply base styling
+                    timestampLabelToUpdate.font = [UIFont systemFontOfSize:14.0];
+                    timestampLabelToUpdate.textColor = [UIColor whiteColor];
+                    timestampLabelToUpdate.textAlignment = NSTextAlignmentCenter;
+                    timestampLabelToUpdate.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5];
+                    
+                    // Calculate and apply frame with padding
+                    [timestampLabelToUpdate sizeToFit];
+                    CGRect currentFrame = timestampLabelToUpdate.frame;
+                    CGFloat horizontalPadding = 2.0;
+                    CGFloat verticalPadding = 12.0;
+                    
+                    CGRect newFrame = CGRectMake(
+                        currentFrame.origin.x - horizontalPadding / 2.0f,
+                        currentFrame.origin.y - verticalPadding / 2.0f,
+                        currentFrame.size.width + horizontalPadding,
+                        currentFrame.size.height + verticalPadding
+                    );
+                    
+                    if (newFrame.size.height < 22.0f) {
+                        CGFloat diff = 22.0f - newFrame.size.height;
+                        newFrame.size.height = 22.0f;
+                        newFrame.origin.y -= diff / 2.0f;
+                    }
+                    
+                    timestampLabelToUpdate.frame = newFrame;
+                    timestampLabelToUpdate.layer.cornerRadius = timestampLabelToUpdate.frame.size.height / 2.0f;
+                    timestampLabelToUpdate.layer.masksToBounds = YES;
+                    
+                    // Mark as styled
+                    objc_setAssociatedObject(timestampLabelToUpdate, "BHT_StyledTimestamp", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                }
+                
+                // Update our global reference
+                gVideoTimestampLabel = timestampLabelToUpdate;
             }
         }
         
         if (timestampLabelToUpdate) {
-            // Use a single property change and do it synchronously to prevent flickering
+            // Force-make visible again if we're showing controls, regardless of previous state
             if (showButtons) {
                 // First set alpha to 1 then unhide - this prevents flickering when becoming visible
                 timestampLabelToUpdate.alpha = 1.0;
@@ -2916,6 +2917,120 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
                 timestampLabelToUpdate.hidden = YES;
                 timestampLabelToUpdate.alpha = 0.0;
             }
+            
+            // Store a strong reference
+            gVideoTimestampLabel = timestampLabelToUpdate;
+        }
+    }
+}
+
+// Handle visibility when view appears
+- (void)viewDidAppear:(BOOL)animated {
+    %orig(animated);
+    
+    // Recheck our timestamp label when view appears
+    if ([BHTManager restoreVideoTimestamp]) {
+        // Always do a complete search on view appear to ensure we have the timestamp
+        UIView *searchView = self.view;
+        NSMutableArray<UILabel *> *foundLabels = [NSMutableArray array];
+        BH_EnumerateSubviewsRecursively(searchView, ^(UIView *currentView) {
+            if ([currentView isKindOfClass:[UILabel class]]) {
+                UILabel *label = (UILabel *)currentView;
+                if (label.text && [label.text containsString:@":"] && [label.text containsString:@"/"]) {
+                    [foundLabels addObject:label];
+                }
+            }
+        });
+        
+        if (foundLabels.count > 0) {
+            UILabel *timestampLabel = foundLabels.firstObject;
+            
+            // Style if needed
+            if (![objc_getAssociatedObject(timestampLabel, "BHT_StyledTimestamp") boolValue]) {
+                // Apply base styling
+                timestampLabel.font = [UIFont systemFontOfSize:14.0];
+                timestampLabel.textColor = [UIColor whiteColor];
+                timestampLabel.textAlignment = NSTextAlignmentCenter;
+                timestampLabel.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5];
+                
+                // Calculate and apply frame with padding
+                [timestampLabel sizeToFit];
+                CGRect currentFrame = timestampLabel.frame;
+                CGFloat horizontalPadding = 2.0;
+                CGFloat verticalPadding = 12.0;
+                
+                CGRect newFrame = CGRectMake(
+                    currentFrame.origin.x - horizontalPadding / 2.0f,
+                    currentFrame.origin.y - verticalPadding / 2.0f,
+                    currentFrame.size.width + horizontalPadding,
+                    currentFrame.size.height + verticalPadding
+                );
+                
+                if (newFrame.size.height < 22.0f) {
+                    CGFloat diff = 22.0f - newFrame.size.height;
+                    newFrame.size.height = 22.0f;
+                    newFrame.origin.y -= diff / 2.0f;
+                }
+                
+                timestampLabel.frame = newFrame;
+                timestampLabel.layer.cornerRadius = timestampLabel.frame.size.height / 2.0f;
+                timestampLabel.layer.masksToBounds = YES;
+                
+                // Mark as styled
+                objc_setAssociatedObject(timestampLabel, "BHT_StyledTimestamp", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            }
+            
+            // Save this reference
+            gVideoTimestampLabel = timestampLabel;
+        }
+        
+        // Determine visibility based on player controls
+        BOOL controlsVisible = NO;
+        
+        // Try to determine if controls are visible
+        if ([self respondsToSelector:@selector(playerControlsView)]) {
+            id playerControls = [self valueForKey:@"playerControlsView"];
+            if ([playerControls respondsToSelector:@selector(alpha)]) {
+                controlsVisible = [(UIView *)playerControls alpha] > 0.0;
+            }
+        }
+        
+        // Set initial visibility
+        if (gVideoTimestampLabel) {
+            if (controlsVisible) {
+                gVideoTimestampLabel.alpha = 1.0;
+                gVideoTimestampLabel.hidden = NO;
+            } else {
+                gVideoTimestampLabel.hidden = YES;
+                gVideoTimestampLabel.alpha = 0.0;
+            }
+        }
+    }
+}
+
+// Add a hook for player state changes
+- (void)playerViewController:(id)playerViewController playerStateDidChange:(NSInteger)state {
+    %orig;
+    
+    if ([BHTManager restoreVideoTimestamp] && gVideoTimestampLabel && gVideoTimestampLabel.superview) {
+        // Check if this state change should update visibility
+        BOOL shouldBeVisible = NO;
+        
+        // Try to determine if controls are visible based on player state or controls
+        if ([self respondsToSelector:@selector(playerControlsView)]) {
+            id playerControls = [self valueForKey:@"playerControlsView"];
+            if ([playerControls respondsToSelector:@selector(alpha)]) {
+                shouldBeVisible = [(UIView *)playerControls alpha] > 0.0;
+            }
+        }
+        
+        // Update visibility to match controls
+        if (shouldBeVisible && gVideoTimestampLabel.hidden) {
+            gVideoTimestampLabel.alpha = 1.0;
+            gVideoTimestampLabel.hidden = NO;
+        } else if (!shouldBeVisible && !gVideoTimestampLabel.hidden) {
+            gVideoTimestampLabel.hidden = YES;
+            gVideoTimestampLabel.alpha = 0.0;
         }
     }
 }
@@ -3450,3 +3565,4 @@ static void BHT_forceRefreshAllWindowAppearances(void) { // Renamed and logic ad
     %orig(BHTCurrentAccentColor());
 }
 %end
+
