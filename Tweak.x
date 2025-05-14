@@ -2797,9 +2797,9 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             [self sizeToFit];
             CGRect currentFrame = self.frame;
 
-            // Define padding
-            CGFloat horizontalPadding = 4.0; 
-            CGFloat verticalPadding = 12.0;  // Increased again for a more pronounced round pill
+            // Define padding - reduced horizontal padding for a narrower pill
+            CGFloat horizontalPadding = 2.0; // Reduced from 4.0 to make the pill less wide
+            CGFloat verticalPadding = 12.0; // Keep vertical padding for pronounced round pill
 
             // Apply padding to the frame
             // Adjust origin to keep the label centered around its original position after resizing
