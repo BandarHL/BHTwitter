@@ -2878,11 +2878,19 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         
         if (timestampLabelToUpdate) {
             dispatch_async(dispatch_get_main_queue(), ^{
-                // Simply set visibility without custom animation to avoid flicker
-                // Rely on the view's own visibility handling if any
+                // Set visibility without custom animation to avoid flicker
+                // Use a minimal delay on hide to better sync with native fade behavior
                 CGFloat targetAlpha = showButtons ? 1.0 : 0.0;
-                timestampLabelToUpdate.alpha = targetAlpha;
-                timestampLabelToUpdate.hidden = !showButtons;
+                if (showButtons) {
+                    timestampLabelToUpdate.alpha = targetAlpha;
+                    timestampLabelToUpdate.hidden = !showButtons;
+                } else {
+                    // Immediately set alpha to 0 to reduce flicker, then hide after a tiny delay
+                    timestampLabelToUpdate.alpha = 0.0;
+                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.05 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                        timestampLabelToUpdate.hidden = !showButtons;
+                    });
+                }
                 
                 NSLog(@"[BHTwitter TimestampLabel Visibility] Text: '%@', Current Width: %f, TargetAlpha: %f, Show: %d", timestampLabelToUpdate.text, timestampLabelToUpdate.frame.size.width, targetAlpha, showButtons);
             });
