@@ -3597,84 +3597,155 @@ static void BHT_forceRefreshAllWindowAppearances(void) { // Renamed and logic ad
 // Global reference to the timestamp label for the active immersive player
 static UILabel *gVideoTimestampLabel = nil;
 
+// Helper method to determine if a text is likely a timestamp
+static BOOL isTimestampText(NSString *text) {
+    if (!text || text.length == 0) {
+        return NO;
+    }
+    
+    // Check for common timestamp patterns like "0:01/0:05" or "00:20/01:30"
+    NSRange colonRange = [text rangeOfString:@":"];
+    NSRange slashRange = [text rangeOfString:@"/"];
+    
+    // Must have both colon and slash
+    if (colonRange.location == NSNotFound || slashRange.location == NSNotFound) {
+        return NO;
+    }
+    
+    // Slash should come after colon in a timestamp (e.g., "0:01/0:05")
+    if (slashRange.location < colonRange.location) {
+        return NO;
+    }
+    
+    // Should have another colon after the slash
+    NSRange secondColonRange = [text rangeOfString:@":" options:0 range:NSMakeRange(slashRange.location, text.length - slashRange.location)];
+    if (secondColonRange.location == NSNotFound) {
+        return NO;
+    }
+    
+    return YES;
+}
+
 %hook UILabel
 
 - (void)setText:(NSString *)text {
     %orig(text);
-
-    // Skip processing if not in a context where we need to style the label
+    
+    // Skip processing if feature is disabled
     if (![BHTManager restoreVideoTimestamp]) {
         return;
     }
-
-    // Quick path: if this is our already styled label, we don't need to do anything else
+    
+    // Skip if already our target label
     if (self == gVideoTimestampLabel) {
         return;
     }
-
-    // Now we need to check if this is a timestamp label we should style
-    if (self.text && [self.text containsString:@":"] && [self.text containsString:@"/"]) {
-        // Check if already styled
-        BOOL isAlreadyStyled = [objc_getAssociatedObject(self, "BHT_StyledTimestamp") boolValue];
-        if (isAlreadyStyled) {
-            return;
+    
+    // Skip if text doesn't match timestamp pattern
+    if (!isTimestampText(self.text)) {
+        return;
+    }
+    
+    // Check if already styled
+    if ([objc_getAssociatedObject(self, "BHT_StyledTimestamp") boolValue]) {
+        return;
+    }
+    
+    // Find if we're in the correct view context
+    UIView *parentView = self.superview;
+    BOOL isInImmersiveContext = NO;
+    
+    while (parentView) {
+        NSString *className = NSStringFromClass([parentView class]);
+        if ([className isEqualToString:@"T1TwitterSwift.ImmersiveCardView"] || 
+            [className hasSuffix:@".ImmersiveCardView"]) {
+            isInImmersiveContext = YES;
+            break;
         }
-
-        // Check if in ImmersiveCardView context
-        UIView *parentView = self.superview;
-        BOOL isInImmersiveCardView = NO;
+        parentView = parentView.superview;
+    }
+    
+    if (isInImmersiveContext) {
+        // Remember original visibility state
+        BOOL wasHidden = self.hidden;
+        CGFloat originalAlpha = self.alpha;
         
-        while (parentView) {
-            NSString *className = NSStringFromClass([parentView class]);
-            if ([className isEqualToString:@"T1TwitterSwift.ImmersiveCardView"] || 
-                [className hasSuffix:@".ImmersiveCardView"]) {
-                isInImmersiveCardView = YES;
+        // Apply styling
+        self.font = [UIFont systemFontOfSize:14.0];
+        self.textColor = [UIColor whiteColor];
+        self.textAlignment = NSTextAlignmentCenter;
+        self.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5];
+        
+        // Calculate size and apply padding
+        [self sizeToFit];
+        CGRect frame = self.frame;
+        CGFloat horizontalPadding = 4.0;
+        CGFloat verticalPadding = 12.0;
+        
+        frame = CGRectMake(
+            frame.origin.x - horizontalPadding / 2.0f,
+            frame.origin.y - verticalPadding / 2.0f,
+            frame.size.width + horizontalPadding,
+            frame.size.height + verticalPadding
+        );
+        
+        // Ensure minimum height
+        if (frame.size.height < 22.0f) {
+            CGFloat diff = 22.0f - frame.size.height;
+            frame.size.height = 22.0f;
+            frame.origin.y -= diff / 2.0f;
+        }
+        
+        self.frame = frame;
+        self.layer.cornerRadius = frame.size.height / 2.0f;
+        self.layer.masksToBounds = YES;
+        
+        // Restore original visibility (don't change current state)
+        self.alpha = originalAlpha; 
+        self.hidden = wasHidden;
+        
+        // Mark as styled and store reference
+        objc_setAssociatedObject(self, "BHT_StyledTimestamp", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        gVideoTimestampLabel = self;
+        
+        // Special handling for first video - ensure visibility matches player controls
+        UIView *controlsParent = parentView;
+        while (controlsParent) {
+            if ([NSStringFromClass([controlsParent class]) containsString:@"ImmersiveFullScreenViewController"]) {
                 break;
             }
-            parentView = parentView.superview;
+            controlsParent = controlsParent.superview;
         }
-
-        // Apply styling if in the correct context
-        if (isInImmersiveCardView) {
-            // Apply visual styling only
-            self.font = [UIFont systemFontOfSize:14.0];
-            self.textColor = [UIColor whiteColor];
-            self.textAlignment = NSTextAlignmentCenter;
-            self.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5];
+        
+        if (controlsParent) {
+            // For first video only, let the player update visibility via showHideNavigationButtons
+            UIView *playerControls = nil;
+            id vc = controlsParent;
             
-            // Calculate size based on current text and font
-            [self sizeToFit];
-            CGRect currentFrame = self.frame;
-            
-            // Apply padding
-            CGFloat horizontalPadding = 4.0;
-            CGFloat verticalPadding = 12.0;
-            
-            CGRect newFrame = CGRectMake(
-                currentFrame.origin.x - horizontalPadding / 2.0f,
-                currentFrame.origin.y - verticalPadding / 2.0f,
-                currentFrame.size.width + horizontalPadding,
-                currentFrame.size.height + verticalPadding
-            );
-            
-            // Ensure minimum height
-            if (newFrame.size.height < 22.0f) {
-                CGFloat diff = 22.0f - newFrame.size.height;
-                newFrame.size.height = 22.0f;
-                newFrame.origin.y -= diff / 2.0f;
+            // Try to find player controls via property
+            if ([vc respondsToSelector:@selector(playerControlsView)]) {
+                playerControls = [vc valueForKey:@"playerControlsView"];
             }
             
-            self.frame = newFrame;
-            self.layer.cornerRadius = newFrame.size.height / 2.0f;
-            self.layer.masksToBounds = YES;
-            
-            // Mark as styled
-            objc_setAssociatedObject(self, "BHT_StyledTimestamp", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-            
-            // Store reference
-            gVideoTimestampLabel = self;
+            // If we find the controls, sync visibility state
+            if (playerControls) {
+                // Don't change visibility now, the controller will set it correctly
+                // Just ensure we're not fighting against any default states
+                objc_setAssociatedObject(self, "BHT_InitialSetupDone", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            }
         }
     }
+}
+
+// Simple hook to prevent premature hiding in first video
+- (void)setHidden:(BOOL)hidden {
+    // Only for our timestamp label
+    if (self == gVideoTimestampLabel && [BHTManager restoreVideoTimestamp]) {
+        // Let the original setHidden call proceed, but log what's happening
+        NSLog(@"[BHTwitter TimestampLabel] setHidden:%d called by: %@", hidden, [NSThread callStackSymbols]);
+    }
+    
+    %orig(hidden);
 }
 
 %end
