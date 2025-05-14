@@ -15,7 +15,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface BHDownloadInlineButton : UIButton
 {
-    int _displayType;
+    NSUInteger _displayType;
     NSUInteger _inlineActionType;
     __weak T1StatusInlineActionsView *_delegate; // Added weak reference
     id _buttonAnimator;
@@ -32,7 +32,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign) UIEdgeInsets hitTestEdgeInsets;
 @property (nonatomic, assign) UIEdgeInsets touchInsets;
 @property (nonatomic, assign) NSUInteger inlineActionType;
-@property (nonatomic, assign) int displayType;
+@property (nonatomic, assign) NSUInteger displayType;
 @property (nonatomic, strong, nullable) id viewModel;
 
 - (void)setTouchInsets:(UIEdgeInsets)touchInsets;
@@ -42,9 +42,9 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)shouldShowCount;
 - (double)extraWidth;
 - (CGFloat)trailingEdgeInset;
-- (int)touchInsetPriority;
-- (int)alternateInlineActionType;
-- (int)visibility;
+- (NSUInteger)touchInsetPriority;
+- (NSUInteger)alternateInlineActionType;
+- (NSUInteger)visibility;
 - (nullable NSString *)actionSheetTitle;
 - (BOOL)enabled;
 

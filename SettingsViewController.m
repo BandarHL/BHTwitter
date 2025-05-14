@@ -15,10 +15,6 @@
 #import "CustomTabBar/BHCustomTabBarViewController.h"
 #import "BHTManager.h"
 
-// Define constants used in this file for custom theme to avoid direct literal numbers
-#define CUSTOM_THEME_ID_SETTINGS 7 
-#define CUSTOM_THEME_HEX_KEY_SETTINGS @"bh_color_theme_customColorHex"
-
 typedef NS_ENUM(NSInteger, TwitterFontWeight) {
     TwitterFontWeightRegular,
     TwitterFontWeightMedium,
@@ -82,40 +78,14 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
 - (void)setupAppearance {
     TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];
-    UIColor *primaryColor = nil;
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    NSInteger selectedThemeOption = -1;
-
-    if ([defaults objectForKey:@"bh_color_theme_selectedColor"]) {
-        selectedThemeOption = [defaults integerForKey:@"bh_color_theme_selectedColor"];
-    }
-
-    if (selectedThemeOption == CUSTOM_THEME_ID_SETTINGS) { // Use a local define for clarity within this file
-        NSString *customHex = [defaults stringForKey:CUSTOM_THEME_HEX_KEY_SETTINGS];
-        if (customHex && customHex.length > 0) {
-            primaryColor = [UIColor colorFromHexString:customHex];
-        }
-    }
+    UIColor *primaryColor;
     
-    // Fallback to predefined or default Twitter color if custom is not set or invalid
-    if (!primaryColor) {
-        NSInteger colorOptionToUse = -1;
-        if (selectedThemeOption != -1 && selectedThemeOption != CUSTOM_THEME_ID_SETTINGS) {
-            // A predefined BHTwitter theme is selected
-            colorOptionToUse = selectedThemeOption;
-        } else if ([defaults objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
-            // No BHTwitter theme, or custom was invalid, try Twitter's own key
-            colorOptionToUse = [defaults integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        primaryColor = [[[colorSettings currentColorPalette] colorPalette] primaryColorForOption:[[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]];
+    } else if ([[NSUserDefaults standardUserDefaults] objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
+        primaryColor = [[[colorSettings currentColorPalette] colorPalette] primaryColorForOption:[[NSUserDefaults standardUserDefaults] integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"]];
     } else {
-            // Absolute fallback to Twitter's default (usually option 1 for Blue)
-            colorOptionToUse = 1; 
-        }
-        primaryColor = [[[colorSettings currentColorPalette] colorPalette] primaryColorForOption:colorOptionToUse];
-    }
-    
-    // Final fallback if everything else fails
-    if (!primaryColor) {
-        primaryColor = [UIColor systemBlueColor];
+        primaryColor = nil;
     }
     
     HBAppearanceSettings *appearanceSettings = [[HBAppearanceSettings alloc] init];
@@ -958,6 +928,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         BOOL isBig = specifier.properties[@"big"] ? ((NSNumber *)specifier.properties[@"big"]).boolValue : NO;
         
         // Get the default font size and make it bold
+        UIFont *defaultFont = self.textLabel.font;
         self.textLabel.font = TwitterChirpFont(TwitterFontStyleSemibold); // 14pt semibold
         
         // Keep subtitle style exactly as before
@@ -978,6 +949,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         BOOL isBig = specifier.properties[@"big"] ? ((NSNumber *)specifier.properties[@"big"]).boolValue : NO;
         
         // Get the default font size and make it bold
+        UIFont *defaultFont = self.textLabel.font;
         self.textLabel.font = TwitterChirpFont(TwitterFontStyleSemibold); // 14pt semibold
 
         // Keep subtitle style exactly as before

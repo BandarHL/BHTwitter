@@ -12,12 +12,7 @@
 #import "../Colours/Colours.h"
 #import "../TWHeaders.h"
 
-// Define a constant for the custom theme ID
-#define CUSTOM_THEME_ID 7
-#define CUSTOM_THEME_HEX_KEY @"bh_color_theme_customColorHex"
-#define BHTColorThemeDidChangeNotificationName @"BHTColorThemeDidChangeNotification"
-
-@interface BHColorThemeViewController () <UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout, UIColorPickerViewControllerDelegate>
+@interface BHColorThemeViewController () <UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout>
 @property (nonatomic, strong) UICollectionView *colorCollectionView;
 @property (nonatomic, strong) UILabel *headerLabel;
 @property (nonatomic, strong) NSMutableArray<BHColorThemeItem *> *colors;
@@ -51,11 +46,6 @@
     [self.colors addObject:[[BHColorThemeItem alloc] initWithColorID:5 name:[[BHTBundle sharedBundle] localizedStringForKey:@"THEME_OPTION_5"] color:[UIColor colorFromHexString:@"#FF7A00"]]];
     [self.colors addObject:[[BHColorThemeItem alloc] initWithColorID:6 name:[[BHTBundle sharedBundle] localizedStringForKey:@"THEME_OPTION_6"] color:[UIColor colorFromHexString:@"#00BA7C"]]];
     
-    // Add Custom Color Option
-    NSString *customColorLabel = [[BHTBundle sharedBundle] localizedStringForKey:@"THEME_OPTION_CUSTOM"];
-    UIColor *customColorPlaceholder = [UIColor colorWithWhite:0.8 alpha:1.0]; // Placeholder color
-    [self.colors addObject:[[BHColorThemeItem alloc] initWithColorID:CUSTOM_THEME_ID name:customColorLabel color:customColorPlaceholder]];
-    
     self.navigationController.navigationBar.prefersLargeTitles = NO;
     self.view.backgroundColor = [UIColor systemBackgroundColor];
     [self.view addSubview:self.headerLabel];
@@ -79,34 +69,68 @@
 
 - (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath {
     BHColorThemeCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:[BHColorThemeCell reuseIdentifier] forIndexPath:indexPath];
-    BHColorThemeItem *currCellItem = self.colors[indexPath.row];
+    BHColorThemeItem *currCell = self.colors[indexPath.row];
     
-    cell.colorLabel.text = currCellItem.name;
-    cell.colorLabel.backgroundColor = currCellItem.color;
-    cell.checkIMG.image = [UIImage systemImageNamed:@"circle"];
-
-    NSInteger selectedColorID = -1;
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        selectedColorID = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
-    }
-
-    if (currCellItem.colorID == CUSTOM_THEME_ID) {
-        // Special handling for the custom color cell
-        if (selectedColorID == CUSTOM_THEME_ID) {
-            NSString *customHex = [[NSUserDefaults standardUserDefaults] stringForKey:CUSTOM_THEME_HEX_KEY];
-            if (customHex && customHex.length > 0) {
-                UIColor *customColor = [UIColor colorFromHexString:customHex];
-                if (customColor) {
-                    cell.colorLabel.backgroundColor = customColor;
-                }
-            }
+    cell.colorLabel.text = currCell.name;
+    cell.colorLabel.backgroundColor = currCell.color;
+    
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"] != nil) {
+        NSInteger selectedColor = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
+        
+        switch (selectedColor) {
+            case 1:
+                if (currCell.colorID == selectedColor) {
+                    [collectionView.visibleCells enumerateObjectsUsingBlock:^(__kindof UICollectionViewCell * _Nonnull colorCell, NSUInteger idx, BOOL * _Nonnull stop) {
+                        BHColorThemeCell *cCell = (BHColorThemeCell *)colorCell;
+                        cCell.checkIMG.image = [UIImage systemImageNamed:@"circle"];
+                    }];
                     cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
-        } else {
-            cell.colorLabel.backgroundColor = currCellItem.color;
+                }
+            case 2:
+                if (currCell.colorID == selectedColor) {
+                    [collectionView.visibleCells enumerateObjectsUsingBlock:^(__kindof UICollectionViewCell * _Nonnull colorCell, NSUInteger idx, BOOL * _Nonnull stop) {
+                        BHColorThemeCell *cCell = (BHColorThemeCell *)colorCell;
+                        cCell.checkIMG.image = [UIImage systemImageNamed:@"circle"];
+                    }];
+                    cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
+                }
+            case 3:
+                if (currCell.colorID == selectedColor) {
+                    [collectionView.visibleCells enumerateObjectsUsingBlock:^(__kindof UICollectionViewCell * _Nonnull colorCell, NSUInteger idx, BOOL * _Nonnull stop) {
+                        BHColorThemeCell *cCell = (BHColorThemeCell *)colorCell;
+                        cCell.checkIMG.image = [UIImage systemImageNamed:@"circle"];
+                    }];
+                    cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
+                }
+            case 4:
+                if (currCell.colorID == selectedColor) {
+                    [collectionView.visibleCells enumerateObjectsUsingBlock:^(__kindof UICollectionViewCell * _Nonnull colorCell, NSUInteger idx, BOOL * _Nonnull stop) {
+                        BHColorThemeCell *cCell = (BHColorThemeCell *)colorCell;
+                        cCell.checkIMG.image = [UIImage systemImageNamed:@"circle"];
+                    }];
+                    cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
+                }
+            case 5:
+                if (currCell.colorID == selectedColor) {
+                    [collectionView.visibleCells enumerateObjectsUsingBlock:^(__kindof UICollectionViewCell * _Nonnull colorCell, NSUInteger idx, BOOL * _Nonnull stop) {
+                        BHColorThemeCell *cCell = (BHColorThemeCell *)colorCell;
+                        cCell.checkIMG.image = [UIImage systemImageNamed:@"circle"];
+                    }];
+                    cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
+                }
+            case 6:
+                if (currCell.colorID == selectedColor) {
+                    [collectionView.visibleCells enumerateObjectsUsingBlock:^(__kindof UICollectionViewCell * _Nonnull colorCell, NSUInteger idx, BOOL * _Nonnull stop) {
+                        BHColorThemeCell *cCell = (BHColorThemeCell *)colorCell;
+                        cCell.checkIMG.image = [UIImage systemImageNamed:@"circle"];
+                    }];
+                    cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
+                }
+            default:
+                break;
         }
     } else {
-        // Predefined colors
-        if (currCellItem.colorID == selectedColorID) {
+        if (currCell.colorID == 0) {
             cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
         }
     }
@@ -117,85 +141,36 @@
 - (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath {
     BHColorThemeItem *colorItem = self.colors[indexPath.row];
     
-    if (colorItem.colorID == CUSTOM_THEME_ID) {
-        UIColorPickerViewController *colorPicker = [[UIColorPickerViewController alloc] init];
-        colorPicker.delegate = self;
-        colorPicker.supportsAlpha = NO;
-
-        NSString *currentCustomHex = [[NSUserDefaults standardUserDefaults] stringForKey:CUSTOM_THEME_HEX_KEY];
-        if (currentCustomHex) {
-            colorPicker.selectedColor = [UIColor colorFromHexString:currentCustomHex];
-        }
-        [self presentViewController:colorPicker animated:YES completion:nil];
-
-    } else {
-        // Predefined color selected
-        [[NSUserDefaults standardUserDefaults] setInteger:colorItem.colorID forKey:@"bh_color_theme_selectedColor"];
-        [[NSUserDefaults standardUserDefaults] removeObjectForKey:CUSTOM_THEME_HEX_KEY];
-        [[NSNotificationCenter defaultCenter] postNotificationName:BHTColorThemeDidChangeNotificationName object:nil];
-        [self.colorCollectionView reloadData];
-        [self triggerFullThemeUpdate];
-    }
-}
-
-//MARK: - UIColorPickerViewControllerDelegate
-
-- (void)colorPickerViewController:(UIColorPickerViewController *)viewController didSelectColor:(UIColor *)color continuously:(BOOL)continuously API_AVAILABLE(ios(14.0)){
-    NSLog(@"[BHTwitterColorPicker] Delegate method didSelectColor:continuously: called. Continuously: %d", continuously);
-    if (!continuously) {
-        UIColor *selectedColor = color; // Use the 'color' parameter directly
-        NSString *hexString = [selectedColor hexString];
-        NSLog(@"[BHTwitterColorPicker] didSelectColor (final) - Selected Color: %@, Hex: %@", selectedColor, hexString);
-
-        if (hexString && hexString.length > 0) { // Ensure we have a valid hex string
-            [[NSUserDefaults standardUserDefaults] setObject:hexString forKey:CUSTOM_THEME_HEX_KEY];
-            [[NSUserDefaults standardUserDefaults] setInteger:CUSTOM_THEME_ID forKey:@"bh_color_theme_selectedColor"];
-            [[NSUserDefaults standardUserDefaults] synchronize];
-            [[NSNotificationCenter defaultCenter] postNotificationName:BHTColorThemeDidChangeNotificationName object:nil];
-            
-            // Reload data and trigger theme update
-            // This might happen while the picker is still visible, or as it dismisses itself.
-            [self.colorCollectionView reloadData];
-            [self triggerFullThemeUpdate];
-        } else {
-            NSLog(@"[BHTwitterColorPicker] didSelectColor (final) - Invalid hexString, not updating theme.");
-        }
-    }
-}
-
-- (void)colorPickerViewControllerDidFinishPicking:(UIColorPickerViewController *)viewController API_AVAILABLE(ios(14.0)){
-    NSLog(@"[BHTwitterColorPicker] Delegate method colorPickerViewControllerDidFinishPicking called.");
-    // This method might still be called when the picker is dismissed (e.g., by dragging down the sheet).
-    // We don't need to re-process the color here if didSelectColor:continuously: already handled it.
-    // The main purpose here is to ensure dismissal and a final UI refresh if needed.
-
-    // It's possible the color was already processed by didSelectColor:continuously:
-    // However, we can ensure a reload and theme update happens on dismissal too,
-    // just in case.
-    [viewController dismissViewControllerAnimated:YES completion:^{
-        NSLog(@"[BHTwitterColorPicker] Picker dismissed from DidFinishPicking. Reloading data.");
-        [self.colorCollectionView reloadData];
-        [self triggerFullThemeUpdate];
+    [collectionView.visibleCells enumerateObjectsUsingBlock:^(__kindof UICollectionViewCell * _Nonnull colorCell, NSUInteger idx, BOOL * _Nonnull stop) {
+        BHColorThemeCell *cCell = (BHColorThemeCell *)colorCell;
+        cCell.checkIMG.image = [UIImage systemImageNamed:@"circle"];
     }];
-}
+    
+    BHColorThemeCell *currCell = (BHColorThemeCell *)[collectionView cellForItemAtIndexPath:indexPath];
+    currCell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
+    
+    [[NSUserDefaults standardUserDefaults] setInteger:colorItem.colorID forKey:@"bh_color_theme_selectedColor"];
+    BH_changeTwitterColor(colorItem.colorID);
 
-// Helper method to trigger full theme update for tab bar etc.
-- (void)triggerFullThemeUpdate {
+    // Manually trigger tab bar icon refresh
     Class t1TabBarVCClass = NSClassFromString(@"T1TabBarViewController");
     if (t1TabBarVCClass) {
         UIWindow *window = nil;
         if (@available(iOS 13.0, *)) {
             for (UIWindowScene *scene in UIApplication.sharedApplication.connectedScenes) {
                 if (scene.activationState == UISceneActivationStateForegroundActive && [scene isKindOfClass:[UIWindowScene class]]) {
+                    // Check if the scene's delegate responds to window selector or if the scene itself has windows
                     if ([scene.delegate respondsToSelector:@selector(window)]) {
                          window = [(id)scene.delegate window];
                     } else if ([scene respondsToSelector:@selector(windows)]) {
+                        // For scenes directly managing windows (e.g. iPad with multiple windows)
                         for (UIWindow *sceneWindow in [(id)scene windows]) {
                             if (sceneWindow.isKeyWindow) {
                                 window = sceneWindow;
                                 break;
                             }
                         }
+                        // Fallback to the first window if no key window is found (less ideal)
                         if (!window && [[(id)scene windows] count] > 0) {
                             window = [[(id)scene windows] firstObject];
                         }
@@ -259,5 +234,6 @@
 - (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout sizeForItemAtIndexPath:(NSIndexPath *)indexPath {
     return CGSizeMake(98, 74);
 }
+
 
 @end
