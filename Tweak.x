@@ -2827,9 +2827,12 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             // Log the calculated width after styling
             NSLog(@"[BHTwitter TimestampLabel setText] Text: '%@', Calculated Width: %f", self.text, self.frame.size.width);
 
-            // Force visibility to ensure it shows up
-            self.alpha = 1.0;
-            self.hidden = NO;
+            // Set initial visibility to match the player's UI state
+            // Do not force alpha to 1.0; let T1ImmersiveFullScreenViewController manage it
+            if (self.alpha != 1.0) {
+                self.alpha = 0.0;
+            }
+            self.hidden = NO; // Ensure it's not hidden by default, let the controller manage visibility
 
             // Store a weak reference to this label
             gVideoTimestampLabel = self;
