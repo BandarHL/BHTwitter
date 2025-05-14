@@ -146,6 +146,7 @@
 
     [[NSUserDefaults standardUserDefaults] setObject:hexString forKey:CUSTOM_THEME_HEX_KEY];
     [[NSUserDefaults standardUserDefaults] setInteger:CUSTOM_THEME_ID forKey:@"bh_color_theme_selectedColor"];
+    [[NSUserDefaults standardUserDefaults] synchronize];
     [[NSNotificationCenter defaultCenter] postNotificationName:BHTColorThemeDidChangeNotificationName object:nil];
     
     [viewController dismissViewControllerAnimated:YES completion:^{
