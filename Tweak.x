@@ -2800,39 +2800,16 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 // MARK: - Timestamp Label Styling via UILabel -setText:
 
-%hook UILabel
-
-- (void)setText:(NSString *)text {
-    %orig(text);
-
-    // This hook now only serves to ensure that if a label *could* be a timestamp,
-    // it exists in the view hierarchy. The actual identification, styling, and 
-    // management of gVideoTimestampLabel is handled by T1ImmersiveFullScreenViewController hooks.
-    if ([BHTManager restoreVideoTimestamp] && self.text && [self.text containsString:@":"] && [self.text containsString:@"/"]) {
-        UIView *parentView = self.superview;
-        BOOL isInImmersiveCardView = NO;
-        while (parentView) {
-            NSString *className = NSStringFromClass([parentView class]);
-            if ([className isEqualToString:@"T1TwitterSwift.ImmersiveCardView"] || 
-                [className containsString:@"ImmersiveCardView"]) {
-                isInImmersiveCardView = YES;
-                break;
-            }
-            parentView = parentView.superview;
-        }
-        // No action needed here other than letting the original setText run.
-        // gVideoTimestampLabel should not be set here.
-    }
-}
-
-%end
-
 // MARK: - Immersive Player Timestamp Visibility Control
 
 %hook T1ImmersiveFullScreenViewController
 
+// Forward declare the new helper method for visibility within this hook block
+- (BOOL)BHT_findAndPrepareTimestampLabelForVC:(T1ImmersiveFullScreenViewController *)activePlayerVC;
+
 // Helper method to find, style, and map the timestamp label for a given VC instance
 %new - (BOOL)BHT_findAndPrepareTimestampLabelForVC:(T1ImmersiveFullScreenViewController *)activePlayerVC {
+    // ... (implementation as before)
     if (!playerToTimestampMap || !activePlayerVC || !activePlayerVC.isViewLoaded) {
         NSLog(@"[BHTwitter Timestamp] BHT_findAndPrepareTimestampLabelForVC: Pre-condition failed (map: %@, vc: %@, viewLoaded: %d)", playerToTimestampMap, activePlayerVC, activePlayerVC.isViewLoaded);
         return NO;
