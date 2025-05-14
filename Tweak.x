@@ -2965,16 +2965,29 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             NSLog(@"[BHTwitter Timestamp] VC %@: Re-initialized playerToTimestampMap in viewDidAppear (SYNC - should be rare).", activePlayerVC);
         }
         
-        // Synchronously find/prepare the label for this VC instance.
-        // This ensures it's ready before we try to set its initial visibility.
+        // Initial synchronous attempt
         BOOL labelFoundAndPrepared = [self BHT_findAndPrepareTimestampLabelForVC:activePlayerVC];
-        NSLog(@"[BHTwitter Timestamp] VC %@: viewDidAppear (SYNC) - labelFoundAndPrepared: %d", activePlayerVC, labelFoundAndPrepared);
+        NSLog(@"[BHTwitter Timestamp] VC %@: viewDidAppear (SYNC) - initial labelFoundAndPrepared: %d", activePlayerVC, labelFoundAndPrepared);
+        [self immersiveViewController:self showHideNavigationButtons:NO]; // Set initial state based on what was found
 
-        // Now, set its initial visibility (typically hidden).
-        // The immersiveViewController:showHideNavigationButtons: method will use the map entry.
-        // We call it directly to enforce the initial state.
-        NSLog(@"[BHTwitter Timestamp] VC %@: viewDidAppear (SYNC) - calling showHideNavigationButtons:NO as baseline.", activePlayerVC);
-        [self immersiveViewController:self showHideNavigationButtons:NO];
+        // Schedule a slightly delayed check to catch labels that might populate *just after* viewDidAppear completes.
+        // This is a targeted fix for potential initial delay.
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            if (activePlayerVC && activePlayerVC.view.window) { // Ensure VC is still valid and on screen
+                 NSLog(@"[BHTwitter Timestamp] VC %@: viewDidAppear (DELAYED CHECK 0.1s) - calling showHideNavigationButtons:NO again.", activePlayerVC);
+                BOOL delayedLabelFound = [activePlayerVC BHT_findAndPrepareTimestampLabelForVC:activePlayerVC];
+                 NSLog(@"[BHTwitter Timestamp] VC %@: viewDidAppear (DELAYED CHECK 0.1s) - delayedLabelFound: %d", activePlayerVC, delayedLabelFound);
+                // Determine current controls visibility for the delayed call
+                BOOL controlsCurrentlyVisible = NO;
+                if ([activePlayerVC respondsToSelector:@selector(playerControlsView)]) { 
+                    UIView *playerControls = [activePlayerVC valueForKey:@"playerControlsView"];
+                    if (playerControls && [playerControls respondsToSelector:@selector(alpha)]) {
+                        controlsCurrentlyVisible = playerControls.alpha > 0.0f;
+                    }
+                }
+                [activePlayerVC immersiveViewController:activePlayerVC showHideNavigationButtons:controlsCurrentlyVisible];
+            }
+        });
     }
 }
 
@@ -2983,33 +2996,63 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     T1ImmersiveFullScreenViewController *activePlayerVC = self;
     NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange: %ld", activePlayerVC, (long)state);
 
-    if (![BHTManager restoreVideoTimestamp] || !playerToTimestampMap) return;
+    if (![BHTManager restoreVideoTimestamp] || !playerToTimestampMap) {
+        NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Bailing early (feature off or map nil)", activePlayerVC);
+        return;
+    }
 
-    UILabel *timestampLabel = [playerToTimestampMap objectForKey:activePlayerVC];
+    // Always try to find/prepare the label for the current video content.
+    // This is crucial if the VC is reused and new video content has loaded.
+    BOOL labelFoundAndPrepared = [self BHT_findAndPrepareTimestampLabelForVC:activePlayerVC];
+    NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - labelFoundAndPrepared: %d", activePlayerVC, labelFoundAndPrepared);
 
-    if (timestampLabel && timestampLabel.superview && [timestampLabel isDescendantOfView:activePlayerVC.view]) {
-        BOOL controlsAreLikelyVisible = NO;
-        if ([activePlayerVC respondsToSelector:@selector(playerControlsView)]) { 
-            UIView *playerControls = [activePlayerVC valueForKey:@"playerControlsView"];
-            if (playerControls && [playerControls respondsToSelector:@selector(alpha)]) {
-                controlsAreLikelyVisible = playerControls.alpha > 0.0f;
-                NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - playerControls.alpha: %f", activePlayerVC, playerControls.alpha);
+    if (labelFoundAndPrepared) {
+        UILabel *timestampLabel = [playerToTimestampMap objectForKey:activePlayerVC];
+        if (timestampLabel && timestampLabel.superview && [timestampLabel isDescendantOfView:activePlayerVC.view]) {
+            // Determine current intended visibility of controls.
+            // This relies on the main showHideNavigationButtons method being the source of truth for user-initiated toggles.
+            // Here, we primarily react to player state changes that might imply controls should appear/disappear.
+            BOOL controlsShouldBeVisible = NO;
+            UIView *playerControls = nil;
+            if ([activePlayerVC respondsToSelector:@selector(playerControlsView)]) { 
+                playerControls = [activePlayerVC valueForKey:@"playerControlsView"];
+                if (playerControls && [playerControls respondsToSelector:@selector(alpha)]) {
+                    controlsShouldBeVisible = playerControls.alpha > 0.0f;
+                    NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - current playerControls.alpha: %f", activePlayerVC, playerControls.alpha);
+                }
             }
+
+            // If player state implies controls *should* be visible (e.g., paused, ready and controls were already up),
+            // ensure our timestamp is visible. The primary toggling is done by showHideNavigationButtons.
+            // This is more about reacting to player-induced control visibility changes.
+            // For example, if the video pauses and Twitter automatically shows controls.
+            
+            // More direct: Mirror the state set by showHideNavigationButtons, which should be the authority.
+            // The key is that showHideNavigationButtons should have ALREADY run if controls became visible due to player state.
+            // So, if our label is hidden but controls are visible, something is out of sync OR this state change *caused* controls to show.
+
+            if (controlsShouldBeVisible) {
+                if (timestampLabel.hidden) {
+                    NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Controls ARE visible, label WAS hidden. SHOWING label %@.", activePlayerVC, timestampLabel);
+                    timestampLabel.alpha = 1.0;
+                    timestampLabel.hidden = NO;
+                }
+            } else {
+                if (!timestampLabel.hidden) {
+                    // Only hide if playerControls view exists and is actually not visible.
+                    // Avoids hiding if playerControlsView is nil or alpha check is inconclusive.
+                    if (playerControls && playerControls.alpha == 0.0f) { 
+                        NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Controls ARE NOT visible (alpha 0), label WAS visible. HIDING label %@.", activePlayerVC, timestampLabel);
+                        timestampLabel.hidden = YES;
+                        timestampLabel.alpha = 0.0;
+                    }
+                }
+            }
+        } else {
+            NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Label was prepared but map/superview check failed.", activePlayerVC);
         }
-        
-        if (controlsAreLikelyVisible && timestampLabel.hidden) {
-            NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Controls detected visible, label was hidden. Showing label.", activePlayerVC);
-            timestampLabel.alpha = 1.0;
-            timestampLabel.hidden = NO;
-        } else if (!controlsAreLikelyVisible && !timestampLabel.hidden) {
-            // Only hide if controls are *definitively* not visible based on alpha.
-            // Otherwise, trust showHideNavigationButtons which is the primary driver.
-             if ([activePlayerVC respondsToSelector:@selector(playerControlsView)] && [activePlayerVC valueForKey:@"playerControlsView"]) { // Ensure we check based on controlsView presence
-                NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Controls detected NOT visible, label was visible. Hiding label.", activePlayerVC);
-                timestampLabel.hidden = YES;
-                timestampLabel.alpha = 0.0;
-             }
-        }
+    } else {
+        NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Label not found/prepared.", activePlayerVC);
     }
 }
 
