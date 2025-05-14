@@ -133,8 +133,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                 [%c(T1ColorSettings) _t1_updateOverrideUserInterfaceStyle];
             }
             // Additional call to ensure TAEColorSettings applies the theme
-            if ([%c(TAEColorSettings) respondsToSelector:@selector(applyCurrentColorPalette)]) {
-                [[%c(TAEColorSettings) sharedSettings] applyCurrentColorPalette];
+            id taeSettings = [%c(TAEColorSettings) sharedSettings];
+            if ([taeSettings respondsToSelector:@selector(applyCurrentColorPalette)]) {
+                [taeSettings performSelector:@selector(applyCurrentColorPalette)];
             }
             BHT_forceRefreshAllWindowAppearances(); // Force refresh all UI elements
             BHT_UpdateAllTabBarIcons();
@@ -158,8 +159,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             [%c(T1ColorSettings) _t1_updateOverrideUserInterfaceStyle];
         }
         // Additional call to ensure TAEColorSettings applies the theme
-        if ([%c(TAEColorSettings) respondsToSelector:@selector(applyCurrentColorPalette)]) {
-            [[%c(TAEColorSettings) sharedSettings] applyCurrentColorPalette];
+        id taeSettings = [%c(TAEColorSettings) sharedSettings];
+        if ([taeSettings respondsToSelector:@selector(applyCurrentColorPalette)]) {
+            [taeSettings performSelector:@selector(applyCurrentColorPalette)];
         }
 
         BHT_forceRefreshAllWindowAppearances(); // Force refresh all UI elements
@@ -861,7 +863,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)didLongPressActionButton:(UILongPressGestureRecognizer *)gestureRecognizer {
     if ([BHTManager tweetToImage]) {
         if (gestureRecognizer.state == UIGestureRecognizerStateBegan) {
-            id<TTAStatusInlineActionButtonDelegate> delegate = self.delegate;
+            id delegate = self.delegate;
             if (![delegate isKindOfClass:%c(TTAStatusInlineActionsView)]) {
                 return %orig;
             }
@@ -897,7 +899,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)didLongPressActionButton:(UILongPressGestureRecognizer *)gestureRecognizer {
     if ([BHTManager tweetToImage]) {
         if (gestureRecognizer.state == UIGestureRecognizerStateBegan) {
-            id<T1StatusInlineActionButtonDelegate> delegate = self.delegate;
+            id delegate = self.delegate;
             if (![delegate isKindOfClass:%c(T1StatusInlineActionsView)]) {
                 return %orig;
             }
