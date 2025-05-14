@@ -2821,8 +2821,10 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             // Restore sizeToFit to ensure the label has a frame based on its content
             [self sizeToFit];
             
-            // Removed explicit alpha and hidden settings here.
-            // Let T1ImmersiveFullScreenViewController manage its visibility and alpha entirely.
+            // Explicitly make it visible and opaque here, as it might be hidden by default.
+            // T1ImmersiveFullScreenViewController will then manage its state.
+            self.hidden = NO;
+            self.alpha = 1.0;
 
             // Store a weak reference to this label
             gVideoTimestampLabel = self;
