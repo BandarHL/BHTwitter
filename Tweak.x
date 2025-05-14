@@ -174,24 +174,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                 }
                 BHT_forceRefreshAllWindowAppearances();
             });
-<<<<<<< HEAD
-            // Add another delayed refresh for even later UI initialization with shorter delay
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.8 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
-                    [taeSettings setPrimaryColorOption:selectedOption];
-                }
-                BH_changeTwitterColor(selectedOption);
-                if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
-                    [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
-                }
-                if ([taeSettings respondsToSelector:@selector(applyCurrentColorPalette)]) {
-                    [taeSettings performSelector:@selector(applyCurrentColorPalette)];
-                }
-                BHT_forceRefreshAllWindowAppearances();
-            });
-=======
->>>>>>> 8b1f349bae118885316185fa11fcae9d35b8c03f
-        });
     }
     
     return true;
