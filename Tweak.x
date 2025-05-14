@@ -859,10 +859,10 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     if ([BHTManager tweetToImage]) {
         if (gestureRecognizer.state == UIGestureRecognizerStateBegan) {
             id<TTAStatusInlineActionButtonDelegate> delegate = self.delegate;
-            if (![delegate isKindOfClass:%c(T1StatusInlineActionsView)]) {
+            if (![delegate isKindOfClass:%c(TTAStatusInlineActionsView)]) {
                 return %orig;
             }
-            T1StatusInlineActionsView *actionsView = (T1StatusInlineActionsView *)delegate;
+            TTAStatusInlineActionsView *actionsView = (TTAStatusInlineActionsView *)delegate;
             T1StatusCell *tweetView;
             
             if ([actionsView.superview isKindOfClass:%c(T1StandardStatusView)]) { // normal tweet in the time line
