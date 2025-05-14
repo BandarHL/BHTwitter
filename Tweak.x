@@ -2775,14 +2775,16 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         UIView *parentView = self.superview;
         BOOL isInVideoPlayerContext = NO;
         while (parentView) {
-            if ([parentView isKindOfClass:%c(T1ImmersiveFullScreenViewController)] || [NSStringFromClass([parentView class]) containsString:@"Video"]) {
+            NSString *className = NSStringFromClass([parentView class]);
+            if ([parentView isKindOfClass:%c(T1ImmersiveFullScreenViewController)] || [className containsString:@"Video"] || [className containsString:@"Player"]) {
                 isInVideoPlayerContext = YES;
                 break;
             }
             parentView = parentView.superview;
         }
         
-        if (isInVideoPlayerContext) {
+        // Broaden the check to include cases where the label might not be directly in a video context but still a timestamp
+        if (isInVideoPlayerContext || (self.text.length > 0 && [self.text rangeOfString:@"^[0-9]+:[0-9]+/[0-9]+:[0-9]+$" options:NSRegularExpressionSearch].location != NSNotFound)) {
             self.font = [UIFont systemFontOfSize:14.0];
             self.textColor = [UIColor whiteColor]; // White text for contrast
             self.textAlignment = NSTextAlignmentCenter; // Center text in the pill
