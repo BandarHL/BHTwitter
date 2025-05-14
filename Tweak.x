@@ -2771,65 +2771,64 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
     // Check if this label is the one we want to modify (e.g., video timestamp)
     if ([BHTManager restoreVideoTimestamp] && self.text && [self.text containsString:@":"] && [self.text containsString:@"/"]) {
-        // Ensure this is within T1ImmersiveFullScreenViewController context by checking the view hierarchy
+        // Log the text and view hierarchy to debug the context
+        NSLog(@"[BHTwitter TimestampDebug] Potential timestamp detected: '%@'", self.text);
         UIView *parentView = self.superview;
-        BOOL isInImmersiveViewController = NO;
+        NSMutableArray *hierarchy = [NSMutableArray array];
         while (parentView) {
-            if ([parentView isKindOfClass:%c(T1ImmersiveFullScreenViewController)]) {
-                isInImmersiveViewController = YES;
-                break;
-            }
+            NSString *className = NSStringFromClass([parentView class]);
+            [hierarchy addObject:className];
+            NSLog(@"[BHTwitter TimestampDebug] Parent view: '%@'", className);
             parentView = parentView.superview;
         }
+        NSLog(@"[BHTwitter TimestampDebug] Full hierarchy: %@", hierarchy);
+
+        // Temporarily apply styling regardless of context to ensure visibility during debugging
+        // We will refine this once we identify the correct context from logs
+        self.font = [UIFont systemFontOfSize:14.0];
+        self.textColor = [UIColor whiteColor]; // White text for contrast
+        self.textAlignment = NSTextAlignmentCenter; // Center text in the pill
         
-        if (isInImmersiveViewController) {
-            self.font = [UIFont systemFontOfSize:14.0];
-            self.textColor = [UIColor whiteColor]; // White text for contrast
-            self.textAlignment = NSTextAlignmentCenter; // Center text in the pill
-            
-            // Calculate size based on current text and font
-            [self sizeToFit];
-            CGRect currentFrame = self.frame;
+        // Calculate size based on current text and font
+        [self sizeToFit];
+        CGRect currentFrame = self.frame;
 
-            // Define padding
-            CGFloat horizontalPadding = 4.0; 
-            CGFloat verticalPadding = 12.0;  // Increased again for a more pronounced round pill
+        // Define padding
+        CGFloat horizontalPadding = 4.0; 
+        CGFloat verticalPadding = 12.0;  // Increased again for a more pronounced round pill
 
-            // Apply padding to the frame
-            // Adjust origin to keep the label centered around its original position after resizing
-            self.frame = CGRectMake(
-                currentFrame.origin.x - horizontalPadding / 2.0f,
-                currentFrame.origin.y - verticalPadding / 2.0f,
-                currentFrame.size.width + horizontalPadding,
-                currentFrame.size.height + verticalPadding
-            );
-            
-            // Ensure a minimum height for very short text (e.g., "0:01/0:05") for a good pill shape
-            if (self.frame.size.height < 22.0f) {
-                CGFloat diff = 22.0f - self.frame.size.height;
-                CGRect frame = self.frame;
-                frame.size.height = 22.0f;
-                frame.origin.y -= diff / 2.0f; // Keep it vertically centered
-                self.frame = frame;
-            }
-            
-            // Pill styling
-            self.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5]; // Dark semi-transparent
-            self.layer.cornerRadius = self.frame.size.height / 2.0f;
-            self.layer.masksToBounds = YES;
-            
-            // Log the calculated width after styling
-            NSLog(@"[BHTwitter TimestampLabel setText] Text: '%@', Calculated Width: %f", self.text, self.frame.size.width);
-
-            // Set initial alpha to 0 for fade-in animation by the other hook
-            // Only set to 0 if it's not already visible (e.g. if controls are already shown when text is set)
-            if (self.alpha != 1.0) { // Avoid making it flicker if it was already visible
-                self.alpha = 0.0;
-            }
-
-            // Store a weak reference to this label
-            gVideoTimestampLabel = self;
+        // Apply padding to the frame
+        // Adjust origin to keep the label centered around its original position after resizing
+        self.frame = CGRectMake(
+            currentFrame.origin.x - horizontalPadding / 2.0f,
+            currentFrame.origin.y - verticalPadding / 2.0f,
+            currentFrame.size.width + horizontalPadding,
+            currentFrame.size.height + verticalPadding
+        );
+        
+        // Ensure a minimum height for very short text (e.g., "0:01/0:05") for a good pill shape
+        if (self.frame.size.height < 22.0f) {
+            CGFloat diff = 22.0f - self.frame.size.height;
+            CGRect frame = self.frame;
+            frame.size.height = 22.0f;
+            frame.origin.y -= diff / 2.0f; // Keep it vertically centered
+            self.frame = frame;
         }
+        
+        // Pill styling
+        self.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5]; // Dark semi-transparent
+        self.layer.cornerRadius = self.frame.size.height / 2.0f;
+        self.layer.masksToBounds = YES;
+        
+        // Log the calculated width after styling
+        NSLog(@"[BHTwitter TimestampLabel setText] Text: '%@', Calculated Width: %f", self.text, self.frame.size.width);
+
+        // Set initial alpha to 1.0 to ensure visibility during debugging
+        // Temporarily override any fade-in animation to confirm the label is rendered
+        self.alpha = 1.0;
+
+        // Store a weak reference to this label
+        gVideoTimestampLabel = self;
     }
 }
 
