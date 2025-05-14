@@ -2878,40 +2878,13 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         
         if (timestampLabelToUpdate) {
             dispatch_async(dispatch_get_main_queue(), ^{
+                // Simply set visibility without custom animation to avoid flicker
+                // Rely on the view's own visibility handling if any
                 CGFloat targetAlpha = showButtons ? 1.0 : 0.0;
-                NSTimeInterval fadeInDuration = 0.2; // Keep fade-in relatively quick
-                NSTimeInterval fadeOutDuration = 0.3; // Short fade-out duration
+                timestampLabelToUpdate.alpha = targetAlpha;
+                timestampLabelToUpdate.hidden = !showButtons;
                 
-                UIViewAnimationOptions animationOptions = UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionAllowUserInteraction | UIViewAnimationOptionOverrideInheritedDuration | UIViewAnimationOptionOverrideInheritedCurve;
-                if (showButtons) {
-                    animationOptions |= UIViewAnimationOptionCurveEaseIn;
-                } else {
-                    animationOptions |= UIViewAnimationOptionCurveEaseOut;
-                }
-                NSTimeInterval animationDuration = showButtons ? fadeInDuration : fadeOutDuration;
-                NSTimeInterval delay = showButtons ? 0.0 : 0.1; // Slight delay on hide to sync with player UI
-
-                NSLog(@"[BHTwitter TimestampLabel Animate] Text: '%@', Current Width: %f, TargetAlpha: %f, Show: %d", timestampLabelToUpdate.text, timestampLabelToUpdate.frame.size.width, targetAlpha, showButtons);
-
-                if (showButtons && timestampLabelToUpdate.hidden) {
-                    timestampLabelToUpdate.alpha = 0.0; 
-                    timestampLabelToUpdate.hidden = NO;
-                } else if (!showButtons && timestampLabelToUpdate.alpha == 0.0) {
-                    timestampLabelToUpdate.hidden = YES;
-                    return;
-                }
-
-                [UIView animateWithDuration:animationDuration
-                                      delay:delay
-                                    options:animationOptions
-                                 animations:^{
-                                     timestampLabelToUpdate.alpha = targetAlpha;
-                                 }
-                                 completion:^(BOOL finished) {
-                                     if (finished && !showButtons) {
-                                         timestampLabelToUpdate.hidden = YES;
-                                     }
-                                 }];
+                NSLog(@"[BHTwitter TimestampLabel Visibility] Text: '%@', Current Width: %f, TargetAlpha: %f, Show: %d", timestampLabelToUpdate.text, timestampLabelToUpdate.frame.size.width, targetAlpha, showButtons);
             });
         }
     }
