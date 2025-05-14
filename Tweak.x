@@ -2853,9 +2853,12 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             self.layer.cornerRadius = self.frame.size.height / 2.0f;
             self.layer.masksToBounds = YES;
             
-            // Start hidden, let T1ImmersiveFullScreenViewController control actual visibility
-            self.alpha = 0.0;
-            self.hidden = YES; // Explicitly start hidden
+            // Set initial visibility to match the player's UI state
+            // Do not force alpha to 1.0; let T1ImmersiveFullScreenViewController manage it
+            if (self.alpha != 1.0) {
+                self.alpha = 0.0;
+            }
+            self.hidden = NO; // Ensure it's not hidden by default, let the controller manage visibility
 
             // Store a weak reference to this label
             gVideoTimestampLabel = self;
@@ -2901,15 +2904,13 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         
         if (timestampLabelToUpdate) {
             dispatch_async(dispatch_get_main_queue(), ^{
-                // Set visibility without custom animation to avoid flicker
-                // Use a minimal delay on hide to better sync with native fade behavior
                 CGFloat targetAlpha = showButtons ? 1.0 : 0.0;
                 if (showButtons) {
-                    timestampLabelToUpdate.hidden = NO;
-                    timestampLabelToUpdate.alpha = 1.0;
+                    timestampLabelToUpdate.alpha = targetAlpha;
+                    timestampLabelToUpdate.hidden = !showButtons;
                 } else {
                     timestampLabelToUpdate.alpha = 0.0;
-                    timestampLabelToUpdate.hidden = YES;
+                    timestampLabelToUpdate.hidden = YES; // Directly hide when showButtons is false
                 }
             });
         }
