@@ -158,10 +158,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                     [taeSettings performSelector:@selector(applyCurrentColorPalette)];
                 }
                 BHT_forceRefreshAllWindowAppearances();
-                NSLog(@"[BHTwitter ThemeRefresh] Delayed theme refresh applied after 0.1 seconds");
             });
             // Add another delayed refresh for even later UI initialization with shorter delay
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
                 if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
                     [taeSettings setPrimaryColorOption:selectedOption];
                 }
@@ -174,6 +173,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                 }
                 BHT_forceRefreshAllWindowAppearances();
             });
+        });
     }
     
     return true;
