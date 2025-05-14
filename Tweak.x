@@ -26,7 +26,7 @@ static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *
 UIColor *BHTCurrentAccentColor(void) {
     Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
     if (!TAEColorSettingsCls) {
-        return [UIColor systemBlueColor];
+        return [palette primaryColorForOption:opt];
     }
 
     id settings = [TAEColorSettingsCls sharedSettings];
@@ -36,15 +36,15 @@ UIColor *BHTCurrentAccentColor(void) {
 
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
+        return [palette primaryColorForOption:opt];
     }
 
     if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
         NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-        return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
+        return [palette primaryColorForOption:opt];
     }
 
-    return [UIColor systemBlueColor];
+    return [palette primaryColorForOption:opt];
 }
 
 static UIFont * _Nullable TAEStandardFontGroupReplacement(UIFont *self, SEL _cmd, CGFloat arg1, CGFloat arg2) {
