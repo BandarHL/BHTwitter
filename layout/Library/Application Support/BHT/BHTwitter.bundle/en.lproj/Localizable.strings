@@ -268,12 +268,12 @@
 
 
 /* Classic Tab Bar */
-"CLASSIC_TAB_BAR_SETTINGS_TITLE" = "Classic Tab Bar";
-"CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "Applies accent color to tab bar icons. Restart may be required.";
+"CLASSIC_TAB_BAR_SETTINGS_TITLE" = "Classic Tab Icons";
+"CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "Applies accent color to the current selected tab like old Twitter. Restart required.";
 "RESTART_REQUIRED_ALERT_TITLE" = "Restart Required";
-"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_ON" = "Please restart Twitter for Classic Tab Bar to take full effect.";
-"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_OFF" = "To fully disable Classic Tab Bar and restore default icons, please restart Twitter if icons do not revert automatically.";
+"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_ON" = "You will need to restart Twitter for this to take effect.";
+"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_OFF" = "To disable and restore default icons, please restart Twitter.";
 "CLASSIC_TAB_BAR_DISABLED_NOTIFICATION_NAME" = "BHTClassicTabBarSettingChangedNotification";
 
 /* Generic Restart Message for Classic Tab Bar */
-"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC" = "Changing the Classic Tab Bar style requires restarting Twitter.";
+"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC" = "Changing this requires restarting Twitter.";
