@@ -69,7 +69,8 @@
 + (BOOL)squareAvatars;
 + (BOOL)restoreVideoTimestamp;
 + (BOOL)dmAvatars;
-+ (BOOL)tabBarTheming;
++ (BOOL)classicTabBarEnabled;
++ (BOOL)noTabBarHiding;
 
 // Prevent Tab Bar Fade
 + (BOOL)preventTabBarFade;

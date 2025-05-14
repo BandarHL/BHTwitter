@@ -262,3 +262,12 @@
 
 "VIDEO_ZOOM_OPTION_TITLE" = "Zoom on videos";
 "VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "Double-tap to zoom in and out.";
+
+
+/* Classic Tab Bar */
+"CLASSIC_TAB_BAR_SETTINGS_TITLE" = "Classic Tab Bar";
+"CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "Applies accent color to tab bar icons. Restart may be required.";
+"RESTART_REQUIRED_ALERT_TITLE" = "Restart Required";
+"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_ON" = "Please restart Twitter for Classic Tab Bar to take full effect.";
+"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_OFF" = "To fully disable Classic Tab Bar and restore default icons, please restart Twitter if icons do not revert automatically.";
+"CLASSIC_TAB_BAR_DISABLED_NOTIFICATION_NAME" = "BHTClassicTabBarSettingChangedNotification";

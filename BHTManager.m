@@ -306,7 +306,7 @@
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"dm_avatars"];
 }
 
-+ (BOOL)tabBarTheming {
++ (BOOL)classicTabBarEnabled {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"tab_bar_theming"];
 }
 

@@ -822,7 +822,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             BOOL isLikelyTwitterLogo = fabs(width - 29.0) < 2.0 && fabs(height - 29.0) < 2.0 && fabs(width - height) < 1.0;
             
             if (isLikelyTwitterLogo) {
-                if (shouldTheme && [BHTManager tabBarTheming]) { // Also check if theming is enabled
+                // MODIFIED: Use classicTabBarEnabled
+                if (shouldTheme && [BHTManager classicTabBarEnabled]) { 
                     // Get the original image
                     UIImage *originalImage = imageView.image;
                     if (originalImage && originalImage.renderingMode != UIImageRenderingModeAlwaysTemplate) {
@@ -832,6 +833,10 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                         imageView.tintColor = BHTCurrentAccentColor();
                     }
                 }
+                // If classicTabBarEnabled is false, the bird icon should naturally revert
+                // or be handled by BHT_forceRefreshAllWindowAppearances if needed.
+                // For now, no explicit 'else' to revert here, assuming default behavior is okay
+                // or other refresh mechanisms will handle it.
             }
         }
     }
@@ -1899,6 +1904,8 @@ static NSDate *lastCookieRefresh              = nil;
 
     // Clear actual source data and control flags
     if (tweetSources) [tweetSources removeAllObjects];
+    if (viewToTweetID) [viewToTweetID removeAllObjects];     // Ensuring these are cleared
+    if (viewInstances) [viewInstances removeAllObjects];     // Ensuring these are cleared
     if (fetchPending) [fetchPending removeAllObjects];
     if (fetchRetries) [fetchRetries removeAllObjects];
     if (updateRetries) [updateRetries removeAllObjects];
@@ -1914,17 +1921,19 @@ static NSDate *lastCookieRefresh              = nil;
     
     // Re-initialize essential dictionaries
     if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
+    if (!viewToTweetID) viewToTweetID = [NSMutableDictionary dictionary];   // Ensuring these are re-initialized
+    if (!viewInstances) viewInstances = [NSMutableDictionary dictionary];   // Ensuring these are re-initialized
     if (!fetchTimeouts) fetchTimeouts = [NSMutableDictionary dictionary];
     if (!fetchPending) fetchPending = [NSMutableDictionary dictionary];
-    if (!fetchRetries) fetchRetries = [NSMutableDictionary dictionary];
-    if (!updateRetries) updateRetries = [NSMutableDictionary dictionary];
-    if (!updateCompleted) updateCompleted = [NSMutableDictionary dictionary];
-    if (!cookieCache) cookieCache = [NSMutableDictionary dictionary];
+    if (!fetchRetries) fetchRetries = [NSMutableDictionary dictionary];         // RESTORING THIS LINE
+    if (!updateRetries) updateRetries = [NSMutableDictionary dictionary];     // RESTORING THIS LINE
+    if (!updateCompleted) updateCompleted = [NSMutableDictionary dictionary]; // RESTORING THIS LINE
+    if (!cookieCache) cookieCache = [NSMutableDictionary dictionary];           // RESTORING THIS LINE
 
     // Trigger a poll to potentially refetch for visible items
     // This needs to be done carefully to avoid immediate thundering herd.
     // A short delay might be good.
-    [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:0.5];
+    [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:0.5]; // RESTORING THIS LINE
 }
 
 @end
@@ -3100,9 +3109,28 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     [TweetSourceHelper loadCachedCookies];
     
     %init;
-    [[NSNotificationCenter defaultCenter] addObserverForName:@"BHTTabBarThemingChanged" object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification * _Nonnull note) {
-        BHT_UpdateAllTabBarIcons();
-    }];
+    // REMOVED: Observer for BHTTabBarThemingChanged (first instance)
+    // [[NSNotificationCenter defaultCenter] addObserverForName:@\"BHTTabBarThemingChanged\" object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification * _Nonnull note) {
+    //     BHT_UpdateAllTabBarIcons();
+    // }];
+
+    // ADDED: Observer for new classic tab bar setting changed notification
+    NSString *classicTabBarNotificationNameKey = @"CLASSIC_TAB_BAR_DISABLED_NOTIFICATION_NAME"; // Key from Localizable.strings
+    NSString *actualNotificationName = [[BHTBundle sharedBundle] localizedStringForKey:classicTabBarNotificationNameKey];
+    
+    if (actualNotificationName && ![actualNotificationName isEqualToString:classicTabBarNotificationNameKey]) { // Check if key was found
+        [[NSNotificationCenter defaultCenter] addObserverForName:actualNotificationName
+                                                        object:nil
+                                                         queue:[NSOperationQueue mainQueue]
+                                                    usingBlock:^(NSNotification * _Nonnull note) {
+            BHT_UpdateAllTabBarIcons(); // This will trigger the updated bh_applyCurrentThemeToIcon
+        }];
+    } else {
+        // Fallback or error logging if the localized string for notification name isn't found
+        NSLog(@"[BHTwitter] Error: Could not find localized string for notification name key: %@", classicTabBarNotificationNameKey);
+        // As a fallback, could register for a hardcoded name if absolutely necessary, but relying on localization is preferred.
+        // For safety, if the localized string isn't found, this observer might not be set up.
+    }
     
     // Add observers for both window and theme changes
     [[NSNotificationCenter defaultCenter] addObserverForName:UIWindowDidBecomeKeyNotification 
@@ -3123,12 +3151,13 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     }];
     
     // Observe theme changes
-    [[NSNotificationCenter defaultCenter] addObserverForName:@"BHTTabBarThemingChanged" 
-                                                    object:nil 
-                                                     queue:[NSOperationQueue mainQueue] 
-                                                usingBlock:^(NSNotification * _Nonnull note) {
-        BHT_ensureTheming();
-    }];
+    // REMOVED: Observer for BHTTabBarThemingChanged (second instance)
+    // [[NSNotificationCenter defaultCenter] addObserverForName:@\"BHTTabBarThemingChanged\" 
+    //                                                 object:nil 
+    //                                                  queue:[NSOperationQueue mainQueue] 
+    //                                             usingBlock:^(NSNotification * _Nonnull note) {
+    //     BHT_ensureTheming(); // This was likely too broad, direct update is better.
+    // }];
 }
 
 // MARK: - DM Avatar Images
@@ -3161,19 +3190,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 %new
 - (void)bh_applyCurrentThemeToIcon {
-    // Only apply theming if the setting is ON.
-    // If OFF, do nothing, and default colors will apply after app restart.
-    if (![BHTManager tabBarTheming]) {
-        return; 
-    }
-    
-    UIColor *targetColor;
-    if ([[self valueForKey:@"selected"] boolValue]) { 
-        targetColor = BHTCurrentAccentColor();
-    } else {
-        targetColor = [UIColor grayColor]; // Unselected but themed icon
-    }
-
     UIImageView *imgView = nil;
     @try {
         imgView = [self valueForKey:@"imageView"];
@@ -3185,37 +3201,61 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         NSLog(@"[BHTwitter TabTheme] imageView is nil.");
         return;
     }
-    if (imgView.image && imgView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
-        imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-    }
-    SEL applyTintColorSelector = @selector(applyTintColor:);
-    if ([self respondsToSelector:applyTintColorSelector]) {
-        // Use objc_msgSend to avoid performSelector warnings and be more explicit.
-        // Assumes applyTintColor: returns void and takes a UIColor*.
-        ((void (*)(id, SEL, UIColor *))objc_msgSend)(self, applyTintColorSelector, targetColor);
+
+    // MODIFIED: Logic for enabling/disabling theme
+    if (![BHTManager classicTabBarEnabled]) {
+        // Revert to default appearance
+        imgView.tintColor = nil; 
+        if (imgView.image) {
+            // Attempt to set to a mode that respects original colors, or automatic.
+            // UIImageRenderingModeAutomatic might be best if original isn't template.
+            // If Twitter's default icons are always template, this might not show them correctly
+            // without knowing their default non-themed tint color.
+            // For now, assume nil tintColor and automatic rendering mode is the goal.
+            imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAutomatic];
+        }
     } else {
-        imgView.tintColor = targetColor;
+        // Apply custom theme (existing logic)
+        UIColor *targetColor;
+        if ([[self valueForKey:@"selected"] boolValue]) { 
+            targetColor = BHTCurrentAccentColor();
+        } else {
+            targetColor = [UIColor grayColor]; // Unselected but themed icon
+        }
+        
+        if (imgView.image && imgView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
+            imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+        }
+        
+        SEL applyTintColorSelector = @selector(applyTintColor:);
+        if ([self respondsToSelector:applyTintColorSelector]) {
+            ((void (*)(id, SEL, UIColor *))objc_msgSend)(self, applyTintColorSelector, targetColor);
+        } else {
+            imgView.tintColor = targetColor;
+        }
     }
+
+    // Always call Twitter's internal update method to refresh the visual state
     SEL updateImageViewSelector = NSSelectorFromString(@"_t1_updateImageViewAnimated:");
     if ([self respondsToSelector:updateImageViewSelector]) {
         IMP imp = [self methodForSelector:updateImageViewSelector];
         void (*func)(id, SEL, _Bool) = (void *)imp;
-        func(self, updateImageViewSelector, NO);
+        func(self, updateImageViewSelector, NO); // Animate NO for immediate change
     } else if (imgView) {
-        [imgView setNeedsDisplay];
+        [imgView setNeedsDisplay]; // Fallback if the specific update method isn't found
     }
 }
 
 - (void)setSelected:(_Bool)selected {
     %orig(selected);
-    // Call the new method using performSelector to ensure it's found at runtime
     [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
 }
 
-/* Potential alternative or supplementary hook if setSelected: alone isn't enough:
+// Optional: Hook _t1_updateImageViewAnimated if setSelected is not enough
+// or if other state changes (like theme color change) need to trigger this.
+/*
 - (void)_t1_updateImageViewAnimated:(_Bool)animated {
     %orig(animated);
-    // We'd call bh_applyCurrentThemeToIcon here too, or replicate its logic if context differs.
     [self bh_applyCurrentThemeToIcon]; 
 }
 */
@@ -3364,7 +3404,7 @@ static void BHT_forceRefreshAllWindowAppearances(void) { // Renamed and logic ad
         if (window.rootViewController && window.rootViewController.isViewLoaded) {
             BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
                 if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
-                    if ([BHTManager tabBarTheming]) { 
+                    if ([BHTManager classicTabBarEnabled]) { // MODIFIED: Used classicTabBarEnabled
                         [(TFNNavigationBar *)currentView updateLogoTheme];
                     }
                 }

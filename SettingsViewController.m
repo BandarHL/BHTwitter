@@ -66,16 +66,14 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         [self.navigationController.navigationBar setPrefersLargeTitles:false];
         [[NSUserDefaults standardUserDefaults] addObserver:self forKeyPath:@"bh_color_theme_selectedColor" options:NSKeyValueObservingOptionNew context:nil];
         [[NSUserDefaults standardUserDefaults] addObserver:self forKeyPath:@"T1ColorSettingsPrimaryColorOptionKey" options:NSKeyValueObservingOptionNew context:nil];
-        // Remove the observer for tab_bar_theming
-        // [[NSUserDefaults standardUserDefaults] addObserver:self forKeyPath:@"tab_bar_theming" options:NSKeyValueObservingOptionNew context:nil];
+        // [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:@"tab_bar_theming"]; // Ensure it's removed if previously added
     }
     return self;
 }
 - (void)dealloc {
     [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:@"bh_color_theme_selectedColor"];
     [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:@"T1ColorSettingsPrimaryColorOptionKey"];
-    // Remove the observer for tab_bar_theming
-    // [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:@"tab_bar_theming"];
+    // [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:@"tab_bar_theming"]; // Ensure it's removed
 }
 
 - (void)setupAppearance {
@@ -100,13 +98,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     if ([keyPath isEqualToString:@"bh_color_theme_selectedColor"] || [keyPath isEqualToString:@"T1ColorSettingsPrimaryColorOptionKey"]) {
         [self setupAppearance];
     }
-    // Remove the handling for tab_bar_theming notification
-    /*
-    if ([keyPath isEqualToString:@"tab_bar_theming"]) {
-        // Post notification to update tab bar icons
-        [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTTabBarThemingChanged" object:nil];
-    }
-    */
+    // Removed tab_bar_theming observation and BHTTabBarThemingChanged notification
 }
 
 
@@ -370,10 +362,10 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         
         PSSpecifier *dmAvatars = [self newSwitchCellWithTitle:@"DM Avatars" detailTitle:@"Only show avatars for the last message in a group from the same sender" key:@"dm_avatars" defaultValue:true changeAction:nil];
         
-        PSSpecifier *tabBarTheming = [self newSwitchCellWithTitle:@"Tab Bar Theming" 
-                                                        detailTitle:@"Apply accent color to tab bar icons" 
-                                                                key:@"tab_bar_theming" 
-                                                       defaultValue:true 
+        PSSpecifier *tabBarTheming = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CLASSIC_TAB_BAR_SETTINGS_TITLE"]
+                                                        detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CLASSIC_TAB_BAR_SETTINGS_DETAIL"]
+                                                                key:@"tab_bar_theming"
+                                                       defaultValue:true
                                                        changeAction:@selector(tabBarThemingAction:)];
         
         PSSpecifier *hideViewCount = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE"] key:@"hide_view_count" defaultValue:false changeAction:nil];
@@ -865,33 +857,33 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 - (void)tabBarThemingAction:(UISwitch *)sender {
     BOOL enabled = sender.isOn;
     NSString *key = @"tab_bar_theming";
-    PSSpecifier *specifier = [self specifierForID:key];
+    // PSSpecifier *specifier = [self specifierForID:key]; // Not strictly needed for this logic
 
     if (enabled) {
-        // Enabling: Save and apply immediately
+        // Enabling: Save and show restart prompt
         [[NSUserDefaults standardUserDefaults] setBool:YES forKey:key];
         [[NSUserDefaults standardUserDefaults] synchronize];
-        // Post notification to update immediately
-        [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTTabBarThemingChanged" object:nil];
-    } else {
-        // Disabling: Show restart prompt
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Restart Required"
-                                                                       message:@"Disabling tab bar theming requires restarting the app to restore default icon colors."
+        
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_TITLE"]
+                                                                       message:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_ON"]
                                                                 preferredStyle:UIAlertControllerStyleAlert];
+        [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+        [self presentViewController:alert animated:YES completion:nil];
 
-        [alert addAction:[UIAlertAction actionWithTitle:@"Restart Now" style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
-            [[NSUserDefaults standardUserDefaults] setBool:NO forKey:key];
-            [[NSUserDefaults standardUserDefaults] synchronize];
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                exit(0);
-            });
-        }]];
+    } else {
+        // Disabling: Save, post notification, and show restart prompt (no forced exit)
+        [[NSUserDefaults standardUserDefaults] setBool:NO forKey:key];
+        [[NSUserDefaults standardUserDefaults] synchronize];
+        
+        // Post notification for Tweak.x to attempt immediate revert
+        NSString *notificationName = [[BHTBundle sharedBundle] localizedStringForKey:@"CLASSIC_TAB_BAR_DISABLED_NOTIFICATION_NAME"];
+        [[NSNotificationCenter defaultCenter] postNotificationName:notificationName object:nil];
 
-        [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
-            // Flip the switch back visually if cancelled
-            [sender setOn:YES animated:YES];
-        }]];
-
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_TITLE"]
+                                                                       message:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_OFF"]
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+        // No "Cancel" that flips switch back, no "Restart Now" that exits.
         [self presentViewController:alert animated:YES completion:nil];
     }
 }
