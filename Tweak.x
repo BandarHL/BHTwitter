@@ -39,7 +39,29 @@ static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *
 
 // Add this before the hooks, after the imports
 
+// Define a constant for the custom theme ID (must match BHColorThemeViewController.m)
+#define CUSTOM_THEME_ID 7
+#define CUSTOM_THEME_HEX_KEY @"bh_color_theme_customColorHex"
+
 UIColor *BHTCurrentAccentColor(void) {
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    NSInteger selectedOption = -1; // Default to an invalid option
+
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        selectedOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
+    }
+
+    if (selectedOption == CUSTOM_THEME_ID) {
+        NSString *customHex = [defs stringForKey:CUSTOM_THEME_HEX_KEY];
+        if (customHex && customHex.length > 0) {
+            UIColor *customColor = [UIColor colorFromHexString:customHex];
+            if (customColor) return customColor;
+        }
+        // Fallback for custom theme if hex is invalid or missing
+        return [UIColor systemBlueColor]; 
+    }
+
+    // Original logic for predefined themes
     Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
     if (!TAEColorSettingsCls) {
         return [UIColor systemBlueColor];
@@ -48,19 +70,59 @@ UIColor *BHTCurrentAccentColor(void) {
     id settings = [TAEColorSettingsCls sharedSettings];
     id current = [settings currentColorPalette];
     id palette = [current colorPalette];
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
 
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
+    // If selectedOption is still -1 (meaning bh_color_theme_selectedColor was not set or not custom),
+    // try the T1ColorSettingsPrimaryColorOptionKey as a fallback for predefined themes.
+    if (selectedOption == -1 && [defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
+         selectedOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    } else if (selectedOption == -1) {
+        // If no theme is set at all, default to system blue or a known Twitter default.
+        // Twitter's default blue is option 1, if bh_color_theme_selectedColor is not set,
+        // we might want to reflect Twitter's actual current choice if possible,
+        // or fall back to a safe default.
+        // For simplicity, if no BHTwitter theme (custom or predefined) is active through bh_color_theme_selectedColor,
+        // let's try to use the T1ColorSettingsPrimaryColorOptionKey directly or default to blue.
+        if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
+            NSInteger t1Option = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+            return [palette primaryColorForOption:t1Option] ?: [UIColor systemBlueColor];
+        }
+        return [UIColor systemBlueColor]; // Ultimate fallback
+    }
+    
+    // If selectedOption was from bh_color_theme_selectedColor and was a predefined one (0-6)
+    return [palette primaryColorForOption:selectedOption] ?: [UIColor systemBlueColor];
+}
+
+static void BH_changeTwitterColor(NSInteger selectedOption) {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    
+    if (selectedOption == CUSTOM_THEME_ID) {
+        // For custom color, we still need to set T1ColorSettingsPrimaryColorOptionKey
+        // to a *valid* predefined option (e.g., Twitter Blue, which is option 1)
+        // This keeps Twitter's internal state consistent, while BHTCurrentAccentColor handles the visual override.
+        [defaults setInteger:1 forKey:@"T1ColorSettingsPrimaryColorOptionKey"]; 
+        // Ensure bh_color_theme_selectedColor is also set to CUSTOM_THEME_ID, which BHColorThemeVC should do.
+        [defaults setInteger:CUSTOM_THEME_ID forKey:@"bh_color_theme_selectedColor"];
+    } else {
+        // For predefined colors (0-6)
+        [defaults setInteger:selectedOption forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+        [defaults setInteger:selectedOption forKey:@"bh_color_theme_selectedColor"];
+        // Remove custom hex if a predefined theme is chosen
+        [defaults removeObjectForKey:CUSTOM_THEME_HEX_KEY];
+    }
+    
+    [defaults synchronize];
+
+    // Call Twitter's internal methods to apply the theme base
+    if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
+        [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
+    }
+    if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_updateOverrideUserInterfaceStyle)]) {
+        [%c(T1ColorSettings) _t1_updateOverrideUserInterfaceStyle];
     }
 
-    if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
-        NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-        return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
-    }
-
-    return [UIColor systemBlueColor];
+    // Force our UI elements to refresh with the potentially new (custom or predefined) accent color
+    BHT_forceRefreshAllWindowAppearances(); 
 }
 
 static UIFont * _Nullable TAEStandardFontGroupReplacement(UIFont *self, SEL _cmd, CGFloat arg1, CGFloat arg2) {
@@ -3109,31 +3171,11 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     [TweetSourceHelper loadCachedCookies];
     
     %init;
-    // REMOVED: Observer for BHTTabBarThemingChanged (first instance)
-    // [[NSNotificationCenter defaultCenter] addObserverForName:@\"BHTTabBarThemingChanged\" object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification * _Nonnull note) {
-    //     BHT_UpdateAllTabBarIcons();
-    // }];
-
-    // ADDED: Observer for new classic tab bar setting changed notification
-    NSString *classicTabBarNotificationNameKey = @"CLASSIC_TAB_BAR_DISABLED_NOTIFICATION_NAME"; // Key from Localizable.strings
-    NSString *actualNotificationName = [[BHTBundle sharedBundle] localizedStringForKey:classicTabBarNotificationNameKey];
-    
-    if (actualNotificationName && ![actualNotificationName isEqualToString:classicTabBarNotificationNameKey]) { // Check if key was found
-        [[NSNotificationCenter defaultCenter] addObserverForName:actualNotificationName
-                                                        object:nil
-                                                         queue:[NSOperationQueue mainQueue]
-                                                    usingBlock:^(NSNotification * _Nonnull note) {
-            BHT_UpdateAllTabBarIcons(); // This will trigger the updated bh_applyCurrentThemeToIcon
-        }];
-    } else {
-        // Fallback or error logging if the localized string for notification name isn't found
-        NSLog(@"[BHTwitter] Error: Could not find localized string for notification name key: %@", classicTabBarNotificationNameKey);
-        // As a fallback, could register for a hardcoded name if absolutely necessary, but relying on localization is preferred.
-        // For safety, if the localized string isn't found, this observer might not be set up.
-    }
+    // REMOVED: Observer for BHTClassicTabBarSettingChanged (and its new equivalent CLASSIC_TAB_BAR_DISABLED_NOTIFICATION_NAME)
+    // The logic for handling classic tab bar changes is now fully managed by restart.
     
     // Add observers for both window and theme changes
-    [[NSNotificationCenter defaultCenter] addObserverForName:UIWindowDidBecomeKeyNotification 
+    [[NSNotificationCenter defaultCenter] addObserverForName:UIWindowDidBecomeVisibleNotification 
                                                     object:nil 
                                                      queue:[NSOperationQueue mainQueue] 
                                                 usingBlock:^(NSNotification * _Nonnull note) {

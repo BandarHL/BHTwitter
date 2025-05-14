@@ -15,6 +15,10 @@
 #import "CustomTabBar/BHCustomTabBarViewController.h"
 #import "BHTManager.h"
 
+// Define constants used in this file for custom theme to avoid direct literal numbers
+#define CUSTOM_THEME_ID_SETTINGS 7 
+#define CUSTOM_THEME_HEX_KEY_SETTINGS @"bh_color_theme_customColorHex"
+
 typedef NS_ENUM(NSInteger, TwitterFontWeight) {
     TwitterFontWeightRegular,
     TwitterFontWeightMedium,
@@ -78,14 +82,40 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
 - (void)setupAppearance {
     TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];
-    UIColor *primaryColor;
+    UIColor *primaryColor = nil;
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSInteger selectedThemeOption = -1;
+
+    if ([defaults objectForKey:@"bh_color_theme_selectedColor"]) {
+        selectedThemeOption = [defaults integerForKey:@"bh_color_theme_selectedColor"];
+    }
+
+    if (selectedThemeOption == CUSTOM_THEME_ID_SETTINGS) { // Use a local define for clarity within this file
+        NSString *customHex = [defaults stringForKey:CUSTOM_THEME_HEX_KEY_SETTINGS];
+        if (customHex && customHex.length > 0) {
+            primaryColor = [UIColor colorFromHexString:customHex];
+        }
+    }
     
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        primaryColor = [[[colorSettings currentColorPalette] colorPalette] primaryColorForOption:[[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]];
-    } else if ([[NSUserDefaults standardUserDefaults] objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
-        primaryColor = [[[colorSettings currentColorPalette] colorPalette] primaryColorForOption:[[NSUserDefaults standardUserDefaults] integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"]];
-    } else {
-        primaryColor = nil;
+    // Fallback to predefined or default Twitter color if custom is not set or invalid
+    if (!primaryColor) {
+        NSInteger colorOptionToUse = -1;
+        if (selectedThemeOption != -1 && selectedThemeOption != CUSTOM_THEME_ID_SETTINGS) {
+            // A predefined BHTwitter theme is selected
+            colorOptionToUse = selectedThemeOption;
+        } else if ([defaults objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
+            // No BHTwitter theme, or custom was invalid, try Twitter's own key
+            colorOptionToUse = [defaults integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+        } else {
+            // Absolute fallback to Twitter's default (usually option 1 for Blue)
+            colorOptionToUse = 1; 
+        }
+        primaryColor = [[[colorSettings currentColorPalette] colorPalette] primaryColorForOption:colorOptionToUse];
+    }
+    
+    // Final fallback if everything else fails
+    if (!primaryColor) {
+        primaryColor = [UIColor systemBlueColor];
     }
     
     HBAppearanceSettings *appearanceSettings = [[HBAppearanceSettings alloc] init];
@@ -855,37 +885,32 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 }
 
 - (void)tabBarThemingAction:(UISwitch *)sender {
-    BOOL enabled = sender.isOn;
-    NSString *key = @"tab_bar_theming";
-    // PSSpecifier *specifier = [self specifierForID:key]; // Not strictly needed for this logic
+    BOOL newState = sender.isOn;
+    NSString *key = @"tab_bar_theming"; // The UserDefaults key
+    BOOL previousState = !newState;    // The state before the user toggled the switch
 
-    if (enabled) {
-        // Enabling: Save and show restart prompt
-        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:key];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_TITLE"]
+                                                                   message:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC"]
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_NOW_BUTTON_TITLE"]
+                                              style:UIAlertActionStyleDestructive
+                                            handler:^(UIAlertAction * _Nonnull action) {
+        [[NSUserDefaults standardUserDefaults] setBool:newState forKey:key];
         [[NSUserDefaults standardUserDefaults] synchronize];
-        
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_TITLE"]
-                                                                       message:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_ON"]
-                                                                preferredStyle:UIAlertControllerStyleAlert];
-        [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-        [self presentViewController:alert animated:YES completion:nil];
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            exit(0);
+        });
+    }]];
 
-    } else {
-        // Disabling: Save, post notification, and show restart prompt (no forced exit)
-        [[NSUserDefaults standardUserDefaults] setBool:NO forKey:key];
-        [[NSUserDefaults standardUserDefaults] synchronize];
-        
-        // Post notification for Tweak.x to attempt immediate revert
-        NSString *notificationName = [[BHTBundle sharedBundle] localizedStringForKey:@"CLASSIC_TAB_BAR_DISABLED_NOTIFICATION_NAME"];
-        [[NSNotificationCenter defaultCenter] postNotificationName:notificationName object:nil];
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"]
+                                              style:UIAlertActionStyleCancel
+                                            handler:^(UIAlertAction * _Nonnull action) {
+        // Revert the switch to its previous state if canceled
+        [sender setOn:previousState animated:YES];
+    }]];
 
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_TITLE"]
-                                                                       message:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_OFF"]
-                                                                preferredStyle:UIAlertControllerStyleAlert];
-        [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-        // No "Cancel" that flips switch back, no "Restart Now" that exits.
-        [self presentViewController:alert animated:YES completion:nil];
-    }
+    [self presentViewController:alert animated:YES completion:nil];
 }
 
 - (void)squareAvatarsAction:(UISwitch *)sender {

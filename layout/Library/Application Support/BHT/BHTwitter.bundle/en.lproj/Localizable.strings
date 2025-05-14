@@ -13,6 +13,9 @@
 "OK_BUTTON_TITLE" = "OK";
 "CANCEL_BUTTON_TITLE" = "Cancel";
 
+/* Restart Now Button */
+"RESTART_NOW_BUTTON_TITLE" = "Restart Now";
+
 
 /*Main menu start*/
 
@@ -226,6 +229,10 @@
 "THEME_OPTION_5" = "Orange";
 "THEME_OPTION_6" = "Green";
 
+/* Custom Color for Theme */
+"THEME_OPTION_CUSTOM" = "Custom Color...";
+"THEME_OPTION_CURRENT_CUSTOM_COLOR" = "Current Custom Color: %@"; // %@ will be the hex string
+
 /*Tab bar*/
 "CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE" = "Edit tab bar";
 "CUSTOM_TAB_BAR_REST_MESSAGE" = "Are you sure you'd like to reset the tab bar?";
@@ -271,3 +278,6 @@
 "RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_ON" = "Please restart Twitter for Classic Tab Bar to take full effect.";
 "RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_OFF" = "To fully disable Classic Tab Bar and restore default icons, please restart Twitter if icons do not revert automatically.";
 "CLASSIC_TAB_BAR_DISABLED_NOTIFICATION_NAME" = "BHTClassicTabBarSettingChangedNotification";
+
+/* Generic Restart Message for Classic Tab Bar */
+"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC" = "Changing the Classic Tab Bar style requires restarting Twitter.";
