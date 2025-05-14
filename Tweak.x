@@ -19,6 +19,12 @@
 - (void)immersiveViewController:(id)immersiveViewController showHideNavigationButtons:(_Bool)showButtons;
 @end
 
+// Add our custom methods to the class interface
+@interface T1ImmersiveFullScreenViewController (BHTTimestamp)
+- (void)BHT_findAndStyleTimestampLabel;
+- (BOOL)BHT_areControlsVisible;
+@end
+
 // Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
 static void BHT_applyThemeToWindow(UIWindow *window);
@@ -3367,8 +3373,10 @@ static void BHT_forceRefreshAllWindowAppearances(void) { // Renamed and logic ad
     if ([BHTManager restoreVideoTimestamp]) {
         // Set up a timer to repeatedly check for the timestamp label during initial loading
         // This helps with immediate discovery when a video is first loaded
+        static int attempts = 0;
+        attempts = 0; // Reset for each new video
+        
         [NSTimer scheduledTimerWithTimeInterval:0.1 repeats:YES block:^(NSTimer *timer) {
-            static int attempts = 0;
             if (attempts >= 20 || (gVideoTimestampLabel && gVideoTimestampLabel.superview)) {
                 [timer invalidate];
                 return;
@@ -3590,7 +3598,7 @@ static void BHT_forceRefreshAllWindowAppearances(void) { // Renamed and logic ad
         
         // Find a parent immersive controller
         UIViewController *immersiveVC = nil;
-        UIResponder *responder = self;
+        UIResponder *responder = (UIResponder *)self;
         while ((responder = [responder nextResponder])) {
             if ([responder isKindOfClass:%c(T1ImmersiveFullScreenViewController)]) {
                 immersiveVC = (UIViewController *)responder;
