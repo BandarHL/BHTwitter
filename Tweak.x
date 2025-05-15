@@ -10,6 +10,7 @@
 #import "BHTManager.h"
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
+#import "TWHeaders.h"
 
 // Forward declare T1ColorSettings and its private method to satisfy the compiler
 @interface T1ColorSettings : NSObject
@@ -4592,399 +4593,299 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 
 %end
 
-// MARK: - Re-enable Media Rail in Composer
+// MARK: - Gemini AI Translation Integration
 
-// Hook the rail controller to ensure its buttons are visible
-%hook T1PhotoMediaRailViewController
+// Required interface declarations to fix compiler errors
+@interface TFSTwitterTranslation : NSObject
+- (id)initWithTranslation:(NSString *)translation 
+                 entities:(id)entities 
+        translationSource:(NSString *)source 
+  localizedSourceLanguage:(NSString *)localizedLang 
+          sourceLanguage:(NSString *)sourceLang 
+     destinationLanguage:(NSString *)destLang 
+        translationState:(NSString *)state;
+- (NSString *)sourceLanguage;
+@end
 
-// Ensure buttons are always visible 
-- (BOOL)isCameraButtonHidden { return NO; }
-- (BOOL)isVoiceButtonHidden { return NO; }
-- (BOOL)isSpaceButtonHidden { return NO; }
-- (BOOL)isLiveModeInCameraHidden { return NO; }
+// The TTACoreStatusViewModel is already defined in TWHeaders.h
+
+@interface T1TranslatedStatusViewModel : NSObject
+- (void)setUnderlyingViewModel:(id)viewModel;
+- (void)setTranslation:(TFSTwitterTranslation *)translation;
+@end
+
+@interface T1TranslationToggleEventHandler : NSObject
+- (void)_t1_fetchTranslatedStatusFromGraphQL:(id)statusViewModel account:(id)account controller:(id)controller;
+- (BOOL)respondsToSelector:(SEL)selector;
+- (NSMethodSignature *)methodSignatureForSelector:(SEL)selector;
+@end
+
+@interface T1TranslateButton : UIButton
+- (NSString *)_t1_buttonTitle;
+@end
+
+@interface T1TranslationProvider : NSObject
++ (id)googleTranslationProvider;
+- (void)setValue:(id)value forKey:(NSString *)key;
+@end
+
+// Helper class to communicate with Gemini AI API
+@interface GeminiTranslator : NSObject
++ (instancetype)sharedInstance;
+- (void)translateText:(NSString *)text fromLanguage:(NSString *)sourceLanguage toLanguage:(NSString *)targetLanguage completion:(void (^)(NSString *translatedText, NSError *error))completion;
+@end
+
+@implementation GeminiTranslator
+
+static GeminiTranslator *_sharedInstance;
+
++ (instancetype)sharedInstance {
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        _sharedInstance = [[GeminiTranslator alloc] init];
+    });
+    return _sharedInstance;
+}
+
+- (void)translateText:(NSString *)text fromLanguage:(NSString *)sourceLanguage toLanguage:(NSString *)targetLanguage completion:(void (^)(NSString *translatedText, NSError *error))completion {
+    // Prepare API request parameters
+    NSString *apiKey = @"YOUR_GEMINI_API_KEY"; // Replace with your actual API key
+    NSString *apiUrl = @"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+    
+    // Build the prompt for translation
+    NSString *prompt = [NSString stringWithFormat:@"Translate the following text from %@ to %@:\n\n%@", 
+                        sourceLanguage, targetLanguage, text];
+    
+    // Create request JSON
+    NSDictionary *requestBody = @{
+        @"contents": @[
+            @{
+                @"parts": @[
+                    @{
+                        @"text": prompt
+                    }
+                ]
+            }
+        ]
+    };
+    
+    NSError *jsonError;
+    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:requestBody options:0 error:&jsonError];
+    
+    if (jsonError) {
+        if (completion) {
+            completion(nil, jsonError);
+        }
+        return;
+    }
+    
+    // Create URL with API key
+    NSString *urlWithKey = [NSString stringWithFormat:@"%@?key=%@", apiUrl, apiKey];
+    NSURL *url = [NSURL URLWithString:urlWithKey];
+    
+    // Create and configure request
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
+    [request setHTTPMethod:@"POST"];
+    [request setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
+    [request setHTTPBody:jsonData];
+    
+    // Create and start task
+    NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+        if (error) {
+            if (completion) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    completion(nil, error);
+                });
+            }
+            return;
+        }
+        
+        NSError *parseError;
+        NSDictionary *responseDict = [NSJSONSerialization JSONObjectWithData:data options:0 error:&parseError];
+        
+        if (parseError) {
+            if (completion) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    completion(nil, parseError);
+                });
+            }
+            return;
+        }
+        
+        // Extract translated text from Gemini response
+        NSString *translatedText = @"";
+        
+        // Navigate the JSON response to find the translation
+        if (responseDict[@"candidates"] && [responseDict[@"candidates"] isKindOfClass:[NSArray class]]) {
+            NSArray *candidates = responseDict[@"candidates"];
+            if (candidates.count > 0 && candidates[0][@"content"] && candidates[0][@"content"][@"parts"]) {
+                NSArray *parts = candidates[0][@"content"][@"parts"];
+                for (NSDictionary *part in parts) {
+                    if (part[@"text"] && [part[@"text"] isKindOfClass:[NSString class]]) {
+                        // Extract just the translated text by removing the prompt and instructions
+                        NSString *fullText = part[@"text"];
+                        
+                        // Try to isolate just the translated text
+                        NSArray *lines = [fullText componentsSeparatedByString:@"\n"];
+                        if (lines.count > 0) {
+                            // Simple extraction - this may need to be improved based on Gemini's exact response format
+                            NSString *cleanedText = fullText;
+                            
+                            // Try to remove any "Translation:" prefix or similar
+                            NSArray *possiblePrefixes = @[@"Translation:", @"Translated text:", @"Here's the translation:"];
+                            for (NSString *prefix in possiblePrefixes) {
+                                NSRange range = [cleanedText rangeOfString:prefix];
+                                if (range.location != NSNotFound) {
+                                    cleanedText = [cleanedText substringFromIndex:range.location + range.length];
+                                    cleanedText = [cleanedText stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+                                    break;
+                                }
+                            }
+                            
+                            translatedText = cleanedText;
+                        } else {
+                            translatedText = fullText;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        
+        if (completion) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                completion(translatedText, nil);
+            });
+        }
+    }];
+    
+    [task resume];
+}
+
+@end
+
+// Replace Google translation with Gemini
+%hook T1TranslationToggleEventHandler
+
+// Override the method that fetches translations
+- (void)_t1_fetchTranslatedStatusFromGraphQL:(id)statusViewModel account:(id)account controller:(id)controller {
+    // Get the tweet text to translate
+    NSString *tweetText = nil;
+    if ([statusViewModel respondsToSelector:@selector(originalText)]) {
+        tweetText = [statusViewModel performSelector:@selector(originalText)];
+    } else if ([statusViewModel respondsToSelector:@selector(displayText)]) {
+        tweetText = [statusViewModel performSelector:@selector(displayText)];
+    } else if ([statusViewModel respondsToSelector:@selector(text)]) {
+        tweetText = [statusViewModel performSelector:@selector(text)];
+    }
+    
+    if (!tweetText || tweetText.length == 0) {
+        // Fall back to the original implementation if we can't get the text
+        %orig;
+        return;
+    }
+    
+    // Get the source and target languages
+    NSString *sourceLanguage = @"auto"; // Auto-detect
+    NSString *targetLanguage = [[NSLocale currentLocale] localeIdentifier];
+    
+    // If we can get the actual language codes from the status view model, use them
+    id existingTranslation = nil;
+    if ([statusViewModel respondsToSelector:@selector(translation)]) {
+        existingTranslation = [statusViewModel performSelector:@selector(translation)];
+        if (existingTranslation && [existingTranslation respondsToSelector:@selector(sourceLanguage)]) {
+            sourceLanguage = [existingTranslation performSelector:@selector(sourceLanguage)];
+        }
+    }
+    
+    // Translate using Gemini AI
+    [[GeminiTranslator sharedInstance] translateText:tweetText 
+                                       fromLanguage:sourceLanguage 
+                                         toLanguage:targetLanguage 
+                                         completion:^(NSString *translatedText, NSError *error) {
+        if (error || !translatedText) {
+            // Fall back to original implementation if Gemini fails
+            %orig;
+            return;
+        }
+        
+        // Create a TFSTwitterTranslation object with our translated text
+        TFSTwitterTranslation *translationObj = [[%c(TFSTwitterTranslation) alloc] initWithTranslation:translatedText 
+                                                               entities:nil 
+                                                      translationSource:@"Gemini" 
+                                                localizedSourceLanguage:sourceLanguage 
+                                                        sourceLanguage:sourceLanguage 
+                                                   destinationLanguage:targetLanguage 
+                                                      translationState:@"Success"];
+        
+        if (!translationObj) {
+            %orig;
+            return;
+        }
+        
+        // Create a translated view model with our translation
+        T1TranslatedStatusViewModel *translatedViewModel = [[%c(T1TranslatedStatusViewModel) alloc] init];
+        
+        if (!translatedViewModel) {
+            %orig;
+            return;
+        }
+        
+        [translatedViewModel setUnderlyingViewModel:statusViewModel];
+        [translatedViewModel setTranslation:translationObj];
+        
+        // Now we need to notify the system that we have a translation
+        SEL handleTranslationSelector = NSSelectorFromString(@"_t1_handleTranslation:controller:");
+        if ([self respondsToSelector:handleTranslationSelector]) {
+            void (*objcMsgSend)(id, SEL, id, id) = (void *)objc_msgSend;
+            objcMsgSend(self, handleTranslationSelector, translatedViewModel, controller);
+        } else {
+            // If we can't find the method to handle the translation, fall back
+            %orig;
+        }
+    }];
+}
 
 %end
 
-// Simple solution - make Twitter's implementation work better
-%hook T1TweetComposeViewController
+// Replace Google Translate provider with Gemini
+%hook T1TranslationProvider
 
-// Override init to ensure we can show the rail initially 
-- (id)initWithAccount:(id)arg1 sessionConfig:(id)arg2 {
-    id result = %orig;
-    if (result) {
-        // Make rail accessible
-        if ([self respondsToSelector:@selector(_t1_loadMediaRailViewController)] && 
-            ![self valueForKey:@"_mediaRailViewController"]) {
-            [self performSelector:@selector(_t1_loadMediaRailViewController)];
-        }
+// Override the googleTranslationProvider method to return a Gemini-branded provider
++ (id)googleTranslationProvider {
+    T1TranslationProvider *provider = %orig;
+    
+    // We're now creating a "Gemini" translation provider
+    // This is mainly for branding in the UI
+    
+    // Use KVC to update the provider's properties
+    if ([provider respondsToSelector:@selector(setValue:forKey:)]) {
+        // Change the translation source name
+        [provider setValue:@"Gemini" forKey:@"_translationSource"];
         
-        // Set up an object association to track state
-        objc_setAssociatedObject(self, "BHT_LastAttachmentCount", @(0), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        objc_setAssociatedObject(self, "BHT_LastTextLength", @(0), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        
-        // Start a timer to check state and force visibility when needed
-        NSTimer *checkTimer = [NSTimer scheduledTimerWithTimeInterval:0.5 
-                                                                target:self 
-                                                              selector:@selector(BHT_checkMediaRailVisibility) 
-                                                              userInfo:nil 
-                                                               repeats:YES];
-        objc_setAssociatedObject(self, "BHT_MediaRailTimer", checkTimer, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        // You could also update the logo images if you have Gemini logos
+        // [provider setValue:@"gemini_logo" forKey:@"_imageName"];
+        // [provider setValue:@"gemini_logo_dark" forKey:@"_darkImageName"];
     }
-    return result;
+    
+    return provider;
 }
 
-%new
-- (void)BHT_checkMediaRailVisibility {
-    // Get current composition state
-    id compositionState = [self valueForKey:@"_compositionState"];
-    if (!compositionState) return;
-    
-    // Get current attachment count
-    NSInteger currentAttachmentCount = 0;
-    if ([compositionState respondsToSelector:@selector(mediaAssets)]) {
-        NSArray *mediaAssets = [compositionState performSelector:@selector(mediaAssets)];
-        if (mediaAssets && [mediaAssets isKindOfClass:[NSArray class]]) {
-            currentAttachmentCount = mediaAssets.count;
-        }
-    }
-    
-    // Get current text length
-    NSInteger currentTextLength = 0;
-    if ([compositionState respondsToSelector:@selector(text)]) {
-        NSString *text = [compositionState performSelector:@selector(text)];
-        if (text && [text isKindOfClass:[NSString class]]) {
-            currentTextLength = text.length;
-        }
-    }
-    
-    // Get previous values
-    NSInteger lastAttachmentCount = [objc_getAssociatedObject(self, "BHT_LastAttachmentCount") integerValue];
-    NSInteger lastTextLength = [objc_getAssociatedObject(self, "BHT_LastTextLength") integerValue];
-    
-    // Store current values for next check
-    objc_setAssociatedObject(self, "BHT_LastAttachmentCount", @(currentAttachmentCount), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    objc_setAssociatedObject(self, "BHT_LastTextLength", @(currentTextLength), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    
-    // Check if attachments were removed
-    BOOL attachmentsRemoved = (currentAttachmentCount < lastAttachmentCount);
-    BOOL textCleared = (currentTextLength == 0 && lastTextLength > 0);
-    
-    // Always check if we should show the rail, but be more aggressive if attachments were
-    // removed or text was cleared
-    BOOL shouldForceUpdate = attachmentsRemoved || textCleared;
-    
-        // Show the rail if we have no text and no attachments
-    if (currentAttachmentCount == 0 && currentTextLength == 0) {
-        // Force a full refresh
-        if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
-            [self performSelector:@selector(_t1_updateAccessoryViewState)];
-        }
-        
-        if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
-            [self performSelector:@selector(_t1_showMediaRail)];
-        }
-        
-        // CRITICAL: Also ensure the accessory wrapper view is visible and at the right position
-        UIView *accessoryWrapperView = [self valueForKey:@"_accessoryWrapperView"];
-        if (accessoryWrapperView) {
-            accessoryWrapperView.hidden = NO;
-            if ([self respondsToSelector:@selector(_t1_updateAccessoryViewFrame)]) {
-                [self performSelector:@selector(_t1_updateAccessoryViewFrame)];
-            }
-        }
-        
-        // Direct manipulation of view
-        id railController = [self valueForKey:@"_mediaRailViewController"];
-        if (railController && [railController respondsToSelector:@selector(view)]) {
-            UIView *railView = [railController performSelector:@selector(view)];
-            if (railView) {
-                railView.hidden = NO;
-                railView.alpha = 1.0;
-                
-                // Place the rail view in front
-                if (railView.superview) {
-                    [railView.superview bringSubviewToFront:railView];
-                }
-            }
-        }
-        
-        // Force another refresh after a small delay to catch edge cases
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
-                [self performSelector:@selector(_t1_updateAccessoryViewState)];
-            }
-            
-            if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
-                [self performSelector:@selector(_t1_showMediaRail)];
-            }
-            
-            // Check the accessory wrapper view again
-            UIView *accessoryWrapperView = [self valueForKey:@"_accessoryWrapperView"];
-            if (accessoryWrapperView) {
-                accessoryWrapperView.hidden = NO;
-                if ([self respondsToSelector:@selector(_t1_updateAccessoryViewFrame)]) {
-                    [self performSelector:@selector(_t1_updateAccessoryViewFrame)];
-                }
-            }
-            
-            id railController = [self valueForKey:@"_mediaRailViewController"];
-            if (railController && [railController respondsToSelector:@selector(view)]) {
-                UIView *railView = [railController performSelector:@selector(view)];
-                if (railView) {
-                    // Place the view in front
-                    if (railView.superview) {
-                        [railView.superview bringSubviewToFront:railView];
-                    }
-                    railView.hidden = NO;
-                    railView.alpha = 1.0;
-                }
-            }
-        });
-        }
-    }
-}
+%end
 
-// Simply modify if the rail should be shown or not
-- (BOOL)_t1_shouldShowMediaRail {
-    // Our logic completely overrides the original.
-    id compositionState = [self valueForKey:@"_compositionState"];
-    if (!compositionState) {
-        return NO; // Should not happen, but defensive.
-    }
+// Update the Translate button to show "Translated by Gemini"
+%hook T1TranslateButton
 
-    BOOL hasVisualAttachments = NO;
-    if ([compositionState respondsToSelector:@selector(mediaAssets)]) {
-        NSArray *mediaAssets = [compositionState performSelector:@selector(mediaAssets)];
-        if (mediaAssets && [mediaAssets isKindOfClass:[NSArray class]]) {
-            hasVisualAttachments = (mediaAssets.count > 0);
-        }
-    }
-    // If mediaAssets is not available or not an array, assume no visual attachments for safety.
-
-    BOOL hasText = NO;
-    if ([compositionState respondsToSelector:@selector(text)]) {
-        NSString *text = [compositionState performSelector:@selector(text)];
-        if (text && [text isKindOfClass:[NSString class]]) {
-            hasText = (text.length > 0);
-        }
-    }
-    // If text is not available or not a string, assume no text for safety.
+// This method builds the button title text
+- (NSString *)_t1_buttonTitle {
+    NSString *originalTitle = %orig;
     
-    // Show rail IF no text AND no visual attachments.
-    return !hasText && !hasVisualAttachments;
-}
-
-// This ensures the rail shows properly on launch
-- (void)viewDidAppear:(BOOL)animated {
-    %orig(animated);
-    
-    // After the view appears and animations settle, update the accessory view state.
-    // This will use our hooked _t1_shouldShowMediaRail to determine rail visibility.
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
-            [self performSelector:@selector(_t1_updateAccessoryViewState)];
-        }
-    });
-}
-
-// These methods are critical for properly hiding/showing the media rail
-- (void)_t1_hideMediaRail {
-    %orig;
-    
-    id railController = [self valueForKey:@"_mediaRailViewController"];
-    if (railController && [railController respondsToSelector:@selector(view)]) {
-        UIView *railView = [railController performSelector:@selector(view)];
-        if (railView) {
-            railView.hidden = YES;
-            railView.alpha = 0;
-        }
-    }
-    // After ensuring it's hidden, tell Twitter to update its state.
-    if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
-        [self performSelector:@selector(_t1_updateAccessoryViewState)];
-    }
-}
-
-- (void)_t1_showMediaRail {
-    %orig;
-    
-    id railController = [self valueForKey:@"_mediaRailViewController"];
-    if (railController && [railController respondsToSelector:@selector(view)]) {
-        UIView *railView = [railController performSelector:@selector(view)];
-        if (railView) {
-            railView.hidden = NO;
-            railView.alpha = 1.0;
-        }
-    }
-    // After ensuring it's shown, tell Twitter to update its state.
-    if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
-        [self performSelector:@selector(_t1_updateAccessoryViewState)];
-    }
-}
-
-// When selecting photos, hide the media rail
-- (void)addOrReplaceAttachment:(id)attachment scribeWithSource:(id)source {
-    %orig(attachment, source);
-    
-    // Always hide the media rail when a photo is added
-    if ([self respondsToSelector:@selector(_t1_hideMediaRail)]) {
-        [self performSelector:@selector(_t1_hideMediaRail)];
-    }
-}
-
-// When photos are removed, update media rail visibility
-// Clean up our timer when the controller is deallocated
-- (void)dealloc {
-    NSTimer *timer = objc_getAssociatedObject(self, "BHT_MediaRailTimer");
-    if (timer) {
-        [timer invalidate];
-    }
-    %orig;
-}
-
-- (void)_t1_setAttachments:(id)attachments scribeWithSource:(id)source {
-    %orig(attachments, source);
-    
-    // Force our visibility checker to run immediately
-    [self BHT_checkMediaRailVisibility];
-    
-    // Also run a check after a delay to catch any asynchronous updates
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        // Check if attachments array is empty
-        BOOL isEmpty = YES;
-        if (attachments && [attachments isKindOfClass:[NSArray class]]) {
-            isEmpty = ([attachments count] == 0);
-        }
-        
-        // If attachments were emptied, we need to show the rail if no text
-        if (isEmpty) {
-            id compositionState = [self valueForKey:@"_compositionState"];
-            if (compositionState) {
-                // Check if there is text
-                BOOL hasText = NO;
-                if ([compositionState respondsToSelector:@selector(text)]) {
-                    NSString *text = [compositionState performSelector:@selector(text)];
-                    hasText = (text && text.length > 0);
-                }
-                
-                // No attachments and no text - show rail with more 
-                // extensive approach to ensure visibility
-                if (!hasText) {
-                    if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
-                        [self performSelector:@selector(_t1_updateAccessoryViewState)];
-                    }
-                    
-                    // First ensure the rail is loaded (defensive)
-                    if (![self valueForKey:@"_mediaRailViewController"] && 
-                        [self respondsToSelector:@selector(_t1_loadMediaRailViewController)]) {
-                        [self performSelector:@selector(_t1_loadMediaRailViewController)];
-                    }
-                    
-                    // Force the view to update with multiple techniques for reliability
-                    if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
-                        [self performSelector:@selector(_t1_showMediaRail)];
-                    }
-                    
-                    // After a short delay, try once more to ensure it's visible
-                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                        // Force another update to ensure the rail appears
-                        if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
-                            [self performSelector:@selector(_t1_updateAccessoryViewState)];
-                        }
-                        
-                        // Re-show the rail to ensure visibility
-                        if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
-                            [self performSelector:@selector(_t1_showMediaRail)];
-                        }
-                        
-                        // Set media rail view to visible directly
-                        id railController = [self valueForKey:@"_mediaRailViewController"];
-                        if (railController && [railController respondsToSelector:@selector(view)]) {
-                            UIView *railView = [railController performSelector:@selector(view)];
-                            if (railView) {
-                                railView.hidden = NO;
-                                railView.alpha = 1.0;
-                            }
-                        }
-                    });
-                }
-            }
-        }
-    });
-}
-
-// When text changes, update the rail visibility
-- (void)tableViewController:(id)controller tweetTextDidChange:(id)text {
-    %orig(controller, text);
-    
-    // Force our state checker to run - it will detect text changes and handle media rail visibility
-    [self BHT_checkMediaRailVisibility];
-    
-    // Use a static property to track the last update time to prevent too frequent updates
-    static NSDate *lastUpdate = nil;
-    NSDate *now = [NSDate date];
-    if (lastUpdate && [now timeIntervalSinceDate:lastUpdate] < 0.2) {
-        // Skip this update if it's too soon after the last one (prevents flickering)
-        return;
-    }
-    lastUpdate = now;
-    
-    // Get the current text
-    NSString *textContent = nil;
-    if ([text respondsToSelector:@selector(string)]) {
-        textContent = [text performSelector:@selector(string)];
+    // Replace "Google" with "Gemini" in the button title
+    if (originalTitle && [originalTitle isKindOfClass:[NSString class]] && [originalTitle containsString:@"Google"]) {
+        return [originalTitle stringByReplacingOccurrencesOfString:@"Google" withString:@"Gemini"];
     }
     
-    // Get composition state for checking attachments
-    id compositionState = [self valueForKey:@"_compositionState"];
-    if (!compositionState) return;
-    
-    // Check if there are any attachments
-    BOOL hasAttachments = NO;
-    if ([compositionState respondsToSelector:@selector(hasAttachments)]) {
-        hasAttachments = [compositionState performSelector:@selector(hasAttachments)];
-    }
-    
-    // Always update accessory view state first
-    if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
-        [self performSelector:@selector(_t1_updateAccessoryViewState)];
-    }
-    
-    // Hide rail when text is being typed, show otherwise if no attachments
-    if (textContent && textContent.length > 0) {
-        if ([self respondsToSelector:@selector(_t1_hideMediaRail)]) {
-            [self performSelector:@selector(_t1_hideMediaRail)];
-        }
-    } else {
-        // No text - check attachments
-        if (!hasAttachments) {
-            // No text and no attachments - definitely show rail
-            
-            // First ensure the rail is loaded (defensive)
-            if (![self valueForKey:@"_mediaRailViewController"] && 
-                [self respondsToSelector:@selector(_t1_loadMediaRailViewController)]) {
-                [self performSelector:@selector(_t1_loadMediaRailViewController)];
-            }
-            
-            // Show the rail
-            if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
-                [self performSelector:@selector(_t1_showMediaRail)];
-            }
-            
-            // After a small delay, ensure visibility
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.15 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                // Set media rail view to visible directly
-                id railController = [self valueForKey:@"_mediaRailViewController"];
-                if (railController && [railController respondsToSelector:@selector(view)]) {
-                    UIView *railView = [railController performSelector:@selector(view)];
-                    if (railView) {
-                        railView.hidden = NO;
-                        railView.alpha = 1.0;
-                    }
-                }
-            });
-        }
-    }
+    return originalTitle;
 }
 
 %end
