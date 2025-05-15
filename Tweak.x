@@ -4602,30 +4602,6 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
     return YES;
 }
 
-// Prevent media rail from being hidden by doing nothing in this method
-- (void)_t1_hideMediaRail {
-    // Deliberately empty - do nothing to prevent hiding
-}
-
-// Force showing the media rail when view appears
-- (void)viewDidAppear:(BOOL)animated {
-    %orig(animated);
-    
-    // Find and unhide accessory view that contains the media rail
-    UIView *accessoryView = [self valueForKey:@"_accessoryWrapperView"];
-    if (accessoryView) {
-        accessoryView.hidden = NO;
-        accessoryView.alpha = 1.0;
-    }
-    
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        // Try to show media rail using its dedicated method
-        if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
-            [self performSelector:@selector(_t1_showMediaRail)];
-        }
-    });
-}
-
 %end
 
 // These getter methods will be automatically created for the forward-declared class
@@ -4641,18 +4617,8 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
     return NO;
 }
 
-// Make sure voice button is visible
-- (BOOL)isVoiceButtonHidden {
-    return NO;
-}
-
 // Make sure live mode is available
 - (BOOL)isLiveModeInCameraHidden {
-    return NO;
-}
-
-// Make sure go live button is visible
-- (BOOL)goLiveButtonHidden {
     return NO;
 }
 
