@@ -3839,35 +3839,43 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 // MARK: - Combined constructor to initialize all hooks and features
 // MARK: - Restore Pull-To-Refresh Sounds
 
-// Simple sound player that just loads and plays the sounds
-static void playSound(BOOL isPull) {
-    static SystemSoundID pullSound = 0;
-    static SystemSoundID popSound = 0;
+// Super simple sound system - just initialize sounds once and play directly
+static void playPullSound(void) {
+    static SystemSoundID pullSoundID = 0;
+    static dispatch_once_t pullOnce;
     
-    // One-time sound initialization
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        NSURL *pullURL = [[BHTBundle sharedBundle] pathForFile:@"psst2.aac"];
-        NSURL *popURL = [[BHTBundle sharedBundle] pathForFile:@"pop.aac"];
-        
-        if (pullURL) AudioServicesCreateSystemSoundID((__bridge CFURLRef)pullURL, &pullSound);
-        if (popURL) AudioServicesCreateSystemSoundID((__bridge CFURLRef)popURL, &popSound);
+    dispatch_once(&pullOnce, ^{
+        NSURL *soundURL = [[BHTBundle sharedBundle] pathForFile:@"psst2.aac"];
+        if (soundURL) {
+            AudioServicesCreateSystemSoundID((__bridge CFURLRef)soundURL, &pullSoundID);
+        }
     });
     
-    // Play the requested sound
-    if (isPull && pullSound != 0) {
-        AudioServicesPlaySystemSound(pullSound);
-    } else if (!isPull && popSound != 0) {
-        AudioServicesPlaySystemSound(popSound);
+    if (pullSoundID != 0) {
+        AudioServicesPlaySystemSound(pullSoundID);
     }
 }
 
-// To track when app first launches
-static BOOL hasPlayedInitialSounds = NO;
+static void playPopSound(void) {
+    static SystemSoundID popSoundID = 0;
+    static dispatch_once_t popOnce;
+    
+    dispatch_once(&popOnce, ^{
+        NSURL *soundURL = [[BHTBundle sharedBundle] pathForFile:@"pop.aac"];
+        if (soundURL) {
+            AudioServicesCreateSystemSoundID((__bridge CFURLRef)soundURL, &popSoundID);
+        }
+    });
+    
+    if (popSoundID != 0) {
+        AudioServicesPlaySystemSound(popSoundID);
+    }
+}
 
-// For adding observers
-static id refreshObserver = nil;
+// Simple flag to avoid playing initial sounds multiple times
+static BOOL initialSoundsPlayed = NO;
 
+// Super direct hook approach
 %hook TFNPullToRefreshControl
 
 // Always enable sound effects
@@ -3875,78 +3883,90 @@ static id refreshObserver = nil;
     return YES;
 }
 
-// Play pull sound when user triggers refresh
+// Play pull sound when the refresh is triggered by dragging
 - (void)_setStatus:(unsigned long long)status fromScrolling:(_Bool)fromScrolling {
     %orig;
     
+    // Only play pull sound for manual pulls
     if (status == 1 && fromScrolling) {
-        playSound(YES); // Pull sound
+        playPullSound();
     }
 }
 
-// Handle app startup
-- (instancetype)initWithFrame:(CGRect)frame {
-    self = %orig;
+// Most direct hook for the pop sound - when updating insets after refresh
+- (void)_updateContentInset:(id)scrollView animated:(BOOL)animated {
+    %orig;
     
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        // Set up to play sounds for initial refresh
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            // Pull sound on startup
-            playSound(YES);
-            
-            // Pop sound with longer delay
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-                playSound(NO);
-                hasPlayedInitialSounds = YES;
-                
-                // Set up a notification observer for future refreshes
-                if (!refreshObserver) {
-                    refreshObserver = [[NSNotificationCenter defaultCenter] 
-                        addObserverForName:@"com.twitter.pulltorefresh.completed" 
-                        object:nil
-                        queue:[NSOperationQueue mainQueue]
-                        usingBlock:^(NSNotification *note) {
-                            // Play pop sound when refresh completes
-                            playSound(NO);
-                        }];
-                }
-            });
+    // This is the perfect place to play the pop sound - after animation
+    if (initialSoundsPlayed) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            playPopSound();
         });
-    });
-    
-    return self;
+    }
 }
 
-// Play pop sound when loading finishes
+// Absolutely ensure the pop sound plays when loading state changes
 - (void)setLoading:(BOOL)loading {
-    // Use a static dictionary to track loading state for each instance
-    static NSMutableDictionary *loadingStates = nil;
-    if (!loadingStates) {
-        loadingStates = [NSMutableDictionary dictionary];
+    // Get old loading value
+    static BOOL *stateMap[128] = {0}; // Simple state map using pointer hash
+    uintptr_t hash = ((uintptr_t)self) % 128;
+    
+    // Get previous state (null = not yet set)
+    BOOL wasLoading = stateMap[hash] != NULL ? *stateMap[hash] : NO;
+    
+    // Update state - allocate if needed
+    if (stateMap[hash] == NULL) {
+        stateMap[hash] = malloc(sizeof(BOOL));
     }
-    
-    // Track by pointer address as string
-    NSString *key = [NSString stringWithFormat:@"%p", self];
-    
-    // Get previous state
-    NSNumber *wasLoadingObj = loadingStates[key];
-    BOOL wasLoading = wasLoadingObj ? [wasLoadingObj boolValue] : NO;
-    
-    // Update state in dictionary
-    loadingStates[key] = @(loading);
+    *stateMap[hash] = loading;
     
     %orig;
     
-    // When finished loading and it's not the initial refresh
-    if (wasLoading && !loading && hasPlayedInitialSounds) {
-        // Post a notification that will trigger the pop sound
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            [[NSNotificationCenter defaultCenter] 
-               postNotificationName:@"com.twitter.pulltorefresh.completed" 
-               object:self];
+    // When transitioning from loading to not loading
+    if (wasLoading && !loading && initialSoundsPlayed) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.3 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            playPopSound();
         });
     }
+}
+
+// Direct hook for responding to scroll completion
+- (void)scrollViewDidEndDecelerating:(id)scrollView {
+    %orig;
+    
+    // Another good point to ensure pop sound plays if needed
+    if (initialSoundsPlayed) {
+        uintptr_t hash = ((uintptr_t)self) % 128;
+        BOOL isLoading = stateMap[hash] != NULL ? *stateMap[hash] : NO;
+        
+        if (!isLoading) { // If we're no longer loading when scrolling ends
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+                playPopSound();
+            });
+        }
+    }
+}
+
+// Play initial sounds when app starts
+- (void)startPullToRefreshAnimationInScrollView:(id)scrollView {
+    %orig;
+    
+    // Only play initial sounds once
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        // First play the pull sound
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            playPullSound();
+            
+            // Then play pop sound after a longer delay
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+                playPopSound();
+                
+                // Mark that initial sounds have played
+                initialSoundsPlayed = YES;
+            });
+        });
+    });
 }
 
 %end
