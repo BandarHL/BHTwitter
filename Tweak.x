@@ -3839,45 +3839,34 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 // MARK: - Combined constructor to initialize all hooks and features
 // MARK: - Restore Pull-To-Refresh Sounds
 
-// Helper function to play sounds since we can't directly call methods on TFNPullToRefreshControl
-static void PlayRefreshSound(int soundType) {
-    static SystemSoundID sounds[2] = {0, 0};
-    static dispatch_once_t onceToken[2];
-    static BOOL soundsInitialized[2] = {NO, NO};
+// Simple sound player that just loads and plays the sounds
+static void playSound(BOOL isPull) {
+    static SystemSoundID pullSound = 0;
+    static SystemSoundID popSound = 0;
     
-    // Ensure the sounds are only initialized once per type
-    if (!soundsInitialized[soundType]) {
-        NSString *soundFile = nil;
-        if (soundType == 0) {
-            // Sound when pulling down
-            soundFile = @"psst2.aac";
-        } else if (soundType == 1) {
-            // Sound when refresh completes
-            soundFile = @"pop.aac";
-        }
+    // One-time sound initialization
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        NSURL *pullURL = [[BHTBundle sharedBundle] pathForFile:@"psst2.aac"];
+        NSURL *popURL = [[BHTBundle sharedBundle] pathForFile:@"pop.aac"];
         
-        if (soundFile) {
-            NSURL *soundURL = [[BHTBundle sharedBundle] pathForFile:soundFile];
-            if (soundURL) {
-                OSStatus status = AudioServicesCreateSystemSoundID((__bridge CFURLRef)soundURL, &sounds[soundType]);
-                if (status == 0) {
-                    soundsInitialized[soundType] = YES;
-                }
-            }
-        }
-    }
+        if (pullURL) AudioServicesCreateSystemSoundID((__bridge CFURLRef)pullURL, &pullSound);
+        if (popURL) AudioServicesCreateSystemSoundID((__bridge CFURLRef)popURL, &popSound);
+    });
     
-    // Play the sound if it was successfully initialized
-    if (soundsInitialized[soundType]) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            AudioServicesPlaySystemSound(sounds[soundType]);
-        });
+    // Play the requested sound
+    if (isPull && pullSound != 0) {
+        AudioServicesPlaySystemSound(pullSound);
+    } else if (!isPull && popSound != 0) {
+        AudioServicesPlaySystemSound(popSound);
     }
 }
 
-// Global variables for state tracking that don't rely on associated objects
-static NSMutableSet *refreshingControllers = nil;
-static BOOL playedInitialRefreshSounds = NO;
+// To track when app first launches
+static BOOL hasPlayedInitialSounds = NO;
+
+// For adding observers
+static id refreshObserver = nil;
 
 %hook TFNPullToRefreshControl
 
@@ -3886,93 +3875,62 @@ static BOOL playedInitialRefreshSounds = NO;
     return YES;
 }
 
-// Simplified and more direct sound triggering approach
-- (void)setLoading:(_Bool)loading {
-    // Initialize our tracking set if needed
-    if (!refreshingControllers) {
-        refreshingControllers = [NSMutableSet new];
-    }
-    
-    // Store pointer value as string for tracking
-    NSString *controllerKey = [NSString stringWithFormat:@"%p", self];
-    BOOL wasRefreshing = [refreshingControllers containsObject:controllerKey];
-    
-    // Update state before calling original
-    if (loading && !wasRefreshing) {
-        [refreshingControllers addObject:controllerKey];
-    } else if (!loading && wasRefreshing) {
-        [refreshingControllers removeObject:controllerKey];
-    }
-    
-    %orig;
-    
-    // Start refresh: If it wasn't refreshing and now it is
-    if (loading && !wasRefreshing) {
-        // If this isn't the initial refresh, play pull sound
-        if (playedInitialRefreshSounds) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                PlayRefreshSound(0); // Pull sound
-            });
-        }
-    }
-    // End refresh: If it was refreshing and now it isn't
-    else if (!loading && wasRefreshing) {
-        // If this isn't the initial refresh, play pop sound with a delay
-        if (playedInitialRefreshSounds) {
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-                PlayRefreshSound(1); // Pop sound with delay to match animation
-            });
-        }
-    }
-}
-
-// Play pull sound on manual pull and handle status changes
+// Play pull sound when user triggers refresh
 - (void)_setStatus:(unsigned long long)status fromScrolling:(_Bool)fromScrolling {
     %orig;
     
-    // Only handle manual pulls from user dragging
-    if (status == 1 && fromScrolling && playedInitialRefreshSounds) {
-        PlayRefreshSound(0); // Play pull sound
+    if (status == 1 && fromScrolling) {
+        playSound(YES); // Pull sound
     }
 }
 
-// Handle initial refresh on app start
-- (void)startPullToRefreshAnimationInScrollView:(id)scrollView {
-    %orig;
+// Handle app startup
+- (instancetype)initWithFrame:(CGRect)frame {
+    self = %orig;
     
-    // Handle initial app launch refresh only once
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        // Play initial refresh sounds with appropriate delays
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            PlayRefreshSound(0); // Pull sound
+        // Set up to play sounds for initial refresh
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            // Pull sound on startup
+            playSound(YES);
             
-            // Play pop sound with sufficient delay for initial refresh
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-                PlayRefreshSound(1); // Pop sound
+            // Pop sound with longer delay
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+                playSound(NO);
+                hasPlayedInitialSounds = YES;
                 
-                // Mark that initial refresh sounds have played so normal refresh can work
-                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-                    playedInitialRefreshSounds = YES;
-                });
+                // Set up a notification observer for future refreshes
+                if (!refreshObserver) {
+                    refreshObserver = [[NSNotificationCenter defaultCenter] 
+                        addObserverForName:@"com.twitter.pulltorefresh.completed" 
+                        object:nil
+                        queue:[NSOperationQueue mainQueue]
+                        usingBlock:^(NSNotification *note) {
+                            // Play pop sound when refresh completes
+                            playSound(NO);
+                        }];
+                }
             });
         });
     });
+    
+    return self;
 }
 
-// Direct hit - just play the pop sound
-- (void)scrollViewContentInsetDidReset:(id)arg1 {
+// Play pop sound when loading finishes
+- (void)setLoading:(BOOL)loading {
+    BOOL wasLoading = self.loading;
     %orig;
     
-    // This method is called when refresh fully completes
-    NSString *controllerKey = [NSString stringWithFormat:@"%p", self];
-    if (refreshingControllers && [refreshingControllers containsObject:controllerKey]) {
-        // We were refreshing but just completed
-        [refreshingControllers removeObject:controllerKey];
-        
-        if (playedInitialRefreshSounds) {
-            PlayRefreshSound(1); // Pop sound
-        }
+    // When finished loading and it's not the initial refresh
+    if (wasLoading && !loading && hasPlayedInitialSounds) {
+        // Post a notification that will trigger the pop sound
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            [[NSNotificationCenter defaultCenter] 
+               postNotificationName:@"com.twitter.pulltorefresh.completed" 
+               object:self];
+        });
     }
 }
 
