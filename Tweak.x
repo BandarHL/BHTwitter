@@ -5413,8 +5413,12 @@ static NSMutableArray *activeTranslationContexts;
                         // Since findAndUpdateStatusViewsIn is not implemented, do the work inline
                         // directly implementing the recursive view update here
                         dispatch_async(dispatch_get_main_queue(), ^{
-                            // Function to recursively find and update status views
-                            void (^findAndUpdateViews)(UIView *, id, id, NSString *) = ^(UIView *view, id translatedVM, id originalVM, NSString *idStr) {
+                            // Use weak-strong pattern to avoid retain cycle
+                            __block __weak void (^weakFindAndUpdateViews)(UIView *, id, id, NSString *);
+                            __block void (^strongFindAndUpdateViews)(UIView *, id, id, NSString *);
+                            
+                            // Create the strong reference implementation
+                            strongFindAndUpdateViews = ^(UIView *view, id translatedVM, id originalVM, NSString *idStr) {
                                 // Skip if any parameters are nil
                                 if (!view || !translatedVM || !originalVM) return;
                                 
@@ -5462,14 +5466,20 @@ static NSMutableArray *activeTranslationContexts;
                                     }
                                 }
                                 
-                                // Recursively search subviews
+                                // Recursively search subviews using the weak reference to avoid retain cycle
                                 for (UIView *subview in view.subviews) {
-                                    findAndUpdateViews(subview, translatedVM, originalVM, idStr);
+                                    // Use the weak reference to call the block
+                                    if (weakFindAndUpdateViews) {
+                                        weakFindAndUpdateViews(subview, translatedVM, originalVM, idStr);
+                                    }
                                 }
                             };
                             
+                            // Set up the weak reference to the block
+                            weakFindAndUpdateViews = strongFindAndUpdateViews;
+                            
                             // Call the recursive function to find and update views
-                            findAndUpdateViews(controllerView, translatedViewModel, context.statusViewModel, statusID);
+                            strongFindAndUpdateViews(controllerView, translatedViewModel, context.statusViewModel, statusID);
                         });
                     }
                 }
