@@ -2137,11 +2137,9 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
                     [self logDebugInfo:[NSString stringWithFormat:@"Tweet %@ not found in response", tweetID]];
                     
                     // Try to find the tweet in response by iterating through tweets
-                    NSString *foundTweetID = nil;
                     for (NSString *key in tweets) {
                         // If the ID is numeric and matches our tweetID (allowing for string/number conversion issues)
                         if ([key longLongValue] == [tweetID longLongValue]) {
-                            foundTweetID = key;
                             tweetData = tweets[key];
                             [self logDebugInfo:[NSString stringWithFormat:@"Found tweet with alternate ID format: %@", key]];
                             break;
@@ -2462,6 +2460,40 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
 
 %end
 
+// Implementation for TweetSourceHelper's missing method
+@implementation TweetSourceHelper (Notifications)
++ (void)handleCookiesReadyNotification:(NSNotification *)notification {
+    // Check for any tweets waiting for authentication
+    if (tweetSources) {
+        NSMutableArray *tweetsToRetry = [NSMutableArray array];
+        
+        // Find all tweets in "Fetching..." state
+        for (NSString *tweetID in tweetSources) {
+            NSString *source = tweetSources[tweetID];
+            if ([source isEqualToString:@"Fetching..."]) {
+                [tweetsToRetry addObject:tweetID];
+            }
+        }
+        
+        if (tweetsToRetry.count == 0) return;
+        
+        // Use a more efficient approach for retrying tweets
+        // Batch the retries to reduce overhead
+        NSUInteger batchSize = 3; // Process 3 tweets at a time
+        for (NSUInteger i = 0; i < tweetsToRetry.count; i += batchSize) {
+            NSUInteger end = MIN(i + batchSize, tweetsToRetry.count);
+            NSUInteger batchIndex = i;
+            
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * (i/batchSize) * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                for (NSUInteger j = batchIndex; j < end; j++) {
+                    [TweetSourceHelper fetchSourceForTweetID:tweetsToRetry[j]];
+                }
+            });
+        }
+    }
+}
+@end
+
 %hook T1ConversationFocalStatusView
 
 - (void)setViewModel:(id)viewModel {
@@ -2590,36 +2622,7 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
 // This method is now replaced by the static C function BH_EnumerateSubviewsRecursively
 // }
 
-+ (void)handleCookiesReadyNotification:(NSNotification *)notification {
-    // Check for any tweets waiting for authentication
-    if (tweetSources) {
-        NSMutableArray *tweetsToRetry = [NSMutableArray array];
-        
-        // Find all tweets in "Fetching..." state
-        for (NSString *tweetID in tweetSources) {
-            NSString *source = tweetSources[tweetID];
-            if ([source isEqualToString:@"Fetching..."]) {
-                [tweetsToRetry addObject:tweetID];
-            }
-        }
-        
-        if (tweetsToRetry.count == 0) return;
-        
-        // Use a more efficient approach for retrying tweets
-        // Batch the retries to reduce overhead
-        NSUInteger batchSize = 3; // Process 3 tweets at a time
-        for (NSUInteger i = 0; i < tweetsToRetry.count; i += batchSize) {
-            NSUInteger end = MIN(i + batchSize, tweetsToRetry.count);
-            NSUInteger batchIndex = i;
-            
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * (i/batchSize) * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                for (NSUInteger j = batchIndex; j < end; j++) {
-                    [self fetchSourceForTweetID:tweetsToRetry[j]];
-                }
-            });
-        }
-    }
-}
+// Method now implemented in the TweetSourceHelper (Notifications) category
 
 + (void)load {
     static dispatch_once_t onceToken;
@@ -3475,8 +3478,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         // Check if this is the first load for this controller
         BOOL isFirstLoad = ![objc_getAssociatedObject(activePlayerVC, "BHT_FirstLoadDone") boolValue];
         
-        // Initial attempt to find the label
-        BOOL labelFoundAndPrepared = [self BHT_findAndPrepareTimestampLabelForVC:activePlayerVC];
+        // Initialize label without using the result
+        [self BHT_findAndPrepareTimestampLabelForVC:activePlayerVC];
         
         // Just mark this controller as processed for first load
         if (isFirstLoad) {
