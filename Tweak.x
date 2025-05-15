@@ -11,6 +11,12 @@
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
 
+@class T1TweetComposeViewController;
+
+@interface T1TweetComposeViewController (BHTwitterMediaRail)
+- (void)_bht_updateMediaRailVisibilityBasedOnState;
+@end
+
 // Forward declare T1ColorSettings and its private method to satisfy the compiler
 @interface T1ColorSettings : NSObject
 + (void)_t1_applyPrimaryColorOption;
@@ -4740,4 +4746,8 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 }
 
 %end
+
+@interface T1TweetComposeViewController (BHTwitterMediaRail)
+- (void)_bht_updateMediaRailVisibilityBasedOnState;
+@end
 
