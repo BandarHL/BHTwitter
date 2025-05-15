@@ -315,9 +315,7 @@
     [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTClearSourceLabelCacheNotification" object:nil];
 }
 
-+ (BOOL)restorePullToRefreshSounds {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"restore_pull_to_refresh_sounds"];
-}
+
 
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount {
     SettingsViewController *pref = [[SettingsViewController alloc] initWithTwitterAccount:twAccount];

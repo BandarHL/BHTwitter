@@ -3840,12 +3840,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 // MARK: - Restore Pull-To-Refresh Sounds
 %hook TFNPullToRefreshControl
 
-// Override the sound effect playback method
+// Override the sound effect playback method to always play our sounds
 - (void)_playSoundEffect:(long long)soundType {
-    if (![BHTManager restorePullToRefreshSounds]) {
-        return %orig;
-    }
-    
     NSString *soundFile = nil;
     if (soundType == 0) {
         // Sound when pulling down
@@ -3872,9 +3868,9 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     }
 }
 
-// This method determines if sound effects are enabled
+// Always enable sound effects
 + (_Bool)_areSoundEffectsEnabled {
-    return [BHTManager restorePullToRefreshSounds] ? YES : %orig;
+    return YES;
 }
 
 // Make sure status changes trigger sound playback
@@ -3883,11 +3879,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     
     %orig;
     
-    if (![BHTManager restorePullToRefreshSounds]) {
-        return;
-    }
-    
-    // Play sounds based on status transitions
+    // Play sounds based on status transitions without conditional check
     if (oldStatus != status) {
         if (status == 1 && fromScrolling) {
             // Status changed to "triggered" - play pull sound

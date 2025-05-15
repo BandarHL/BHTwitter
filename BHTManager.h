@@ -76,7 +76,6 @@
 + (BOOL)preventTabBarFade;
 
 + (void)clearSourceLabelCache;
-+ (BOOL)restorePullToRefreshSounds;
 
 @end
 

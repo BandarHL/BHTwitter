@@ -395,7 +395,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         
         PSSpecifier *restoreFollowButton = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTORE_FOLLOW_BUTTON_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTORE_FOLLOW_BUTTON_DETAIL_TITLE"] key:@"restore_follow_button" defaultValue:false changeAction:nil];
         
-        PSSpecifier *restorePullToRefreshSounds = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTORE_PULL_TO_REFRESH_SOUNDS_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTORE_PULL_TO_REFRESH_SOUNDS_DETAIL_TITLE"] key:@"restore_pull_to_refresh_sounds" defaultValue:false changeAction:nil];
+
         
         PSSpecifier *squareAvatars = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SQUARE_AVATARS_TITLE"] 
                                                         detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SQUARE_AVATARS_DETAIL_TITLE"]
@@ -466,7 +466,6 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             autoHighestLoad,
             forceFullFrame,
             restoreVideoTimestamp,
-            restorePullToRefreshSounds,
 
             twitterBlueSection, // 5
             undoTweet,
