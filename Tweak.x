@@ -4679,14 +4679,68 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
     [self _t1_updateMediaRailVisibility];
 }
 
+// Hook to handle photo selection - this captures when user picks a photo
+- (void)addOrReplaceAttachment:(id)attachment scribeWithSource:(id)source {
+    %orig(attachment, source);
+    
+    // Immediately hide the media rail when adding attachment
+    if ([self respondsToSelector:@selector(_t1_hideMediaRail)]) {
+        [self performSelector:@selector(_t1_hideMediaRail)];
+        
+        // Also hide the accessory view to ensure it's completely gone
+        UIView *accessoryView = [self valueForKey:@"_accessoryWrapperView"];
+        if (accessoryView) {
+            accessoryView.hidden = YES;
+            accessoryView.alpha = 0;
+        }
+    }
+}
+
+// Hook to handle attachment removals to show media rail again
+- (void)_t1_setAttachments:(id)attachments scribeWithSource:(id)source {
+    %orig(attachments, source);
+    
+    // Check if attachments is nil or empty array
+    BOOL isEmpty = YES;
+    if (attachments && [attachments isKindOfClass:[NSArray class]]) {
+        isEmpty = ([attachments count] == 0);
+    }
+    
+    // Show media rail again if attachments were removed
+    if (isEmpty) {
+        [self _t1_updateMediaRailVisibility];
+    }
+}
+
 // Handle the media rail visibility based on current state
 %new
 - (void)_t1_updateMediaRailVisibility {
+    static NSTimeInterval lastUpdate = 0;
+    NSTimeInterval now = [[NSDate date] timeIntervalSince1970];
+    
+    // Anti-flicker: Don't update too frequently (at least 0.3s between updates)
+    if (now - lastUpdate < 0.3) {
+        return;
+    }
+    
+    lastUpdate = now;
+    
     // Check if we have attachments
     BOOL hasAttachments = NO;
+    BOOL hasMedia = NO;
+    
     id compositionState = [self valueForKey:@"_compositionState"];
-    if (compositionState && [compositionState respondsToSelector:@selector(hasAttachments)]) {
-        hasAttachments = [compositionState performSelector:@selector(hasAttachments)];
+    if (compositionState) {
+        // Check attachments property
+        if ([compositionState respondsToSelector:@selector(hasAttachments)]) {
+            hasAttachments = [compositionState performSelector:@selector(hasAttachments)];
+        }
+        
+        // Also check for media assets directly
+        if ([compositionState respondsToSelector:@selector(mediaAssets)]) {
+            NSArray *mediaAssets = [compositionState performSelector:@selector(mediaAssets)];
+            hasMedia = (mediaAssets && [mediaAssets count] > 0);
+        }
     }
     
     // Check if we have text
@@ -4696,36 +4750,58 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
         hasText = (text && text.length > 0);
     }
     
-    // If we have attachments or text, hide the media rail
-    if (hasAttachments || hasText) {
-        if ([self respondsToSelector:@selector(_t1_hideMediaRail)]) {
-            [self performSelector:@selector(_t1_hideMediaRail)];
-        }
-    } else {
-        // Otherwise show it
-        if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
-            [self performSelector:@selector(_t1_showMediaRail)];
-        }
-        
-        // Adding a small delay to let the UI update and ensure buttons are visible
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            // If we have a media rail controller, make sure buttons are visible
-            id railController = [self valueForKey:@"_mediaRailViewController"];
-            if (railController) {
-                // Try to ensure the buttons are visible by setting instance variables
-                [railController setValue:@NO forKey:@"_cameraButtonHidden"];
-                [railController setValue:@NO forKey:@"_spaceButtonHidden"];
-                [railController setValue:@NO forKey:@"_liveModeInCameraHidden"];
-                [railController setValue:@YES forKey:@"_allowDownload"];
-                
-                // Update the collection view if it exists
-                UICollectionView *collectionView = [railController valueForKey:@"_collectionView"];
-                if (collectionView) {
-                    [collectionView reloadData];
-                }
+    // Also check the current gallery controller
+    id galleryController = [self valueForKey:@"_currentPhotoGalleryViewController"];
+    BOOL hasGalleryOpen = (galleryController != nil);
+    
+    BOOL shouldHideRail = (hasAttachments || hasMedia || hasText || hasGalleryOpen);
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        // If we have attachments, media, text, or gallery open, hide the media rail
+        if (shouldHideRail) {
+            if ([self respondsToSelector:@selector(_t1_hideMediaRail)]) {
+                [self performSelector:@selector(_t1_hideMediaRail)];
             }
-        });
-    }
+            
+            // Also hide the accessory view to ensure it's completely gone
+            UIView *accessoryView = [self valueForKey:@"_accessoryWrapperView"];
+            if (accessoryView) {
+                accessoryView.hidden = YES;
+                accessoryView.alpha = 0;
+            }
+        } else {
+            // Otherwise show it
+            if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
+                [self performSelector:@selector(_t1_showMediaRail)];
+            }
+            
+            // Make sure the accessory view is visible
+            UIView *accessoryView = [self valueForKey:@"_accessoryWrapperView"];
+            if (accessoryView) {
+                accessoryView.hidden = NO;
+                accessoryView.alpha = 1.0;
+            }
+            
+            // Adding a small delay to let the UI update and ensure buttons are visible
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                // If we have a media rail controller, make sure buttons are visible
+                id railController = [self valueForKey:@"_mediaRailViewController"];
+                if (railController) {
+                    // Try to ensure the buttons are visible by setting instance variables
+                    [railController setValue:@NO forKey:@"_cameraButtonHidden"];
+                    [railController setValue:@NO forKey:@"_spaceButtonHidden"];
+                    [railController setValue:@NO forKey:@"_liveModeInCameraHidden"];
+                    [railController setValue:@YES forKey:@"_allowDownload"];
+                    
+                    // Update the collection view if it exists
+                    UICollectionView *collectionView = [railController valueForKey:@"_collectionView"];
+                    if (collectionView) {
+                        [collectionView reloadData];
+                    }
+                }
+            });
+        }
+    });
 }
 
 %end
