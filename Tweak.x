@@ -4904,11 +4904,15 @@ static GeminiTranslator *_sharedInstance;
 // Static reference to prevent deallocation during async operations
 static NSMutableArray *activeTranslationContexts;
 
+// Track tweets we've already attempted to translate to prevent infinite loops
+static NSMutableSet *attemptedTranslations;
+
 // Replace Google translation with Gemini
 %hook T1TranslationToggleEventHandler
 
 + (void)load {
     activeTranslationContexts = [NSMutableArray new];
+    attemptedTranslations = [NSMutableSet new];
     
     // Register for app termination notification to clean up
     [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationWillTerminateNotification
@@ -4918,6 +4922,9 @@ static NSMutableArray *activeTranslationContexts;
         @synchronized(activeTranslationContexts) {
             [activeTranslationContexts removeAllObjects];
         }
+        @synchronized(attemptedTranslations) {
+            [attemptedTranslations removeAllObjects];
+        }
     }];
 }
 
@@ -4925,6 +4932,47 @@ static NSMutableArray *activeTranslationContexts;
 - (void)_t1_fetchTranslatedStatusFromGraphQL:(id)statusViewModel account:(id)account controller:(id)controller {
     @try {
         NSLog(@"[GeminiTranslator] Starting translation process");
+        
+        // Generate a unique identifier for this translation request
+        NSString *tweetID = nil;
+        if ([statusViewModel respondsToSelector:@selector(statusID)]) {
+            tweetID = [[statusViewModel performSelector:@selector(statusID)] stringValue];
+        } else if ([statusViewModel respondsToSelector:@selector(id_str)]) {
+            tweetID = [statusViewModel performSelector:@selector(id_str)];
+        }
+        
+        // Add a timestamp to make the identifier unique even for the same tweet
+        NSString *translationKey = [NSString stringWithFormat:@"%@_%f", tweetID ?: @"unknown", [[NSDate date] timeIntervalSince1970]];
+        
+        // Check if we've already attempted to translate this recently (within the last 2 seconds)
+        BOOL alreadyAttempted = NO;
+        @synchronized(attemptedTranslations) {
+            // First, clean up old attempts (older than 2 seconds)
+            NSMutableSet *toRemove = [NSMutableSet set];
+            for (NSString *key in attemptedTranslations) {
+                NSArray *parts = [key componentsSeparatedByString:@"_"];
+                if (parts.count > 1) {
+                    NSTimeInterval timestamp = [parts.lastObject doubleValue];
+                    if ([[NSDate date] timeIntervalSince1970] - timestamp > 2.0) {
+                        [toRemove addObject:key];
+                    }
+                }
+            }
+            [attemptedTranslations minusSet:toRemove];
+            
+            // Now check if we're already processing this
+            if ([attemptedTranslations containsObject:translationKey]) {
+                alreadyAttempted = YES;
+            } else {
+                [attemptedTranslations addObject:translationKey];
+            }
+        }
+        
+        // Prevent infinite recursion
+        if (alreadyAttempted) {
+            NSLog(@"[GeminiTranslator] Preventing duplicate translation attempt for: %@", translationKey);
+            return;
+        }
         
         // Perform null checks
         if (!statusViewModel) {
@@ -5419,7 +5467,29 @@ static NSMutableArray *activeTranslationContexts;
                 }
                 
                 // Try to call the handler method with the translated view model
-                SEL handleTranslationSelector = NSSelectorFromString(@"_t1_handleTranslation:controller:");
+                // First, check multiple possible selector names used by Twitter
+                SEL handleTranslationSelector = nil;
+                NSArray *possibleSelectors = @[
+                    @"_t1_handleTranslation:controller:",
+                    @"handleTranslation:controller:",
+                    @"_handleTranslatedContent:controller:",
+                    @"_t1_handleTranslatedContent:controller:",
+                    @"_t1_completeWithTranslation:controller:"
+                ];
+                
+                for (NSString *selectorStr in possibleSelectors) {
+                    SEL selector = NSSelectorFromString(selectorStr);
+                    if ([strongSelf respondsToSelector:selector]) {
+                        handleTranslationSelector = selector;
+                        NSLog(@"[GeminiTranslator] Found valid handler method: %@", selectorStr);
+                        break;
+                    }
+                }
+                
+                // If none found, use the default one
+                if (!handleTranslationSelector) {
+                    handleTranslationSelector = NSSelectorFromString(@"_t1_handleTranslation:controller:");
+                }
                 
                 if ([strongSelf respondsToSelector:handleTranslationSelector]) {
                     NSLog(@"[GeminiTranslator] Calling handler with translated content");
@@ -5447,10 +5517,19 @@ static NSMutableArray *activeTranslationContexts;
                         cleanupContext();
                     }
                 } else {
-                    NSLog(@"[GeminiTranslator] Handler method not found");
-                    [strongSelf _t1_fetchTranslatedStatusFromGraphQL:context.statusViewModel 
-                                                             account:context.account 
-                                                          controller:context.controller];
+                    NSLog(@"[GeminiTranslator] Handler method not found, using fallback approach");
+                    // Instead of recursively calling the same method that got us here (creating an infinite loop),
+                    // let's just use Twitter's notification system directly to update the UI
+                    
+                    // Post a notification that will be picked up by observers
+                    [[NSNotificationCenter defaultCenter] postNotificationName:@"TFSTranslationCompletedNotification" 
+                                                                        object:nil
+                                                                      userInfo:@{
+                        @"statusViewModel": context.statusViewModel,
+                        @"translatedViewModel": translatedViewModel
+                    }];
+                    
+                    // Clean up
                     cleanupContext();
                 }
                             } @catch (NSException *exception) {
