@@ -3920,7 +3920,22 @@ static id refreshObserver = nil;
 
 // Play pop sound when loading finishes
 - (void)setLoading:(BOOL)loading {
-    BOOL wasLoading = self.loading;
+    // Use a static dictionary to track loading state for each instance
+    static NSMutableDictionary *loadingStates = nil;
+    if (!loadingStates) {
+        loadingStates = [NSMutableDictionary dictionary];
+    }
+    
+    // Track by pointer address as string
+    NSString *key = [NSString stringWithFormat:@"%p", self];
+    
+    // Get previous state
+    NSNumber *wasLoadingObj = loadingStates[key];
+    BOOL wasLoading = wasLoadingObj ? [wasLoadingObj boolValue] : NO;
+    
+    // Update state in dictionary
+    loadingStates[key] = @(loading);
+    
     %orig;
     
     // When finished loading and it's not the initial refresh
