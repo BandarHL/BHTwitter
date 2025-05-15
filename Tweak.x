@@ -4594,6 +4594,20 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 
 // MARK: - Re-enable Media Rail in Composer
 
+// Add interface declarations for our methods
+@interface T1TweetComposeViewController (MediaRail)
+- (void)_bht_forceUpdateRailVisibility;
+@end
+
+// Define the actual class to avoid forward declaration issues
+@interface T1PhotoMediaRailViewController : UIViewController
+@property (nonatomic, weak) id delegate;
+@property (nonatomic, assign) BOOL cameraButtonHidden;
+@property (nonatomic, assign) BOOL spaceButtonHidden;
+@property (nonatomic, assign) BOOL voiceButtonHidden;
+@property (nonatomic, assign) BOOL liveModeInCameraHidden;
+@end
+
 // Hook the rail controller to ensure its buttons are visible
 %hook T1PhotoMediaRailViewController
 
@@ -4602,6 +4616,21 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 - (BOOL)isVoiceButtonHidden { return NO; }
 - (BOOL)isSpaceButtonHidden { return NO; }
 - (BOOL)isLiveModeInCameraHidden { return NO; }
+
+// Force visibility when selecting an asset
+- (void)collectionView:(id)collectionView didSelectItemAtIndexPath:(id)indexPath {
+    %orig;
+    
+    // Tell the compose controller to update rail visibility when done
+    id composeVC = [self valueForKey:@"_delegate"];
+    if (composeVC && [composeVC isKindOfClass:%c(T1TweetComposeViewController)]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if ([composeVC respondsToSelector:@selector(_bht_forceUpdateRailVisibility)]) {
+                [composeVC performSelector:@selector(_bht_forceUpdateRailVisibility)];
+            }
+        });
+    }
+}
 
 %end
 
@@ -4652,12 +4681,24 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 - (void)viewDidAppear:(BOOL)animated {
     %orig(animated);
     
-    // Force update the rail after a short delay (for animation to complete)
+    // Check and force correct rail visibility
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
-            [self performSelector:@selector(_t1_showMediaRail)];
-        }
+        [self _bht_forceUpdateRailVisibility];
     });
+}
+
+// Hook layout updates to potentially fix visibility
+- (void)viewDidLayoutSubviews {
+    %orig;
+    
+    static NSTimeInterval lastUpdate = 0;
+    NSTimeInterval now = [[NSDate date] timeIntervalSince1970];
+    
+    // Limit frequency of updates (max once per 0.5 seconds)
+    if (now - lastUpdate > 0.5) {
+        lastUpdate = now;
+        [self _bht_forceUpdateRailVisibility];
+    }
 }
 
 // These methods are critical for properly hiding/showing the media rail
@@ -4730,77 +4771,95 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
     }
 }
 
-// Hook the remove attachment method specifically to handle when photos are unselected
-- (void)removeAttachment:(id)attachment {
-    // Call original method
-    %orig(attachment);
-    
-    // Get the composition state after removal
+// Add a direct method to force the media rail to update visibility
+%new
+- (void)_bht_forceUpdateRailVisibility {
+    // Get the current composition state
     id compositionState = [self valueForKey:@"_compositionState"];
     if (!compositionState) return;
     
-    // Check if there are any attachments left
-    BOOL hasAttachments = NO;
-    if ([compositionState respondsToSelector:@selector(hasAttachments)]) {
-        hasAttachments = [compositionState performSelector:@selector(hasAttachments)];
-    }
-    
-    // Also check for media assets directly
+    // Important: Check if there are any media assets directly
     BOOL hasMediaAssets = NO;
     if ([compositionState respondsToSelector:@selector(mediaAssets)]) {
         NSArray *mediaAssets = [compositionState performSelector:@selector(mediaAssets)];
         hasMediaAssets = (mediaAssets && [mediaAssets count] > 0);
     }
     
-    // Check if there is text
+    // Also check the attachments flag
+    BOOL hasAttachments = NO;
+    if ([compositionState respondsToSelector:@selector(hasAttachments)]) {
+        hasAttachments = [compositionState performSelector:@selector(hasAttachments)];
+    }
+    
+    // Check text separately
     BOOL hasText = NO;
     if ([compositionState respondsToSelector:@selector(text)]) {
         NSString *text = [compositionState performSelector:@selector(text)];
         hasText = (text && text.length > 0);
     }
     
-    // If no attachments/media and no text, show the media rail
+    // Make decision to show or hide
     if (!hasAttachments && !hasMediaAssets && !hasText) {
-        if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [self performSelector:@selector(_t1_showMediaRail)];
-            });
-        }
-    }
-}
-
-// Also hook the attachment management method
-- (void)_t1_didUpdateAttachments {
-    %orig;
-    
-    // Check state after attachments update
-    id compositionState = [self valueForKey:@"_compositionState"];
-    if (!compositionState) return;
-    
-    dispatch_async(dispatch_get_main_queue(), ^{
-        // Check if there are any attachments
-        BOOL hasAttachments = NO;
-        if ([compositionState respondsToSelector:@selector(hasAttachments)]) {
-            hasAttachments = [compositionState performSelector:@selector(hasAttachments)];
-        }
-        
-        // Check if there is text
-        BOOL hasText = NO;
-        if ([compositionState respondsToSelector:@selector(text)]) {
-            NSString *text = [compositionState performSelector:@selector(text)];
-            hasText = (text && text.length > 0);
-        }
-        
-        // Show or hide rail based on state
-        if (!hasAttachments && !hasText) {
+        // No content, show rail
+        dispatch_async(dispatch_get_main_queue(), ^{
+            // Force the accessory wrapper view to be visible
+            UIView *accessoryView = [self valueForKey:@"_accessoryWrapperView"];
+            if (accessoryView) {
+                accessoryView.hidden = NO;
+                accessoryView.alpha = 1.0;
+            }
+            
             if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
                 [self performSelector:@selector(_t1_showMediaRail)];
             }
-        } else {
+            
+            // Force the rail view to be visible
+            id railController = [self valueForKey:@"_mediaRailViewController"];
+            if (railController && [railController respondsToSelector:@selector(view)]) {
+                UIView *railView = [railController performSelector:@selector(view)];
+                if (railView) {
+                    railView.hidden = NO;
+                    railView.alpha = 1.0;
+                }
+            }
+        });
+    } else {
+        // Has content, hide rail
+        dispatch_async(dispatch_get_main_queue(), ^{
             if ([self respondsToSelector:@selector(_t1_hideMediaRail)]) {
                 [self performSelector:@selector(_t1_hideMediaRail)];
             }
-        }
+        });
+    }
+}
+
+// Hook directly to the attachment changes
+- (void)_t1_updateForHasAttachments:(BOOL)hasAttachments {
+    %orig(hasAttachments);
+    
+    // Force update rail visibility whenever attachments change
+    [self _bht_forceUpdateRailVisibility];
+}
+
+// Hook when removing attachments
+- (void)removeAttachment:(id)attachment {
+    %orig(attachment);
+    
+    // Force visibility check when user explicitly removes an attachment
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self _bht_forceUpdateRailVisibility];
+    });
+}
+
+// We already hook this elsewhere
+
+// Additional hook for attachment management
+- (void)_t1_didUpdateAttachments {
+    %orig;
+    
+    // Force update rail visibility
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self _bht_forceUpdateRailVisibility];
     });
 }
 
