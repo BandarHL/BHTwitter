@@ -4592,66 +4592,71 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 
 %end
 
-// MARK: - Always Show Media Rail in Composer
+// MARK: - Restore Media Rail in Tweet Composer
+
+// Define a static variable to track whether we've applied the fix
+static BOOL mediaRailFixApplied = NO;
 
 %hook T1TweetComposeViewController
 
-// Always show the media rail
-- (BOOL)_t1_shouldShowMediaRail {
-    return YES; 
-}
-
-// Ensure the rail gets initialized when the view loads
+// Hook viewDidLoad to apply our media rail fix
 - (void)viewDidLoad {
     %orig;
     
-    // Force the media rail to load
-    SEL loadRailSelector = NSSelectorFromString(@"_t1_loadMediaRailViewController");
-    if ([self respondsToSelector:loadRailSelector]) {
-        ((void (*)(id, SEL))objc_msgSend)(self, loadRailSelector);
-    }
-}
-
-// Force the accessory view to appear when the view appears
-- (void)viewDidAppear:(BOOL)animated {
-    %orig;
+    // Skip if we've already applied the fix to avoid duplicate application
+    if (mediaRailFixApplied) return;
     
-    // Delayed execution to ensure UI is ready
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        // Force media rail to show by calling its show method
-        SEL showRailSelector = NSSelectorFromString(@"_t1_showMediaRail");
-        if ([self respondsToSelector:showRailSelector]) {
-            ((void (*)(id, SEL))objc_msgSend)(self, showRailSelector);
+    // Log that we're applying the fix
+    NSLog(@"[BHTwitter] Attempting to restore media rail in tweet composer");
+    
+    // Set flag to avoid re-applying
+    mediaRailFixApplied = YES;
+    
+    // 1. Directly create the media rail view controller
+    Class mediaRailClass = NSClassFromString(@"T1PhotoMediaRailViewController");
+    if (mediaRailClass) {
+        id mediaRailVC = [[mediaRailClass alloc] init];
+        if (mediaRailVC) {
+            // 2. Configure the media rail
+            [mediaRailVC setValue:[self valueForKey:@"_account"] forKey:@"account"];
+            [mediaRailVC setValue:@NO forKey:@"_cameraButtonHidden"];
+            
+            // 3. Assign it to the compose view controller
+            [self setValue:mediaRailVC forKey:@"_mediaRailViewController"];
+            
+            // 4. Set accessory view state to show media rail (1)
+            [self setValue:@1 forKey:@"_accessoryViewState"];
+            
+            // 5. Update all related views with a slight delay to ensure proper layout
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                // Get the accessory wrapper view and make it visible
+                UIView *accessoryView = [self valueForKey:@"_accessoryWrapperView"];
+                if (accessoryView) {
+                    accessoryView.hidden = NO;
+                    accessoryView.alpha = 1.0;
+                    [accessoryView layoutIfNeeded];
+                }
+                
+                // Try to trigger the show media rail method
+                SEL showRailSelector = NSSelectorFromString(@"_t1_showMediaRail");
+                if ([self respondsToSelector:showRailSelector]) {
+                    ((void (*)(id, SEL))objc_msgSend)(self, showRailSelector);
+                }
+                
+                NSLog(@"[BHTwitter] Media rail restoration completed");
+            });
         }
-        
-        // Also make sure the accessory wrapper view is visible
-        UIView *accessoryWrapper = [self valueForKey:@"_accessoryWrapperView"];
-        if (accessoryWrapper) {
-            accessoryWrapper.hidden = NO;
-        }
-    });
+    }
 }
 
-// Intercept the accessory view state to ensure it includes the media rail
-- (unsigned long long)accessoryViewState {
-    unsigned long long state = %orig;
-    
-    // If the state is 0 (no accessories), force it to 1 (media rail)
-    if (state == 0) {
-        return 1;
-    }
-    
-    return state;
+// Override to always return YES - forces media rail to be shown
+- (BOOL)_t1_shouldShowMediaRail {
+    return YES;
 }
 
-// Also provide the setter to ensure we can modify the state
-- (void)setAccessoryViewState:(unsigned long long)state {
-    // If trying to hide all accessories (state 0), override to keep media rail (state 1)
-    if (state == 0) {
-        %orig(1);
-    } else {
-        %orig(state);
-    }
+// Prevent the rail from being hidden
+- (void)_t1_hideMediaRail {
+    // Do nothing - prevent hiding
 }
 
 %end
