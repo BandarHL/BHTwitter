@@ -1170,7 +1170,17 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 // Twitter save all the features and keys in side JSON file in bundle of application fs_embedded_defaults_production.json, and use it in TFNTwitterAccount class but with DM voice maybe developers forget to add boolean variable in the class, so i had to change it from the file.
 // also, you can find every key for every feature i used in this tweak, i can remove all the codes below and find every key for it but I'm lazy to do that, :)
 - (BOOL)boolForKey:(NSString *)key {
-    if ([key isEqualToString:@"edit_tweet_enabled"] || [key isEqualToString:@"edit_tweet_ga_composition_enabled"] || [key isEqualToString:@"edit_tweet_pdp_dialog_enabled"] || [key isEqualToString:@"edit_tweet_upsell_enabled"]) {
+    // Force enable photo rail in composer
+    if ([key containsString:@"photo_rail"] || 
+        [key containsString:@"media_rail"] ||
+        [key containsString:@"composer_attachment"]) {
+        return true;
+    }
+    
+    if ([key isEqualToString:@"edit_tweet_enabled"] || 
+        [key isEqualToString:@"edit_tweet_ga_composition_enabled"] || 
+        [key isEqualToString:@"edit_tweet_pdp_dialog_enabled"] || 
+        [key isEqualToString:@"edit_tweet_upsell_enabled"]) {
         return true;
     }
     
@@ -3839,18 +3849,14 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 // MARK: - Combined constructor to initialize all hooks and features
 // MARK: - Restore Pull-To-Refresh Sounds
 
-// Add proper interface for key methods
-@interface TFNPullToRefreshControl : UIControl
-- (void)_playSoundEffect:(long long)soundType;
-- (void)_viewDidCompleteLoading;
-- (void)_triggerLoading;
-@end
-
-// Helper function to play sounds with proper initialization
+// Helper function to play sounds since we can't directly call methods on TFNPullToRefreshControl
 static void PlayRefreshSound(int soundType) {
     static SystemSoundID sounds[2] = {0, 0};
+    static dispatch_once_t onceToken[2];
+    static BOOL soundsInitialized[2] = {NO, NO};
     
-    if (sounds[soundType] == 0) {
+    // Ensure the sounds are only initialized once per type
+    if (!soundsInitialized[soundType]) {
         NSString *soundFile = nil;
         if (soundType == 0) {
             // Sound when pulling down
@@ -3863,73 +3869,380 @@ static void PlayRefreshSound(int soundType) {
         if (soundFile) {
             NSURL *soundURL = [[BHTBundle sharedBundle] pathForFile:soundFile];
             if (soundURL) {
-                AudioServicesCreateSystemSoundID((__bridge CFURLRef)soundURL, &sounds[soundType]);
+                OSStatus status = AudioServicesCreateSystemSoundID((__bridge CFURLRef)soundURL, &sounds[soundType]);
+                if (status == 0) {
+                    soundsInitialized[soundType] = YES;
+                }
             }
         }
     }
     
-    if (sounds[soundType]) {
-        AudioServicesPlaySystemSound(sounds[soundType]);
+    // Play the sound if it was successfully initialized
+    if (soundsInitialized[soundType]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            AudioServicesPlaySystemSound(sounds[soundType]);
+        });
     }
 }
 
 %hook TFNPullToRefreshControl
 
-// DIRECT APPROACH: Override the exact method Twitter uses to play sounds
-- (void)_playSoundEffect:(long long)soundType {
-    // Don't call %orig because we're completely replacing the sound system
+// Track state with instance-specific variables using associated objects
+static char kRefreshingKey;
+static char kPlayedPullSoundKey;
+static char kNeedsPopSoundKey;
+static char kPopSoundTimerKey;
+
+%end
+
+// MARK: - Restore Photo Rail in Composer
+
+// First, hook the Tweet compose controller to make sure it shows the photo rail
+%hook T1TweetComposeViewController
+
+// Force the media rail to be always shown
+- (BOOL)_t1_shouldShowMediaRail {
+    return YES; // Always return YES to show the media rail
+}
+
+// Make sure the media rail gets loaded
+- (void)_t1_loadMediaRailViewController {
+    %orig;
     
-    // Add time-based deduplication
-    static NSTimeInterval lastPullSoundTime = 0;
-    static NSTimeInterval lastPopSoundTime = 0;
-    NSTimeInterval now = [[NSDate date] timeIntervalSince1970];
+    // Ensure the media rail is actually created
+    if (!self.mediaRailViewController) {
+        // Force create a new media rail controller if needed
+        T1PhotoMediaRailViewController *mediaRailVC = [[%c(T1PhotoMediaRailViewController) alloc] init];
+        if (mediaRailVC) {
+            mediaRailVC.account = self.account;
+            mediaRailVC.delegate = self;
+            mediaRailVC.allowDownload = YES;
+            mediaRailVC.cameraButtonHidden = NO;
+            mediaRailVC.voiceButtonHidden = NO;
+            mediaRailVC.spaceButtonHidden = NO;
+            
+            // Set the controller
+            self.mediaRailViewController = mediaRailVC;
+            [self addChildViewController:mediaRailVC];
+        }
+    }
     
-    if (soundType == 0) {
-        // This is the pull-down sound
-        if (now - lastPullSoundTime > 0.5) {
-            lastPullSoundTime = now;
+    // Ensure it's configured properly
+    if (self.mediaRailViewController) {
+        self.mediaRailViewController.allowDownload = YES;
+        self.mediaRailViewController.cameraButtonHidden = NO;
+        self.mediaRailViewController.voiceButtonHidden = NO;
+        self.mediaRailViewController.spaceButtonHidden = NO;
+    }
+}
+
+// Make sure the rail is actually shown
+- (void)_t1_showMediaRail {
+    %orig; // Call original implementation
+    
+    // Force rail to be shown
+    if (self.mediaRailViewController) {
+        self.mediaRailViewController.view.hidden = NO;
+        self.mediaRailViewController.view.alpha = 1.0;
+        
+        // Ensure its internal collection view is visible
+        if ([self.mediaRailViewController respondsToSelector:@selector(collectionView)]) {
+            UICollectionView *collectionView = [self.mediaRailViewController valueForKey:@"_collectionView"];
+            if (collectionView) {
+                collectionView.hidden = NO;
+                collectionView.alpha = 1.0;
+            }
+        }
+    }
+}
+
+// Force update accessory view state to include media rail
+- (void)_t1_updateAccessoryViewState {
+    %orig;
+    
+    // Show media rail after state update
+    if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
+        [self performSelector:@selector(_t1_showMediaRail)];
+    }
+}
+
+- (void)viewDidLoad {
+    %orig;
+    
+    // Force load and show the media rail
+    [self _t1_loadMediaRailViewController];
+    
+    // Find and unhide any existing photo rail view controllers
+    for (UIViewController *childVC in self.childViewControllers) {
+        if ([childVC isKindOfClass:%c(T1PhotoMediaRailViewController)]) {
+            T1PhotoMediaRailViewController *photoRailVC = (T1PhotoMediaRailViewController *)childVC;
+            photoRailVC.view.hidden = NO;
+            photoRailVC.view.alpha = 1.0;
+            
+            // Make sure its collection view is visible too
+            if ([photoRailVC respondsToSelector:@selector(collectionView)]) {
+                UICollectionView *collectionView = [photoRailVC valueForKey:@"_collectionView"];
+                if (collectionView) {
+                    collectionView.hidden = NO;
+                    collectionView.alpha = 1.0;
+                }
+            }
+        }
+    }
+    
+    // Force update after a short delay to ensure everything is initialized
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self _t1_updateAccessoryViewState];
+        [self _t1_showMediaRail];
+    });
+}
+
+// If there's a method that decides whether to show the photo rail, override it
+- (BOOL)_t1_shouldShowPhotoRail {
+    return YES; // Always show the photo rail
+}
+
+// Make sure the photo rail is properly laid out
+- (void)viewDidLayoutSubviews {
+    %orig;
+    
+    // Check for and ensure any photo rail is visible
+    for (UIViewController *childVC in self.childViewControllers) {
+        if ([childVC isKindOfClass:%c(T1PhotoMediaRailViewController)]) {
+            childVC.view.hidden = NO;
+            childVC.view.alpha = 1.0;
+            
+            // Make sure it has sufficient height
+            CGRect frame = childVC.view.frame;
+            if (frame.size.height < 110) {
+                frame.size.height = 110;
+                childVC.view.frame = frame;
+            }
+            
+            [childVC.view setNeedsLayout];
+            [childVC.view layoutIfNeeded];
+            
+            // Force visibility of the collection view
+            if ([childVC respondsToSelector:@selector(collectionView)]) {
+                UICollectionView *collectionView = [childVC valueForKey:@"_collectionView"];
+                if (collectionView) {
+                    collectionView.hidden = NO;
+                    collectionView.alpha = 1.0;
+                    
+                    // Make sure the collection view also has good height
+                    CGRect cvFrame = collectionView.frame;
+                    if (cvFrame.size.height < 100) {
+                        cvFrame.size.height = 100;
+                        collectionView.frame = cvFrame;
+                    }
+                }
+            }
+        }
+    }
+    
+    // Force update the accessory view
+    [self _t1_updateAccessoryViewState];
+}
+
+%end
+
+// Then hook the PhotoMediaRailViewController itself
+%hook T1PhotoMediaRailViewController 
+
+// Unhide the photo rail when the view appears
+- (void)viewWillAppear:(BOOL)animated {
+    %orig;
+    
+    // Make sure we're fully visible
+    self.view.hidden = NO;
+    self.view.alpha = 1.0;
+    
+    // Force a height if needed
+    CGRect viewFrame = self.view.frame;
+    if (viewFrame.size.height < 100.0) {
+        viewFrame.size.height = 100.0;
+        self.view.frame = viewFrame;
+    }
+}
+
+// Make sure to show the rail when view appears
+- (void)viewDidAppear:(BOOL)animated {
+    %orig;
+    
+    // Refresh the collection view
+    if (self.collectionView) {
+        [self.collectionView reloadData];
+        self.collectionView.hidden = NO;
+        self.collectionView.alpha = 1.0;
+    }
+}
+
+- (void)viewDidLoad {
+    %orig;
+    
+    // Make sure the collection view is not hidden
+    if (self.collectionView) {
+        self.collectionView.hidden = NO;
+        self.collectionView.alpha = 1.0;
+    }
+    
+    // Enable related properties
+    self.allowDownload = YES;
+    self.cameraButtonHidden = NO;
+    self.voiceButtonHidden = NO;
+    self.spaceButtonHidden = NO;
+}
+
+// Override the method that might hide the collection view
+- (void)loadView {
+    %orig;
+    
+    // Make sure the collection view is properly initialized
+    if (self.collectionView) {
+        [self.collectionView setHidden:NO];
+        [self.collectionView setAlpha:1.0];
+        
+        // Set minimum height for collection view
+        CGRect frame = self.collectionView.frame;
+        if (frame.size.height < 100.0) {
+            frame.size.height = 100.0;
+            self.collectionView.frame = frame;
+        }
+        
+        // Force layout update
+        [self.collectionView setNeedsLayout];
+        [self.collectionView layoutIfNeeded];
+    }
+}
+
+// Ensure sufficient height for the collection view
+- (double)_t1_collectionViewHeight {
+    // Call original first to get Twitter's calculated height
+    CGFloat originalHeight = %orig;
+    
+    // Return a minimum height of 100 points or the original height, whichever is greater
+    return MAX(originalHeight, 100.0);
+}
+
+// If there's a method that updates visibility, make sure it doesn't hide our view
+- (void)_t1_updateButtonsBeforePhotos {
+    %orig;
+    
+    // Ensure collection view stays visible after button updates
+    if (self.collectionView) {
+        self.collectionView.hidden = NO;
+        self.collectionView.alpha = 1.0;
+    }
+}
+
+// Make sure this view controller is not removed from its parent
+- (void)willMoveToParentViewController:(UIViewController *)parent {
+    if (!parent) {
+        // If being removed from parent, prevent it by doing nothing
+        return;
+    }
+    
+    %orig;
+}
+
+// Always enable sound effects
++ (_Bool)_areSoundEffectsEnabled {
+    return YES;
+}
+
+// Track refresh animation completion to ensure pop sound plays after content is loaded
+- (void)_updateContentInset:(id)arg1 animated:(_Bool)arg2 {
+    %orig;
+    
+    // This method is called when animation completes - check if we should play pop sound
+    if (objc_getAssociatedObject(self, &kNeedsPopSoundKey)) {
+        // Get the timer if it exists
+        NSTimer *popTimer = objc_getAssociatedObject(self, &kPopSoundTimerKey);
+        if (popTimer) {
+            [popTimer invalidate]; // Cancel any pending timer
+        }
+        
+        // Reset state
+        objc_setAssociatedObject(self, &kNeedsPopSoundKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        objc_setAssociatedObject(self, &kPopSoundTimerKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        
+        // Play the pop sound with slight delay to ensure animation is visible
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            PlayRefreshSound(1);
+        });
+    }
+}
+
+// Play sounds when loading state changes - this catches all refreshes
+- (void)setLoading:(_Bool)loading {
+    // Get previous state before changing
+    NSNumber *wasRefreshing = objc_getAssociatedObject(self, &kRefreshingKey);
+    BOOL wasRefreshingBool = wasRefreshing ? [wasRefreshing boolValue] : NO;
+    
+    // Set new state
+    objc_setAssociatedObject(self, &kRefreshingKey, @(loading), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    
+    %orig;
+    
+    // Going from not loading to loading (start of refresh)
+    if (!wasRefreshingBool && loading) {
+        NSNumber *didPlayPull = objc_getAssociatedObject(self, &kPlayedPullSoundKey);
+        if (!didPlayPull || ![didPlayPull boolValue]) {
+            // This is for auto-refresh cases where _setStatus isn't called
             PlayRefreshSound(0);
         }
-    } else if (soundType == 1) {
-        // This is the completion sound
-        if (now - lastPopSoundTime > 0.5) {
-            lastPopSoundTime = now;
-            PlayRefreshSound(1);
-        }
-    }
-}
-
-// Backup method to ensure sounds play even if _playSoundEffect doesn't fire
-- (void)_viewDidCompleteLoading {
-    %orig;
-    
-    // Play completion sound on a slight delay
-    static NSTimeInterval lastPopSoundTime = 0;
-    NSTimeInterval now = [[NSDate date] timeIntervalSince1970];
-    
-    if (now - lastPopSoundTime > 0.5) {
-        lastPopSoundTime = now;
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            PlayRefreshSound(1);
-        });
-    }
-}
-
-// Ensure we handle the initial app launch case
-- (void)_triggerLoading {
-    %orig;
-    
-    // Play the initial pull sound
-    static BOOL initialSoundPlayed = NO;
-    if (!initialSoundPlayed) {
-        initialSoundPlayed = YES;
-        PlayRefreshSound(0);
         
-        // Schedule the pop sound for initial app launch
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            PlayRefreshSound(1);
-        });
+        // Reset status for next refresh
+        objc_setAssociatedObject(self, &kPlayedPullSoundKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
+    // Going from loading to not loading (end of refresh)
+    else if (wasRefreshingBool && !loading) {
+        // Mark that we need to play pop sound after animation completes
+        objc_setAssociatedObject(self, &kNeedsPopSoundKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        
+        // Set a fallback timer in case _updateContentInset doesn't get called
+        NSTimer *popTimer = [NSTimer scheduledTimerWithTimeInterval:0.7 
+                                                          repeats:NO 
+                                                            block:^(NSTimer *timer) {
+            // Only play if not already played
+            if (objc_getAssociatedObject(self, &kNeedsPopSoundKey)) {
+                objc_setAssociatedObject(self, &kNeedsPopSoundKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                objc_setAssociatedObject(self, &kPopSoundTimerKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                PlayRefreshSound(1);
+            }
+        }];
+        
+        objc_setAssociatedObject(self, &kPopSoundTimerKey, popTimer, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+}
+
+// Detect manual pull-to-refresh and play pull sound
+- (void)_setStatus:(unsigned long long)status fromScrolling:(_Bool)fromScrolling {
+    %orig;
+    
+    if (status == 1 && fromScrolling) {
+        // Status changed to "triggered" via pull - play the pull sound
+        PlayRefreshSound(0);
+        objc_setAssociatedObject(self, &kPlayedPullSoundKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+}
+
+// Handle initial load refresh when app launches
+- (void)startPullToRefreshAnimationInScrollView:(id)scrollView {
+    %orig;
+    
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        // For the initial app launch refresh, use slightly different timing
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            PlayRefreshSound(0); // Pull sound
+            
+            // Play pop with longer delay for initial refresh
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+                PlayRefreshSound(1); // Pop sound
+            });
+        });
+    });
 }
 
 %end
