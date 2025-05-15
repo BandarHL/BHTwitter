@@ -3875,6 +3875,9 @@ static void playPopSound(void) {
 // Simple flag to avoid playing initial sounds multiple times
 static BOOL initialSoundsPlayed = NO;
 
+// State tracking for refresh controls
+static BOOL *stateMap[128] = {0}; // Simple state map using pointer hash
+
 // Super direct hook approach
 %hook TFNPullToRefreshControl
 
@@ -3908,7 +3911,6 @@ static BOOL initialSoundsPlayed = NO;
 // Absolutely ensure the pop sound plays when loading state changes
 - (void)setLoading:(BOOL)loading {
     // Get old loading value
-    static BOOL *stateMap[128] = {0}; // Simple state map using pointer hash
     uintptr_t hash = ((uintptr_t)self) % 128;
     
     // Get previous state (null = not yet set)
