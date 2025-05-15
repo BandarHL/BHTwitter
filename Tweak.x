@@ -3886,50 +3886,59 @@ static BOOL *stateMap[128] = {0}; // Simple state map using pointer hash
     return YES;
 }
 
-// Play sounds based on refresh status changes
-- (void)_setStatus:(unsigned long long)status fromScrolling:(_Bool)fromScrolling {
-    %orig;
-    
-    // Just play the pull sound when the pull action happens
-    if (status == 1 && fromScrolling) {
+// Completely override Twitter's sound system
+- (void)_playSoundEffect:(long long)soundType {
+    // soundType 0 = pull, soundType 1 = pop
+    if (soundType == 0) {
         playPullSound();
+    } else if (soundType == 1) {
+        playPopSound();
+    } else {
+        %orig; // let Twitter handle unknown sound types
     }
 }
 
-// Hook the animation completion block directly - this is key!
-- (void)endRefreshingWithCompletionHandler:(void (^)(void))completionHandler {
-    // Create our own wrapper completion handler
-    void (^ourCompletionHandler)(void) = ^{
-        // First run the original completion handler
-        if (completionHandler) {
-            completionHandler();
-        }
-        
-        // Then play our sound
-        if (initialSoundsPlayed) {
-            playPopSound();
-        }
-    };
-    
-    // Call original with our completion handler
-    %orig(ourCompletionHandler);
+// Ensure the refresh control always thinks it should play sounds
++ (_Bool)_areSoundEffectsEnabled {
+    return YES;
 }
 
-// Additional hook point for completion - some Twitter versions use this
+// FORCE Twitter to call playSound on status transitions
+- (void)_setStatus:(unsigned long long)status fromScrolling:(_Bool)fromScrolling {
+    unsigned long long oldStatus = 0;
+    
+    // Safely get old status
+    @try {
+        oldStatus = [[self valueForKey:@"_status"] unsignedLongLongValue];
+    } @catch (NSException *e) {
+        // Ignore errors
+    }
+    
+    %orig;
+    
+    // Force call our sound methods
+    if (oldStatus != status) {
+        if (status == 3) { // 3 = loading
+            // Call playSoundEffect for the pull sound
+            if ([self respondsToSelector:@selector(_playSoundEffect:)]) {
+                [self _playSoundEffect:0];
+            }
+        } else if (oldStatus == 3 && status != 3) { // Exiting loading state
+            // Call playSoundEffect for the pop sound
+            if ([self respondsToSelector:@selector(_playSoundEffect:)]) {
+                [self _playSoundEffect:1];
+            }
+        }
+    }
+}
+
+// Emergency fallback - manually play pop sound when refresh completes
 - (void)endRefreshing {
     %orig;
     
-    if (initialSoundsPlayed) {
-        playPopSound();
-    }
-}
-
-// Another hook point to cover all bases
-- (void)finishRefreshing {
-    %orig;
-    
-    if (initialSoundsPlayed) {
-        playPopSound();
+    // Force call playSoundEffect
+    if ([self respondsToSelector:@selector(_playSoundEffect:)]) {
+        [self _playSoundEffect:1]; // 1 = pop sound
     }
 }
 
