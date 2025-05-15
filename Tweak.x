@@ -4622,20 +4622,9 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
                 [self performSelector:@selector(_t1_updateMediaRailViewController)];
             }
             
-            // Check if it should be visible based on compose state
-            BOOL hasText = NO;
-            id compositionState = [self valueForKey:@"_compositionState"];
-            if (compositionState) {
-                // Check if there's text in the composition
-                NSString *text = [compositionState valueForKey:@"text"];
-                hasText = (text && text.length > 0);
-            }
-            
-            // Only show if no text entered yet (initial state)
-            if (!hasText) {
-                if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
-                    [self performSelector:@selector(_t1_showMediaRail)];
-                }
+            // Always show the rail on initial load - Twitter will handle hiding it when needed
+            if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
+                [self performSelector:@selector(_t1_showMediaRail)];
             }
         });
     });
@@ -4649,23 +4638,10 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
     
     // If Twitter says "no" but we want to override in some cases
     if (!shouldShow) {
-        // Get the current compose state
-        id compositionState = [self valueForKey:@"_compositionState"];
-        if (compositionState) {
-            // Check if there's text in the composition
-            NSString *text = [compositionState valueForKey:@"text"];
-            BOOL hasText = (text && text.length > 0);
-            
-            // Check if there are attachments
-            NSArray *attachments = [compositionState valueForKey:@"attachments"];
-            BOOL hasAttachments = (attachments && attachments.count > 0);
-            
-            // Show rail if we're in initial compose state with no text and no attachments
-            // This makes the rail available initially, then honors Twitter's normal hide behavior
-            if (!hasText && !hasAttachments) {
-                return YES;
-            }
-        }
+        // Only show the rail when first opening the composer
+        // This is safer than trying to inspect the composition state
+        // in a forward-declared class
+        return YES;
     }
     
     // Otherwise respect Twitter's decision
