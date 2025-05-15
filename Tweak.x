@@ -2988,32 +2988,57 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             NSLog(@"[BHTwitter Timestamp] VC %@: Re-initialized playerToTimestampMap in viewDidAppear (SYNC - should be rare).", activePlayerVC);
         }
         
-        // Initial synchronous attempt
+        // Check if this is the first load for this controller
+        BOOL isFirstLoad = ![objc_getAssociatedObject(activePlayerVC, "BHT_FirstLoadDone") boolValue];
+        
+        // Initial synchronous attempt to find the label
         BOOL labelFoundAndPrepared = [self BHT_findAndPrepareTimestampLabelForVC:activePlayerVC];
         NSLog(@"[BHTwitter Timestamp] VC %@: viewDidAppear (SYNC) - initial labelFoundAndPrepared: %d", activePlayerVC, labelFoundAndPrepared);
         
-        // Check if this is the first load for this player instance
-        BOOL isFirstLoad = ![objc_getAssociatedObject(activePlayerVC, "BHT_FirstLoadDone") boolValue];
-        
-        // When we first load, we'll set visibility based on whether we want the label visible
-        // during first load (always true) or the normal visibility rules
-        [self immersiveViewController:self showHideNavigationButtons:NO]; 
-
-        // Schedule a slightly delayed check to catch labels that might populate *just after* viewDidAppear completes.
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            if (activePlayerVC && activePlayerVC.view.window) { // Ensure VC is still valid and on screen
-                NSLog(@"[BHTwitter Timestamp] VC %@: viewDidAppear (DELAYED CHECK 0.1s) - calling showHideNavigationButtons:NO again.", activePlayerVC);
-                BOOL delayedLabelFound = [activePlayerVC BHT_findAndPrepareTimestampLabelForVC:activePlayerVC];
-                NSLog(@"[BHTwitter Timestamp] VC %@: viewDidAppear (DELAYED CHECK 0.1s) - delayedLabelFound: %d", activePlayerVC, delayedLabelFound);
+        if (isFirstLoad && labelFoundAndPrepared) {
+            // If this is the first load and we found a label, we'll handle it specially
+            UILabel *timestampLabel = [playerToTimestampMap objectForKey:activePlayerVC];
+            if (timestampLabel) {
+                // Force visibility ON for first load - and mark it as fixed for first load
+                timestampLabel.alpha = 1.0;
+                timestampLabel.hidden = NO;
                 
-                // Check if this is still the first load for this player instance - if we're in first load mode,
-                // we DON'T want to hide controls/timestamp here through the delayed check
-                BOOL isStillFirstLoad = ![objc_getAssociatedObject(activePlayerVC, "BHT_FirstLoadDone") boolValue];
-                if (isStillFirstLoad) {
-                    NSLog(@"[BHTwitter Timestamp] VC %@: Skipping delayed showHideNavigationButtons call during first load", activePlayerVC);
-                    // Don't call showHideNavigationButtons as it would override our visibility
-                } else {
-                    // Determine current controls visibility for the delayed call
+                // This is important - mark the label as fixed for first load
+                // so it won't be hidden by subsequent calls
+                objc_setAssociatedObject(timestampLabel, "BHT_FixedForFirstLoad", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                
+                NSLog(@"[BHTwitter Timestamp] VC %@: FIRST LOAD - Applied direct label visibility fix", activePlayerVC);
+                
+                // Schedule directly to mark first load as done after a delay
+                // to prevent flicker from multiple hide/show cycles
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                    if (activePlayerVC && activePlayerVC.view.window) {
+                        objc_setAssociatedObject(activePlayerVC, "BHT_FirstLoadDone", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                        objc_setAssociatedObject(timestampLabel, "BHT_FixedForFirstLoad", @NO, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                        NSLog(@"[BHTwitter Timestamp] VC %@: Ending first load mode", activePlayerVC);
+                    }
+                });
+            }
+        } else {
+            // For non-first loads, use normal behavior - call showHideNavigationButtons
+            // but be careful not to set it to NO and hide the label
+            // instead check the current control state
+            BOOL controlsVisible = NO;
+            if ([activePlayerVC respondsToSelector:@selector(playerControlsView)]) { 
+                UIView *playerControls = [activePlayerVC valueForKey:@"playerControlsView"];
+                if (playerControls) {
+                    controlsVisible = playerControls.alpha > 0.0f;
+                }
+            }
+            
+            [self immersiveViewController:self showHideNavigationButtons:controlsVisible];
+            
+            // For non-first loads, still do the delayed check
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                if (activePlayerVC && activePlayerVC.view.window) { // Ensure VC is still valid and on screen
+                    NSLog(@"[BHTwitter Timestamp] VC %@: viewDidAppear (DELAYED CHECK 0.1s)", activePlayerVC);
+                    BOOL delayedLabelFound = [activePlayerVC BHT_findAndPrepareTimestampLabelForVC:activePlayerVC];
+                    
                     BOOL controlsCurrentlyVisible = NO;
                     if ([activePlayerVC respondsToSelector:@selector(playerControlsView)]) { 
                         UIView *playerControls = [activePlayerVC valueForKey:@"playerControlsView"];
@@ -3023,8 +3048,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
                     }
                     [activePlayerVC immersiveViewController:activePlayerVC showHideNavigationButtons:controlsCurrentlyVisible];
                 }
-            }
-        });
+            });
+        }
     }
 }
 
@@ -3761,14 +3786,42 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
     }
 }
 
-// Log when player changes visibility to debug
+// Override setHidden to prevent hiding labels that are fixed for first load
 - (void)setHidden:(BOOL)hidden {
-    // Only log changes to our timestamp label
+    // Check if this is our timestamp label
     if (self == gVideoTimestampLabel && [BHTManager restoreVideoTimestamp]) {
-        NSLog(@"[BHTwitter Timestamp] UILabel setHidden:%d called by: %@", hidden, [NSThread callStackReturnAddresses]);
+        // If it's being hidden, check if it's fixed for first load
+        if (hidden) {
+            BOOL isFixedForFirstLoad = [objc_getAssociatedObject(self, "BHT_FixedForFirstLoad") boolValue];
+            if (isFixedForFirstLoad) {
+                // If it's fixed for first load, override the hide request
+                NSLog(@"[BHTwitter Timestamp] Prevented hiding label that is fixed for first load");
+                return; // Skip the %orig call to prevent hiding
+            }
+        }
+        
+        NSLog(@"[BHTwitter Timestamp] UILabel setHidden:%d", hidden);
     }
     
     %orig(hidden);
+}
+
+// Also override setAlpha to prevent fading out
+- (void)setAlpha:(CGFloat)alpha {
+    // For our timestamp label only
+    if (self == gVideoTimestampLabel && [BHTManager restoreVideoTimestamp]) {
+        // If it's being made transparent, check if it's fixed for first load
+        if (alpha == 0.0) {
+            BOOL isFixedForFirstLoad = [objc_getAssociatedObject(self, "BHT_FixedForFirstLoad") boolValue];
+            if (isFixedForFirstLoad) {
+                // If it's fixed for first load, override the alpha change
+                NSLog(@"[BHTwitter Timestamp] Prevented setting alpha 0 for label that is fixed for first load");
+                return; // Skip the %orig call to prevent transparency
+            }
+        }
+    }
+    
+    %orig(alpha);
 }
 
 %end
