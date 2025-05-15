@@ -10,7 +10,6 @@
 #import "BHTManager.h"
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
-#import "TWHeaders.h"
 
 // Forward declare T1ColorSettings and its private method to satisfy the compiler
 @interface T1ColorSettings : NSObject
@@ -4649,8 +4648,8 @@ static GeminiTranslator *_sharedInstance;
 
 - (void)translateText:(NSString *)text fromLanguage:(NSString *)sourceLanguage toLanguage:(NSString *)targetLanguage completion:(void (^)(NSString *translatedText, NSError *error))completion {
     // Prepare API request parameters
-    NSString *apiKey = @"YOUR_GEMINI_API_KEY"; // Replace with your actual API key
-    NSString *apiUrl = @"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+    NSString *apiKey = @"AIzaSyB-bQ6f2dEzlN_mMOljHazxbJEH1BsS6cQ"; // Replace with your actual API key
+    NSString *apiUrl = @"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
     
     // Build the prompt for translation
     NSString *prompt = [NSString stringWithFormat:@"Translate the following text from %@ to %@:\n\n%@", 
