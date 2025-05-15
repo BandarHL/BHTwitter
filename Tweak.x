@@ -5410,76 +5410,92 @@ static NSMutableArray *activeTranslationContexts;
                     if (controllerView) {
                         NSLog(@"[GeminiTranslator] Looking for status views to update");
                         
-                        // Since findAndUpdateStatusViewsIn is not implemented, do the work inline
-                        // directly implementing the recursive view update here
+                        // Since findAndUpdateStatusViewsIn is not implemented, use a simpler approach
+                        // without recursion to avoid potential performance issues
                         dispatch_async(dispatch_get_main_queue(), ^{
-                            // Use weak-strong pattern to avoid retain cycle
-                            __block __weak void (^weakFindAndUpdateViews)(UIView *, id, id, NSString *);
-                            __block void (^strongFindAndUpdateViews)(UIView *, id, id, NSString *);
+                            NSLog(@"[GeminiTranslator] Starting view update with non-recursive approach");
                             
-                            // Create the strong reference implementation
-                            strongFindAndUpdateViews = ^(UIView *view, id translatedVM, id originalVM, NSString *idStr) {
-                                // Skip if any parameters are nil
-                                if (!view || !translatedVM || !originalVM) return;
+                            // Just try a simple, direct update on the controller's view if possible
+                            if ([controllerView respondsToSelector:@selector(setNeedsLayout)]) {
+                                [controllerView setNeedsLayout];
+                                [controllerView layoutIfNeeded];
+                                NSLog(@"[GeminiTranslator] Forced layout update on controller view");
+                            }
+                            
+                            // Try to find the status cell using a queue-based approach instead of recursion
+                            NSMutableArray *viewsToCheck = [NSMutableArray arrayWithObject:controllerView];
+                            NSInteger maxChecks = 100; // Limit checks to avoid potential infinite loops
+                            NSInteger checksPerformed = 0;
+                            BOOL foundAndUpdated = NO;
+                            
+                            while (viewsToCheck.count > 0 && checksPerformed < maxChecks && !foundAndUpdated) {
+                                UIView *currentView = viewsToCheck.firstObject;
+                                [viewsToCheck removeObjectAtIndex:0];
+                                checksPerformed++;
                                 
                                 // Check if this view is a status view
-                                NSString *viewClassName = NSStringFromClass([view class]);
+                                NSString *viewClassName = NSStringFromClass([currentView class]);
                                 BOOL isStatusView = [viewClassName containsString:@"StatusView"] || 
                                                     [viewClassName containsString:@"TweetView"];
                                 
                                 if (isStatusView) {
-                                    // Try to get the view model of this status view
+                                    // Try to get the view model
                                     id viewModel = nil;
-                                    if ([view respondsToSelector:@selector(viewModel)]) {
-                                        viewModel = [view performSelector:@selector(viewModel)];
-                                    } else if ([view respondsToSelector:@selector(statusViewModel)]) {
-                                        viewModel = [view performSelector:@selector(statusViewModel)];
+                                    if ([currentView respondsToSelector:@selector(viewModel)]) {
+                                        viewModel = [currentView performSelector:@selector(viewModel)];
+                                    } else if ([currentView respondsToSelector:@selector(statusViewModel)]) {
+                                        viewModel = [currentView performSelector:@selector(statusViewModel)];
                                     }
                                     
-                                    // Check if this is the status view we're looking for
-                                    BOOL isTargetView = NO;
-                                    if (viewModel && [viewModel isEqual:originalVM]) {
-                                        isTargetView = YES;
-                                    } else if (idStr && [viewModel respondsToSelector:@selector(statusIDString)]) {
-                                        NSString *viewStatusID = [viewModel performSelector:@selector(statusIDString)];
-                                        if ([viewStatusID isEqualToString:idStr]) {
-                                            isTargetView = YES;
+                                    // Check if this is our target
+                                    BOOL isTarget = NO;
+                                    if (viewModel && [viewModel isEqual:context.statusViewModel]) {
+                                        isTarget = YES;
+                                    } else if (statusID && [viewModel respondsToSelector:@selector(statusIDString)]) {
+                                        NSString *viewID = [viewModel performSelector:@selector(statusIDString)];
+                                        if ([viewID isEqualToString:statusID]) {
+                                            isTarget = YES;
                                         }
                                     }
                                     
-                                    // If this is our target view, update it
-                                    if (isTargetView) {
-                                        NSLog(@"[GeminiTranslator] Found matching status view: %@", view);
+                                    // Update if it's our target
+                                    if (isTarget) {
+                                        NSLog(@"[GeminiTranslator] Found matching status view: %@", currentView);
                                         
-                                        // Try various ways to update the view with the translated view model
-                                        if ([view respondsToSelector:@selector(setViewModel:)]) {
-                                            [view performSelector:@selector(setViewModel:) withObject:translatedVM];
-                                            NSLog(@"[GeminiTranslator] Updated viewModel");
-                                        } else if ([view respondsToSelector:@selector(setStatusViewModel:)]) {
-                                            [view performSelector:@selector(setStatusViewModel:) withObject:translatedVM];
-                                            NSLog(@"[GeminiTranslator] Updated statusViewModel");
+                                        @try {
+                                            if ([currentView respondsToSelector:@selector(setViewModel:)]) {
+                                                [currentView performSelector:@selector(setViewModel:) withObject:translatedViewModel];
+                                                NSLog(@"[GeminiTranslator] Updated viewModel");
+                                                foundAndUpdated = YES;
+                                            } else if ([currentView respondsToSelector:@selector(setStatusViewModel:)]) {
+                                                [currentView performSelector:@selector(setStatusViewModel:) withObject:translatedViewModel];
+                                                NSLog(@"[GeminiTranslator] Updated statusViewModel");
+                                                foundAndUpdated = YES;
+                                            }
+                                            
+                                            // Force layout update
+                                            [currentView setNeedsLayout];
+                                            [currentView layoutIfNeeded];
+                                        } @catch (NSException *e) {
+                                            NSLog(@"[GeminiTranslator] Exception updating view: %@", e);
                                         }
-                                        
-                                        // Force a layout update
-                                        [view setNeedsLayout];
-                                        [view layoutIfNeeded];
                                     }
                                 }
                                 
-                                // Recursively search subviews using the weak reference to avoid retain cycle
-                                for (UIView *subview in view.subviews) {
-                                    // Use the weak reference to call the block
-                                    if (weakFindAndUpdateViews) {
-                                        weakFindAndUpdateViews(subview, translatedVM, originalVM, idStr);
-                                    }
+                                // Add subviews to the queue
+                                for (UIView *subview in currentView.subviews) {
+                                    [viewsToCheck addObject:subview];
                                 }
-                            };
+                            }
                             
-                            // Set up the weak reference to the block
-                            weakFindAndUpdateViews = strongFindAndUpdateViews;
-                            
-                            // Call the recursive function to find and update views
-                            strongFindAndUpdateViews(controllerView, translatedViewModel, context.statusViewModel, statusID);
+                            if (!foundAndUpdated) {
+                                NSLog(@"[GeminiTranslator] Could not find specific status view to update (checked %ld views)", (long)checksPerformed);
+                                // As fallback, try to update the main controller
+                                if ([context.controller respondsToSelector:@selector(reloadData)]) {
+                                    NSLog(@"[GeminiTranslator] Trying reloadData on controller as fallback");
+                                    [context.controller performSelector:@selector(reloadData)];
+                                }
+                            }
                         });
                     }
                 }
