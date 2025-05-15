@@ -4754,48 +4754,14 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
     }
 }
 
-%end
+// When an attachment is removed via the table view, update accessory state
+- (void)tableViewController:(id)arg1 activeTweetDidRemoveAttachment:(id)arg2 {
+    %orig(arg1, arg2);
 
-%hook T1MediaAttachmentView
-
-- (void)setAttachment:(TTMAsset *)attachment animated:(_Bool)animated {
-    %orig(attachment, animated);
-
-    // If the attachment is set to nil, or if the view is hidden, 
-    // it implies this specific attachment is no longer being actively displayed.
-    BOOL isEffectivelyHidden = (attachment == nil || self.hidden || self.alpha == 0.0f);
-
-    if (isEffectivelyHidden) {
-        // Try to find the T1TweetComposeViewController to notify it.
-        UIResponder *responder = self;
-        while (responder && ![responder isKindOfClass:[UIViewController class]]) {
-            responder = [responder nextResponder];
-        }
-
-        UIViewController *parentVC = (UIViewController *)responder;
-        T1TweetComposeViewController *composeVC = nil;
-
-        // Walk up the VC hierarchy to find T1TweetComposeViewController
-        while (parentVC) {
-            if ([parentVC isKindOfClass:[%c(T1TweetComposeViewController) class]]) {
-                composeVC = (T1TweetComposeViewController *)parentVC;
-                break;
-            }
-            if (parentVC.parentViewController) {
-                parentVC = parentVC.parentViewController;
-            } else if (parentVC.presentingViewController) {
-                parentVC = parentVC.presentingViewController; // Check presenting VC as well
-            } else {
-                break;
-            }
-        }
-
-        if (composeVC && [composeVC respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
-            // Call on the main thread, possibly after a tiny delay to allow state to settle.
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [composeVC performSelector:@selector(_t1_updateAccessoryViewState)];
-            });
-        }
+    // After an attachment is removed, always update the accessory view state.
+    // This will re-evaluate _t1_shouldShowMediaRail.
+    if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
+        [self performSelector:@selector(_t1_updateAccessoryViewState)];
     }
 }
 
