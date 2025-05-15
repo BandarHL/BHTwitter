@@ -5152,12 +5152,61 @@ static NSMutableArray *activeTranslationContexts;
                                 free(methods);
                             } else {
                                 NSLog(@"[GeminiTranslator] No methods found or unable to inspect class.");
+                                                    }
+                    } @catch (NSException *e) {
+                        NSLog(@"[GeminiTranslator] Exception while inspecting methods: %@", e);
+                    }
+                    
+                    // Now that we know the exact initializer name, let's try it directly
+                    SEL exactInitSelector = NSSelectorFromString(@"initWithTranslation:entities:translationSource:localizedSourceLanguage:sourceLanguage:destinationLanguage:translationState:");
+                    if ([instance respondsToSelector:exactInitSelector]) {
+                        NSLog(@"[GeminiTranslator] Found exact initializer through runtime introspection. Attempting to use it.");
+                        NSMethodSignature *sig = [instance methodSignatureForSelector:exactInitSelector];
+                        if (sig) {
+                            NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
+                            [inv setSelector:exactInitSelector];
+                            [inv setTarget:instance];
+                            
+                            // Set up all the arguments with the correct names
+                            id arg1_translation = translatedText;
+                            id arg2_entities = [NSNull null]; // Or nil if that's more appropriate
+                            id arg3_translationSource = @"Gemini";
+                            id arg4_localizedSourceLang = context.sourceLanguage ?: @"en";
+                            id arg5_sourceLang = context.sourceLanguage ?: @"en";
+                            id arg6_destLang = context.targetLanguage ?: @"en";
+                            id arg7_state = @"Success";
+                            
+                            [inv setArgument:&arg1_translation atIndex:2];
+                            [inv setArgument:&arg2_entities atIndex:3];
+                            [inv setArgument:&arg3_translationSource atIndex:4];
+                            [inv setArgument:&arg4_localizedSourceLang atIndex:5];
+                            [inv setArgument:&arg5_sourceLang atIndex:6];
+                            [inv setArgument:&arg6_destLang atIndex:7];
+                            [inv setArgument:&arg7_state atIndex:8];
+                            
+                            [inv invoke];
+                            __unsafe_unretained id result = nil;
+                            [inv getReturnValue:&result];
+                            translationObject = result;
+                            
+                            if (translationObject) {
+                                NSLog(@"[GeminiTranslator] Successfully created translation object using exact initializer!");
+                            } else {
+                                NSLog(@"[GeminiTranslator] Initialization with exact initializer returned nil.");
                             }
-                        } @catch (NSException *e) {
-                            NSLog(@"[GeminiTranslator] Exception while inspecting methods: %@", e);
+                        } else {
+                            NSLog(@"[GeminiTranslator] Could not get method signature for exact initializer.");
                         }
-                        
-                        // Attempt to Loop through simpler initializers
+                    } else {
+                        NSLog(@"[GeminiTranslator] Allocated instance doesn't respond to exact initializer - this is unexpected!");
+                    }
+                    
+                    // Only use the "simpler initializers" approach if the exact initializer failed
+                    if (!translationObject) {
+                        NSLog(@"[GeminiTranslator] Exact initializer failed, falling back to simpler ones (unlikely to work)");
+                    }
+                    
+                    // Attempt to Loop through simpler initializers
                         NSArray *simpleInitSelectors = @[
                             @"initWithTranslatedText:",
                             @"initWithText:",
