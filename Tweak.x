@@ -1658,16 +1658,19 @@ static NSDate *lastCookieRefresh              = nil;
 static BOOL isInitializingCookies = NO;
 static NSTimer *cookieRetryTimer = nil;
 static int cookieRetryCount = 0;
-static const int MAX_COOKIE_RETRIES = 15; // Maximum number of retry attempts
+static const int MAX_COOKIE_RETRIES = 8; // Reduced maximum retry attempts
 static const NSTimeInterval INITIAL_RETRY_DELAY = 3.0; // Start with a short delay
-static const NSTimeInterval MAX_RETRY_DELAY = 60.0; // Cap at 1 minute between retries
+static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 seconds
 
 @implementation TweetSourceHelper
 
 + (void)logDebugInfo:(NSString *)message {
+    // Only log in debug mode to reduce log spam
+#if BHT_DEBUG
     if (message) {
         NSLog(@"[BHTwitter SourceLabel] %@", message);
     }
+#endif
 }
 
 + (void)initializeCookiesWithRetry {
@@ -1683,14 +1686,27 @@ static const NSTimeInterval MAX_RETRY_DELAY = 60.0; // Cap at 1 minute between r
         return;
     }
     
-    // If no valid cached cookies, start the retry process
-    [self logDebugInfo:@"No valid cached cookies found, starting retry process"];
+    // Try fetching cookies once immediately before starting retry process
+    NSDictionary *freshCookies = [self fetchCookies];
+    if (freshCookies && freshCookies.count > 0 && freshCookies[@"ct0"] && freshCookies[@"auth_token"]) {
+        [self logDebugInfo:@"Successfully fetched cookies on first try"];
+        [self cacheCookies:freshCookies];
+        isInitializingCookies = NO;
+        
+        // Notify that cookies are ready
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
+        });
+        return;
+    }
+    
+    // If couldn't get cookies, start the retry process with reduced logging
     [self retryFetchCookies];
 }
 
 + (void)retryFetchCookies {
     if (cookieRetryCount >= MAX_COOKIE_RETRIES) {
-        [self logDebugInfo:[NSString stringWithFormat:@"Giving up after %d cookie fetch attempts", cookieRetryCount]];
+        [self logDebugInfo:@"Giving up cookie fetch attempts"];
         isInitializingCookies = NO;
         
         // Invalidate any existing timer
@@ -1701,15 +1717,12 @@ static const NSTimeInterval MAX_RETRY_DELAY = 60.0; // Cap at 1 minute between r
         return;
     }
     
-    [self logDebugInfo:[NSString stringWithFormat:@"Cookie fetch attempt #%d", cookieRetryCount + 1]];
-    
     // Try to fetch cookies
     NSDictionary *freshCookies = [self fetchCookies];
     BOOL hasCriticalCookies = freshCookies && freshCookies.count > 0 && 
                               freshCookies[@"ct0"] && freshCookies[@"auth_token"];
     
     if (hasCriticalCookies) {
-        [self logDebugInfo:@"Successfully fetched cookies with auth tokens"];
         [self cacheCookies:freshCookies];
         isInitializingCookies = NO;
         
@@ -1731,8 +1744,6 @@ static const NSTimeInterval MAX_RETRY_DELAY = 60.0; // Cap at 1 minute between r
     
     // Calculate next retry delay with exponential backoff (capped)
     NSTimeInterval nextDelay = MIN(INITIAL_RETRY_DELAY * pow(1.5, cookieRetryCount - 1), MAX_RETRY_DELAY);
-    
-    [self logDebugInfo:[NSString stringWithFormat:@"Scheduling next cookie fetch in %.1f seconds", nextDelay]];
     
     // Invalidate any existing timer
     if (cookieRetryTimer) {
@@ -1808,8 +1819,10 @@ static const NSTimeInterval MAX_RETRY_DELAY = 60.0; // Cap at 1 minute between r
         NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"https://%@", domain]];
         NSArray *cookies = [cookieStorage cookiesForURL:url];
         
-        // Log the cookies we found for this domain
+        // Only log in debug mode
+#if BHT_DEBUG
         [self logDebugInfo:[NSString stringWithFormat:@"Found %ld cookies for domain %@", (long)cookies.count, domain]];
+#endif
         
         for (NSHTTPCookie *cookie in cookies) {
             if ([requiredCookies containsObject:cookie.name]) {
@@ -1818,40 +1831,30 @@ static const NSTimeInterval MAX_RETRY_DELAY = 60.0; // Cap at 1 minute between r
         }
     }
     
-    // Print the required cookies we found
-    for (NSString *requiredCookie in requiredCookies) {
-        NSString *value = cookiesDict[requiredCookie];
-        if (value) {
-            [self logDebugInfo:[NSString stringWithFormat:@"Found cookie %@: %@...", requiredCookie, [value substringToIndex:MIN(5, value.length)]]];
-        } else {
-            [self logDebugInfo:[NSString stringWithFormat:@"Missing required cookie: %@", requiredCookie]];
-        }
-    }
-    
-    // Verify the minimum required cookies for API access
-    if (!cookiesDict[@"ct0"] || !cookiesDict[@"auth_token"]) {
-        [self logDebugInfo:@"Missing critical cookies for API access"];
-    }
+    // Log status of required cookies only in debug mode
+#if BHT_DEBUG
+    BOOL hasCritical = cookiesDict[@"ct0"] && cookiesDict[@"auth_token"];
+    [self logDebugInfo:[NSString stringWithFormat:@"Has critical cookies: %@", hasCritical ? @"Yes" : @"No"]];
+#endif
     
     return cookiesDict;
 }
 
 + (void)cacheCookies:(NSDictionary *)cookies {
     if (!cookies || cookies.count == 0) {
-        [self logDebugInfo:@"No cookies to cache"];
         return;
     }
     
     cookieCache = [cookies mutableCopy];
     lastCookieRefresh = [NSDate date];
     
-    // Persist to NSUserDefaults
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    [defaults setObject:cookies forKey:@"TweetSourceTweak_CookieCache"];
-    [defaults setObject:lastCookieRefresh forKey:@"TweetSourceTweak_LastCookieRefresh"];
-    [defaults synchronize];
-    
-    [self logDebugInfo:[NSString stringWithFormat:@"Cached %ld cookies at %@", (long)cookies.count, lastCookieRefresh]];
+    // Persist to NSUserDefaults using async to avoid blocking
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
+        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+        [defaults setObject:cookies forKey:@"TweetSourceTweak_CookieCache"];
+        [defaults setObject:lastCookieRefresh forKey:@"TweetSourceTweak_LastCookieRefresh"];
+        [defaults synchronize];
+    });
 }
 
 + (NSDictionary *)loadCachedCookies {
@@ -1861,9 +1864,6 @@ static const NSTimeInterval MAX_RETRY_DELAY = 60.0; // Cap at 1 minute between r
     
     if (cachedCookies) {
         cookieCache = [cachedCookies mutableCopy];
-        [self logDebugInfo:[NSString stringWithFormat:@"Loaded %ld cached cookies from %@", (long)cachedCookies.count, lastCookieRefresh]];
-    } else {
-        [self logDebugInfo:@"No cached cookies found, will fetch fresh cookies"];
     }
     
     return cachedCookies;
@@ -1999,11 +1999,11 @@ static const NSTimeInterval MAX_RETRY_DELAY = 60.0; // Cap at 1 minute between r
                         });
                     }
                     
-                    // Mark this tweet as "Waiting for login" instead of unavailable
-                    tweetSources[tweetID] = @"Waiting for login...";
-                    fetchPending[tweetID] = @(NO);
-                    [fetchTimeouts removeObjectForKey:tweetID];
-                    [timeoutTimer invalidate];
+                    // Mark this tweet as "Fetching..." instead of unavailable
+                    tweetSources[tweetID] = @"Fetching...";
+                fetchPending[tweetID] = @(NO);
+                [fetchTimeouts removeObjectForKey:tweetID];
+                [timeoutTimer invalidate];
                     
                     // Notify UI that we're waiting for login
                     dispatch_async(dispatch_get_main_queue(), ^{
@@ -2011,7 +2011,7 @@ static const NSTimeInterval MAX_RETRY_DELAY = 60.0; // Cap at 1 minute between r
                                                                             object:nil 
                                                                           userInfo:@{@"tweetID": tweetID}];
                     });
-                    return;
+                return;
                 }
             }
         }
@@ -2281,26 +2281,23 @@ static const NSTimeInterval MAX_RETRY_DELAY = 60.0; // Cap at 1 minute between r
 
         // Only retry for valid sources
         if (tweetSources[tweetID] && ![tweetSources[tweetID] isEqualToString:@""]) {
+            // Post update notification if needed 
             dispatch_async(dispatch_get_main_queue(), ^{
-            [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
+                [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
             });
             
-            // Schedule next retry with exponential backoff
-            NSTimeInterval delay = (retryCount < 5) ? 0.5 : 
-                                  (retryCount < 10) ? 1.0 : 
-                                  (retryCount < 15) ? 2.0 : 3.0;
-                                  
-            // Stop after 20 retries
-            if (retryCount < 20) {
-            [self performSelector:@selector(retryUpdateForTweetID:) withObject:tweetID afterDelay:delay];
+            // Use simpler retry schedule - only retry 10 times total with fixed delays
+            // Stop after 10 retries (reduced from 20)
+            if (retryCount < 10) {
+                // Fixed delay of 1 second
+                [self performSelector:@selector(retryUpdateForTweetID:) withObject:tweetID afterDelay:1.0];
             } else {
                 // Mark as completed after max retries
                 updateCompleted[tweetID] = @(YES);
-                [self logDebugInfo:[NSString stringWithFormat:@"Max retries reached for updating tweet %@", tweetID]];
-        }
+            }
         }
     } @catch (__unused NSException *e) {
-        [self logDebugInfo:[NSString stringWithFormat:@"Exception in retryUpdateForTweetID: %@", e]];
+        // Minimize logging in production
     }
 }
 
@@ -2308,54 +2305,86 @@ static const NSTimeInterval MAX_RETRY_DELAY = 60.0; // Cap at 1 minute between r
     @try {
         if (!tweetSources || !updateCompleted) return;
         
-        NSArray *allTweetIDs = [tweetSources allKeys];
-        NSInteger updateCount = 0;
+        static NSUInteger pollCounter = 0;
+        pollCounter++;
         
+        // Only process every 3rd poll to reduce CPU usage (interval is now 15 seconds)
+        if (pollCounter % 3 != 0) {
+            // Just schedule next poll and return
+            [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:5.0];
+            return;
+        }
+        
+        NSArray *allTweetIDs = [tweetSources allKeys];
+        NSMutableArray *pendingTweets = [NSMutableArray array];
+        
+        // First pass: just collect IDs that need updating (no UI work)
         for (NSString *tweetID in allTweetIDs) {
-            if (tweetSources[tweetID] && 
-                ![tweetSources[tweetID] isEqualToString:@""] &&
-                ![tweetSources[tweetID] isEqualToString:@"Source Unavailable"]) {
-                
-                if (!updateCompleted[tweetID] || ![updateCompleted[tweetID] boolValue]) {
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" 
-                                                                            object:nil 
-                                                                          userInfo:@{@"tweetID": tweetID}];
-                    });
-                    
-                    if (!updateRetries[tweetID] || [updateRetries[tweetID] integerValue] < 5) {
-                        [self performSelector:@selector(retryUpdateForTweetID:) withObject:tweetID afterDelay:1.0];
-                    }
-                    
-                    updateCount++;
-                    if (updateCount >= 10) break; // Limit batch size
-                }
+            NSString *source = tweetSources[tweetID];
+            if (source && ![source isEqualToString:@""] && ![source isEqualToString:@"Source Unavailable"] &&
+                (!updateCompleted[tweetID] || ![updateCompleted[tweetID] boolValue])) {
+                [pendingTweets addObject:tweetID];
+                if (pendingTweets.count >= 10) break; // Limit batch size
             }
+        }
+        
+        // Now process them in batches to reduce UI work
+        if (pendingTweets.count > 0) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                for (NSUInteger i = 0; i < MIN(5, pendingTweets.count); i++) {
+                    NSString *tweetID = pendingTweets[i];
+                    [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" 
+                                                                        object:nil 
+                                                                      userInfo:@{@"tweetID": tweetID}];
+                    
+                    if (!updateRetries[tweetID] || [updateRetries[tweetID] integerValue] < 3) {
+                        [self performSelector:@selector(retryUpdateForTweetID:) withObject:tweetID afterDelay:0.5];
+                    }
+                }
+                
+                // Process the rest with a delay
+                if (pendingTweets.count > 5) {
+                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                        for (NSUInteger i = 5; i < pendingTweets.count; i++) {
+                            NSString *tweetID = pendingTweets[i];
+                            [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" 
+                                                                                object:nil 
+                                                                              userInfo:@{@"tweetID": tweetID}];
+                            
+                            if (!updateRetries[tweetID] || [updateRetries[tweetID] integerValue] < 3) {
+                                [self performSelector:@selector(retryUpdateForTweetID:) withObject:tweetID afterDelay:0.5];
+                            }
+                        }
+                    });
+                }
+            });
         }
         
         // Schedule next poll
         [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:5.0];
         
-    } @catch (NSException *e) {
-        [self logDebugInfo:[NSString stringWithFormat:@"Exception in pollForPendingUpdates: %@", e]];
+    } @catch (__unused NSException *e) {
+        // Minimize logging in production
     }
 }
 
 + (void)handleAppForeground:(NSNotification *)notification {
     @try {
-        [self logDebugInfo:@"App became active, polling for updates"];
-        
-        // Force a fresh cookie fetch on app foreground
-        NSDictionary *freshCookies = [self fetchCookies];
-        if (freshCookies.count > 0) {
-            [self cacheCookies:freshCookies];
+        // Lazily fetch cookies when needed instead of on every foreground
+        if (!cookieCache || cookieCache.count == 0 || [self shouldRefreshCookies]) {
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
+                NSDictionary *freshCookies = [self fetchCookies];
+                if (freshCookies.count > 0) {
+                    [self cacheCookies:freshCookies];
+                }
+            });
         }
         
-        // Start polling for updates
-        [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:1.0];
+        // Start polling for updates (after a short delay)
+        [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:1.5];
         
-    } @catch (NSException *e) {
-        [self logDebugInfo:[NSString stringWithFormat:@"Exception in handleAppForeground: %@", e]];
+    } @catch (__unused NSException *e) {
+        // Minimized error logging in production
     }
 }
 
@@ -2562,26 +2591,31 @@ static const NSTimeInterval MAX_RETRY_DELAY = 60.0; // Cap at 1 minute between r
 // }
 
 + (void)handleCookiesReadyNotification:(NSNotification *)notification {
-    [self logDebugInfo:@"Received cookies ready notification, retrying pending tweets"];
-    
-    // Check for any tweets waiting for login
+    // Check for any tweets waiting for authentication
     if (tweetSources) {
         NSMutableArray *tweetsToRetry = [NSMutableArray array];
         
+        // Find all tweets in "Fetching..." state
         for (NSString *tweetID in tweetSources) {
             NSString *source = tweetSources[tweetID];
-            if ([source isEqualToString:@"Waiting for login..."]) {
+            if ([source isEqualToString:@"Fetching..."]) {
                 [tweetsToRetry addObject:tweetID];
             }
         }
         
-        [self logDebugInfo:[NSString stringWithFormat:@"Found %ld tweets waiting for login to retry", (long)tweetsToRetry.count]];
+        if (tweetsToRetry.count == 0) return;
         
-        // Retry these tweets with a slight delay between them
-        for (NSUInteger i = 0; i < tweetsToRetry.count; i++) {
-            NSString *tweetID = tweetsToRetry[i];
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * i * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                [self fetchSourceForTweetID:tweetID];
+        // Use a more efficient approach for retrying tweets
+        // Batch the retries to reduce overhead
+        NSUInteger batchSize = 3; // Process 3 tweets at a time
+        for (NSUInteger i = 0; i < tweetsToRetry.count; i += batchSize) {
+            NSUInteger end = MIN(i + batchSize, tweetsToRetry.count);
+            NSUInteger batchIndex = i;
+            
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * (i/batchSize) * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                for (NSUInteger j = batchIndex; j < end; j++) {
+                    [self fetchSourceForTweetID:tweetsToRetry[j]];
+                }
             });
         }
     }
