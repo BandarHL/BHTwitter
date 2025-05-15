@@ -284,8 +284,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"disableSensitiveTweetWarnings"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"disable_immersive_player"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"custom_voice_upload"];
-        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"dm_avatars"];
-        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"tab_bar_theming"];
+        [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"dm_avatars"];
+        [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"tab_bar_theming"];
     }
     [BHTManager cleanCache];
     if ([BHTManager FLEX]) {
