@@ -1749,7 +1749,7 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
             NSMutableArray *tweetsToUpdate = [NSMutableArray array];
             for (NSString *tweetID in tweetSources) {
                 NSString *source = tweetSources[tweetID];
-                if ([source isEqualToString:@"Fetching..."] || [source isEqualToString:@"Updating..."]) {
+                if ([source isEqualToString:@"Fetching..."]) {
                     [tweetsToUpdate addObject:tweetID];
                     tweetSources[tweetID] = @"Source Unavailable";
                 }
@@ -1963,8 +1963,7 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
         if (tweetSources[tweetID] && 
             ![tweetSources[tweetID] isEqualToString:@""] &&
             ![tweetSources[tweetID] isEqualToString:@"Source Unavailable"] &&
-            ![tweetSources[tweetID] isEqualToString:@"Fetching..."] &&
-            ![tweetSources[tweetID] isEqualToString:@"Updating..."]) {
+            ![tweetSources[tweetID] isEqualToString:@"Fetching..."]) {
             [self logDebugInfo:[NSString stringWithFormat:@"Using cached source for tweet %@: %@", 
                               tweetID, tweetSources[tweetID]]];
             
@@ -2360,9 +2359,8 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
                           ![currentSource isEqualToString:@""] && 
                           ![currentSource isEqualToString:@"Source Unavailable"];
                           
-        // Special case for "Fetching..." to "Updating..." - these need updates too
-        BOOL isTransitionalState = [currentSource isEqualToString:@"Fetching..."] || 
-                                  [currentSource isEqualToString:@"Updating..."];
+        // Check if this is a tweet waiting for source
+        BOOL isTransitionalState = [currentSource isEqualToString:@"Fetching..."];
                                   
         if (needsRetry || isTransitionalState) {
             // Check if we have a view instance for this tweet ID
@@ -2599,12 +2597,11 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
         
         // First, force a UI refresh for any tweets currently shown with "Fetching..." status
         dispatch_async(dispatch_get_main_queue(), ^{
+            // No need to temporarily update the status - keep it as "Fetching..."
+            // Just force a UI refresh for any tweets currently shown with "Fetching..." status
             for (NSString *tweetID in tweetsToRetry) {
-                // Temporarily set to "Updating..." to show something is happening
                 if ([tweetSources[tweetID] isEqualToString:@"Fetching..."]) {
-                    tweetSources[tweetID] = @"Updating...";
-                    
-                    // Immediately notify UI to update the "Fetching..." to "Updating..."
+                    // Immediately notify UI to refresh the "Fetching..." status
                     [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" 
                                                                        object:nil 
                                                                      userInfo:@{@"tweetID": tweetID}];
