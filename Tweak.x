@@ -3837,141 +3837,204 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 
 // MARK: - Combined constructor to initialize all hooks and features
-// MARK: - Restore Pull-To-Refresh Sounds - Guaranteed to work
+// MARK: - Restore Pull-To-Refresh Sounds
 
-static SystemSoundID pullSound = 0;
-static SystemSoundID popSound = 0;
-
-static BOOL firstPullDone = NO;  // Track if first pull occurred
-
-// Ultra reliable sound player
-static void playPullSound(void) {
-    // Load on first use
-    if (pullSound == 0) {
-        NSURL *url = [[BHTBundle sharedBundle] pathForFile:@"psst2.aac"];
-        if (url) {
-            AudioServicesCreateSystemSoundID((__bridge CFURLRef)url, &pullSound);
+// Helper function to play sounds since we can't directly call methods on TFNPullToRefreshControl
+static void PlayRefreshSound(int soundType) {
+    static SystemSoundID sounds[2] = {0, 0};
+    static dispatch_once_t onceToken[2];
+    static BOOL soundsInitialized[2] = {NO, NO};
+    
+    // Ensure the sounds are only initialized once per type
+    if (!soundsInitialized[soundType]) {
+        NSString *soundFile = nil;
+        if (soundType == 0) {
+            // Sound when pulling down
+            soundFile = @"psst2.aac";
+        } else if (soundType == 1) {
+            // Sound when refresh completes
+            soundFile = @"pop.aac";
+        }
+        
+        if (soundFile) {
+            NSURL *soundURL = [[BHTBundle sharedBundle] pathForFile:soundFile];
+            if (soundURL) {
+                OSStatus status = AudioServicesCreateSystemSoundID((__bridge CFURLRef)soundURL, &sounds[soundType]);
+                if (status == 0) {
+                    soundsInitialized[soundType] = YES;
+                }
+            }
         }
     }
     
-    // Play the sound (with fallback in case SystemSoundID failed)
-    if (pullSound != 0) {
-        AudioServicesPlaySystemSound(pullSound);
-    } else {
-        // Fallback to vibration if sound won't load
-        AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
+    // Play the sound if it was successfully initialized
+    if (soundsInitialized[soundType]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            AudioServicesPlaySystemSound(sounds[soundType]);
+        });
     }
 }
 
-static void playPopSound(void) {
-    // Load on first use
-    if (popSound == 0) {
-        NSURL *url = [[BHTBundle sharedBundle] pathForFile:@"pop.aac"];
-        if (url) {
-            AudioServicesCreateSystemSoundID((__bridge CFURLRef)url, &popSound);
-        }
-    }
-    
-    // Play the sound (with fallback in case SystemSoundID failed)
-    if (popSound != 0) {
-        AudioServicesPlaySystemSound(popSound);
-    } else {
-        // Fallback to vibration if sound won't load
-        AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
-    }
+// Universal method to play pop sound
+static void PlayPopSoundAfterDelay(NSTimeInterval delay) {
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        PlayRefreshSound(1);
+    });
 }
 
-// App launch sequence
-%hook UIApplication
+%hook TFNPullToRefreshControl
 
-// Capture when app fully launches
-- (void)applicationDidFinishLaunching:(UIApplication *)application {
+// Track state with instance-specific variables using associated objects
+static char kRefreshingKey;
+static char kPlayedPullSoundKey;
+static char kNeedsPopSoundKey;
+static char kPopSoundTimerKey;
+
+// Always enable sound effects
++ (_Bool)_areSoundEffectsEnabled {
+    return YES;
+}
+
+// This is one of the key methods - triggered after animation completes
+- (void)scrollViewContentInsetDidReset:(id)scrollView {
     %orig;
     
-    // Play first launch sounds
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-        playPullSound();
+    // This is often called when the refresh action completes
+    // If we're marked as needing a pop sound, play it here
+    if (objc_getAssociatedObject(self, &kNeedsPopSoundKey)) {
+        // Get the timer if it exists
+        NSTimer *popTimer = objc_getAssociatedObject(self, &kPopSoundTimerKey);
+        if (popTimer) {
+            [popTimer invalidate]; // Cancel any pending timer
+        }
         
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            playPopSound();
-            firstPullDone = YES;  // Mark first pull as done
+        // Reset state
+        objc_setAssociatedObject(self, &kNeedsPopSoundKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        objc_setAssociatedObject(self, &kPopSoundTimerKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        
+        // Play the sound with a small delay
+        PlayPopSoundAfterDelay(0.1);
+    }
+}
+
+// Intercept when the animation completes
+- (void)_updateContentInset:(id)arg1 animated:(_Bool)arg2 {
+    %orig;
+    
+    // Another place where we might catch completion
+    if (objc_getAssociatedObject(self, &kNeedsPopSoundKey)) {
+        // Get the timer if it exists
+        NSTimer *popTimer = objc_getAssociatedObject(self, &kPopSoundTimerKey);
+        if (popTimer) {
+            [popTimer invalidate]; // Cancel any pending timer
+        }
+        
+        // Reset state
+        objc_setAssociatedObject(self, &kNeedsPopSoundKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        objc_setAssociatedObject(self, &kPopSoundTimerKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        
+        // Play the pop sound with slight delay
+        PlayPopSoundAfterDelay(0.2);
+    }
+}
+
+// Directly hook the completion action that was mentioned by the user
+- (void)_tfn_dynamic_didPullToLoadTop {
+    %orig;
+    
+    // This is directly called when a refresh completes in manual mode
+    // No need to check state, this method is only called at completion
+    PlayPopSoundAfterDelay(0.3);
+}
+
+// Play sounds when loading state changes - this catches all refreshes
+- (void)setLoading:(_Bool)loading {
+    // Get previous state before changing
+    NSNumber *wasRefreshing = objc_getAssociatedObject(self, &kRefreshingKey);
+    BOOL wasRefreshingBool = wasRefreshing ? [wasRefreshing boolValue] : NO;
+    
+    // Set new state
+    objc_setAssociatedObject(self, &kRefreshingKey, @(loading), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    
+    %orig;
+    
+    // Going from not loading to loading (start of refresh)
+    if (!wasRefreshingBool && loading) {
+        NSNumber *didPlayPull = objc_getAssociatedObject(self, &kPlayedPullSoundKey);
+        if (!didPlayPull || ![didPlayPull boolValue]) {
+            // This is for auto-refresh cases where _setStatus isn't called
+            PlayRefreshSound(0);
+        }
+        
+        // Reset status for next refresh
+        objc_setAssociatedObject(self, &kPlayedPullSoundKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    // Going from loading to not loading (end of refresh)
+    else if (wasRefreshingBool && !loading) {
+        // Mark that we need to play pop sound after animation completes
+        objc_setAssociatedObject(self, &kNeedsPopSoundKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        
+        // Set a fallback timer in case none of our hooks catch the completion
+        NSTimer *popTimer = [NSTimer scheduledTimerWithTimeInterval:0.75
+                                                          repeats:NO 
+                                                            block:^(NSTimer *timer) {
+            // Only play if not already played
+            if (objc_getAssociatedObject(self, &kNeedsPopSoundKey)) {
+                objc_setAssociatedObject(self, &kNeedsPopSoundKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                objc_setAssociatedObject(self, &kPopSoundTimerKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                PlayRefreshSound(1);
+            }
+        }];
+        
+        objc_setAssociatedObject(self, &kPopSoundTimerKey, popTimer, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+}
+
+// Detect manual pull-to-refresh and play pull sound
+- (void)_setStatus:(unsigned long long)status fromScrolling:(_Bool)fromScrolling {
+    %orig;
+    
+    if (status == 1 && fromScrolling) {
+        // Status changed to "triggered" via pull - play the pull sound
+        PlayRefreshSound(0);
+        objc_setAssociatedObject(self, &kPlayedPullSoundKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+}
+
+// Handle initial load refresh when app launches
+- (void)startPullToRefreshAnimationInScrollView:(id)scrollView {
+    %orig;
+    
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        // For the initial app launch refresh, use slightly different timing
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            PlayRefreshSound(0); // Pull sound
+            
+            // Play pop with longer delay for initial refresh
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+                PlayRefreshSound(1); // Pop sound
+            });
         });
     });
 }
 
 %end
 
-// Primary hook for actual pull to refresh
-%hook UIScrollView
+// Hook UIControl's action handling to ensure we catch the refresh completion
+%hook UIControl
 
-// This is the universal method that gets called when any scroll view bounces
-- (void)_scrollViewWillBeginDragging {
-    %orig;
-    
-    // First, find out if this is a TFNPullToRefreshControl's scroll view
-    BOOL isPullToRefreshScrollView = NO;
-    
-    for (UIView *subview in self.subviews) {
-        NSString *className = NSStringFromClass([subview class]);
-        if ([className isEqualToString:@"TFNPullToRefreshControl"]) {
-            isPullToRefreshScrollView = YES;
-            break;
-        }
-    }
-    
-    if (isPullToRefreshScrollView) {
-        // We know we're in a pull-to-refresh scroll view
-        // Set up observation for content offset changes
+- (void)sendAction:(SEL)action to:(id)target forEvent:(UIEvent *)event {
+    // Check if this is the refresh completion action
+    if (action == NSSelectorFromString(@"_tfn_dynamic_didPullToLoadTop")) {
+        // This log would help verify if this method is being hit when refresh completes
+        // NSLog(@"[BHTwitter] Caught refresh completion action: %@ -> %@", NSStringFromSelector(action), target);
         
-        // Using KVO would be ideal but could cause compilation issues
-        // So instead we'll use a simple observation mechanism
-        
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1), dispatch_get_main_queue(), ^{
-            // Check if we got pulled down significantly
-            if (self.contentOffset.y < -60) {  // Typical threshold for pull to refresh
-                playPullSound();
-            }
-        });
+        // Play the sound with a slight delay so it lines up correctly
+        PlayPopSoundAfterDelay(0.3);
     }
-}
-
-// When scrolling ends completely - potential point for pop sound
-- (void)_scrollViewDidEndDraggingWithDeceleration:(BOOL)willDecelerate {
-    %orig;
     
-    // Is this a pull to refresh scroll view that just triggered?
-    if (firstPullDone && self.contentOffset.y < -60) {
-        // Play pop sound after a delay when refresh would complete
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            playPopSound();
-        });
-    }
-}
-
-%end
-
-// Direct hook for the pull-to-refresh control
-%hook TFNPullToRefreshControl
-
-// Backup method directly on the refresh control
-- (void)endRefreshing {
     %orig;
-    
-    // Play pop sound when refresh completes
-    if (firstPullDone) {
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1), dispatch_get_main_queue(), ^{
-            playPopSound();
-        });
-    }
-}
-
-// Another potential hook point - for older Twitter versions
-- (void)_didEndRefreshAnimation {
-    %orig;
-    
-    if (firstPullDone) {
-        playPopSound();
-    }
 }
 
 %end
