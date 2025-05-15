@@ -816,6 +816,83 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %end
 
 // Improved BHT_ensureTheming to be more targeted and efficient
+static void BHT_ensureTheming(void) {
+    if (![[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) return;
+    
+    // Get the selected color option
+    NSInteger selectedOption = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
+    
+    // Update our internal color state
+    BH_changeTwitterColor(selectedOption);
+    
+    // Apply to Twitter's theme system
+    id taeSettings = [objc_getClass("TAEColorSettings") sharedSettings];
+    if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
+        [taeSettings setPrimaryColorOption:selectedOption];
+    }
+    
+    // Notify Twitter's color system
+    if ([objc_getClass("T1ColorSettings") respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
+        [objc_getClass("T1ColorSettings") _t1_applyPrimaryColorOption];
+    }
+    
+    // Update UI elements that need specific handling
+    dispatch_async(dispatch_get_main_queue(), ^{
+        // Update all windows - tab bar icons need special handling
+        BHT_UpdateAllTabBarIcons();
+        
+        // Refresh navigation bar icons
+        for (UIWindow *window in [UIApplication sharedApplication].windows) {
+            if (!window.isHidden && window.rootViewController) {
+                BH_EnumerateSubviewsRecursively(window, ^(UIView *view) {
+                    if ([view isKindOfClass:[objc_getClass("TFNNavigationBar") class]]) {
+                        [(TFNNavigationBar *)view updateLogoTheme];
+                    }
+                });
+            }
+        }
+    });
+}
+
+// Simplified window appearance refresh - focus on what matters
+static void BHT_forceRefreshAllWindowAppearances(void) {
+    // Update tab bar icons first - this is key for visual consistency
+    BHT_UpdateAllTabBarIcons();
+    
+    for (UIWindow *window in [UIApplication sharedApplication].windows) {
+        if (!window.isOpaque || window.isHidden) continue;
+        
+        // Focus on just the key elements that need updating
+        if (window.rootViewController && window.rootViewController.isViewLoaded) {
+            // Find and update navigation bars
+            BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *view) {
+                if ([view isKindOfClass:[objc_getClass("TFNNavigationBar") class]]) {
+                    [(TFNNavigationBar *)view updateLogoTheme];
+                }
+            });
+            
+            // Force window layout refresh 
+            [window.rootViewController.view setNeedsLayout];
+            [window.rootViewController.view layoutIfNeeded];
+        }
+    }
+}
+
+// MARK: - Timestamp Label Styling via UILabel -setText:
+
+// Global reference to the timestamp label for the active immersive player
+static UILabel *gVideoTimestampLabel = nil;
+
+// Helper method to determine if a text is likely a timestamp
+static BOOL isTimestampText(NSString *text) {
+    if (!text || text.length == 0) {
+        return NO;
+    }
+    
+    // Check for common timestamp patterns like "0:01/0:05" or "00:20/01:30"
+    NSRange colonRange = [text rangeOfString:@":"];
+    NSRange slashRange = [text rangeOfString:@"/"];
+    
     // Must have both colon and slash
     if (colonRange.location == NSNotFound || slashRange.location == NSNotFound) {
         return NO;
@@ -1441,6 +1518,160 @@ static void BHT_applyThemeToWindow(UIWindow *window) {
     }
 }
 
+static void BHT_ensureTheming(void) {
+    if (![[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) return;
+    
+    // Get the selected color option
+    NSInteger selectedOption = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
+    
+    // Update our internal color state
+    BH_changeTwitterColor(selectedOption);
+    
+    // Apply to Twitter's theme system
+    id taeSettings = [objc_getClass("TAEColorSettings") sharedSettings];
+    if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
+        [taeSettings setPrimaryColorOption:selectedOption];
+    }
+    
+    // Notify Twitter's color system
+    if ([objc_getClass("T1ColorSettings") respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
+        [objc_getClass("T1ColorSettings") _t1_applyPrimaryColorOption];
+    }
+    
+    // Update UI elements that need specific handling
+    dispatch_async(dispatch_get_main_queue(), ^{
+        // Update all windows - tab bar icons need special handling
+        BHT_UpdateAllTabBarIcons();
+        
+        // Refresh navigation bar icons
+        for (UIWindow *window in [UIApplication sharedApplication].windows) {
+            if (!window.isHidden && window.rootViewController) {
+                BH_EnumerateSubviewsRecursively(window, ^(UIView *view) {
+                    if ([view isKindOfClass:[objc_getClass("TFNNavigationBar") class]]) {
+                        [(TFNNavigationBar *)view updateLogoTheme];
+                    }
+                });
+            }
+        }
+    });
+}
+
+static void BHT_forceRefreshAllWindowAppearances(void) { // Renamed and logic adjusted
+    // 1. Update our custom elements (these seem to work reliably)
+    BHT_UpdateAllTabBarIcons(); 
+    
+    for (UIWindow *window in [UIApplication sharedApplication].windows) {
+        if (!window.isOpaque || window.isHidden) continue; // Skip non-visible or transparent windows
+
+        // Update our custom nav bar bird icon for this window
+        if (window.rootViewController && window.rootViewController.isViewLoaded) {
+            BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
+                if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
+                    if ([BHTManager classicTabBarEnabled]) { // MODIFIED: Used classicTabBarEnabled
+                        [(TFNNavigationBar *)currentView updateLogoTheme];
+                    }
+                }
+            });
+        }
+
+        // Attempt to "jolt" this window's hierarchy
+        UIViewController *rootVC = window.rootViewController;
+        if (rootVC && rootVC.isViewLoaded) {
+            BH_EnumerateSubviewsRecursively(rootVC.view, ^(UIView *subview) {
+                if ([subview respondsToSelector:@selector(tintColorDidChange)]) {
+                    [subview tintColorDidChange];
+                }
+                if ([subview respondsToSelector:@selector(setNeedsDisplay)]) {
+                    [subview setNeedsDisplay]; // Force redraw
+                }
+            });
+            [rootVC.view setNeedsLayout];
+            [rootVC.view layoutIfNeeded];
+            [rootVC.view setNeedsDisplay]; // Redraw the whole root view of the window
+        }
+    }
+}
+
+// MARK: Theme TFNBarButtonItemButtonV2
+%hook TFNBarButtonItemButtonV2
+- (void)didMoveToWindow {
+    %orig;
+    if (self.window) {
+        self.tintColor = BHTCurrentAccentColor();
+    }
+}
+
+- (void)setTintColor:(UIColor *)tintColor {
+    %orig(BHTCurrentAccentColor());
+}
+%end
+
+// MARK: - Timestamp Label Styling via UILabel -setText:
+
+// MARK: - Immersive Player Timestamp Visibility Control
+
+%hook T1ImmersiveFullScreenViewController
+
+// Forward declare the new helper method for visibility within this hook block
+- (BOOL)BHT_findAndPrepareTimestampLabelForVC:(T1ImmersiveFullScreenViewController *)activePlayerVC;
+
+// Helper method to find, style, and map the timestamp label for a given VC instance
+%new - (BOOL)BHT_findAndPrepareTimestampLabelForVC:(T1ImmersiveFullScreenViewController *)activePlayerVC {
+    // ... (implementation as before)
+    if (!playerToTimestampMap || !activePlayerVC || !activePlayerVC.isViewLoaded) {
+        NSLog(@"[BHTwitter Timestamp] BHT_findAndPrepareTimestampLabelForVC: Pre-condition failed (map: %@, vc: %@, viewLoaded: %d)", playerToTimestampMap, activePlayerVC, activePlayerVC.isViewLoaded);
+        return NO;
+    }
+
+    UILabel *timestampLabel = [playerToTimestampMap objectForKey:activePlayerVC];
+
+    BOOL needsFreshFind = (!timestampLabel || !timestampLabel.superview || ![timestampLabel.superview isDescendantOfView:activePlayerVC.view]);
+    if (timestampLabel && timestampLabel.superview && 
+        (![timestampLabel.text containsString:@":"] || ![timestampLabel.text containsString:@"/"])) {
+        needsFreshFind = YES;
+        NSLog(@"[BHTwitter Timestamp] VC %@: Label %@ found with non-timestamp text: \"%@\". Forcing re-find.", activePlayerVC, timestampLabel, timestampLabel.text);
+        [playerToTimestampMap removeObjectForKey:activePlayerVC];
+        timestampLabel = nil;
+    }
+    
+    if (needsFreshFind) {
+        NSLog(@"[BHTwitter Timestamp] VC %@: Needs fresh find for label.", activePlayerVC);
+        __block UILabel *foundCandidate = nil;
+        UIView *searchView = activePlayerVC.view;
+
+        BH_EnumerateSubviewsRecursively(searchView, ^(UIView *currentView) {
+            if (foundCandidate) return;
+            if ([currentView isKindOfClass:[UILabel class]]) {
+                UILabel *label = (UILabel *)currentView;
+                UIView *v = label.superview;
+                BOOL inImmersiveCardViewContext = NO;
+                while(v && v != searchView.window && v != searchView) {
+                    NSString *className = NSStringFromClass([v class]);
+                    if ([className isEqualToString:@"T1TwitterSwift.ImmersiveCardView"] || [className hasSuffix:@".ImmersiveCardView"]) {
+                        inImmersiveCardViewContext = YES;
+                break;
+            }
+                    v = v.superview;
+                }
+
+                if (inImmersiveCardViewContext && label.text && [label.text containsString:@":"] && [label.text containsString:@"/"]) {
+                    NSLog(@"[BHTwitter Timestamp] VC %@: Candidate label found: Text='%@', Superview=%@", activePlayerVC, label.text, NSStringFromClass(label.superview.class));
+                    foundCandidate = label;
+                }
+            }
+        });
+
+        if (foundCandidate) {
+            timestampLabel = foundCandidate;
+            [playerToTimestampMap setObject:timestampLabel forKey:activePlayerVC];
+            NSLog(@"[BHTwitter Timestamp] VC %@: Associated label %@ in map.", activePlayerVC, timestampLabel);
+        } else {
+            if ([playerToTimestampMap objectForKey:activePlayerVC]) {
+                 NSLog(@"[BHTwitter Timestamp] VC %@: No label found, removing existing map entry.", activePlayerVC);
+                [playerToTimestampMap removeObjectForKey:activePlayerVC];
+            }
+            return NO;
+        }
     }
 
     if (timestampLabel && ![objc_getAssociatedObject(timestampLabel, "BHT_StyledTimestamp") boolValue]) {
@@ -2462,6 +2693,160 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 %end
 
 // Simplified App Delegate hook - less redundant code, more focused
+%hook T1AppDelegate
+- (_Bool)application:(UIApplication *)application didFinishLaunchingWithOptions:(id)arg2 {
+    %orig;
+    if (![[NSUserDefaults standardUserDefaults] objectForKey:@"FirstRun_4.3"]) {
+        [[NSUserDefaults standardUserDefaults] setValue:@"1strun" forKey:@"FirstRun_4.3"];
+        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"dw_v"];
+        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"hide_promoted"];
+        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"voice"];
+        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"undo_tweet"];
+        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"TrustedFriends"];
+        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"disableSensitiveTweetWarnings"];
+        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"disable_immersive_player"];
+        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"custom_voice_upload"];
+        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"dm_avatars"];
+        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"tab_bar_theming"];
+    }
+    [BHTManager cleanCache];
+    if ([BHTManager FLEX]) {
+        [[%c(FLEXManager) sharedManager] showExplorer];
+    }
+    
+    // Apply theme on launch in a cleaner, more focused way
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger selectedOption = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
+        
+        // Directly set the theme in TAEColorSettings
+        id taeSettings = [%c(TAEColorSettings) sharedSettings];
+        if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
+            [taeSettings setPrimaryColorOption:selectedOption];
+        }
+        
+        // Also update our internal color state
+        BH_changeTwitterColor(selectedOption);
+        
+        // Schedule a delayed refresh to ensure UI elements catch up
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            // Force T1ColorSettings to refresh
+            if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
+                [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
+            }
+            
+            // Update UI elements that need specific handling
+            BHT_forceRefreshAllWindowAppearances();
+        });
+    }
+    
+    return true;
+}
+
+- (void)applicationDidBecomeActive:(id)arg1 {
+    %orig;
+    
+    // Only focus on theme refresh, not additional checks
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            // Just refresh what's needed - avoid redundant checks
+            BHT_ensureTheming();
+        });
+    }
+
+    if ([BHTManager Padlock]) {
+        NSDictionary *keychainData = [[keychain shared] getData];
+        if (keychainData != nil) {
+            id isAuthenticated = [keychainData valueForKey:@"isAuthenticated"];
+            if (isAuthenticated == nil || [isAuthenticated isEqual:@NO]) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    AuthViewController *auth = [[AuthViewController alloc] init];
+                    [auth setModalPresentationStyle:UIModalPresentationFullScreen];
+                    [self.window.rootViewController presentViewController:auth animated:true completion:nil];
+                });
+            }
+        }
+    }
+}
+
+%end
+
+// MARK: NSUserDefaults hook to protect our theme settings
+%hook NSUserDefaults
+- (void)setObject:(id)value forKey:(NSString *)defaultName {
+    // Protect our theme color key from external changes
+    if ([defaultName isEqualToString:@"T1ColorSettingsPrimaryColorOptionKey"]) {
+        id selectedColor = [[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"];
+        if (selectedColor != nil) {
+            // Only allow setting to our chosen value
+            if ([value isEqual:selectedColor]) {
+                return %orig;
+            } else {
+                // Silently prevent changes to this key from outside
+                return;
+            }
+        }
+    }
+    return %orig;
+}
+%end
+
+// Improved BHT_ensureTheming to be more targeted and efficient
+static void BHT_ensureTheming(void) {
+    if (![[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) return;
+    
+    // Get the selected color option
+    NSInteger selectedOption = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
+    
+    // Update our internal color state
+    BH_changeTwitterColor(selectedOption);
+    
+    // Apply to Twitter's theme system
+    id taeSettings = [objc_getClass("TAEColorSettings") sharedSettings];
+    if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
+        [taeSettings setPrimaryColorOption:selectedOption];
+    }
+    
+    // Notify Twitter's color system
+    if ([objc_getClass("T1ColorSettings") respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
+        [objc_getClass("T1ColorSettings") _t1_applyPrimaryColorOption];
+    }
+    
+    // Update UI elements that need specific handling
+    dispatch_async(dispatch_get_main_queue(), ^{
+        // Update all windows - tab bar icons need special handling
+        BHT_UpdateAllTabBarIcons();
+        
+        // Refresh navigation bar icons
+        for (UIWindow *window in [UIApplication sharedApplication].windows) {
+            if (!window.isHidden && window.rootViewController) {
+                BH_EnumerateSubviewsRecursively(window, ^(UIView *view) {
+                    if ([view isKindOfClass:[objc_getClass("TFNNavigationBar") class]]) {
+                        [(TFNNavigationBar *)view updateLogoTheme];
+                    }
+                });
+            }
+        }
+    });
+}
+
+// Simplified window appearance refresh - focus on what matters
+static void BHT_forceRefreshAllWindowAppearances(void) {
+    // Update tab bar icons first - this is key for visual consistency
+    BHT_UpdateAllTabBarIcons();
+    
+    for (UIWindow *window in [UIApplication sharedApplication].windows) {
+        if (!window.isOpaque || window.isHidden) continue;
+        
+        // Focus on just the key elements that need updating
+        if (window.rootViewController && window.rootViewController.isViewLoaded) {
+            // Find and update navigation bars
+            BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *view) {
+                if ([view isKindOfClass:[objc_getClass("TFNNavigationBar") class]]) {
+                    [(TFNNavigationBar *)view updateLogoTheme];
+                }
+            });
+            
+            // Force window layout refresh 
             [window.rootViewController.view setNeedsLayout];
             [window.rootViewController.view layoutIfNeeded];
         }
