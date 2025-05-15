@@ -1,7 +1,7 @@
 #import <UIKit/UIKit.h>
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
-#import <objc/message.h> // For objc_msgSend
+#import <objc/message.h> // For objc_msgSend and objc_msgSend_stret
 #import <AudioToolbox/AudioToolbox.h>
 #import <AVFoundation/AVFoundation.h>
 #import <dlfcn.h>
@@ -4663,9 +4663,23 @@ static GeminiTranslator *_sharedInstance;
         NSString *apiKey = @"AIzaSyB-bQ6f2dEzlN_mMOljHazxbJEH1BsS6cQ";
         NSString *apiUrl = @"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
         
+        // Check if we have a valid API key
+        if (!apiKey || apiKey.length == 0 || [apiKey isEqualToString:@"YOUR_API_KEY_HERE"]) {
+            NSLog(@"[GeminiTranslator] Missing or invalid API key, falling back to Twitter translation");
+            if (completion) {
+                NSError *error = [NSError errorWithDomain:@"GeminiTranslator" code:401 userInfo:@{NSLocalizedDescriptionKey: @"Invalid API key"}];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    completion(nil, error);
+                });
+            }
+            return;
+        }
+        
         // Simpler prompt to avoid confusion
         NSString *prompt = [NSString stringWithFormat:@"Translate this from %@ to %@: %@", 
                             sourceLanguage, targetLanguage, text];
+        
+        NSLog(@"[GeminiTranslator] Using prompt: %@", prompt);
         
         // Create simplified request JSON
         NSDictionary *requestBody = @{
@@ -4843,6 +4857,13 @@ static GeminiTranslator *_sharedInstance;
 
 @end
 
+// Forward declarations for Twitter's classes
+// TFNTwitterStatus already declared in TWHeaders.h
+
+@interface TFSTwitterAPITranslationDetails : NSObject
+- (id)initWithStatus:(TFNTwitterStatus *)status fromLanguage:(NSString *)fromLanguage toLanguage:(NSString *)toLanguage;
+@end
+
 // Simple object to keep references alive during async operations
 @interface TranslationContext : NSObject
 @property (nonatomic, strong) id handler;
@@ -4852,9 +4873,32 @@ static GeminiTranslator *_sharedInstance;
 @property (nonatomic, strong) NSString *tweetText;
 @property (nonatomic, strong) NSString *sourceLanguage;
 @property (nonatomic, strong) NSString *targetLanguage;
+// Add a helper method for using Twitter's built-in translation
+- (void)useTwitterTranslationWithHandler:(id)handler;
 @end
 
 @implementation TranslationContext
+
+// Twitter's built-in translation approach
+- (void)useTwitterTranslationWithHandler:(id)handler {
+    if (!self.statusViewModel || !handler) {
+        return;
+    }
+    
+    NSLog(@"[GeminiTranslator] Using Twitter's native translation");
+    
+    // Cast to the right type for Objective-C
+    SEL fetchSelector = NSSelectorFromString(@"_t1_fetchTranslatedStatusFromGraphQL:account:controller:");
+    if ([handler respondsToSelector:fetchSelector]) {
+        NSLog(@"[GeminiTranslator] Calling Twitter's translation method");
+        
+        // Use direct method call
+        IMP imp = [handler methodForSelector:fetchSelector];
+        void (*func)(id, SEL, id, id, id) = (void *)imp;
+        func(handler, fetchSelector, self.statusViewModel, self.account, self.controller);
+    }
+}
+
 @end
 
 // Static reference to prevent deallocation during async operations
@@ -4968,14 +5012,16 @@ static NSMutableArray *activeTranslationContexts;
             }
             
                         @try {
-                // Always clean up context before returning
-                void (^cleanupContext)(void) = ^{
-                    @synchronized(activeTranslationContexts) {
-                        [activeTranslationContexts removeObject:context];
-                    }
-                    // Break potential retain cycles
-                    strongSelf = nil;
-                };
+                                        // Always clean up context before returning
+                    void (^cleanupContext)(void) = ^{
+                        if (context) {
+                            @synchronized(activeTranslationContexts) {
+                                [activeTranslationContexts removeObject:context];
+                            }
+                        }
+                        // Break potential retain cycles
+                        strongSelf = nil;
+                    };
                 
                 if (error || !translatedText) {
                     NSLog(@"[GeminiTranslator] Translation failed: %@", error);
@@ -5011,43 +5057,312 @@ static NSMutableArray *activeTranslationContexts;
                     return;
                 }
                 
-                // Create the translation object using NSInvocation since we have multiple arguments
+                // Create the translation object directly with correct parameters
                 id translationObj = nil;
-                NSMethodSignature *signature = [translationClass instanceMethodSignatureForSelector:initSelector];
-                if (signature) {
-                    NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
-                    [invocation setSelector:initSelector];
+                
+                // Try a different direct approach - don't use init() which doesn't exist
+                SEL allocSelector = @selector(alloc);
+                // Use a safer approach to avoid the -Warc-performSelector-leaks warning
+                id instance = ((id (*)(id, SEL))objc_msgSend)(translationClass, allocSelector);
+                
+                if (instance) {
+                    NSLog(@"[GeminiTranslator] Successfully allocated instance");
                     
-                    id instance = [[translationClass alloc] init]; // Temporary instance for the invocation
-                    [invocation setTarget:instance];
+                    // Create parameters dictionary for direct method call
+                    NSDictionary *params = @{
+                        @"translation": translatedText ?: @"",
+                        @"entities": [NSNull null],
+                        @"translationSource": @"Gemini",
+                        @"localizedSourceLanguage": context.sourceLanguage ?: @"en",
+                        @"sourceLanguage": context.sourceLanguage ?: @"en",
+                        @"destinationLanguage": context.targetLanguage ?: @"en",
+                        @"translationState": @"Success"
+                    };
                     
-                    // Set all the arguments
-                    NSString *tempText = translatedText;
-                    [invocation setArgument:&tempText atIndex:2]; // First arg is at index 2 (0=self, 1=_cmd)
-                    id nilObj = nil;
-                    [invocation setArgument:&nilObj atIndex:3];
-                    NSString *source = @"Gemini";
-                    [invocation setArgument:&source atIndex:4];
-                    NSString *tempSourceLang1 = context.sourceLanguage;
-                    [invocation setArgument:&tempSourceLang1 atIndex:5];
-                    NSString *tempSourceLang2 = context.sourceLanguage;
-                    [invocation setArgument:&tempSourceLang2 atIndex:6];
-                    NSString *tempTargetLang = context.targetLanguage;
-                    [invocation setArgument:&tempTargetLang atIndex:7];
-                    NSString *success = @"Success";
-                    [invocation setArgument:&success atIndex:8];
+                    NSLog(@"[GeminiTranslator] Trying to initialize with parameters: %@", params);
                     
-                    [invocation invoke];
-                    [invocation getReturnValue:&translationObj];
+                    // Try to use Objective-C runtime to create the object
+                    @try {
+                        // First try direct method call pattern for Swift bridged classes
+                        // Use NSInvocation for multiple arguments
+                        NSMethodSignature *methodSig = [instance methodSignatureForSelector:initSelector];
+                        if (methodSig) {
+                            NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:methodSig];
+                            [invocation setSelector:initSelector];
+                            [invocation setTarget:instance];
+                            
+                            // Arguments start at index 2 (self and _cmd are 0 and 1)
+                            id arg1 = translatedText;
+                            id arg2 = [NSNull null];
+                            id arg3 = @"Gemini";
+                            id arg4 = context.sourceLanguage;
+                            id arg5 = context.sourceLanguage;
+                            id arg6 = context.targetLanguage;
+                            id arg7 = @"Success";
+                            
+                            [invocation setArgument:&arg1 atIndex:2];
+                            [invocation setArgument:&arg2 atIndex:3];
+                            [invocation setArgument:&arg3 atIndex:4];
+                            [invocation setArgument:&arg4 atIndex:5];
+                            [invocation setArgument:&arg5 atIndex:6];
+                            [invocation setArgument:&arg6 atIndex:7];
+                            [invocation setArgument:&arg7 atIndex:8];
+                            
+                            [invocation invoke];
+                            
+                            // Get the return value
+                            __unsafe_unretained id result = nil;
+                            [invocation getReturnValue:&result];
+                            translationObj = result;
+                        }
+                    } @catch (NSException *e) {
+                        NSLog(@"[GeminiTranslator] First initialization attempt failed: %@", e);
+                        
+                        // Try a second initialization approach using NSClassFromString to get the Swift class directly
+                        NSLog(@"[GeminiTranslator] Trying alternative construction approach");
+                        
+                        // Look for the Swift class (TwitterTranslation vs TFSTwitterTranslation)
+                        Class swiftClass = NSClassFromString(@"TFSTwitterCore.TwitterTranslation");
+                        if (swiftClass) {
+                            NSLog(@"[GeminiTranslator] Found Swift class");
+                            
+                            // Try multiple ways to initialize Swift class
+                            
+                            // First attempt - look for a factory method
+                            SEL factorySelector = NSSelectorFromString(@"translationWithText:entities:source:localizedLanguage:sourceLanguage:targetLanguage:state:");
+                            if ([swiftClass respondsToSelector:factorySelector]) {
+                                NSLog(@"[GeminiTranslator] Found factory method");
+                                
+                                // Try to use factory method
+                                @try {
+                                    // Use NSInvocation for factory method with multiple arguments
+                                    NSMethodSignature *factorySig = [swiftClass methodSignatureForSelector:factorySelector];
+                                    if (factorySig) {
+                                        NSInvocation *factoryInvocation = [NSInvocation invocationWithMethodSignature:factorySig];
+                                        [factoryInvocation setSelector:factorySelector];
+                                        [factoryInvocation setTarget:swiftClass];
+                                        
+                                        // Arguments start at index 2
+                                        id arg1 = translatedText;
+                                        id arg2 = [NSNull null];
+                                        id arg3 = @"Gemini";
+                                        id arg4 = context.sourceLanguage;
+                                        id arg5 = context.sourceLanguage;
+                                        id arg6 = context.targetLanguage;
+                                        id arg7 = @"Success";
+                                        
+                                        [factoryInvocation setArgument:&arg1 atIndex:2];
+                                        [factoryInvocation setArgument:&arg2 atIndex:3];
+                                        [factoryInvocation setArgument:&arg3 atIndex:4];
+                                        [factoryInvocation setArgument:&arg4 atIndex:5];
+                                        [factoryInvocation setArgument:&arg5 atIndex:6];
+                                        [factoryInvocation setArgument:&arg6 atIndex:7];
+                                        [factoryInvocation setArgument:&arg7 atIndex:8];
+                                        
+                                        [factoryInvocation invoke];
+                                        
+                                        // Get the return value
+                                        __unsafe_unretained id result = nil;
+                                        [factoryInvocation getReturnValue:&result];
+                                        translationObj = result;
+                                    }
+                                    if (translationObj) {
+                                        NSLog(@"[GeminiTranslator] Successfully created translation using factory method");
+                                    }
+                                } @catch (NSException *e) {
+                                    NSLog(@"[GeminiTranslator] Exception in factory method: %@", e);
+                                }
+                            }
+                            
+                            // Second attempt - try alternate factory methods that might exist in Swift
+                            if (!translationObj) {
+                                SEL altFactorySelector = NSSelectorFromString(@"createWithText:source:sourceLanguage:targetLanguage:");
+                                if ([swiftClass respondsToSelector:altFactorySelector]) {
+                                    NSLog(@"[GeminiTranslator] Trying alternate factory method");
+                                    @try {
+                                        // Use NSInvocation for alternate factory method
+                                        NSMethodSignature *altSig = [swiftClass methodSignatureForSelector:altFactorySelector];
+                                        if (altSig) {
+                                            NSInvocation *altInvocation = [NSInvocation invocationWithMethodSignature:altSig];
+                                            [altInvocation setSelector:altFactorySelector];
+                                            [altInvocation setTarget:swiftClass];
+                                            
+                                            // Set arguments
+                                            id arg1 = translatedText;
+                                            id arg2 = @"Gemini";
+                                            id arg3 = context.sourceLanguage;
+                                            id arg4 = context.targetLanguage;
+                                            
+                                            [altInvocation setArgument:&arg1 atIndex:2];
+                                            [altInvocation setArgument:&arg2 atIndex:3];
+                                            [altInvocation setArgument:&arg3 atIndex:4];
+                                            [altInvocation setArgument:&arg4 atIndex:5];
+                                            
+                                            [altInvocation invoke];
+                                            
+                                            // Get the return value
+                                            __unsafe_unretained id result = nil;
+                                            [altInvocation getReturnValue:&result];
+                                            translationObj = result;
+                                        }
+                                        if (translationObj) {
+                                            NSLog(@"[GeminiTranslator] Successfully created object with alternate factory method");
+                                        }
+                                    } @catch (NSException *factoryException) {
+                                        NSLog(@"[GeminiTranslator] Exception in alternate factory: %@", factoryException);
+                                    }
+                                }
+                            }
+                            
+                            // Third attempt - try using the old-style alloc-init pattern with a bridged Swift class
+                            if (!translationObj) {
+                                // First try to find a valid initializer that won't crash
+                                NSArray *possibleInitSelectors = @[
+                                    @"initWithText:source:sourceLanguage:targetLanguage:",
+                                    @"initWithText:source:sourceLanguage:targetLanguage:state:",
+                                    @"initWithTranslation:source:sourceLanguage:targetLanguage:",
+                                    @"initWithTranslatedText:",
+                                    @"initWithDictionary:"
+                                ];
+                                
+                                id swiftInstance = [swiftClass alloc];
+                                if (swiftInstance) {
+                                    NSLog(@"[GeminiTranslator] Allocated Swift instance, trying initializers");
+                                    
+                                    // Try each initializer in sequence
+                                    for (NSString *initSelectorStr in possibleInitSelectors) {
+                                        SEL initSelector = NSSelectorFromString(initSelectorStr);
+                                        if ([swiftInstance respondsToSelector:initSelector]) {
+                                            NSLog(@"[GeminiTranslator] Found valid initializer: %@", initSelectorStr);
+                                            @try {
+                                                if ([initSelectorStr isEqualToString:@"initWithText:source:sourceLanguage:targetLanguage:"]) {
+                                                    // Use NSInvocation for 4-arg method
+                                                    NSMethodSignature *sig = [swiftInstance methodSignatureForSelector:initSelector];
+                                                    if (sig) {
+                                                        NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
+                                                        [inv setSelector:initSelector];
+                                                        [inv setTarget:swiftInstance];
+                                                        
+                                                        id arg1 = translatedText;
+                                                        id arg2 = @"Gemini";
+                                                        id arg3 = context.sourceLanguage;
+                                                        id arg4 = context.targetLanguage;
+                                                        
+                                                        [inv setArgument:&arg1 atIndex:2];
+                                                        [inv setArgument:&arg2 atIndex:3];
+                                                        [inv setArgument:&arg3 atIndex:4];
+                                                        [inv setArgument:&arg4 atIndex:5];
+                                                        
+                                                        [inv invoke];
+                                                        
+                                                        __unsafe_unretained id result = nil;
+                                                        [inv getReturnValue:&result];
+                                                        translationObj = result;
+                                                    }
+                                                } else if ([initSelectorStr isEqualToString:@"initWithText:source:sourceLanguage:targetLanguage:state:"]) {
+                                                    // Use NSInvocation for 5-arg method
+                                                    NSMethodSignature *sig = [swiftInstance methodSignatureForSelector:initSelector];
+                                                    if (sig) {
+                                                        NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
+                                                        [inv setSelector:initSelector];
+                                                        [inv setTarget:swiftInstance];
+                                                        
+                                                        id arg1 = translatedText;
+                                                        id arg2 = @"Gemini";
+                                                        id arg3 = context.sourceLanguage;
+                                                        id arg4 = context.targetLanguage;
+                                                        id arg5 = @"Success";
+                                                        
+                                                        [inv setArgument:&arg1 atIndex:2];
+                                                        [inv setArgument:&arg2 atIndex:3];
+                                                        [inv setArgument:&arg3 atIndex:4];
+                                                        [inv setArgument:&arg4 atIndex:5];
+                                                        [inv setArgument:&arg5 atIndex:6];
+                                                        
+                                                        [inv invoke];
+                                                        
+                                                        __unsafe_unretained id result = nil;
+                                                        [inv getReturnValue:&result];
+                                                        translationObj = result;
+                                                    }
+                                                } else if ([initSelectorStr isEqualToString:@"initWithTranslation:source:sourceLanguage:targetLanguage:"]) {
+                                                    // Use NSInvocation for 4-arg method
+                                                    NSMethodSignature *sig = [swiftInstance methodSignatureForSelector:initSelector];
+                                                    if (sig) {
+                                                        NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
+                                                        [inv setSelector:initSelector];
+                                                        [inv setTarget:swiftInstance];
+                                                        
+                                                        id arg1 = translatedText;
+                                                        id arg2 = @"Gemini";
+                                                        id arg3 = context.sourceLanguage;
+                                                        id arg4 = context.targetLanguage;
+                                                        
+                                                        [inv setArgument:&arg1 atIndex:2];
+                                                        [inv setArgument:&arg2 atIndex:3];
+                                                        [inv setArgument:&arg3 atIndex:4];
+                                                        [inv setArgument:&arg4 atIndex:5];
+                                                        
+                                                        [inv invoke];
+                                                        
+                                                        __unsafe_unretained id result = nil;
+                                                        [inv getReturnValue:&result];
+                                                        translationObj = result;
+                                                    }
+                                                } else if ([initSelectorStr isEqualToString:@"initWithTranslatedText:"]) {
+                                                    // Use a safer method to avoid the performSelector leak warning
+                                                    IMP imp = [swiftInstance methodForSelector:initSelector];
+                                                    id (*initFunc)(id, SEL, id) = (id (*)(id, SEL, id))imp;
+                                                    translationObj = initFunc(swiftInstance, initSelector, translatedText);
+                                                } else if ([initSelectorStr isEqualToString:@"initWithDictionary:"]) {
+                                                    NSDictionary *params = @{
+                                                        @"text": translatedText,
+                                                        @"source": @"Gemini",
+                                                        @"sourceLanguage": context.sourceLanguage ?: @"en",
+                                                        @"targetLanguage": context.targetLanguage ?: @"en",
+                                                        @"state": @"Success"
+                                                    };
+                                                    // Use a safer method to avoid the performSelector leak warning
+                                                    IMP imp = [swiftInstance methodForSelector:initSelector];
+                                                    id (*initFunc)(id, SEL, id) = (id (*)(id, SEL, id))imp;
+                                                    translationObj = initFunc(swiftInstance, initSelector, params);
+                                                }
+                                                
+                                                if (translationObj) {
+                                                    NSLog(@"[GeminiTranslator] Successfully initialized with %@", initSelectorStr);
+                                                    break;
+                                                }
+                                            } @catch (NSException *initException) {
+                                                NSLog(@"[GeminiTranslator] Exception initializing with %@: %@", 
+                                                      initSelectorStr, initException);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // If still no luck, fall back to Twitter's translation
+                        if (!translationObj) {
+                            NSLog(@"[GeminiTranslator] All creation attempts failed, marking for fallback");
+                            translationObj = @"USING_TWITTER_TRANSLATION";
+                        }
+                    }
                 } else {
-                    NSLog(@"[GeminiTranslator] Failed to get method signature for initWithTranslation:...");
+                    NSLog(@"[GeminiTranslator] Failed to allocate instance");
                 }
                 
-                if (!translationObj) {
-                    NSLog(@"[GeminiTranslator] Failed to create translation object");
-                    [strongSelf _t1_fetchTranslatedStatusFromGraphQL:context.statusViewModel 
-                                                             account:context.account 
-                                                          controller:context.controller];
+                // Check if translation object was created
+                if (!translationObj || 
+                    ([translationObj isKindOfClass:[NSString class]] && 
+                     [(NSString *)translationObj isEqualToString:@"USING_TWITTER_TRANSLATION"])) {
+                    
+                    NSLog(@"[GeminiTranslator] Cannot create our own translation object - using Twitter's native translation instead");
+                    
+                    // Use our helper method that ensures proper memory management
+                    [context useTwitterTranslationWithHandler:strongSelf];
+                    
+                    // Clean up our context
                     cleanupContext();
                     return;
                 }
@@ -5063,8 +5378,14 @@ static NSMutableArray *activeTranslationContexts;
                     return;
                 }
                 
-                // Create the view model instance
-                id translatedViewModel = [[viewModelClass alloc] init];
+                // Create the view model instance with more robust error handling
+                id translatedViewModel = nil;
+                @try {
+                    translatedViewModel = [[viewModelClass alloc] init];
+                } @catch (NSException *viewModelException) {
+                    NSLog(@"[GeminiTranslator] Exception creating view model: %@", viewModelException);
+                }
+                
                 if (!translatedViewModel) {
                     NSLog(@"[GeminiTranslator] Failed to create translated view model");
                     [strongSelf _t1_fetchTranslatedStatusFromGraphQL:context.statusViewModel 
@@ -5132,16 +5453,17 @@ static NSMutableArray *activeTranslationContexts;
                                                           controller:context.controller];
                     cleanupContext();
                 }
-            } @catch (NSException *exception) {
-                NSLog(@"[GeminiTranslator] Exception in completion handler: %@", exception);
-                [strongSelf _t1_fetchTranslatedStatusFromGraphQL:context.statusViewModel 
-                                                         account:context.account 
-                                                      controller:context.controller];
-                // Always clean up
-                @synchronized(activeTranslationContexts) {
-                    [activeTranslationContexts removeObject:context];
-                }
-                strongSelf = nil;
+                            } @catch (NSException *exception) {
+                    NSLog(@"[GeminiTranslator] Exception in completion handler: %@", exception);
+                    
+                    // Fall back to Twitter's native translation method using our helper
+                    [context useTwitterTranslationWithHandler:strongSelf];
+                    
+                    // Always clean up
+                    @synchronized(activeTranslationContexts) {
+                        [activeTranslationContexts removeObject:context];
+                    }
+                    strongSelf = nil;
             }
         }];
     } @catch (NSException *exception) {
