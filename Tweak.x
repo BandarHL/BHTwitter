@@ -52,7 +52,6 @@ static void BHT_ensureThemingEngineSynchronized(BOOL forceSynchronize);
 + (void)logDebugInfo:(NSString *)message;
 + (void)initializeCookiesWithRetry;
 + (void)retryFetchCookies;
-+ (void)handleCookiesReadyNotification:(NSNotification *)notification;
 @end
 
 // Theme state tracking
@@ -2459,6 +2458,11 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
 }
 
 %end
+
+// Declare the category interface first
+@interface TweetSourceHelper (Notifications)
++ (void)handleCookiesReadyNotification:(NSNotification *)notification;
+@end
 
 // Implementation for TweetSourceHelper's missing method
 @implementation TweetSourceHelper (Notifications)
