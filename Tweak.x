@@ -5005,8 +5005,8 @@ static NSMutableArray *activeTranslationContexts;
             // Try method 1: Class factory method
             @try {
                 NSArray *factorySelectors = @[
-                    @"translationWithText:entities:source:localizedLanguage:sourceLanguage:destinationLanguage:state:",
-                    @"translationWithTranslation:entities:source:localizedLanguage:sourceLanguage:destinationLanguage:state:"
+                    @"translationWithText:entities:source:localizedLanguage:sourceLanguage:targetLanguage:state:",
+                    @"translationWithTranslation:entities:source:localizedLanguage:sourceLanguage:targetLanguage:state:"
                 ];
                 
                 for (NSString *selectorStr in factorySelectors) {
@@ -5063,9 +5063,9 @@ static NSMutableArray *activeTranslationContexts;
                         NSLog(@"[GeminiTranslator] Successfully allocated instance: %@ for TFSTwitterTranslation", instance);
 
                         // Attempt 1: Specific multi-argument initializer
-                        SEL specificInitSelector = NSSelectorFromString(@"initWithTranslation:entities:source:localizedLanguage:sourceLanguage:destinationLanguage:translationState:");
+                        SEL specificInitSelector = NSSelectorFromString(@"initWithTranslation:entities:source:localizedLanguage:sourceLanguage:targetLanguage:translationState:");
                         if ([instance respondsToSelector:specificInitSelector]) {
-                            NSLog(@"[GeminiTranslator] Found specific initializer: initWithTranslation:entities:source:localizedLanguage:sourceLanguage:destinationLanguage:translationState:");
+                            NSLog(@"[GeminiTranslator] Found specific initializer: initWithTranslation:entities:source:localizedLanguage:sourceLanguage:targetLanguage:translationState:");
                             NSMethodSignature *methodSig = [instance methodSignatureForSelector:specificInitSelector];
                             if (methodSig) {
                                 NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:methodSig];
