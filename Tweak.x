@@ -2991,24 +2991,38 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         // Initial synchronous attempt
         BOOL labelFoundAndPrepared = [self BHT_findAndPrepareTimestampLabelForVC:activePlayerVC];
         NSLog(@"[BHTwitter Timestamp] VC %@: viewDidAppear (SYNC) - initial labelFoundAndPrepared: %d", activePlayerVC, labelFoundAndPrepared);
-        [self immersiveViewController:self showHideNavigationButtons:NO]; // Set initial state based on what was found
+        
+        // Check if this is the first load for this player instance
+        BOOL isFirstLoad = ![objc_getAssociatedObject(activePlayerVC, "BHT_FirstLoadDone") boolValue];
+        
+        // When we first load, we'll set visibility based on whether we want the label visible
+        // during first load (always true) or the normal visibility rules
+        [self immersiveViewController:self showHideNavigationButtons:NO]; 
 
         // Schedule a slightly delayed check to catch labels that might populate *just after* viewDidAppear completes.
-        // This is a targeted fix for potential initial delay.
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             if (activePlayerVC && activePlayerVC.view.window) { // Ensure VC is still valid and on screen
-                 NSLog(@"[BHTwitter Timestamp] VC %@: viewDidAppear (DELAYED CHECK 0.1s) - calling showHideNavigationButtons:NO again.", activePlayerVC);
+                NSLog(@"[BHTwitter Timestamp] VC %@: viewDidAppear (DELAYED CHECK 0.1s) - calling showHideNavigationButtons:NO again.", activePlayerVC);
                 BOOL delayedLabelFound = [activePlayerVC BHT_findAndPrepareTimestampLabelForVC:activePlayerVC];
-                 NSLog(@"[BHTwitter Timestamp] VC %@: viewDidAppear (DELAYED CHECK 0.1s) - delayedLabelFound: %d", activePlayerVC, delayedLabelFound);
-                // Determine current controls visibility for the delayed call
-                BOOL controlsCurrentlyVisible = NO;
-                if ([activePlayerVC respondsToSelector:@selector(playerControlsView)]) { 
-                    UIView *playerControls = [activePlayerVC valueForKey:@"playerControlsView"];
-                    if (playerControls && [playerControls respondsToSelector:@selector(alpha)]) {
-                        controlsCurrentlyVisible = playerControls.alpha > 0.0f;
+                NSLog(@"[BHTwitter Timestamp] VC %@: viewDidAppear (DELAYED CHECK 0.1s) - delayedLabelFound: %d", activePlayerVC, delayedLabelFound);
+                
+                // Check if this is still the first load for this player instance - if we're in first load mode,
+                // we DON'T want to hide controls/timestamp here through the delayed check
+                BOOL isStillFirstLoad = ![objc_getAssociatedObject(activePlayerVC, "BHT_FirstLoadDone") boolValue];
+                if (isStillFirstLoad) {
+                    NSLog(@"[BHTwitter Timestamp] VC %@: Skipping delayed showHideNavigationButtons call during first load", activePlayerVC);
+                    // Don't call showHideNavigationButtons as it would override our visibility
+                } else {
+                    // Determine current controls visibility for the delayed call
+                    BOOL controlsCurrentlyVisible = NO;
+                    if ([activePlayerVC respondsToSelector:@selector(playerControlsView)]) { 
+                        UIView *playerControls = [activePlayerVC valueForKey:@"playerControlsView"];
+                        if (playerControls && [playerControls respondsToSelector:@selector(alpha)]) {
+                            controlsCurrentlyVisible = playerControls.alpha > 0.0f;
+                        }
                     }
+                    [activePlayerVC immersiveViewController:activePlayerVC showHideNavigationButtons:controlsCurrentlyVisible];
                 }
-                [activePlayerVC immersiveViewController:activePlayerVC showHideNavigationButtons:controlsCurrentlyVisible];
             }
         });
     }
