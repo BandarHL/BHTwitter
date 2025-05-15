@@ -5279,6 +5279,50 @@ static NSMutableArray *activeTranslationContexts;
             
             NSLog(@"[GeminiTranslator] Successfully created translation object: %@", translationObject);
             
+            // Inspect the original statusViewModel to see what properties/methods it has
+            @try {
+                NSLog(@"[GeminiTranslator] Inspecting original statusViewModel properties:");
+                id viewModel = context.statusViewModel;
+                unsigned int propCount = 0;
+                objc_property_t *properties = class_copyPropertyList([viewModel class], &propCount);
+                
+                if (properties) {
+                    for (unsigned int i = 0; i < propCount; i++) {
+                        objc_property_t property = properties[i];
+                        const char *name = property_getName(property);
+                        NSString *propName = @(name);
+                        
+                        // Look for translation-related properties
+                        if ([propName containsString:@"translation"] || 
+                            [propName containsString:@"translat"] ||
+                            [propName containsString:@"status"] ||
+                            [propName isEqualToString:@"tweet"]) {
+                            NSLog(@"[GeminiTranslator] Found property: %@", propName);
+                        }
+                    }
+                    free(properties);
+                }
+                
+                // Also check for response to key methods
+                NSArray *keySelectors = @[
+                    @"setTranslation:",
+                    @"setTranslatedText:",
+                    @"setIsTranslated:",
+                    @"showTranslation",
+                    @"updateWithTranslation:",
+                    @"configureWithTranslation:"
+                ];
+                
+                for (NSString *selectorStr in keySelectors) {
+                    SEL selector = NSSelectorFromString(selectorStr);
+                    BOOL responds = [viewModel respondsToSelector:selector];
+                    NSLog(@"[GeminiTranslator] StatusViewModel responds to %@: %@", selectorStr, responds ? @"YES" : @"NO");
+                }
+                
+            } @catch (NSException *e) {
+                NSLog(@"[GeminiTranslator] Exception while inspecting statusViewModel: %@", e);
+            }
+            
             // Get the view model class
             Class viewModelClass = NSClassFromString(@"T1TranslatedStatusViewModel");
             if (!viewModelClass) {
@@ -5418,6 +5462,51 @@ static NSMutableArray *activeTranslationContexts;
             
             // Call the handler
             @try {
+                // BEFORE calling the handler, try direct property setting approach
+                BOOL directlySet = NO;
+                
+                @try {
+                    // Try to directly set the translation on the original viewModel
+                    if ([context.statusViewModel respondsToSelector:@selector(setTranslation:)]) {
+                        [context.statusViewModel performSelector:@selector(setTranslation:) withObject:translationObject];
+                        NSLog(@"[GeminiTranslator] Directly set translation on original viewModel");
+                        directlySet = YES;
+                    }
+                    
+                    // Try to mark the view as translated
+                    if ([context.statusViewModel respondsToSelector:@selector(setIsTranslated:)]) {
+                        NSNumber *yes = @YES;
+                        [context.statusViewModel performSelector:@selector(setIsTranslated:) withObject:yes];
+                        NSLog(@"[GeminiTranslator] Set isTranslated to YES");
+                        directlySet = YES;
+                    }
+                    
+                    // Try to refresh the view if possible
+                    if ([context.controller respondsToSelector:@selector(reloadData)]) {
+                        [context.controller performSelector:@selector(reloadData)];
+                        NSLog(@"[GeminiTranslator] Called reloadData on controller");
+                        directlySet = YES;
+                    }
+                    
+                    // Try to update UI elements if we can find them
+                    if ([context.controller respondsToSelector:@selector(view)]) {
+                        UIView *controllerView = [context.controller performSelector:@selector(view)];
+                        if ([controllerView isKindOfClass:[UIView class]]) {
+                            [controllerView setNeedsLayout];
+                            [controllerView layoutIfNeeded];
+                            NSLog(@"[GeminiTranslator] Called setNeedsLayout on controller.view");
+                            directlySet = YES;
+                        }
+                    }
+                } @catch (NSException *e) {
+                    NSLog(@"[GeminiTranslator] Exception during direct property setting: %@", e);
+                }
+                
+                if (directlySet) {
+                    NSLog(@"[GeminiTranslator] Attempted direct property setting approach");
+                }
+                
+                // Continue with the handler call
                 NSMethodSignature *handlerSig = [strongSelf methodSignatureForSelector:handlerSelector];
                 if (handlerSig) {
                     NSInvocation *handlerInv = [NSInvocation invocationWithMethodSignature:handlerSig];
