@@ -4632,8 +4632,6 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 @interface GeminiTranslator : NSObject
 + (instancetype)sharedInstance;
 - (void)translateText:(NSString *)text fromLanguage:(NSString *)sourceLanguage toLanguage:(NSString *)targetLanguage completion:(void (^)(NSString *translatedText, NSError *error))completion;
-// Simplified approach that doesn't interact with Swift objects
-- (void)simplifiedTranslateAndDisplay:(NSString *)text sourceLanguage:(NSString *)sourceLanguage targetLanguage:(NSString *)targetLanguage inViewController:(UIViewController *)viewController;
 @end
 
 @implementation GeminiTranslator
@@ -4646,51 +4644,6 @@ static GeminiTranslator *_sharedInstance;
         _sharedInstance = [[GeminiTranslator alloc] init];
     });
     return _sharedInstance;
-}
-
-// Simple method to show a translation alert - doesn't interact with Twitter's internal structures
-- (void)simplifiedTranslateAndDisplay:(NSString *)text sourceLanguage:(NSString *)sourceLanguage targetLanguage:(NSString *)targetLanguage inViewController:(UIViewController *)viewController {
-    if (!text || text.length == 0 || !viewController) {
-        return;
-    }
-    
-    // Show a loading indicator
-    UIAlertController *loadingAlert = [UIAlertController alertControllerWithTitle:@"Translating with Gemini AI" 
-                                                                          message:@"Please wait..." 
-                                                                   preferredStyle:UIAlertControllerStyleAlert];
-    
-    [viewController presentViewController:loadingAlert animated:YES completion:^{
-        // Call Gemini API to translate text
-        [self translateText:text fromLanguage:sourceLanguage toLanguage:targetLanguage completion:^(NSString *translatedText, NSError *error) {
-            // Dismiss loading indicator
-            [loadingAlert dismissViewControllerAnimated:YES completion:^{
-                if (error || !translatedText) {
-                    // Show error alert
-                    UIAlertController *errorAlert = [UIAlertController alertControllerWithTitle:@"Translation Failed" 
-                                                                                        message:[NSString stringWithFormat:@"Error: %@", error.localizedDescription ?: @"Unknown error"] 
-                                                                                 preferredStyle:UIAlertControllerStyleAlert];
-                    
-                    [errorAlert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-                    [viewController presentViewController:errorAlert animated:YES completion:nil];
-                } else {
-                    // Show translation result
-                    UIAlertController *resultAlert = [UIAlertController alertControllerWithTitle:@"Translated by Gemini AI" 
-                                                                                         message:translatedText 
-                                                                                  preferredStyle:UIAlertControllerStyleAlert];
-                    
-                    [resultAlert addAction:[UIAlertAction actionWithTitle:@"Copy" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-                        // Copy to clipboard
-                        UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
-                        pasteboard.string = translatedText;
-                    }]];
-                    
-                    [resultAlert addAction:[UIAlertAction actionWithTitle:@"Done" style:UIAlertActionStyleCancel handler:nil]];
-                    
-                    [viewController presentViewController:resultAlert animated:YES completion:nil];
-                }
-            }];
-        }];
-    }];
 }
 
 - (void)translateText:(NSString *)text fromLanguage:(NSString *)sourceLanguage toLanguage:(NSString *)targetLanguage completion:(void (^)(NSString *translatedText, NSError *error))completion {
@@ -4885,10 +4838,29 @@ static GeminiTranslator *_sharedInstance;
 - (id)initWithStatus:(TFNTwitterStatus *)status fromLanguage:(NSString *)fromLanguage toLanguage:(NSString *)toLanguage;
 @end
 
-// No longer need complex context management or tracking since we're using a simpler approach
+// Context object to keep references alive during async operations
+@interface TranslationContext : NSObject
+@property (nonatomic, strong) id handler;
+@property (nonatomic, strong) id statusViewModel;
+@property (nonatomic, strong) id controller;
+@property (nonatomic, strong) id account;
+@property (nonatomic, strong) NSString *tweetText;
+@property (nonatomic, strong) NSString *sourceLanguage;
+@property (nonatomic, strong) NSString *targetLanguage;
+@end
+
+@implementation TranslationContext
+@end
+
+// Static reference to prevent deallocation during async operations
+static NSMutableArray *activeTranslationContexts;
 
 // Replace Google translation with Gemini
 %hook T1TranslationToggleEventHandler
+
++ (void)load {
+    activeTranslationContexts = [NSMutableArray new];
+}
 
 // Override the method that fetches translations
 - (void)_t1_fetchTranslatedStatusFromGraphQL:(id)statusViewModel account:(id)account controller:(id)controller {
@@ -4903,7 +4875,7 @@ static GeminiTranslator *_sharedInstance;
     }
     
     @try {
-        NSLog(@"[GeminiTranslator] Starting translation process with simplified approach");
+        NSLog(@"[GeminiTranslator] Starting translation process");
         
         // Safety checks for required objects
         if (!statusViewModel || !controller) {
@@ -4912,14 +4884,7 @@ static GeminiTranslator *_sharedInstance;
             return;
         }
         
-        // Check if controller is a UIViewController
-        if (![controller isKindOfClass:[UIViewController class]]) {
-            NSLog(@"[GeminiTranslator] Controller is not a view controller, falling back to Twitter translation");
-            %orig;
-            return;
-        }
-        
-        // Extract the tweet text simply and safely
+        // Extract the tweet text safely
         NSString *tweetText = nil;
         
         @try {
@@ -4949,15 +4914,230 @@ static GeminiTranslator *_sharedInstance;
         NSLog(@"[GeminiTranslator] Translating text: %@", tweetText);
         NSLog(@"[GeminiTranslator] From: %@ To: %@", sourceLanguage, targetLanguage);
         
-        // Use our simplified approach that doesn't interact with Twitter's internal objects
-        // This should avoid pointer authentication failures and memory issues
-        [[GeminiTranslator sharedInstance] simplifiedTranslateAndDisplay:tweetText 
-                                                         sourceLanguage:sourceLanguage 
-                                                         targetLanguage:targetLanguage 
-                                                       inViewController:(UIViewController *)controller];
+        // Create a context object to keep references alive
+        TranslationContext *context = [[TranslationContext alloc] init];
+        context.handler = self;
+        context.statusViewModel = statusViewModel;
+        context.controller = controller;
+        context.account = account;
+        context.tweetText = tweetText;
+        context.sourceLanguage = sourceLanguage;
+        context.targetLanguage = targetLanguage;
+        
+        // Add to active contexts to keep alive
+        @synchronized(activeTranslationContexts) {
+            [activeTranslationContexts addObject:context];
+        }
+        
+        // Keep a strong self reference
+        __strong typeof(self) strongSelf = self;
+        
+        // Translate using Gemini
+        [[GeminiTranslator sharedInstance] translateText:tweetText 
+                                           fromLanguage:sourceLanguage 
+                                             toLanguage:targetLanguage 
+                                             completion:^(NSString *translatedText, NSError *error) {
+            // Cleanup function for use in multiple code paths
+            void (^cleanupContext)(void) = ^{
+                @synchronized(activeTranslationContexts) {
+                    [activeTranslationContexts removeObject:context];
+                }
+            };
+                                                 
+            // Check if translation failed
+            if (error || !translatedText) {
+                NSLog(@"[GeminiTranslator] Translation failed: %@", error);
+                // Fall back to Twitter's translation
+                %orig(context.statusViewModel, context.account, context.controller);
+                cleanupContext();
+                return;
+            }
+                                                 
+            NSLog(@"[GeminiTranslator] Translation successful: %@", translatedText);
+            
+            // Get Twitter's translation model class
+            Class twitterTranslationClass = NSClassFromString(@"TFSTwitterCore.TwitterTranslation");
+            if (!twitterTranslationClass) {
+                twitterTranslationClass = NSClassFromString(@"TFSTwitterTranslation");
+                
+                if (!twitterTranslationClass) {
+                    NSLog(@"[GeminiTranslator] Could not find Twitter's translation class, falling back");
+                    %orig(context.statusViewModel, context.account, context.controller);
+                    cleanupContext();
+                    return;
+                }
+            }
+            
+            // Create a translation object
+            id translationObject = nil;
+            SEL factorySelector = NSSelectorFromString(@"translationWithText:entities:source:localizedLanguage:sourceLanguage:targetLanguage:state:");
+            
+            @try {
+                // Try to create translation object
+                if ([twitterTranslationClass respondsToSelector:factorySelector]) {
+                    NSLog(@"[GeminiTranslator] Using factory method to create translation");
+                    
+                    // Use proper NSInvocation to avoid crashes
+                    NSMethodSignature *methodSig = [twitterTranslationClass methodSignatureForSelector:factorySelector];
+                    if (methodSig) {
+                        NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:methodSig];
+                        [invocation setSelector:factorySelector];
+                        [invocation setTarget:twitterTranslationClass];
+                        
+                        id arg1 = translatedText;
+                        id arg2 = [NSNull null];
+                        id arg3 = @"Gemini";
+                        id arg4 = context.sourceLanguage;
+                        id arg5 = context.sourceLanguage;
+                        id arg6 = context.targetLanguage;
+                        id arg7 = @"Success";
+                        
+                        [invocation setArgument:&arg1 atIndex:2];
+                        [invocation setArgument:&arg2 atIndex:3];
+                        [invocation setArgument:&arg3 atIndex:4];
+                        [invocation setArgument:&arg4 atIndex:5];
+                        [invocation setArgument:&arg5 atIndex:6];
+                        [invocation setArgument:&arg6 atIndex:7];
+                        [invocation setArgument:&arg7 atIndex:8];
+                        
+                        [invocation invoke];
+                        
+                        __unsafe_unretained id result = nil;
+                        [invocation getReturnValue:&result];
+                        translationObject = result;
+                    }
+                }
+                
+                // If that didn't work, try allocating directly
+                if (!translationObject) {
+                    id instance = [twitterTranslationClass alloc];
+                    
+                    if (instance) {
+                        // Try multiple initializers
+                        SEL initSelector = NSSelectorFromString(@"initWithTranslatedText:");
+                        if ([instance respondsToSelector:initSelector]) {
+                            NSMethodSignature *sig = [instance methodSignatureForSelector:initSelector];
+                            if (sig) {
+                                NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
+                                [inv setSelector:initSelector];
+                                [inv setTarget:instance];
+                                
+                                id arg = translatedText;
+                                [inv setArgument:&arg atIndex:2];
+                                
+                                [inv invoke];
+                                
+                                __unsafe_unretained id result = nil;
+                                [inv getReturnValue:&result];
+                                translationObject = result;
+                            }
+                        }
+                    }
+                }
+            } @catch (NSException *exception) {
+                NSLog(@"[GeminiTranslator] Exception creating translation object: %@", exception);
+            }
+            
+            if (!translationObject) {
+                NSLog(@"[GeminiTranslator] Could not create translation object, falling back");
+                %orig(context.statusViewModel, context.account, context.controller);
+                cleanupContext();
+                return;
+            }
+            
+            // Get the view model class
+            Class viewModelClass = NSClassFromString(@"T1TranslatedStatusViewModel");
+            if (!viewModelClass) {
+                NSLog(@"[GeminiTranslator] Could not find view model class, falling back");
+                %orig(context.statusViewModel, context.account, context.controller);
+                cleanupContext();
+                return;
+            }
+            
+            // Create view model
+            id translatedViewModel = nil;
+            @try {
+                translatedViewModel = [[viewModelClass alloc] init];
+            } @catch (NSException *exception) {
+                NSLog(@"[GeminiTranslator] Exception creating view model: %@", exception);
+            }
+            
+            if (!translatedViewModel) {
+                NSLog(@"[GeminiTranslator] Could not create view model, falling back");
+                %orig(context.statusViewModel, context.account, context.controller);
+                cleanupContext();
+                return;
+            }
+            
+            // Set properties
+            @try {
+                if ([translatedViewModel respondsToSelector:@selector(setUnderlyingViewModel:)]) {
+                    [translatedViewModel performSelector:@selector(setUnderlyingViewModel:) withObject:context.statusViewModel];
+                } else {
+                    NSLog(@"[GeminiTranslator] setUnderlyingViewModel method not found");
+                    %orig(context.statusViewModel, context.account, context.controller);
+                    cleanupContext();
+                    return;
+                }
+                
+                if ([translatedViewModel respondsToSelector:@selector(setTranslation:)]) {
+                    [translatedViewModel performSelector:@selector(setTranslation:) withObject:translationObject];
+                } else {
+                    NSLog(@"[GeminiTranslator] setTranslation method not found");
+                    %orig(context.statusViewModel, context.account, context.controller);
+                    cleanupContext();
+                    return;
+                }
+            } @catch (NSException *exception) {
+                NSLog(@"[GeminiTranslator] Exception setting properties: %@", exception);
+                %orig(context.statusViewModel, context.account, context.controller);
+                cleanupContext();
+                return;
+            }
+            
+            // Find the handler method
+            SEL handlerSelector = NSSelectorFromString(@"_t1_handleTranslation:controller:");
+            
+            if (![strongSelf respondsToSelector:handlerSelector]) {
+                handlerSelector = NSSelectorFromString(@"_handleTranslation:controller:");
+            }
+            
+            if (![strongSelf respondsToSelector:handlerSelector]) {
+                NSLog(@"[GeminiTranslator] Handler method not found, falling back");
+                %orig(context.statusViewModel, context.account, context.controller);
+                cleanupContext();
+                return;
+            }
+            
+            // Call the handler
+            @try {
+                NSMethodSignature *handlerSig = [strongSelf methodSignatureForSelector:handlerSelector];
+                if (handlerSig) {
+                    NSInvocation *handlerInv = [NSInvocation invocationWithMethodSignature:handlerSig];
+                    [handlerInv setSelector:handlerSelector];
+                    [handlerInv setTarget:strongSelf];
+                    
+                    id tempVM = translatedViewModel;
+                    id tempController = context.controller;
+                    
+                    [handlerInv setArgument:&tempVM atIndex:2];
+                    [handlerInv setArgument:&tempController atIndex:3];
+                    
+                    [handlerInv invoke];
+                    
+                    NSLog(@"[GeminiTranslator] Successfully displayed translation inline");
+                }
+            } @catch (NSException *exception) {
+                NSLog(@"[GeminiTranslator] Exception in handler: %@", exception);
+                %orig(context.statusViewModel, context.account, context.controller);
+            }
+            
+            // Clean up
+            cleanupContext();
+        }];
     } @catch (NSException *exception) {
         // If anything goes wrong, fall back to Twitter's translation
-        NSLog(@"[GeminiTranslator] Exception in simplified translation: %@", exception);
+        NSLog(@"[GeminiTranslator] Exception in translation: %@", exception);
         %orig;
     }
 }
