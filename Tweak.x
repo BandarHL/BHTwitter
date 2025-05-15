@@ -3841,64 +3841,110 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 // Helper function to play sounds since we can't directly call methods on TFNPullToRefreshControl
 static void PlayRefreshSound(int soundType) {
-    NSString *soundFile = nil;
-    if (soundType == 0) {
-        // Sound when pulling down
-        soundFile = @"psst2.aac";
-    } else if (soundType == 1) {
-        // Sound when refresh completes
-        soundFile = @"pop.aac";
+    static SystemSoundID sounds[2] = {0, 0};
+    static dispatch_once_t onceToken[2];
+    static BOOL soundsInitialized[2] = {NO, NO};
+    
+    // Ensure the sounds are only initialized once per type
+    if (!soundsInitialized[soundType]) {
+        NSString *soundFile = nil;
+        if (soundType == 0) {
+            // Sound when pulling down
+            soundFile = @"psst2.aac";
+        } else if (soundType == 1) {
+            // Sound when refresh completes
+            soundFile = @"pop.aac";
+        }
+        
+        if (soundFile) {
+            NSURL *soundURL = [[BHTBundle sharedBundle] pathForFile:soundFile];
+            if (soundURL) {
+                OSStatus status = AudioServicesCreateSystemSoundID((__bridge CFURLRef)soundURL, &sounds[soundType]);
+                if (status == 0) {
+                    soundsInitialized[soundType] = YES;
+                }
+            }
+        }
     }
     
-    if (soundFile) {
-        NSURL *soundURL = [[BHTBundle sharedBundle] pathForFile:soundFile];
-        
-        static SystemSoundID sounds[2] = {0, 0};
-        static dispatch_once_t onceToken[2];
-        
-        dispatch_once(&onceToken[soundType], ^{
-            AudioServicesCreateSystemSoundID((__bridge CFURLRef)soundURL, &sounds[soundType]);
-        });
-        
-        if (sounds[soundType]) {
+    // Play the sound if it was successfully initialized
+    if (soundsInitialized[soundType]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
             AudioServicesPlaySystemSound(sounds[soundType]);
-        }
+        });
     }
 }
 
 %hook TFNPullToRefreshControl
 
 // Track loading state with static variables
-static BOOL isRefreshing = NO;
+static BOOL isCurrentlyRefreshing = NO;
+static BOOL didPlayPullSound = NO;
+static BOOL initialRefreshPlayed = NO;
 
 // Always enable sound effects
 + (_Bool)_areSoundEffectsEnabled {
     return YES;
 }
 
-// Track when loading starts/stops and play appropriate sounds
+// Play sounds when loading state changes - this catches most cases
 - (void)setLoading:(_Bool)loading {
-    BOOL wasRefreshing = isRefreshing;
-    isRefreshing = loading;
+    BOOL wasRefreshing = isCurrentlyRefreshing;
+    isCurrentlyRefreshing = loading;
     
     %orig;
     
-    // Only play the sound when transitioning from loading to not loading
-    if (wasRefreshing && !loading) {
-        // Refresh completed - play the "pop" sound
+    // Going from not loading to loading (start of refresh)
+    if (!wasRefreshing && loading) {
+        // Don't play pull sound here if already played by _setStatus
+        if (!didPlayPullSound) {
+            // This handles cases like app first launch
+            PlayRefreshSound(0);
+        }
+        didPlayPullSound = NO; // Reset for next refresh cycle
+    }
+    // Going from loading to not loading (end of refresh)
+    else if (wasRefreshing && !loading) {
+        // Play completion sound
         PlayRefreshSound(1);
     }
 }
 
-// Keep the pull sound when we trigger a refresh
+// Play pull sound when status changes to triggered
 - (void)_setStatus:(unsigned long long)status fromScrolling:(_Bool)fromScrolling {
     %orig;
     
-    // Just handle the pull sound here
     if (status == 1 && fromScrolling) {
-        // Status changed to "triggered" - play pull sound
+        // Status changed to "triggered" via pull - play the pull sound
         PlayRefreshSound(0);
+        didPlayPullSound = YES; // Mark that we've played the pull sound
     }
+}
+
+// Catch the initial refresh on app start
+- (void)startPullToRefreshAnimationInScrollView:(UIScrollView *)scrollView {
+    %orig;
+    
+    // Only play the initial refresh sound once
+    if (!initialRefreshPlayed) {
+        initialRefreshPlayed = YES;
+        
+        // Play pull sound with slight delay
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            PlayRefreshSound(0);
+            
+            // Play completion sound after delay
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+                PlayRefreshSound(1);
+            });
+        });
+    }
+}
+
+// Reset the initial refresh flag when scrollview is done
+- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate {
+    %orig;
+    initialRefreshPlayed = NO;
 }
 
 %end
