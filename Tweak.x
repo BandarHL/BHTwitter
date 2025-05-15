@@ -4600,6 +4600,7 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 // Force media rail to show by overriding this key decision method
 - (BOOL)_t1_shouldShowMediaRail {
     return YES;
+}
 
 // Force showing the media rail when view appears
 - (void)viewDidAppear:(BOOL)animated {
