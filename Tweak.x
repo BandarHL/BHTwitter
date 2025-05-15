@@ -5056,54 +5056,101 @@ static NSMutableArray *activeTranslationContexts;
             // Try method 2: Direct alloc/init
             if (!translationObject) {
                 @try {
-                    NSLog(@"[GeminiTranslator] Trying alloc/init approach");
+                    NSLog(@"[GeminiTranslator] Trying alloc/init approach for TFSTwitterTranslation");
                     id instance = [twitterTranslationClass alloc];
-                    
+
                     if (instance) {
-                        NSLog(@"[GeminiTranslator] Successfully allocated instance: %@", instance);
-                        // Try various initializers
-                        NSArray *initSelectors = @[
-                            @"initWithTranslatedText:",
-                            @"initWithText:",
-                            @"initWithTranslation:",
-                            @"initWithTranslation:entities:source:localizedLanguage:sourceLanguage:destinationLanguage:translationState:"
-                            // Removed "init" since it doesn't exist for TwitterTranslation class
-                        ];
-                        
-                        for (NSString *selectorStr in initSelectors) {
-                            SEL initSelector = NSSelectorFromString(selectorStr);
-                            if ([instance respondsToSelector:initSelector]) {
-                                NSLog(@"[GeminiTranslator] Found initializer: %@", selectorStr);
-                                
-                                if ([selectorStr hasSuffix:@":"]) {
-                                    // Single-argument initializer
-                                    NSMethodSignature *sig = [instance methodSignatureForSelector:initSelector];
-                                    if (sig) {
-                                        NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
-                                        [inv setSelector:initSelector];
-                                        [inv setTarget:instance];
-                                        
-                                        id arg = translatedText;
-                                        [inv setArgument:&arg atIndex:2];
-                                        
-                                        [inv invoke];
-                                        
-                                        __unsafe_unretained id result = nil;
-                                        [inv getReturnValue:&result];
-                                        translationObject = result;
-                                        
-                                        if (translationObject) {
-                                            NSLog(@"[GeminiTranslator] Successfully initialized with %@", selectorStr);
-                                            break;
-                                        }
-                                    }
-                                // Removed init block since TwitterTranslation doesn't implement init
+                        NSLog(@"[GeminiTranslator] Successfully allocated instance: %@ for TFSTwitterTranslation", instance);
+
+                        // Attempt 1: Specific multi-argument initializer
+                        SEL specificInitSelector = NSSelectorFromString(@"initWithTranslation:entities:source:localizedLanguage:sourceLanguage:destinationLanguage:translationState:");
+                        if ([instance respondsToSelector:specificInitSelector]) {
+                            NSLog(@"[GeminiTranslator] Found specific initializer: initWithTranslation:entities:source:localizedLanguage:sourceLanguage:destinationLanguage:translationState:");
+                            NSMethodSignature *methodSig = [instance methodSignatureForSelector:specificInitSelector];
+                            if (methodSig) {
+                                NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:methodSig];
+                                [invocation setSelector:specificInitSelector];
+                                [invocation setTarget:instance];
+
+                                id arg1_translation = translatedText;
+                                id arg2_entities = [NSNull null]; // Assuming entities are not critical or available
+                                id arg3_source = @"Gemini";
+                                id arg4_localizedLang = context.sourceLanguage ?: @"en";
+                                id arg5_sourceLang = context.sourceLanguage ?: @"en";
+                                id arg6_destLang = context.targetLanguage ?: @"en";
+                                id arg7_state = @"Success";
+
+                                [invocation setArgument:&arg1_translation atIndex:2];
+                                [invocation setArgument:&arg2_entities atIndex:3];
+                                [invocation setArgument:&arg3_source atIndex:4];
+                                [invocation setArgument:&arg4_localizedLang atIndex:5];
+                                [invocation setArgument:&arg5_sourceLang atIndex:6];
+                                [invocation setArgument:&arg6_destLang atIndex:7];
+                                [invocation setArgument:&arg7_state atIndex:8];
+
+                                [invocation invoke];
+                                __unsafe_unretained id result = nil;
+                                [invocation getReturnValue:&result];
+                                translationObject = result;
+
+                                if (translationObject) {
+                                    NSLog(@"[GeminiTranslator] Successfully initialized with specific 7-argument initializer.");
                                 }
                             }
                         }
+
+                        // Attempt 2: Loop through other simpler initializers if the specific one failed
+                        if (!translationObject) {
+                            NSLog(@"[GeminiTranslator] Specific 7-argument initializer failed or not found, trying simpler initializers.");
+                            NSArray *simpleInitSelectors = @[
+                                @"initWithTranslatedText:",
+                                @"initWithText:",
+                                @"initWithTranslation:"
+                                // The 7-arg one is tried above, "init" was removed
+                            ];
+
+                            for (NSString *selectorStr in simpleInitSelectors) {
+                                SEL initSelector = NSSelectorFromString(selectorStr);
+                                if ([instance respondsToSelector:initSelector]) {
+                                    NSLog(@"[GeminiTranslator] Found simpler initializer: %@", selectorStr);
+                                    NSMethodSignature *sig = [instance methodSignatureForSelector:initSelector];
+                                    if (sig) {
+                                        if (sig.numberOfArguments == 3) { // Selector like initWithText:(id)
+                                            NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
+                                            [inv setSelector:initSelector];
+                                            [inv setTarget:instance];
+                                            id arg = translatedText;
+                                            [inv setArgument:&arg atIndex:2];
+                                            [inv invoke];
+                                            __unsafe_unretained id result = nil;
+                                            [inv getReturnValue:&result];
+                                            translationObject = result;
+
+                                            if (translationObject) {
+                                                NSLog(@"[GeminiTranslator] Successfully initialized with simpler initializer: %@", selectorStr);
+                                                // Try to set source to Gemini if not already done by initializer
+                                                @try {
+                                                    if ([translationObject respondsToSelector:@selector(setSource:)]) {
+                                                        [translationObject performSelector:@selector(setSource:) withObject:@"Gemini"];
+                                                    } else if ([translationObject respondsToSelector:@selector(setValue:forKey:)]) {
+                                                        [translationObject setValue:@"Gemini" forKey:@"source"];
+                                                    }
+                                                } @catch (NSException *e) {
+                                                    NSLog(@"[GeminiTranslator] Error setting source for simpler init: %@", e);
+                                                }
+                                                break; 
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        NSLog(@"[GeminiTranslator] Failed to allocate instance of TFSTwitterTranslation");
                     }
                 } @catch (NSException *exception) {
                     NSLog(@"[GeminiTranslator] Exception with alloc/init approach: %@", exception);
+                    translationObject = nil; // Ensure it's nil on exception
                 }
             }
             
