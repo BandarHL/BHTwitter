@@ -1170,17 +1170,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 // Twitter save all the features and keys in side JSON file in bundle of application fs_embedded_defaults_production.json, and use it in TFNTwitterAccount class but with DM voice maybe developers forget to add boolean variable in the class, so i had to change it from the file.
 // also, you can find every key for every feature i used in this tweak, i can remove all the codes below and find every key for it but I'm lazy to do that, :)
 - (BOOL)boolForKey:(NSString *)key {
-    // Force enable photo rail in composer
-    if ([key containsString:@"photo_rail"] || 
-        [key containsString:@"media_rail"] ||
-        [key containsString:@"composer_attachment"]) {
-        return true;
-    }
-    
-    if ([key isEqualToString:@"edit_tweet_enabled"] || 
-        [key isEqualToString:@"edit_tweet_ga_composition_enabled"] || 
-        [key isEqualToString:@"edit_tweet_pdp_dialog_enabled"] || 
-        [key isEqualToString:@"edit_tweet_upsell_enabled"]) {
+    if ([key isEqualToString:@"edit_tweet_enabled"] || [key isEqualToString:@"edit_tweet_ga_composition_enabled"] || [key isEqualToString:@"edit_tweet_pdp_dialog_enabled"] || [key isEqualToString:@"edit_tweet_upsell_enabled"]) {
         return true;
     }
     
@@ -3893,258 +3883,6 @@ static char kPlayedPullSoundKey;
 static char kNeedsPopSoundKey;
 static char kPopSoundTimerKey;
 
-%end
-
-// MARK: - Restore Photo Rail in Composer
-
-// First, hook the Tweet compose controller to make sure it shows the photo rail
-%hook T1TweetComposeViewController
-
-// Force the media rail to be always shown
-- (BOOL)_t1_shouldShowMediaRail {
-    return YES; // Always return YES to show the media rail
-}
-
-// Make sure the media rail gets loaded
-- (void)_t1_loadMediaRailViewController {
-    %orig;
-    
-    // Ensure the media rail is actually created
-    if (!self.mediaRailViewController) {
-        // Force create a new media rail controller if needed
-        T1PhotoMediaRailViewController *mediaRailVC = [[%c(T1PhotoMediaRailViewController) alloc] init];
-        if (mediaRailVC) {
-            mediaRailVC.account = self.account;
-            mediaRailVC.delegate = self;
-            mediaRailVC.allowDownload = YES;
-            mediaRailVC.cameraButtonHidden = NO;
-            mediaRailVC.voiceButtonHidden = NO;
-            mediaRailVC.spaceButtonHidden = NO;
-            
-            // Set the controller
-            self.mediaRailViewController = mediaRailVC;
-            [self addChildViewController:mediaRailVC];
-        }
-    }
-    
-    // Ensure it's configured properly
-    if (self.mediaRailViewController) {
-        self.mediaRailViewController.allowDownload = YES;
-        self.mediaRailViewController.cameraButtonHidden = NO;
-        self.mediaRailViewController.voiceButtonHidden = NO;
-        self.mediaRailViewController.spaceButtonHidden = NO;
-    }
-}
-
-// Make sure the rail is actually shown
-- (void)_t1_showMediaRail {
-    %orig; // Call original implementation
-    
-    // Force rail to be shown
-    if (self.mediaRailViewController) {
-        self.mediaRailViewController.view.hidden = NO;
-        self.mediaRailViewController.view.alpha = 1.0;
-        
-        // Ensure its internal collection view is visible
-        if ([self.mediaRailViewController respondsToSelector:@selector(collectionView)]) {
-            UICollectionView *collectionView = [self.mediaRailViewController valueForKey:@"_collectionView"];
-            if (collectionView) {
-                collectionView.hidden = NO;
-                collectionView.alpha = 1.0;
-            }
-        }
-    }
-}
-
-// Force update accessory view state to include media rail
-- (void)_t1_updateAccessoryViewState {
-    %orig;
-    
-    // Show media rail after state update
-    if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
-        [self performSelector:@selector(_t1_showMediaRail)];
-    }
-}
-
-- (void)viewDidLoad {
-    %orig;
-    
-    // Force load and show the media rail
-    [self _t1_loadMediaRailViewController];
-    
-    // Find and unhide any existing photo rail view controllers
-    for (UIViewController *childVC in self.childViewControllers) {
-        if ([childVC isKindOfClass:%c(T1PhotoMediaRailViewController)]) {
-            T1PhotoMediaRailViewController *photoRailVC = (T1PhotoMediaRailViewController *)childVC;
-            photoRailVC.view.hidden = NO;
-            photoRailVC.view.alpha = 1.0;
-            
-            // Make sure its collection view is visible too
-            if ([photoRailVC respondsToSelector:@selector(collectionView)]) {
-                UICollectionView *collectionView = [photoRailVC valueForKey:@"_collectionView"];
-                if (collectionView) {
-                    collectionView.hidden = NO;
-                    collectionView.alpha = 1.0;
-                }
-            }
-        }
-    }
-    
-    // Force update after a short delay to ensure everything is initialized
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [self _t1_updateAccessoryViewState];
-        [self _t1_showMediaRail];
-    });
-}
-
-// If there's a method that decides whether to show the photo rail, override it
-- (BOOL)_t1_shouldShowPhotoRail {
-    return YES; // Always show the photo rail
-}
-
-// Make sure the photo rail is properly laid out
-- (void)viewDidLayoutSubviews {
-    %orig;
-    
-    // Check for and ensure any photo rail is visible
-    for (UIViewController *childVC in self.childViewControllers) {
-        if ([childVC isKindOfClass:%c(T1PhotoMediaRailViewController)]) {
-            childVC.view.hidden = NO;
-            childVC.view.alpha = 1.0;
-            
-            // Make sure it has sufficient height
-            CGRect frame = childVC.view.frame;
-            if (frame.size.height < 110) {
-                frame.size.height = 110;
-                childVC.view.frame = frame;
-            }
-            
-            [childVC.view setNeedsLayout];
-            [childVC.view layoutIfNeeded];
-            
-            // Force visibility of the collection view
-            if ([childVC respondsToSelector:@selector(collectionView)]) {
-                UICollectionView *collectionView = [childVC valueForKey:@"_collectionView"];
-                if (collectionView) {
-                    collectionView.hidden = NO;
-                    collectionView.alpha = 1.0;
-                    
-                    // Make sure the collection view also has good height
-                    CGRect cvFrame = collectionView.frame;
-                    if (cvFrame.size.height < 100) {
-                        cvFrame.size.height = 100;
-                        collectionView.frame = cvFrame;
-                    }
-                }
-            }
-        }
-    }
-    
-    // Force update the accessory view
-    [self _t1_updateAccessoryViewState];
-}
-
-%end
-
-// Then hook the PhotoMediaRailViewController itself
-%hook T1PhotoMediaRailViewController 
-
-// Unhide the photo rail when the view appears
-- (void)viewWillAppear:(BOOL)animated {
-    %orig;
-    
-    // Make sure we're fully visible
-    self.view.hidden = NO;
-    self.view.alpha = 1.0;
-    
-    // Force a height if needed
-    CGRect viewFrame = self.view.frame;
-    if (viewFrame.size.height < 100.0) {
-        viewFrame.size.height = 100.0;
-        self.view.frame = viewFrame;
-    }
-}
-
-// Make sure to show the rail when view appears
-- (void)viewDidAppear:(BOOL)animated {
-    %orig;
-    
-    // Refresh the collection view
-    if (self.collectionView) {
-        [self.collectionView reloadData];
-        self.collectionView.hidden = NO;
-        self.collectionView.alpha = 1.0;
-    }
-}
-
-- (void)viewDidLoad {
-    %orig;
-    
-    // Make sure the collection view is not hidden
-    if (self.collectionView) {
-        self.collectionView.hidden = NO;
-        self.collectionView.alpha = 1.0;
-    }
-    
-    // Enable related properties
-    self.allowDownload = YES;
-    self.cameraButtonHidden = NO;
-    self.voiceButtonHidden = NO;
-    self.spaceButtonHidden = NO;
-}
-
-// Override the method that might hide the collection view
-- (void)loadView {
-    %orig;
-    
-    // Make sure the collection view is properly initialized
-    if (self.collectionView) {
-        [self.collectionView setHidden:NO];
-        [self.collectionView setAlpha:1.0];
-        
-        // Set minimum height for collection view
-        CGRect frame = self.collectionView.frame;
-        if (frame.size.height < 100.0) {
-            frame.size.height = 100.0;
-            self.collectionView.frame = frame;
-        }
-        
-        // Force layout update
-        [self.collectionView setNeedsLayout];
-        [self.collectionView layoutIfNeeded];
-    }
-}
-
-// Ensure sufficient height for the collection view
-- (double)_t1_collectionViewHeight {
-    // Call original first to get Twitter's calculated height
-    CGFloat originalHeight = %orig;
-    
-    // Return a minimum height of 100 points or the original height, whichever is greater
-    return MAX(originalHeight, 100.0);
-}
-
-// If there's a method that updates visibility, make sure it doesn't hide our view
-- (void)_t1_updateButtonsBeforePhotos {
-    %orig;
-    
-    // Ensure collection view stays visible after button updates
-    if (self.collectionView) {
-        self.collectionView.hidden = NO;
-        self.collectionView.alpha = 1.0;
-    }
-}
-
-// Make sure this view controller is not removed from its parent
-- (void)willMoveToParentViewController:(UIViewController *)parent {
-    if (!parent) {
-        // If being removed from parent, prevent it by doing nothing
-        return;
-    }
-    
-    %orig;
-}
-
 // Always enable sound effects
 + (_Bool)_areSoundEffectsEnabled {
     return YES;
@@ -4850,6 +4588,77 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
     
     // Default behavior
     %orig(alpha);
+}
+
+%end
+
+// MARK: - Always Show Media Rail in Composer
+
+// Simplify our approach to just intercept key methods on the TweetComposeViewController
+%hook T1TweetComposeViewController
+
+// Force media rail to show by overriding this key decision method
+- (BOOL)_t1_shouldShowMediaRail {
+    return YES;
+}
+
+// Prevent media rail from being hidden by doing nothing in this method
+- (void)_t1_hideMediaRail {
+    // Deliberately empty - do nothing to prevent hiding
+}
+
+// Force showing the media rail when view appears
+- (void)viewDidAppear:(BOOL)animated {
+    %orig(animated);
+    
+    // Find and unhide accessory view that contains the media rail
+    UIView *accessoryView = [self valueForKey:@"_accessoryWrapperView"];
+    if (accessoryView) {
+        accessoryView.hidden = NO;
+        accessoryView.alpha = 1.0;
+    }
+    
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        // Try to show media rail using its dedicated method
+        if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
+            [self performSelector:@selector(_t1_showMediaRail)];
+        }
+    });
+}
+
+%end
+
+// These getter methods will be automatically created for the forward-declared class
+%hook T1PhotoMediaRailViewController
+
+// Make sure camera button is visible
+- (BOOL)isCameraButtonHidden {
+    return NO;
+}
+
+// Make sure space button is visible
+- (BOOL)isSpaceButtonHidden {
+    return NO;
+}
+
+// Make sure voice button is visible
+- (BOOL)isVoiceButtonHidden {
+    return NO;
+}
+
+// Make sure live mode is available
+- (BOOL)isLiveModeInCameraHidden {
+    return NO;
+}
+
+// Make sure go live button is visible
+- (BOOL)goLiveButtonHidden {
+    return NO;
+}
+
+// Allow downloading media
+- (BOOL)allowDownload {
+    return YES;
 }
 
 %end
