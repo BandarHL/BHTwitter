@@ -4843,8 +4843,39 @@ static GeminiTranslator *_sharedInstance;
 
 @end
 
+// Simple object to keep references alive during async operations
+@interface TranslationContext : NSObject
+@property (nonatomic, strong) id handler;
+@property (nonatomic, strong) id statusViewModel;
+@property (nonatomic, strong) id controller;
+@property (nonatomic, strong) id account;
+@property (nonatomic, strong) NSString *tweetText;
+@property (nonatomic, strong) NSString *sourceLanguage;
+@property (nonatomic, strong) NSString *targetLanguage;
+@end
+
+@implementation TranslationContext
+@end
+
+// Static reference to prevent deallocation during async operations
+static NSMutableArray *activeTranslationContexts;
+
 // Replace Google translation with Gemini
 %hook T1TranslationToggleEventHandler
+
++ (void)load {
+    activeTranslationContexts = [NSMutableArray new];
+    
+    // Register for app termination notification to clean up
+    [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationWillTerminateNotification
+                                                     object:nil
+                                                      queue:[NSOperationQueue mainQueue]
+                                                 usingBlock:^(NSNotification * _Nonnull note) {
+        @synchronized(activeTranslationContexts) {
+            [activeTranslationContexts removeAllObjects];
+        }
+    }];
+}
 
 // Override the method that fetches translations
 - (void)_t1_fetchTranslatedStatusFromGraphQL:(id)statusViewModel account:(id)account controller:(id)controller {
@@ -4902,34 +4933,70 @@ static GeminiTranslator *_sharedInstance;
         NSLog(@"[GeminiTranslator] Translating text: %@", tweetText);
         NSLog(@"[GeminiTranslator] From: %@ To: %@", sourceLanguage, targetLanguage);
         
-        // Use a weak reference to self to avoid retain cycles
-        __weak typeof(self) weakSelf = self;
+        // Create a context object to keep everything alive
+        TranslationContext *context = [[TranslationContext alloc] init];
+        context.handler = self;
+        context.statusViewModel = statusViewModel;
+        context.controller = controller;
+        context.account = account;
+        context.tweetText = tweetText;
+        context.sourceLanguage = sourceLanguage;
+        context.targetLanguage = targetLanguage;
+        
+        // Keep a strong reference to prevent deallocation
+        @synchronized(activeTranslationContexts) {
+            [activeTranslationContexts addObject:context];
+        }
+        
+        // Keep a strong reference to self to prevent deallocation
+        __block id strongSelf = self;
         
         // Translate using Gemini AI
         [[GeminiTranslator sharedInstance] translateText:tweetText 
                                           fromLanguage:sourceLanguage 
                                             toLanguage:targetLanguage 
                                             completion:^(NSString *translatedText, NSError *error) {
-            __strong typeof(weakSelf) strongSelf = weakSelf;
+            // Use the strong reference we kept
             if (!strongSelf) {
-                NSLog(@"[GeminiTranslator] Self deallocated during translation");
+                NSLog(@"[GeminiTranslator] Self deallocated during translation despite strong reference");
+                
+                // Remove context from active contexts
+                @synchronized(activeTranslationContexts) {
+                    [activeTranslationContexts removeObject:context];
+                }
                 return;
             }
             
-            if (error || !translatedText) {
-                NSLog(@"[GeminiTranslator] Translation failed: %@", error);
-                [strongSelf _t1_fetchTranslatedStatusFromGraphQL:statusViewModel account:account controller:controller];
-                return;
-            }
-            
-            NSLog(@"[GeminiTranslator] Translation successful: %@", translatedText);
-            
-            @try {
+                        @try {
+                // Always clean up context before returning
+                void (^cleanupContext)(void) = ^{
+                    @synchronized(activeTranslationContexts) {
+                        [activeTranslationContexts removeObject:context];
+                    }
+                    // Break potential retain cycles
+                    strongSelf = nil;
+                };
+                
+                if (error || !translatedText) {
+                    NSLog(@"[GeminiTranslator] Translation failed: %@", error);
+                    // Fall back to original implementation, which should be async
+                    [strongSelf _t1_fetchTranslatedStatusFromGraphQL:context.statusViewModel 
+                                                             account:context.account 
+                                                          controller:context.controller];
+                    cleanupContext();
+                    return;
+                }
+                
+                NSLog(@"[GeminiTranslator] Translation successful: %@", translatedText);
+                
                 // First check if the necessary class exists
                 Class translationClass = NSClassFromString(@"TFSTwitterTranslation");
                 if (!translationClass) {
                     NSLog(@"[GeminiTranslator] TFSTwitterTranslation class not found");
-                    [strongSelf _t1_fetchTranslatedStatusFromGraphQL:statusViewModel account:account controller:controller];
+                    [strongSelf _t1_fetchTranslatedStatusFromGraphQL:context.statusViewModel 
+                                                             account:context.account 
+                                                          controller:context.controller];
+                    cleanupContext();
                     return;
                 }
                 
@@ -4937,7 +5004,10 @@ static GeminiTranslator *_sharedInstance;
                 SEL initSelector = @selector(initWithTranslation:entities:translationSource:localizedSourceLanguage:sourceLanguage:destinationLanguage:translationState:);
                 if (![translationClass instancesRespondToSelector:initSelector]) {
                     NSLog(@"[GeminiTranslator] Initialization method not found on TFSTwitterTranslation");
-                    [strongSelf _t1_fetchTranslatedStatusFromGraphQL:statusViewModel account:account controller:controller];
+                    [strongSelf _t1_fetchTranslatedStatusFromGraphQL:context.statusViewModel 
+                                                             account:context.account 
+                                                          controller:context.controller];
+                    cleanupContext();
                     return;
                 }
                 
@@ -4958,11 +5028,11 @@ static GeminiTranslator *_sharedInstance;
                     [invocation setArgument:&nilObj atIndex:3];
                     NSString *source = @"Gemini";
                     [invocation setArgument:&source atIndex:4];
-                    NSString *tempSourceLang1 = sourceLanguage;
+                    NSString *tempSourceLang1 = context.sourceLanguage;
                     [invocation setArgument:&tempSourceLang1 atIndex:5];
-                    NSString *tempSourceLang2 = sourceLanguage;
+                    NSString *tempSourceLang2 = context.sourceLanguage;
                     [invocation setArgument:&tempSourceLang2 atIndex:6];
-                    NSString *tempTargetLang = targetLanguage;
+                    NSString *tempTargetLang = context.targetLanguage;
                     [invocation setArgument:&tempTargetLang atIndex:7];
                     NSString *success = @"Success";
                     [invocation setArgument:&success atIndex:8];
@@ -4975,7 +5045,10 @@ static GeminiTranslator *_sharedInstance;
                 
                 if (!translationObj) {
                     NSLog(@"[GeminiTranslator] Failed to create translation object");
-                    [strongSelf _t1_fetchTranslatedStatusFromGraphQL:statusViewModel account:account controller:controller];
+                    [strongSelf _t1_fetchTranslatedStatusFromGraphQL:context.statusViewModel 
+                                                             account:context.account 
+                                                          controller:context.controller];
+                    cleanupContext();
                     return;
                 }
                 
@@ -4983,7 +5056,10 @@ static GeminiTranslator *_sharedInstance;
                 Class viewModelClass = NSClassFromString(@"T1TranslatedStatusViewModel");
                 if (!viewModelClass) {
                     NSLog(@"[GeminiTranslator] T1TranslatedStatusViewModel class not found");
-                    [strongSelf _t1_fetchTranslatedStatusFromGraphQL:statusViewModel account:account controller:controller];
+                    [strongSelf _t1_fetchTranslatedStatusFromGraphQL:context.statusViewModel 
+                                                             account:context.account 
+                                                          controller:context.controller];
+                    cleanupContext();
                     return;
                 }
                 
@@ -4991,16 +5067,22 @@ static GeminiTranslator *_sharedInstance;
                 id translatedViewModel = [[viewModelClass alloc] init];
                 if (!translatedViewModel) {
                     NSLog(@"[GeminiTranslator] Failed to create translated view model");
-                    [strongSelf _t1_fetchTranslatedStatusFromGraphQL:statusViewModel account:account controller:controller];
+                    [strongSelf _t1_fetchTranslatedStatusFromGraphQL:context.statusViewModel 
+                                                             account:context.account 
+                                                          controller:context.controller];
+                    cleanupContext();
                     return;
                 }
                 
                 // Set the properties safely
                 if ([translatedViewModel respondsToSelector:@selector(setUnderlyingViewModel:)]) {
-                    [translatedViewModel performSelector:@selector(setUnderlyingViewModel:) withObject:statusViewModel];
+                    [translatedViewModel performSelector:@selector(setUnderlyingViewModel:) withObject:context.statusViewModel];
                 } else {
                     NSLog(@"[GeminiTranslator] setUnderlyingViewModel: not found");
-                    [strongSelf _t1_fetchTranslatedStatusFromGraphQL:statusViewModel account:account controller:controller];
+                    [strongSelf _t1_fetchTranslatedStatusFromGraphQL:context.statusViewModel 
+                                                             account:context.account 
+                                                          controller:context.controller];
+                    cleanupContext();
                     return;
                 }
                 
@@ -5008,7 +5090,10 @@ static GeminiTranslator *_sharedInstance;
                     [translatedViewModel performSelector:@selector(setTranslation:) withObject:translationObj];
                 } else {
                     NSLog(@"[GeminiTranslator] setTranslation: not found");
-                    [strongSelf _t1_fetchTranslatedStatusFromGraphQL:statusViewModel account:account controller:controller];
+                    [strongSelf _t1_fetchTranslatedStatusFromGraphQL:context.statusViewModel 
+                                                             account:context.account 
+                                                          controller:context.controller];
+                    cleanupContext();
                     return;
                 }
                 
@@ -5018,32 +5103,45 @@ static GeminiTranslator *_sharedInstance;
                 if ([strongSelf respondsToSelector:handleTranslationSelector]) {
                     NSLog(@"[GeminiTranslator] Calling handler with translated content");
                     
-                                         @try {
-                        // Use NSInvocation to avoid performSelector leak warnings
-                        NSMethodSignature *handlerSignature = [strongSelf methodSignatureForSelector:handleTranslationSelector];
-                        if (handlerSignature) {
-                            NSInvocation *handlerInvocation = [NSInvocation invocationWithMethodSignature:handlerSignature];
-                            [handlerInvocation setSelector:handleTranslationSelector];
-                            [handlerInvocation setTarget:strongSelf];
-                            id tempViewModel = translatedViewModel;
-                            [handlerInvocation setArgument:&tempViewModel atIndex:2];
-                            id tempController = controller;
-                            [handlerInvocation setArgument:&tempController atIndex:3];
-                            [handlerInvocation invoke];
-                        } else {
-                            NSLog(@"[GeminiTranslator] Failed to get method signature for handler");
-                        }
-                    } @catch (NSException *exception) {
-                        NSLog(@"[GeminiTranslator] Exception calling handler: %@", exception);
-                        [strongSelf _t1_fetchTranslatedStatusFromGraphQL:statusViewModel account:account controller:controller];
+                    // Use NSInvocation to avoid performSelector leak warnings
+                    NSMethodSignature *handlerSignature = [strongSelf methodSignatureForSelector:handleTranslationSelector];
+                    if (handlerSignature) {
+                        NSInvocation *handlerInvocation = [NSInvocation invocationWithMethodSignature:handlerSignature];
+                        [handlerInvocation setSelector:handleTranslationSelector];
+                        [handlerInvocation setTarget:strongSelf];
+                        id tempViewModel = translatedViewModel;
+                        [handlerInvocation setArgument:&tempViewModel atIndex:2];
+                        id tempController = context.controller;
+                        [handlerInvocation setArgument:&tempController atIndex:3];
+                        [handlerInvocation invoke];
+                        
+                        // Clean up after successful completion
+                        NSLog(@"[GeminiTranslator] Translation handled successfully");
+                        cleanupContext();
+                    } else {
+                        NSLog(@"[GeminiTranslator] Failed to get method signature for handler");
+                        [strongSelf _t1_fetchTranslatedStatusFromGraphQL:context.statusViewModel 
+                                                                 account:context.account 
+                                                              controller:context.controller];
+                        cleanupContext();
                     }
                 } else {
                     NSLog(@"[GeminiTranslator] Handler method not found");
-                    [strongSelf _t1_fetchTranslatedStatusFromGraphQL:statusViewModel account:account controller:controller];
+                    [strongSelf _t1_fetchTranslatedStatusFromGraphQL:context.statusViewModel 
+                                                             account:context.account 
+                                                          controller:context.controller];
+                    cleanupContext();
                 }
             } @catch (NSException *exception) {
                 NSLog(@"[GeminiTranslator] Exception in completion handler: %@", exception);
-                [strongSelf _t1_fetchTranslatedStatusFromGraphQL:statusViewModel account:account controller:controller];
+                [strongSelf _t1_fetchTranslatedStatusFromGraphQL:context.statusViewModel 
+                                                         account:context.account 
+                                                      controller:context.controller];
+                // Always clean up
+                @synchronized(activeTranslationContexts) {
+                    [activeTranslationContexts removeObject:context];
+                }
+                strongSelf = nil;
             }
         }];
     } @catch (NSException *exception) {
