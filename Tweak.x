@@ -4594,88 +4594,12 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 
 // MARK: - Always Show Media Rail in Composer
 
-// Fix for restoring the media rail in the composer
+// Super simple approach - just override this one method to always return YES
 %hook T1TweetComposeViewController
 
-// Show media rail conditionally based on attachments
+// Always return YES to ensure the media rail is shown initially
 - (BOOL)_t1_shouldShowMediaRail {
-    // Check if there are any attachments
-    NSArray *compositions = [self valueForKey:@"_compositionState"];
-    id activeComposition = compositions ? [compositions firstObject] : nil;
-    
-    // If we have attachments, let Twitter decide (it will hide the rail)
-    if (activeComposition && [[activeComposition valueForKey:@"attachments"] count] > 0) {
-        return %orig;
-    }
-    
-    // Otherwise force the rail to be visible
-    return YES;
-}
-
-// Make the media rail appear immediately when view loads
-- (void)viewDidLoad {
-    %orig;
-    
-    // Initialize the media rail controller if needed
-    if ([self respondsToSelector:@selector(_t1_loadMediaRailViewController)]) {
-        [self performSelector:@selector(_t1_loadMediaRailViewController)];
-    }
-    
-    // Show the media rail immediately
-    if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
-        [self performSelector:@selector(_t1_showMediaRail)];
-    }
-}
-
-// Make sure the media rail is visible when view appears
-- (void)viewDidAppear:(BOOL)animated {
-    %orig(animated);
-    
-    // Only show rail if there are no attachments
-    NSArray *compositions = [self valueForKey:@"_compositionState"];
-    id activeComposition = compositions ? [compositions firstObject] : nil;
-    
-    if (!activeComposition || ![[activeComposition valueForKey:@"attachments"] count]) {
-        // Show media rail 
-        if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
-            [self performSelector:@selector(_t1_showMediaRail)];
-        }
-    }
-}
-
-%end
-
-// Make sure all the buttons in the rail are enabled
-%hook T1PhotoMediaRailViewController
-
-// Make sure camera button is visible
-- (BOOL)isCameraButtonHidden {
-    return NO;
-}
-
-// Make sure space button is visible
-- (BOOL)isSpaceButtonHidden {
-    return NO;
-}
-
-// Make sure voice button is visible
-- (BOOL)isVoiceButtonHidden {
-    return NO;
-}
-
-// Make sure live mode is available
-- (BOOL)isLiveModeInCameraHidden {
-    return NO;
-}
-
-// Make sure go live button is visible
-- (BOOL)goLiveButtonHidden {
-    return NO;
-}
-
-// Allow downloading media
-- (BOOL)allowDownload {
-    return YES;
+    return YES; 
 }
 
 %end
