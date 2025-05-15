@@ -4666,7 +4666,7 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 
 // These methods are critical for properly hiding/showing the media rail
 - (void)_t1_hideMediaRail {
-    %orig;
+    %orig; // Let Twitter's original logic run first
     
     id railController = [self valueForKey:@"_mediaRailViewController"];
     if (railController && [railController respondsToSelector:@selector(view)]) {
@@ -4676,14 +4676,11 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
             railView.alpha = 0;
         }
     }
-    // After ensuring it's hidden, tell Twitter to update its state.
-    if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
-        [self performSelector:@selector(_t1_updateAccessoryViewState)];
-    }
+    // DO NOT call _t1_updateAccessoryViewState from here.
 }
 
 - (void)_t1_showMediaRail {
-    %orig;
+    %orig; // Let Twitter's original logic run first
     
     id railController = [self valueForKey:@"_mediaRailViewController"];
     if (railController && [railController respondsToSelector:@selector(view)]) {
@@ -4693,19 +4690,17 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
             railView.alpha = 1.0;
         }
     }
-    // After ensuring it's shown, tell Twitter to update its state.
-    if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
-        [self performSelector:@selector(_t1_updateAccessoryViewState)];
-    }
+    // DO NOT call _t1_updateAccessoryViewState from here.
 }
 
 // When selecting photos, hide the media rail
 - (void)addOrReplaceAttachment:(id)attachment scribeWithSource:(id)source {
     %orig(attachment, source);
     
-    // Always hide the media rail when a photo is added
-    if ([self respondsToSelector:@selector(_t1_hideMediaRail)]) {
-        [self performSelector:@selector(_t1_hideMediaRail)];
+    // After an attachment is added/replaced, always update the accessory view state.
+    // It will internally consult our _t1_shouldShowMediaRail hook.
+    if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
+        [self performSelector:@selector(_t1_updateAccessoryViewState)];
     }
 }
 
@@ -4713,30 +4708,10 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 - (void)_t1_setAttachments:(id)attachments scribeWithSource:(id)source {
     %orig(attachments, source);
     
-    // Check if attachments array is empty
-    BOOL isEmpty = YES;
-    if (attachments && [attachments isKindOfClass:[NSArray class]]) {
-        isEmpty = ([attachments count] == 0);
-    }
-    
-    // If attachments were cleared, check if we should show rail
-    if (isEmpty) {
-        id compositionState = [self valueForKey:@"_compositionState"];
-        if (compositionState) {
-            // Check if there is text
-            BOOL hasText = NO;
-            if ([compositionState respondsToSelector:@selector(text)]) {
-                NSString *text = [compositionState performSelector:@selector(text)];
-                hasText = (text && text.length > 0);
-            }
-            
-            // No attachments and no text - show rail
-            if (!hasText) {
-                if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
-                    [self performSelector:@selector(_t1_showMediaRail)];
-                }
-            }
-        }
+    // After attachments change, always update the accessory view state.
+    // It will internally consult our _t1_shouldShowMediaRail hook.
+    if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
+        [self performSelector:@selector(_t1_updateAccessoryViewState)];
     }
 }
 
@@ -4744,33 +4719,10 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 - (void)tableViewController:(id)controller tweetTextDidChange:(id)text {
     %orig(controller, text);
     
-    // Get the current text
-    NSString *textContent = nil;
-    if ([text respondsToSelector:@selector(string)]) {
-        textContent = [text performSelector:@selector(string)];
-    }
-    
-    // Hide rail when text is being typed, show otherwise if no attachments
-    if (textContent && textContent.length > 0) {
-        if ([self respondsToSelector:@selector(_t1_hideMediaRail)]) {
-            [self performSelector:@selector(_t1_hideMediaRail)];
-        }
-    } else {
-        // Check if we have attachments - only show if no attachments
-        id compositionState = [self valueForKey:@"_compositionState"];
-        if (compositionState) {
-            BOOL hasAttachments = NO;
-            if ([compositionState respondsToSelector:@selector(hasAttachments)]) {
-                hasAttachments = [compositionState performSelector:@selector(hasAttachments)];
-            }
-            
-            // No text and no attachments - show rail
-            if (!hasAttachments) {
-                if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
-                    [self performSelector:@selector(_t1_showMediaRail)];
-                }
-            }
-        }
+    // After text changes, always update the accessory view state.
+    // It will internally consult our _t1_shouldShowMediaRail hook.
+    if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
+        [self performSelector:@selector(_t1_updateAccessoryViewState)];
     }
 }
 
