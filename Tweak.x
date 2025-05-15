@@ -3842,11 +3842,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 // Helper function to play sounds with proper initialization
 static void PlayRefreshSound(int soundType) {
     static SystemSoundID sounds[2] = {0, 0};
-    static dispatch_once_t onceToken[2];
-    static BOOL soundsInitialized[2] = {NO, NO};
     
-    // Ensure the sounds are only initialized once per type
-    if (!soundsInitialized[soundType]) {
+    if (sounds[soundType] == 0) {
         NSString *soundFile = nil;
         if (soundType == 0) {
             // Sound when pulling down
@@ -3859,88 +3856,101 @@ static void PlayRefreshSound(int soundType) {
         if (soundFile) {
             NSURL *soundURL = [[BHTBundle sharedBundle] pathForFile:soundFile];
             if (soundURL) {
-                OSStatus status = AudioServicesCreateSystemSoundID((__bridge CFURLRef)soundURL, &sounds[soundType]);
-                if (status == 0) {
-                    soundsInitialized[soundType] = YES;
-                }
+                AudioServicesCreateSystemSoundID((__bridge CFURLRef)soundURL, &sounds[soundType]);
             }
         }
     }
     
-    // Play the sound if it was successfully initialized
-    if (soundsInitialized[soundType]) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            AudioServicesPlaySystemSound(sounds[soundType]);
-        });
+    if (sounds[soundType]) {
+        AudioServicesPlaySystemSound(sounds[soundType]);
     }
 }
 
-// Static data to prevent duplicate sounds
-static BOOL gInitialSoundPlayed = NO;
-
-// SIMPLE APPROACH: Hook the activity indicator directly
-%hook UIActivityIndicatorView 
-
-- (void)stopAnimating {
-    // Check if this is likely a pull-to-refresh indicator
-    BOOL isPullToRefreshIndicator = NO;
-    UIView *parentView = self.superview;
-    
-    while (parentView && !isPullToRefreshIndicator) {
-        if ([NSStringFromClass([parentView class]) isEqualToString:@"TFNPullToRefreshControl"]) {
-            isPullToRefreshIndicator = YES;
-        }
-        parentView = parentView.superview;
-    }
-    
-    // If this is an activity indicator in a pull-to-refresh control
-    if (isPullToRefreshIndicator && self.isAnimating) {
-        // Play pop sound with slight delay to align with animation completion
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            PlayRefreshSound(1);
-        });
-    }
-    
-    %orig;
-}
-
-%end
-
+// ULTRA SIMPLE APPROACH: Use minimal hooks with strong timestamps to avoid duplicates
 %hook TFNPullToRefreshControl
+
+// Timestamp tracking to avoid duplicated sounds
+static NSTimeInterval lastPullSoundTime = 0;
+static NSTimeInterval lastPopSoundTime = 0;
+static BOOL initialAppLaunchHandled = NO;
 
 // Always enable sound effects
 + (_Bool)_areSoundEffectsEnabled {
     return YES;
 }
 
-// Detect pull-to-refresh action and play pull sound
-- (void)_setStatus:(unsigned long long)status fromScrolling:(_Bool)fromScrolling {
+// Play "pull" sound when refresh starts
+- (void)setLoading:(_Bool)loading {
+    // Check what the current state is before %orig changes it
+    BOOL wasLoading = self.loading;
+    
     %orig;
     
-    // Status 1 appears to be "triggered" based on our observations
-    if (status == 1 && fromScrolling) {
-        // Play the pull sound when user triggers a refresh
-        PlayRefreshSound(0);
+    // Get current time for deduplication
+    NSTimeInterval currentTime = [[NSDate date] timeIntervalSince1970];
+    
+    // If transitioning from not loading to loading, play pull sound
+    if (!wasLoading && loading) {
+        // Only play if we haven't played a pull sound too recently (within 0.5 seconds)
+        if (currentTime - lastPullSoundTime > 0.5) {
+            lastPullSoundTime = currentTime;
+            PlayRefreshSound(0);
+            
+            // Schedule the pop sound with a fixed delay that matches Twitter's typical refresh time
+            if (!initialAppLaunchHandled) {
+                // For initial app launch, use a longer delay
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                    lastPopSoundTime = [[NSDate date] timeIntervalSince1970];
+                    PlayRefreshSound(1);
+                });
+                initialAppLaunchHandled = YES;
+            }
+        }
+    }
+    // If transitioning from loading to not loading, play pop sound
+    else if (wasLoading && !loading) {
+        // Only play if we haven't played a pop sound too recently (within 0.5 seconds)
+        if (currentTime - lastPopSoundTime > 0.5) {
+            // Small delay to match the animation
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                lastPopSoundTime = [[NSDate date] timeIntervalSince1970];
+                PlayRefreshSound(1);
+            });
+        }
     }
 }
 
-// Handle initial app launch refresh with special timing
+// Backup trigger for the pull sound via status change
+- (void)_setStatus:(unsigned long long)status fromScrolling:(_Bool)fromScrolling {
+    %orig;
+    
+    // Only handle manual pulls, not during app launch
+    if (initialAppLaunchHandled && status == 1 && fromScrolling) {
+        NSTimeInterval currentTime = [[NSDate date] timeIntervalSince1970];
+        
+        // Only play if we haven't played a pull sound too recently
+        if (currentTime - lastPullSoundTime > 0.5) {
+            lastPullSoundTime = currentTime;
+            PlayRefreshSound(0);
+        }
+    }
+}
+
+// Handle special case for initial app launch
 - (void)startPullToRefreshAnimationInScrollView:(id)scrollView {
     %orig;
     
-    // Only play once per app launch
-    if (!gInitialSoundPlayed) {
-        gInitialSoundPlayed = YES;
+    // Only handle if we haven't dealt with the initial app launch yet
+    if (!initialAppLaunchHandled) {
+        NSTimeInterval currentTime = [[NSDate date] timeIntervalSince1970];
+        lastPullSoundTime = currentTime;
         
-        // Play pull sound first
+        // Slight delay before playing the pull sound
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             PlayRefreshSound(0);
-            
-            // Play pop sound after a delay to match the visual feedback
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                PlayRefreshSound(1);
-            });
         });
+        
+        // No need to schedule pop sound here, the setLoading method will handle it
     }
 }
 
