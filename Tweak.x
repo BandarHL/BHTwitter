@@ -11,25 +11,32 @@
 // Forward declare T1ColorSettings and its private method to satisfy the compiler
 @interface T1ColorSettings : NSObject
 + (void)_t1_applyPrimaryColorOption;
-+ (void)_t1_updateOverrideUserInterfaceStyle; // Add this line
++ (void)_t1_updateOverrideUserInterfaceStyle;
 @end
 
+// We don't need to declare TAEColorSettings here as it's already defined in TWHeaders.h
+
 // Forward declaration for the immersive view controller
-@interface T1ImmersiveFullScreenViewController : UIViewController // Assuming base class, adjust if known
+@interface T1ImmersiveFullScreenViewController : UIViewController
 - (void)immersiveViewController:(id)immersiveViewController showHideNavigationButtons:(_Bool)showButtons;
-// Declare other methods if their signatures are needed for direct calls or performSelector
-- (void)playerViewController:(id)playerViewController playerStateDidChange:(NSInteger)state; // Assuming this method exists
+- (void)playerViewController:(id)playerViewController playerStateDidChange:(NSInteger)state;
 @end
 
 // Now declare the category, after the main interface is known
 @interface T1ImmersiveFullScreenViewController (BHTwitter)
-- (BOOL)BHT_findAndPrepareTimestampLabelForVC:(T1ImmersiveFullScreenViewController *)activePlayerVC; // Declare our new method
+- (BOOL)BHT_findAndPrepareTimestampLabelForVC:(T1ImmersiveFullScreenViewController *)activePlayerVC;
 @end
 
 // Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
+static void BHT_applyThemeToWindow(UIWindow *window);
 static void BHT_ensureTheming(void);
-static void BHT_applyAndRefreshThemeForAllUI(void); // New centralized function
+static void BHT_forceRefreshAllWindowAppearances(void);
+static void BHT_ensureThemingEngineSynchronized(BOOL forceSynchronize);
+
+// Theme state tracking
+static BOOL BHT_themeManagerInitialized = NO;
+static BOOL BHT_isInThemeChangeOperation = NO;
 
 // Map to store timestamp labels for each player instance
 static NSMapTable<T1ImmersiveFullScreenViewController *, UILabel *> *playerToTimestampMap = nil;
@@ -106,6 +113,144 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 
 // MARK: Clean cache and Padlock
+// MARK: - Core Theme Engine Hooks
+%hook TAEColorSettings
+
+- (instancetype)init {
+    id instance = %orig;
+    if (instance && !BHT_themeManagerInitialized) {
+        // Register for system theme and appearance related notifications
+        [[NSNotificationCenter defaultCenter] addObserverForName:@"UITraitCollectionDidChangeNotification"
+                                                         object:nil
+                                                          queue:[NSOperationQueue mainQueue]
+                                                     usingBlock:^(NSNotification * _Nonnull note) {
+            if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"]) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    BHT_ensureThemingEngineSynchronized(NO);
+                });
+            }
+        }];
+        
+        // Also listen for app entering foreground
+        [[NSNotificationCenter defaultCenter] addObserverForName:@"UIApplicationWillEnterForegroundNotification"
+                                                         object:nil
+                                                          queue:[NSOperationQueue mainQueue]
+                                                     usingBlock:^(NSNotification * _Nonnull note) {
+            if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"]) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    BHT_ensureThemingEngineSynchronized(YES);
+                });
+            }
+        }];
+        
+        BHT_themeManagerInitialized = YES;
+    }
+    return instance;
+}
+
+- (void)setPrimaryColorOption:(NSInteger)colorOption {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    
+    // If we have a BHTwitter theme selected, ensure it takes precedence
+    if ([defaults objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger ourSelectedOption = [defaults integerForKey:@"bh_color_theme_selectedColor"];
+        
+        // Only allow changes that match our selection (avoids fighting with Twitter's system)
+        if (colorOption == ourSelectedOption || BHT_isInThemeChangeOperation) {
+            %orig(colorOption);
+        } else {
+            // If not from our theme operation, apply our own theme instead
+            %orig(ourSelectedOption);
+            
+            // Also ensure Twitter's defaults match our setting for consistency
+            [defaults setObject:@(ourSelectedOption) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+        }
+    } else {
+        // No BHTwitter theme active, let Twitter handle it normally
+        %orig(colorOption);
+    }
+}
+
+- (void)applyCurrentColorPalette {
+    %orig;
+    
+    // Signal UI to refresh after Twitter applies its palette
+    if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"] && !BHT_isInThemeChangeOperation) {
+        // This call happens after Twitter has applied its color changes,
+        // so we need to force refresh our special UI elements
+        dispatch_async(dispatch_get_main_queue(), ^{
+            BHT_UpdateAllTabBarIcons();
+            
+            // Refresh our navigation bar bird logos
+            for (UIWindow *window in UIApplication.sharedApplication.windows) {
+                if (window.isHidden || !window.isOpaque) continue;
+                
+                if (window.rootViewController && window.rootViewController.isViewLoaded) {
+                    BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
+                        if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
+                            [(TFNNavigationBar *)currentView updateLogoTheme];
+                        }
+                    });
+                }
+            }
+        });
+    }
+}
+
+%end
+
+// Hook T1ColorSettings to intercept Twitter's internal theme application
+%hook T1ColorSettings
+
++ (void)_t1_applyPrimaryColorOption {
+    // Execute original implementation to let Twitter update its internal state
+    %orig;
+    
+    // If we have an active theme, ensure it's properly applied
+    if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"]) {
+        // Synchronize our theme if needed (without forcing)
+        BHT_ensureThemingEngineSynchronized(NO);
+    }
+}
+
++ (void)_t1_updateOverrideUserInterfaceStyle {
+    // Let Twitter update its UI style
+    %orig;
+    
+    // Ensure our theme isn't lost during dark/light mode changes
+    if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            BHT_UpdateAllTabBarIcons();
+        });
+    }
+}
+
+%end
+
+// This replaces the multiple NSUserDefaults method of protecting our theme key
+%hook NSUserDefaults
+
+- (void)setObject:(id)value forKey:(NSString *)defaultName {
+    // Protect our custom theme from being overwritten by Twitter
+    if ([defaultName isEqualToString:@"T1ColorSettingsPrimaryColorOptionKey"]) {
+        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+        id selectedColor = [defaults objectForKey:@"bh_color_theme_selectedColor"];
+        
+        if (selectedColor != nil && !BHT_isInThemeChangeOperation) {
+            // If our theme is active and this change isn't part of our operation,
+            // only allow the change if it matches our selection
+            if (![value isEqual:selectedColor]) {
+                // Silently reject the change, our theme has priority
+                return;
+            }
+        }
+    }
+    
+    %orig;
+}
+
+%end
+
 %hook T1AppDelegate
 - (_Bool)application:(UIApplication *)application didFinishLaunchingWithOptions:(id)arg2 {
     %orig;
@@ -127,17 +272,11 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         [[%c(FLEXManager) sharedManager] showExplorer];
     }
     
-    // Apply theme with the new robust function
+    // Apply theme immediately after launch - simplified version using our new system
     if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        dispatch_async(dispatch_get_main_queue(), ^ {
-            BHT_applyAndRefreshThemeForAllUI(); // Initial application
-            
-            // One delayed call to catch late UI initializations and ensure theme sticks
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.75 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) { // Re-check in case it was disabled
-                    BHT_applyAndRefreshThemeForAllUI();
-                }
-            });
+        dispatch_async(dispatch_get_main_queue(), ^{
+            // Force synchronize our theme with Twitter's internal theme system
+            BHT_ensureThemingEngineSynchronized(YES);
         });
     }
     
@@ -146,9 +285,10 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 - (void)applicationDidBecomeActive:(id)arg1 {
     %orig;
-    // Re-apply theme on becoming active using the new robust function
+    
+    // Re-apply theme on becoming active - simpler with our new management system
     if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        BHT_applyAndRefreshThemeForAllUI();
+        BHT_ensureThemingEngineSynchronized(YES);
     }
 
     if ([BHTManager Padlock]) {
@@ -687,55 +827,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 
 // MARK: Color theme
-%hook TFNPagingViewController
-- (void)viewDidAppear:(_Bool)animated {
-    %orig(animated);
-    
-    // Re-apply theme when this controller appears
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        BHT_ensureTheming();
-        }
-}
-%end
-
-%hook TFNNavigationController
-- (void)viewDidAppear:(_Bool)animated {
-    %orig(animated);
-    
-    // Re-apply theme when this controller appears
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        BHT_ensureTheming();
-        }
-}
-%end
-
-%hook T1AppSplitViewController
-- (void)viewDidAppear:(_Bool)animated {
-    %orig(animated);
-    
-    // Re-apply theme when this controller appears
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        BHT_ensureTheming();
-        }
-}
-%end
-
-%hook NSUserDefaults
-- (void)setObject:(id)value forKey:(NSString *)defaultName {
-    if ([defaultName isEqualToString:@"T1ColorSettingsPrimaryColorOptionKey"]) {
-        id selectedColor = [[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"];
-        if (selectedColor != nil) {
-            if ([value isEqual:selectedColor]) {
-                return %orig;
-            } else {
-                return;
-            }
-        }
-        return %orig;
-    }
-    return %orig;
-}
-%end
+// Previous view controller hooks for theme re-application have been removed
+// We now use a centralized theme management approach through our TAEColorSettings hooks
 
 %hook TFNNavigationBar
 - (void)setPrefersLargeTitles:(BOOL)largeTitles {
@@ -3519,12 +3612,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         }
     }];
     
-    [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
-                                                    object:nil 
-                                                     queue:[NSOperationQueue mainQueue] 
-                                                usingBlock:^(NSNotification * _Nonnull note) {
-        BHT_ensureTheming();
-    }];
+    // Note: UIApplicationDidBecomeActiveNotification is now primarily handled by
+    // BHT_ensureThemingEngineSynchronized with the appropriate flags and hooks
     
     // Observe theme changes
     // REMOVED: Observer for BHTTabBarThemingChanged (second instance)
@@ -3762,118 +3851,94 @@ static void BHT_applyThemeToWindow(UIWindow *window) {
     }
 }
 
-static void BHT_ensureTheming(void) {
-    if (![[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) return;
+// Helper to synchronize theme engine and ensure our theme is active
+static void BHT_ensureThemingEngineSynchronized(BOOL forceSynchronize) {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    id selectedColorObj = [defaults objectForKey:@"bh_color_theme_selectedColor"];
     
-    // Apply the main color theme
-    BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
+    if (!selectedColorObj) return;
     
-    // Apply to all windows
-    for (UIWindow *window in [UIApplication sharedApplication].windows) {
-        BHT_applyThemeToWindow(window);
+    NSInteger selectedColor = [selectedColorObj integerValue];
+    id twitterColorObj = [defaults objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    
+    // Check if Twitter's color setting matches our desired color
+    if (forceSynchronize || !twitterColorObj || ![twitterColorObj isEqual:selectedColorObj]) {
+        // Mark that we're performing our own theme change to avoid recursion
+        BHT_isInThemeChangeOperation = YES;
+        
+        // Apply our theme color through Twitter's system
+        TAEColorSettings *taeSettings = [%c(TAEColorSettings) sharedSettings];
+        if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
+            [taeSettings setPrimaryColorOption:selectedColor];
+        }
+        
+        // Set Twitter's user defaults key to match our selection
+        [defaults setObject:selectedColorObj forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+        
+        // Call Twitter's internal theme application methods
+        if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
+            [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
+        }
+        
+        // Refresh UI to reflect these changes
+        BHT_UpdateAllTabBarIcons();
+        
+        // Apply to each window
+        for (UIWindow *window in [UIApplication sharedApplication].windows) {
+            if (!window.isOpaque || window.isHidden) continue;
+            
+            // Apply theme to the specific window
+            BHT_applyThemeToWindow(window);
+        }
+        
+        // Reset our operation flag
+        BHT_isInThemeChangeOperation = NO;
     }
 }
 
-static void BHT_applyAndRefreshThemeForAllUI(void) {
-    if (![[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) return;
-    NSInteger selectedOption = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
+// Legacy method for backward compatibility, now just calls our new function
+static void BHT_ensureTheming(void) {
+    BHT_ensureThemingEngineSynchronized(YES);
+}
 
-    // Part 1: Update underlying settings (NSUserDefaults and Twitter's settings objects)
-    id taeSettings = [%c(TAEColorSettings) sharedSettings];
-    if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
-        [taeSettings setPrimaryColorOption:selectedOption];
-    }
-    // Ensure T1ColorSettingsPrimaryColorOptionKey is also set for consistency, as Twitter might read this.
-    [[NSUserDefaults standardUserDefaults] setObject:@(selectedOption) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+// Comprehensive UI refresh - used when we need to force a UI update
+static void BHT_forceRefreshAllWindowAppearances(void) {
+    // Update tab bar icons which are specifically customized by our tweak
+    BHT_UpdateAllTabBarIcons(); 
     
-    // Call BH_changeTwitterColor, assuming it handles deeper integration or other necessary state changes.
-    // This function's definition is external to this snippet (likely a global C function or in BHTManager).
-    if (BH_changeTwitterColor) { // Check if function pointer is valid if it were dynamically looked up. Assumed to be directly callable.
-       BH_changeTwitterColor(selectedOption);
-    }
-
-    // Part 2: Call Twitter's core theme application methods
-    if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
-        [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
-    }
-    if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_updateOverrideUserInterfaceStyle)]) {
-        [%c(T1ColorSettings) _t1_updateOverrideUserInterfaceStyle];
-    }
-    if ([taeSettings respondsToSelector:@selector(applyCurrentColorPalette)]) {
-        [taeSettings performSelector:@selector(applyCurrentColorPalette)];
-    }
-
-    // Part 3: Update our custom themed elements
-    BHT_UpdateAllTabBarIcons(); // For tab bar icons
     for (UIWindow *window in [UIApplication sharedApplication].windows) {
         if (!window.isOpaque || window.isHidden) continue;
+
+        // Update our custom nav bar bird icon for this window
         if (window.rootViewController && window.rootViewController.isViewLoaded) {
             BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
                 if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
-                    // updateLogoTheme should internally use BHTCurrentAccentColor()
-                    if ([(TFNNavigationBar *)currentView respondsToSelector:@selector(updateLogoTheme)]) {
+                    if ([BHTManager classicTabBarEnabled]) {
                         [(TFNNavigationBar *)currentView updateLogoTheme];
                     }
                 }
             });
         }
-    }
-    // TFNBarButtonItemButtonV2 theming is handled by its own hooks (didMoveToWindow, setTintColor).
 
-    // Part 4: Force UI refresh for all windows
-    for (UIWindow *window in [UIApplication sharedApplication].windows) {
-        if (!window.isOpaque || window.isHidden) continue;
+        // Trigger UI refresh hierarchy
         UIViewController *rootVC = window.rootViewController;
-        if (rootVC && rootVC.isViewLoaded && window.rootViewController.view.window) { // Check if view is part of a window
-            [rootVC.view setNeedsLayout];
-            [rootVC.view layoutIfNeeded];
-
+        if (rootVC && rootVC.isViewLoaded) {
+            // Trigger tintColorDidChange on relevant views
             BH_EnumerateSubviewsRecursively(rootVC.view, ^(UIView *subview) {
                 if ([subview respondsToSelector:@selector(tintColorDidChange)]) {
                     [subview tintColorDidChange];
                 }
-                // Defer setNeedsDisplay to allow system to batch
-                // [subview setNeedsDisplay]; // This might be too aggressive here
+                if ([subview respondsToSelector:@selector(setNeedsDisplay)]) {
+                    [subview setNeedsDisplay];
+                }
             });
-             // Ask the entire window to redraw. This should propagate setNeedsDisplay calls.
-            [window setNeedsDisplay];
+            
+            // Force layout update
+            [rootVC.view setNeedsLayout];
+            [rootVC.view layoutIfNeeded];
+            [rootVC.view setNeedsDisplay];
         }
     }
-    
-    // Part 5: One final re-application of Twitter's core theme methods
-    // This is to ensure that if any views reset their appearance during the layout/redraw pass,
-    // they pick up the correct theme colors again.
-    // Use dispatch_async to allow the current runloop to finish processing layout and display updates.
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
-            [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
-        }
-        if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_updateOverrideUserInterfaceStyle)]) {
-            [%c(T1ColorSettings) _t1_updateOverrideUserInterfaceStyle];
-        }
-        if ([taeSettings respondsToSelector:@selector(applyCurrentColorPalette)]) {
-            [taeSettings performSelector:@selector(applyCurrentColorPalette)];
-        }
-        // And re-update our custom elements one last time too
-        BHT_UpdateAllTabBarIcons();
-        for (UIWindow *window in [UIApplication sharedApplication].windows) {
-            if (!window.isOpaque || window.isHidden) continue;
-            if (window.rootViewController && window.rootViewController.isViewLoaded) {
-                BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
-                    if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
-                        if ([(TFNNavigationBar *)currentView respondsToSelector:@selector(updateLogoTheme)]) {
-                           [(TFNNavigationBar *)currentView updateLogoTheme];
-                        }
-                    }
-                });
-            }
-        }
-    });
-}
-
-// Simplified BHT_ensureTheming
-static void BHT_ensureTheming(void) {
-    BHT_applyAndRefreshThemeForAllUI();
 }
 
 // MARK: Theme TFNBarButtonItemButtonV2
