@@ -210,6 +210,9 @@
 
 "CLEAR_SOURCE_LABEL_CACHE_TITLE" = "Clear Source Label Cache";
 "CLEAR_SOURCE_LABEL_CACHE_DETAIL_TITLE" = "Forces refetching of all tweet source labels.";
+"CLEAR_CACHE_BUTTON_TITLE" = "Clear Cache";
+"CACHE_CLEARED_TITLE" = "Cache Cleared";
+"CACHE_CLEARED_MESSAGE" = "Source label cache has been cleared. This may help if labels were not showing correctly.";
 
 
 /*Developers*/

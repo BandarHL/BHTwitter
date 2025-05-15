@@ -813,8 +813,8 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         [BHTManager clearSourceLabelCache];
         
         UIAlertController *doneAlert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CACHE_CLEARED_TITLE"]
-                                                                       message:[[BHTBundle sharedBundle] localizedStringForKey:@"CACHE_CLEARED_MESSAGE"]
-                                                                preferredStyle:UIAlertControllerStyleAlert];
+                                                                          message:[[BHTBundle sharedBundle] localizedStringForKey:@"CACHE_CLEARED_MESSAGE"]
+                                                                   preferredStyle:UIAlertControllerStyleAlert];
         [doneAlert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"OK_BUTTON_TITLE"] style:UIAlertActionStyleDefault handler:nil]];
         [self presentViewController:doneAlert animated:YES completion:nil];
     }]];
@@ -922,11 +922,11 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 // Source Label Cache Clearing
 - (void)clearSourceLabelCacheAction:(PSSpecifier *)specifier {
     [BHTManager clearSourceLabelCache];
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Success" 
-                                                                   message:@"Source label cache has been cleared. This may help if labels were not showing correctly." 
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CACHE_CLEARED_TITLE"] 
+                                                                   message:[[BHTBundle sharedBundle] localizedStringForKey:@"CACHE_CLEARED_MESSAGE"] 
                                                             preferredStyle:UIAlertControllerStyleAlert];
     
-    [alert addAction:[UIAlertAction actionWithTitle:@"OK" 
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"OK_BUTTON_TITLE"] 
                                               style:UIAlertActionStyleDefault 
                                             handler:nil]];
     
