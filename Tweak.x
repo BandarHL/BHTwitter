@@ -4594,9 +4594,10 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 
 // MARK: - Re-enable Media Rail in Composer
 
-// Create a category to add our method declaration
+// Create a category to add our method declarations
 @interface T1TweetComposeViewController (BHTwitter)
-- (void)_t1_updateMediaRailVisibility;
+- (void)_t1_hideOnlyMediaRail;
+- (void)_t1_checkAndUpdateMediaRailVisibility;
 @end
 
 // Handle both loading and showing the media rail
@@ -4604,11 +4605,10 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 
 // Make the media rail visible in more cases
 - (BOOL)_t1_shouldShowMediaRail {
-    // Always allow the rail to show when composing in initial state
+    // Always allow the rail to show when composing in initial state with no attachments/text
     BOOL shouldShow = %orig;
     
-    // If Twitter decided not to show it, and we're in initial compose state with no attachments or text,
-    // then override to YES
+    // If Twitter decided not to show it, we'll only override in specific cases
     if (!shouldShow) {
         // Check if we're in initial compose state with no attachments
         id compositionState = [self valueForKey:@"_compositionState"];
@@ -4626,7 +4626,7 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
                 hasText = (text && text.length > 0);
             }
             
-            // Only show rail when there are no attachments and no text
+            // Only show rail in empty state - no attachments and no text
             return !hasAttachments && !hasText;
         }
     }
@@ -4658,89 +4658,64 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
             [self performSelector:@selector(_t1_updateMediaRailViewController)];
         }
         
-        // Then update the media rail visibility based on current state
-        [self _t1_updateMediaRailVisibility];
+        // Check if we should be showing the media rail
+        [self _t1_checkAndUpdateMediaRailVisibility];
     });
-}
-
-// Hook to handle attachment changes
-- (void)_t1_updateForHasAttachments:(BOOL)hasAttachments {
-    %orig(hasAttachments);
-    
-    // Update media rail visibility based on attachments
-    [self _t1_updateMediaRailVisibility];
 }
 
 // Hook to handle text changes
 - (void)tableViewController:(id)controller tweetTextDidChange:(id)text {
     %orig(controller, text);
     
-    // Update media rail visibility based on text changes
-    [self _t1_updateMediaRailVisibility];
+    // Check if text is typed to hide rail or if empty to show it
+    NSString *textContent = nil;
+    if ([text respondsToSelector:@selector(string)]) {
+        textContent = [text performSelector:@selector(string)];
+    }
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (textContent && textContent.length > 0) {
+            // Text entered - hide just the media rail
+            [self _t1_hideOnlyMediaRail];
+        } else {
+            // Text cleared - maybe show rail if no attachments
+            [self _t1_checkAndUpdateMediaRailVisibility];
+        }
+    });
 }
 
-// Hook to handle photo selection - this captures when user picks a photo
-- (void)addOrReplaceAttachment:(id)attachment scribeWithSource:(id)source {
-    %orig(attachment, source);
+// When media is selected, hide ONLY the rail, not the entire accessory bar
+%new
+- (void)_t1_hideOnlyMediaRail {
+    // First make sure we have a media rail controller
+    id railController = [self valueForKey:@"_mediaRailViewController"];
+    if (!railController) return;
     
-    // Immediately hide the media rail when adding attachment
-    if ([self respondsToSelector:@selector(_t1_hideMediaRail)]) {
-        [self performSelector:@selector(_t1_hideMediaRail)];
-        
-        // Also hide the accessory view to ensure it's completely gone
-        UIView *accessoryView = [self valueForKey:@"_accessoryWrapperView"];
-        if (accessoryView) {
-            accessoryView.hidden = YES;
-            accessoryView.alpha = 0;
+    // Then hide only the media rail by hiding its view
+    if ([railController respondsToSelector:@selector(view)]) {
+        UIView *railView = [railController performSelector:@selector(view)];
+        if (railView) {
+            railView.hidden = YES;
+            railView.alpha = 0;
         }
     }
 }
 
-// Hook to handle attachment removals to show media rail again
-- (void)_t1_setAttachments:(id)attachments scribeWithSource:(id)source {
-    %orig(attachments, source);
-    
-    // Check if attachments is nil or empty array
-    BOOL isEmpty = YES;
-    if (attachments && [attachments isKindOfClass:[NSArray class]]) {
-        isEmpty = ([attachments count] == 0);
-    }
-    
-    // Show media rail again if attachments were removed
-    if (isEmpty) {
-        [self _t1_updateMediaRailVisibility];
-    }
-}
-
-// Handle the media rail visibility based on current state
+// Check composition state and show/hide media rail accordingly
 %new
-- (void)_t1_updateMediaRailVisibility {
-    static NSTimeInterval lastUpdate = 0;
-    NSTimeInterval now = [[NSDate date] timeIntervalSince1970];
-    
-    // Anti-flicker: Don't update too frequently (at least 0.3s between updates)
-    if (now - lastUpdate < 0.3) {
-        return;
-    }
-    
-    lastUpdate = now;
-    
+- (void)_t1_checkAndUpdateMediaRailVisibility {
     // Check if we have attachments
     BOOL hasAttachments = NO;
-    BOOL hasMedia = NO;
-    
     id compositionState = [self valueForKey:@"_compositionState"];
-    if (compositionState) {
-        // Check attachments property
-        if ([compositionState respondsToSelector:@selector(hasAttachments)]) {
-            hasAttachments = [compositionState performSelector:@selector(hasAttachments)];
-        }
-        
-        // Also check for media assets directly
-        if ([compositionState respondsToSelector:@selector(mediaAssets)]) {
-            NSArray *mediaAssets = [compositionState performSelector:@selector(mediaAssets)];
-            hasMedia = (mediaAssets && [mediaAssets count] > 0);
-        }
+    if (compositionState && [compositionState respondsToSelector:@selector(hasAttachments)]) {
+        hasAttachments = [compositionState performSelector:@selector(hasAttachments)];
+    }
+    
+    // Check if there are media assets
+    BOOL hasMedia = NO;
+    if (compositionState && [compositionState respondsToSelector:@selector(mediaAssets)]) {
+        NSArray *mediaAssets = [compositionState performSelector:@selector(mediaAssets)];
+        hasMedia = (mediaAssets && [mediaAssets count] > 0);
     }
     
     // Check if we have text
@@ -4750,58 +4725,89 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
         hasText = (text && text.length > 0);
     }
     
-    // Also check the current gallery controller
-    id galleryController = [self valueForKey:@"_currentPhotoGalleryViewController"];
-    BOOL hasGalleryOpen = (galleryController != nil);
-    
-    BOOL shouldHideRail = (hasAttachments || hasMedia || hasText || hasGalleryOpen);
-    
+    // If we have no attachments and no text, show the media rail
     dispatch_async(dispatch_get_main_queue(), ^{
-        // If we have attachments, media, text, or gallery open, hide the media rail
-        if (shouldHideRail) {
-            if ([self respondsToSelector:@selector(_t1_hideMediaRail)]) {
-                [self performSelector:@selector(_t1_hideMediaRail)];
+        if (!hasAttachments && !hasMedia && !hasText) {
+            // First make sure we have a media rail controller
+            id railController = [self valueForKey:@"_mediaRailViewController"];
+            if (!railController) return;
+            
+            // Show the media rail by making its view visible
+            if ([railController respondsToSelector:@selector(view)]) {
+                UIView *railView = [railController performSelector:@selector(view)];
+                if (railView) {
+                    railView.hidden = NO;
+                    railView.alpha = 1.0;
+                }
             }
             
-            // Also hide the accessory view to ensure it's completely gone
-            UIView *accessoryView = [self valueForKey:@"_accessoryWrapperView"];
-            if (accessoryView) {
-                accessoryView.hidden = YES;
-                accessoryView.alpha = 0;
-            }
-        } else {
-            // Otherwise show it
+            // Also show the rail using Twitter's method
             if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
                 [self performSelector:@selector(_t1_showMediaRail)];
             }
             
-            // Make sure the accessory view is visible
-            UIView *accessoryView = [self valueForKey:@"_accessoryWrapperView"];
-            if (accessoryView) {
-                accessoryView.hidden = NO;
-                accessoryView.alpha = 1.0;
-            }
-            
-            // Adding a small delay to let the UI update and ensure buttons are visible
+            // Make sure buttons are visible
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                // If we have a media rail controller, make sure buttons are visible
-                id railController = [self valueForKey:@"_mediaRailViewController"];
-                if (railController) {
-                    // Try to ensure the buttons are visible by setting instance variables
-                    [railController setValue:@NO forKey:@"_cameraButtonHidden"];
-                    [railController setValue:@NO forKey:@"_spaceButtonHidden"];
-                    [railController setValue:@NO forKey:@"_liveModeInCameraHidden"];
-                    [railController setValue:@YES forKey:@"_allowDownload"];
-                    
-                    // Update the collection view if it exists
-                    UICollectionView *collectionView = [railController valueForKey:@"_collectionView"];
-                    if (collectionView) {
-                        [collectionView reloadData];
-                    }
+                // Configure rail buttons
+                [railController setValue:@NO forKey:@"_cameraButtonHidden"];
+                [railController setValue:@NO forKey:@"_spaceButtonHidden"];
+                [railController setValue:@NO forKey:@"_liveModeInCameraHidden"];
+                [railController setValue:@YES forKey:@"_allowDownload"];
+                
+                // Update collection view
+                UICollectionView *collectionView = [railController valueForKey:@"_collectionView"];
+                if (collectionView) {
+                    [collectionView reloadData];
                 }
             });
+        } else {
+            // Hide only the media rail
+            [self _t1_hideOnlyMediaRail];
         }
     });
+}
+
+// Hook to handle attachment changes
+- (void)_t1_updateForHasAttachments:(BOOL)hasAttachments {
+    %orig(hasAttachments);
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (hasAttachments) {
+            // Hide only the media rail when attachments are added
+            [self _t1_hideOnlyMediaRail];
+        } else {
+            // No attachments now, check if we should show media rail
+            [self _t1_checkAndUpdateMediaRailVisibility];
+        }
+    });
+}
+
+// Handle when photo is selected 
+- (void)addOrReplaceAttachment:(id)attachment scribeWithSource:(id)source {
+    %orig(attachment, source);
+    
+    // Hide only the media rail when attachment is added
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self _t1_hideOnlyMediaRail];
+    });
+}
+
+// Handle when attachments are removed
+- (void)_t1_setAttachments:(id)attachments scribeWithSource:(id)source {
+    %orig(attachments, source);
+    
+    // Check if attachments is nil or empty array
+    BOOL isEmpty = YES;
+    if (attachments && [attachments isKindOfClass:[NSArray class]]) {
+        isEmpty = ([attachments count] == 0);
+    }
+    
+    // Check if we should show media rail again
+    if (isEmpty) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self _t1_checkAndUpdateMediaRailVisibility];
+        });
+    }
 }
 
 %end
