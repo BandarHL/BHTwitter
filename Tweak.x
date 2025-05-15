@@ -4594,28 +4594,6 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 
 // MARK: - Re-enable Media Rail in Composer
 
-// Add interface declarations for our methods
-@interface T1TweetComposeViewController (MediaRail)
-- (void)_bht_forceUpdateRailVisibility;
-@end
-
-// Define the actual class to avoid forward declaration issues
-@interface T1PhotoMediaRailViewController : UIViewController
-@property (nonatomic, weak) id delegate;
-@property (nonatomic, assign) BOOL cameraButtonHidden;
-@property (nonatomic, assign) BOOL spaceButtonHidden;
-@property (nonatomic, assign) BOOL voiceButtonHidden;
-@property (nonatomic, assign) BOOL liveModeInCameraHidden;
-@end
-
-@interface T1TweetComposeViewController (BHTwitter)
-// Declare methods we call/override to avoid "no visible @interface" errors
-- (void)_t1_hideMediaRail;
-- (void)_t1_showMediaRail;
-- (BOOL)_t1_shouldShowMediaRail;
-- (void)_t1_loadMediaRailViewController;
-@end
-
 // Hook the rail controller to ensure its buttons are visible
 %hook T1PhotoMediaRailViewController
 
@@ -4624,21 +4602,6 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 - (BOOL)isVoiceButtonHidden { return NO; }
 - (BOOL)isSpaceButtonHidden { return NO; }
 - (BOOL)isLiveModeInCameraHidden { return NO; }
-
-// Force visibility when selecting an asset
-- (void)collectionView:(id)collectionView didSelectItemAtIndexPath:(id)indexPath {
-    %orig;
-    
-    // Tell the compose controller to update rail visibility when done
-    id composeVC = [self valueForKey:@"_delegate"];
-    if (composeVC && [composeVC isKindOfClass:%c(T1TweetComposeViewController)]) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            if ([composeVC respondsToSelector:@selector(_bht_forceUpdateRailVisibility)]) {
-                [composeVC performSelector:@selector(_bht_forceUpdateRailVisibility)];
-            }
-        });
-    }
-}
 
 %end
 
@@ -4658,35 +4621,83 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
     return result;
 }
 
-// This initial implementation is removed to avoid duplication
-// The more complete version is kept below
+// Simply modify if the rail should be shown or not
+- (BOOL)_t1_shouldShowMediaRail {
+    // Our logic completely overrides the original.
+    id compositionState = [self valueForKey:@"_compositionState"];
+    if (!compositionState) {
+        return NO; // Should not happen, but defensive.
+    }
+
+    BOOL hasVisualAttachments = NO;
+    if ([compositionState respondsToSelector:@selector(mediaAssets)]) {
+        NSArray *mediaAssets = [compositionState performSelector:@selector(mediaAssets)];
+        if (mediaAssets && [mediaAssets isKindOfClass:[NSArray class]]) {
+            hasVisualAttachments = (mediaAssets.count > 0);
+        }
+    }
+    // If mediaAssets is not available or not an array, assume no visual attachments for safety.
+
+    BOOL hasText = NO;
+    if ([compositionState respondsToSelector:@selector(text)]) {
+        NSString *text = [compositionState performSelector:@selector(text)];
+        if (text && [text isKindOfClass:[NSString class]]) {
+            hasText = (text.length > 0);
+        }
+    }
+    // If text is not available or not a string, assume no text for safety.
+    
+    // Show rail IF no text AND no visual attachments.
+    return !hasText && !hasVisualAttachments;
+}
 
 // This ensures the rail shows properly on launch
 - (void)viewDidAppear:(BOOL)animated {
     %orig(animated);
     
-    // Check and force correct rail visibility
+    // After the view appears and animations settle, update the accessory view state.
+    // This will use our hooked _t1_shouldShowMediaRail to determine rail visibility.
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [self _bht_forceUpdateRailVisibility];
+        if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
+            [self performSelector:@selector(_t1_updateAccessoryViewState)];
+        }
     });
 }
 
-// Hook layout updates to potentially fix visibility
-- (void)viewDidLayoutSubviews {
+// These methods are critical for properly hiding/showing the media rail
+- (void)_t1_hideMediaRail {
     %orig;
     
-    static NSTimeInterval lastUpdate = 0;
-    NSTimeInterval now = [[NSDate date] timeIntervalSince1970];
-    
-    // Limit frequency of updates (max once per 0.5 seconds)
-    if (now - lastUpdate > 0.5) {
-        lastUpdate = now;
-        [self _bht_forceUpdateRailVisibility];
+    id railController = [self valueForKey:@"_mediaRailViewController"];
+    if (railController && [railController respondsToSelector:@selector(view)]) {
+        UIView *railView = [railController performSelector:@selector(view)];
+        if (railView) {
+            railView.hidden = YES;
+            railView.alpha = 0;
+        }
+    }
+    // After ensuring it's hidden, tell Twitter to update its state.
+    if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
+        [self performSelector:@selector(_t1_updateAccessoryViewState)];
     }
 }
 
-// These earlier methods are removed to avoid duplication
-// The more complete versions are kept below
+- (void)_t1_showMediaRail {
+    %orig;
+    
+    id railController = [self valueForKey:@"_mediaRailViewController"];
+    if (railController && [railController respondsToSelector:@selector(view)]) {
+        UIView *railView = [railController performSelector:@selector(view)];
+        if (railView) {
+            railView.hidden = NO;
+            railView.alpha = 1.0;
+        }
+    }
+    // After ensuring it's shown, tell Twitter to update its state.
+    if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
+        [self performSelector:@selector(_t1_updateAccessoryViewState)];
+    }
+}
 
 // When selecting photos, hide the media rail
 - (void)addOrReplaceAttachment:(id)attachment scribeWithSource:(id)source {
@@ -4729,321 +4740,38 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
     }
 }
 
-// Completely override the show/hide methods with extreme force
-- (void)_t1_hideMediaRail {
-    // Call original just to make sure internal state is updated
-    %orig;
-    
-    // EXTREME force to hide the media rail view
-    id railController = [self valueForKey:@"_mediaRailViewController"];
-    if (railController) {
-        // Directly manipulate the view
-        if ([railController respondsToSelector:@selector(view)]) {
-            UIView *railView = [railController performSelector:@selector(view)];
-            if (railView) {
-                // Multiple hiding approaches
-                railView.hidden = YES;
-                railView.alpha = 0;
-                railView.userInteractionEnabled = NO;
-                
-                // Force removal from view hierarchy
-                [railView removeFromSuperview];
-                
-                // Use zero frame as an additional measure
-                railView.frame = CGRectZero;
-            }
-        }
-        
-        // Directly hide the accessory wrapper too
-        UIView *accessoryView = [self valueForKey:@"_accessoryWrapperView"];
-        if (accessoryView) {
-            accessoryView.hidden = YES;
-            accessoryView.alpha = 0;
-            
-            // Set accessory view state directly
-            [self setValue:@0 forKey:@"_accessoryViewState"];
-            
-            // Force update the accessory view state
-            if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
-                [self performSelector:@selector(_t1_updateAccessoryViewState)];
-            }
-        }
-    }
-    
-    // Force layout update
-    [self.view layoutIfNeeded];
-}
-
-- (void)_t1_showMediaRail {
-    // Call original for internal state update
-    %orig;
-    
-    // EXTREME force to show the media rail view
-    id railController = [self valueForKey:@"_mediaRailViewController"];
-    if (railController) {
-        // Make the controller create the view if needed
-        if ([railController respondsToSelector:@selector(loadView)]) {
-            [railController performSelector:@selector(loadView)];
-        }
-        
-        // Force rail controller to view did load if needed
-        if ([railController respondsToSelector:@selector(viewDidLoad)] && 
-            ![railController valueForKey:@"_viewLoaded"]) {
-            [railController performSelector:@selector(viewDidLoad)];
-        }
-        
-        // Get the accessory view which should contain the rail
-        UIView *accessoryView = [self valueForKey:@"_accessoryWrapperView"];
-        if (!accessoryView) {
-            // If no accessory view, try to create it
-            if ([self respondsToSelector:@selector(_t1_setupAccessoryWrapperView)]) {
-                [self performSelector:@selector(_t1_setupAccessoryWrapperView)];
-                accessoryView = [self valueForKey:@"_accessoryWrapperView"];
-            }
-        }
-        
-        // Update accessory view state to force it to update
-        [self setValue:@2 forKey:@"_accessoryViewState"];
-        if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
-            [self performSelector:@selector(_t1_updateAccessoryViewState)];
-        }
-        
-        // Force visibility of the view with extreme measures
-        if ([railController respondsToSelector:@selector(view)]) {
-            UIView *railView = [railController performSelector:@selector(view)];
-            if (railView) {
-                // Make sure view has proper frame before showing
-                if (accessoryView) {
-                    CGRect accessoryFrame = accessoryView.bounds;
-                    railView.frame = accessoryFrame;
-                }
-                
-                // Multiple showing methods
-                railView.hidden = NO;
-                railView.alpha = 1.0;
-                railView.userInteractionEnabled = YES;
-                
-                // Add it to the hierarchy if not already
-                if (accessoryView) {
-                    accessoryView.hidden = NO;
-                    accessoryView.alpha = 1.0;
-                    
-                    // Remove from any existing parent before adding
-                    [railView removeFromSuperview];
-                    
-                    // Make sure rail view is a subview of accessory
-                    [accessoryView addSubview:railView];
-                    
-                    // Ensure it's visible with proper constraints
-                    [railView setTranslatesAutoresizingMaskIntoConstraints:NO];
-                    [NSLayoutConstraint activateConstraints:@[
-                        [railView.leadingAnchor constraintEqualToAnchor:accessoryView.leadingAnchor],
-                        [railView.trailingAnchor constraintEqualToAnchor:accessoryView.trailingAnchor],
-                        [railView.topAnchor constraintEqualToAnchor:accessoryView.topAnchor],
-                        [railView.bottomAnchor constraintEqualToAnchor:accessoryView.bottomAnchor]
-                    ]];
-                }
-            }
-        }
-    }
-    
-    // Force layout update
-    [self.view layoutIfNeeded];
-}
-
-// Completely override the shouldShow method
-- (BOOL)_t1_shouldShowMediaRail {
-    // Check if this is empty compose state
-    id compositionState = [self valueForKey:@"_compositionState"];
-    if (compositionState) {
-        // Check for attachments
-        BOOL hasAttachments = NO;
-        if ([compositionState respondsToSelector:@selector(hasAttachments)]) {
-            hasAttachments = [compositionState performSelector:@selector(hasAttachments)];
-        }
-        
-        // Check for media assets
-        BOOL hasMediaAssets = NO;
-        if ([compositionState respondsToSelector:@selector(mediaAssets)]) {
-            NSArray *mediaAssets = [compositionState performSelector:@selector(mediaAssets)];
-            hasMediaAssets = (mediaAssets && [mediaAssets count] > 0);
-        }
-        
-        // Check for text
-        BOOL hasText = NO;
-        if ([compositionState respondsToSelector:@selector(text)]) {
-            NSString *text = [compositionState performSelector:@selector(text)];
-            hasText = (text && text.length > 0);
-        }
-        
-        // ONLY show rail in empty state
-        return !hasAttachments && !hasMediaAssets && !hasText;
-    }
-    
-    // Default to original behavior if no composition state
-    return %orig;
-}
-
-// Direct hook to force update visibility - completely rewritten for maximum reliability
-%new
-- (void)_bht_forceUpdateRailVisibility {
-    // Get composition state - required for decision making
-    id compositionState = [self valueForKey:@"_compositionState"];
-    if (!compositionState) {
-        // No composition state - default to hide
-        [self _t1_hideMediaRail];
-        return;
-    }
-    
-    // THOROUGH checking of all conditions that should hide the rail
-    
-    // Check for attachments (most important)
-    BOOL hasAttachments = NO;
-    if ([compositionState respondsToSelector:@selector(hasAttachments)]) {
-        hasAttachments = [compositionState performSelector:@selector(hasAttachments)];
-    }
-    
-    // Double-check with explicit media assets check
-    BOOL hasMediaAssets = NO;
-    if ([compositionState respondsToSelector:@selector(mediaAssets)]) {
-        NSArray *mediaAssets = [compositionState performSelector:@selector(mediaAssets)];
-        hasMediaAssets = (mediaAssets && [mediaAssets count] > 0);
-    }
-    
-    // Check if there's any image asset attachments
-    BOOL hasImageAttachments = NO;
-    if ([compositionState respondsToSelector:@selector(imageAssets)]) {
-        NSArray *imageAssets = [compositionState performSelector:@selector(imageAssets)];
-        hasImageAttachments = (imageAssets && [imageAssets count] > 0);
-    }
-    
-    // Check if there's any gif asset attachments
-    BOOL hasGifAttachments = NO;
-    if ([compositionState respondsToSelector:@selector(gifAssets)]) {
-        NSArray *gifAssets = [compositionState performSelector:@selector(gifAssets)];
-        hasGifAttachments = (gifAssets && [gifAssets count] > 0);
-    }
-    
-    // Check if there's any video asset attachments
-    BOOL hasVideoAttachments = NO;
-    if ([compositionState respondsToSelector:@selector(videoAssets)]) {
-        NSArray *videoAssets = [compositionState performSelector:@selector(videoAssets)];
-        hasVideoAttachments = (videoAssets && [videoAssets count] > 0);
-    }
-    
-    // Check for text content
-    BOOL hasText = NO;
-    if ([compositionState respondsToSelector:@selector(text)]) {
-        NSString *text = [compositionState performSelector:@selector(text)];
-        hasText = (text && text.length > 0);
-    }
-    
-    // Determine visibility with comprehensive check
-    BOOL shouldHide = hasAttachments || hasMediaAssets || hasImageAttachments || 
-                       hasGifAttachments || hasVideoAttachments || hasText;
-    
-    // Apply visibility change with some delay to ensure UI is ready
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if (shouldHide) {
-            [self _t1_hideMediaRail];
-        } else {
-            [self _t1_showMediaRail];
-        }
-        
-        // Force a layout pass to ensure changes are applied
-        [self.view setNeedsLayout];
-        [self.view layoutIfNeeded];
-    });
-}
-
-// Hook directly to the attachment changes
-- (void)_t1_updateForHasAttachments:(BOOL)hasAttachments {
-    %orig(hasAttachments);
-    
-    // Force update rail visibility whenever attachments change
-    [self _bht_forceUpdateRailVisibility];
-}
-
-// Hook when removing attachments
-- (void)removeAttachment:(id)attachment {
-    %orig(attachment);
-    
-    // Force visibility check when user explicitly removes an attachment
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [self _bht_forceUpdateRailVisibility];
-    });
-}
-
-// We already hook this elsewhere
-
-// Additional hook for attachment management
-- (void)_t1_didUpdateAttachments {
-    %orig;
-    
-    // Force update rail visibility
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [self _bht_forceUpdateRailVisibility];
-    });
-}
-
-// When text changes, update the rail visibility with extreme force
+// When text changes, update the rail visibility
 - (void)tableViewController:(id)controller tweetTextDidChange:(id)text {
     %orig(controller, text);
     
-    // Get the current text with multiple ways to ensure detection
+    // Get the current text
     NSString *textContent = nil;
-    
-    // Try primary text extraction method
     if ([text respondsToSelector:@selector(string)]) {
         textContent = [text performSelector:@selector(string)];
     }
-    // Backup extraction if the first one fails
-    else if ([text isKindOfClass:[NSAttributedString class]]) {
-        textContent = [(NSAttributedString *)text string];
-    }
-    else if ([text isKindOfClass:[NSString class]]) {
-        textContent = (NSString *)text;
-    }
     
-    // Also directly check composition state as a verification
-    id compositionState = [self valueForKey:@"_compositionState"];
-    BOOL hasTextViaCompositionState = NO;
-    if (compositionState && [compositionState respondsToSelector:@selector(text)]) {
-        NSString *compositionText = [compositionState performSelector:@selector(text)];
-        hasTextViaCompositionState = (compositionText && compositionText.length > 0);
-    }
-    
-    // Comprehensive check for text
-    BOOL hasTextContent = (textContent && textContent.length > 0) || hasTextViaCompositionState;
-    
-    // Check for attachments - thorough version
-    BOOL hasAttachments = NO;
-    if (compositionState) {
-        // Direct attachment check
-        if ([compositionState respondsToSelector:@selector(hasAttachments)]) {
-            hasAttachments = [compositionState performSelector:@selector(hasAttachments)];
+    // Hide rail when text is being typed, show otherwise if no attachments
+    if (textContent && textContent.length > 0) {
+        if ([self respondsToSelector:@selector(_t1_hideMediaRail)]) {
+            [self performSelector:@selector(_t1_hideMediaRail)];
         }
-        
-        // Backup attachment check via media assets
-        if (!hasAttachments && [compositionState respondsToSelector:@selector(mediaAssets)]) {
-            NSArray *mediaAssets = [compositionState performSelector:@selector(mediaAssets)];
-            hasAttachments = (mediaAssets && [mediaAssets count] > 0);
+    } else {
+        // Check if we have attachments - only show if no attachments
+        id compositionState = [self valueForKey:@"_compositionState"];
+        if (compositionState) {
+            BOOL hasAttachments = NO;
+            if ([compositionState respondsToSelector:@selector(hasAttachments)]) {
+                hasAttachments = [compositionState performSelector:@selector(hasAttachments)];
+            }
+            
+            // No text and no attachments - show rail
+            if (!hasAttachments) {
+                if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
+                    [self performSelector:@selector(_t1_showMediaRail)];
+                }
+            }
         }
     }
-    
-    // Final decision - hide rail if any text OR attachments
-    // THIS IS CRITICAL for proper rail visibility
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if (hasTextContent || hasAttachments) {
-            [self _t1_hideMediaRail];
-        } else {
-            [self _t1_showMediaRail];
-        }
-        
-        // Force layout to ensure view updates
-        [self.view setNeedsLayout];
-        [self.view layoutIfNeeded];
-    });
 }
 
 %end
