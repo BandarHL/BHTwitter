@@ -4594,80 +4594,234 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 
 // MARK: - Re-enable Media Rail in Composer
 
-// Handle the media rail initialization and appearance
+// Handle both loading and showing the media rail
 %hook T1TweetComposeViewController
 
-// Make sure the rail is properly initialized on first load
+// Make the media rail visible in more cases
+- (BOOL)_t1_shouldShowMediaRail {
+    // Always allow the rail to show when composing
+    BOOL shouldShow = %orig;
+    
+    // If Twitter decided not to show it, we'll override to YES
+    if (!shouldShow) {
+        // Check if we're in initial compose state
+        id activeComposition = [self valueForKey:@"_compositionState"];
+        if (activeComposition) {
+            return YES;
+        }
+    }
+    
+    return shouldShow;
+}
+
+// Make sure media rail loads early and properly
 - (void)viewDidLoad {
     %orig;
     
-    // Ensure the media rail controller is loaded - this is the key part
-    if (![self valueForKey:@"_mediaRailViewController"]) {
+    // Force-load the media rail controller if needed
+    id existingController = [self valueForKey:@"_mediaRailViewController"];
+    if (!existingController) {
         if ([self respondsToSelector:@selector(_t1_loadMediaRailViewController)]) {
             [self performSelector:@selector(_t1_loadMediaRailViewController)];
         }
     }
 }
 
-// Make the rail initially visible when the composer appears
+// Override to show media rail when the view appears
 - (void)viewDidAppear:(BOOL)animated {
     %orig(animated);
     
-    // Do a one-time check to ensure rail is properly initialized
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            // First make sure it's loaded
-            if ([self respondsToSelector:@selector(_t1_updateMediaRailViewController)]) {
-                [self performSelector:@selector(_t1_updateMediaRailViewController)];
-            }
-            
-            // Always show the rail on initial load - Twitter will handle hiding it when needed
-            if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
-                [self performSelector:@selector(_t1_showMediaRail)];
-            }
-        });
+    // Schedule the media rail to show with a slight delay for animation
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        // First trigger loading if needed
+        if ([self respondsToSelector:@selector(_t1_updateMediaRailViewController)]) {
+            [self performSelector:@selector(_t1_updateMediaRailViewController)];
+        }
+        
+        // Then show the rail
+        if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
+            [self performSelector:@selector(_t1_showMediaRail)];
+        }
     });
 }
 
-// We'll selectively override this method to make the rail available
-// in certain conditions, but still respect hiding when needed
-- (BOOL)_t1_shouldShowMediaRail {
-    // Get Twitter's original decision
-    BOOL shouldShow = %orig;
+%end
+
+// Add key methods to ensure the media rail works
+// Instead of trying to modify the PhotoMediaRailViewController directly,
+// let's focus on making sure it appears and stays visible
+%hook T1TweetComposeViewController
+
+// Force media rail to appear whenever attachments are shown
+- (void)_t1_updateForHasAttachments:(BOOL)hasAttachments {
+    %orig(hasAttachments);
     
-    // If Twitter says "no" but we want to override in some cases
-    if (!shouldShow) {
-        // Only show the rail when first opening the composer
-        // This is safer than trying to inspect the composition state
-        // in a forward-declared class
-        return YES;
-    }
-    
-    // Otherwise respect Twitter's decision
-    return shouldShow;
+    // Adding a small delay to let the UI update first
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        // If we have a media rail controller, make sure it's visible
+        id railController = [self valueForKey:@"_mediaRailViewController"];
+        if (railController) {
+            // Make sure the accessory view is visible
+            UIView *accessoryView = [self valueForKey:@"_accessoryWrapperView"];
+            if (accessoryView) {
+                accessoryView.hidden = NO;
+                accessoryView.alpha = 1.0;
+            }
+            
+            // Try to ensure the buttons are visible by setting instance variables
+            // on the rail controller using KVC
+            [railController setValue:@NO forKey:@"_cameraButtonHidden"];
+            [railController setValue:@NO forKey:@"_spaceButtonHidden"];
+            [railController setValue:@NO forKey:@"_liveModeInCameraHidden"];
+            [railController setValue:@YES forKey:@"_allowDownload"];
+            
+            // Update the collection view if it exists
+            UICollectionView *collectionView = [railController valueForKey:@"_collectionView"];
+            if (collectionView) {
+                [collectionView reloadData];
+            }
+        }
+    });
 }
 
-// Config media rail whenever it loads or updates
-- (void)_t1_updateMediaRailViewController {
-    %orig;
-    
-    // Configure the rail controller if it exists
-    id railController = [self valueForKey:@"_mediaRailViewController"];
-    if (railController) {
-        // Make sure buttons are visible
-        [railController setValue:@NO forKey:@"_cameraButtonHidden"];
-        [railController setValue:@NO forKey:@"_spaceButtonHidden"];
-        [railController setValue:@NO forKey:@"_liveModeInCameraHidden"];
-        [railController setValue:@YES forKey:@"_allowDownload"];
-        
-        // Reload the collection view to update UI
-        UICollectionView *collectionView = [railController valueForKey:@"_collectionView"];
-        if (collectionView) {
-            [collectionView reloadData];
+%end
+
+// MARK: - Re-enable Media Rail in Composer (Revised Logic)
+%hook T1TweetComposeViewController
+
+// Helper method to manage media rail visibility
+%new
+- (void)_bht_updateMediaRailVisibility {
+    // Get active composition - assuming it's TFNTwitterComposition or responds to text/attachments
+    id activeCompositionObj = [self activeComposition];
+    TFNTwitterComposition *activeComposition = nil;
+    if (activeCompositionObj && [activeCompositionObj isKindOfClass:%c(TFNTwitterComposition)]) {
+        activeComposition = (TFNTwitterComposition *)activeCompositionObj;
+    }
+
+    NSString *text = activeComposition ? activeComposition.text : nil;
+    NSArray *attachments = activeComposition ? activeComposition.attachments : nil;
+
+    BOOL hasText = text && text.length > 0;
+    BOOL hasAttachments = attachments && attachments.count > 0;
+
+    if (hasText || hasAttachments) {
+        if ([self respondsToSelector:@selector(_t1_hideMediaRail)]) {
+            [self performSelector:@selector(_t1_hideMediaRail)];
+        }
+    } else {
+        if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
+            [self performSelector:@selector(_t1_showMediaRail)];
         }
     }
 }
+
+- (void)viewDidLoad {
+    %orig;
+    // Ensure media rail VC is loaded
+    id existingController = [self valueForKey:@"_mediaRailViewController"];
+    if (!existingController) {
+        if ([self respondsToSelector:@selector(_t1_loadMediaRailViewController)]) {
+            [self performSelector:@selector(_t1_loadMediaRailViewController)];
+        }
+    }
+    // Set initial visibility state
+    [self _bht_updateMediaRailVisibility];
+}
+
+- (void)viewDidAppear:(BOOL)animated {
+    %orig(animated);
+    // Update media rail content and then its visibility
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        if ([self respondsToSelector:@selector(_t1_updateMediaRailViewController)]) {
+            [self performSelector:@selector(_t1_updateMediaRailViewController)];
+        }
+        [self _bht_updateMediaRailVisibility];
+    });
+}
+
+// Called when attachments (photos, videos, etc.) are added or removed.
+- (void)_t1_updateForHasAttachments:(BOOL)hasAttachments {
+    %orig(hasAttachments);
+
+    // Update rail visibility based on current text/attachment state
+    [self _bht_updateMediaRailVisibility];
+
+    // Configure the internal state of the media rail (buttons, etc.)
+    // This ensures the rail's contents are correctly set up, even if the rail itself is hidden.
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        id railController = [self valueForKey:@"_mediaRailViewController"];
+        if (railController) {
+            // Configure internal buttons of the media rail using their property names.
+            // These properties are defined in T1PhotoMediaRailViewController.h
+            [railController setValue:@NO forKey:@"cameraButtonHidden"];
+            [railController setValue:@NO forKey:@"spaceButtonHidden"];
+            [railController setValue:@NO forKey:@"liveModeInCameraHidden"];
+            [railController setValue:@YES forKey:@"allowDownload"]; // Seems related to PHAsset download permission
+
+            UICollectionView *collectionView = [railController valueForKey:@"_collectionView"];
+            if (collectionView) {
+                [collectionView reloadData]; // Refresh the rail's photo/video content
+            }
+        }
+    });
+}
+
+// When an attachment is added via other means (e.g., gallery button)
+- (void)tableViewController:(id)arg1 activeTweetDidAddAttachment:(id)arg2 {
+    %orig;
+    [self _bht_updateMediaRailVisibility];
+}
+
+// When an attachment is removed
+- (void)tableViewController:(id)arg1 activeTweetDidRemoveAttachment:(id)arg2 {
+    %orig;
+    [self _bht_updateMediaRailVisibility];
+}
+
+// When text in the composer changes
+- (void)tableViewController:(id)arg1 tweetTextDidChange:(id)arg2 {
+    %orig;
+    [self _bht_updateMediaRailVisibility];
+}
+
+%end
+
+// Add key methods to ensure the media rail works
+// Instead of trying to modify the PhotoMediaRailViewController directly,
+// let's focus on making sure it appears and stays visible
+// %hook T1TweetComposeViewController // This was a duplicate hook declaration. Merged above.
+
+// - (void)_t1_updateForHasAttachments:(BOOL)hasAttachments { // This method is now handled above.
+//    %orig(hasAttachments);
+//    
+//    // Adding a small delay to let the UI update first
+//    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+//        // If we have a media rail controller, make sure it's visible
+//        id railController = [self valueForKey:@"_mediaRailViewController"];
+//        if (railController) {
+//            // Make sure the accessory view is visible
+//            UIView *accessoryView = [self valueForKey:@"_accessoryWrapperView"];
+//            if (accessoryView) {
+//                accessoryView.hidden = NO;
+//                accessoryView.alpha = 1.0;
+//            }
+//            
+//            // Try to ensure the buttons are visible by setting instance variables
+//            // on the rail controller using KVC
+//            [railController setValue:@NO forKey:@"_cameraButtonHidden"];
+//            [railController setValue:@NO forKey:@"_spaceButtonHidden"];
+//            [railController setValue:@NO forKey:@"_liveModeInCameraHidden"];
+//            [railController setValue:@YES forKey:@"_allowDownload"];
+//            
+//            // Update the collection view if it exists
+//            UICollectionView *collectionView = [railController valueForKey:@"_collectionView"];
+//            if (collectionView) {
+//                [collectionView reloadData];
+//            }
+//        }
+//    });
+//}
 
 %end
 
