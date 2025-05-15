@@ -3866,6 +3866,13 @@ static void PlayRefreshSound(int soundType) {
     }
 }
 
+// Add interface for TFNPullToRefreshControl to access properties
+@interface TFNPullToRefreshControl : UIControl
+@property (nonatomic, assign, getter=isLoading) BOOL loading;
+- (void)_setStatus:(unsigned long long)status fromScrolling:(_Bool)fromScrolling;
+- (void)startPullToRefreshAnimationInScrollView:(id)scrollView;
+@end
+
 // ULTRA SIMPLE APPROACH: Use minimal hooks with strong timestamps to avoid duplicates
 %hook TFNPullToRefreshControl
 
@@ -3882,7 +3889,7 @@ static BOOL initialAppLaunchHandled = NO;
 // Play "pull" sound when refresh starts
 - (void)setLoading:(_Bool)loading {
     // Check what the current state is before %orig changes it
-    BOOL wasLoading = self.loading;
+    BOOL wasLoading = [self isLoading];
     
     %orig;
     
