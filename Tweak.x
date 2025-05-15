@@ -3143,8 +3143,27 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
         if (foundCandidate) {
             timestampLabel = foundCandidate;
+            
+            // Check if there are visible player controls before adding
+            BOOL controlsCurrentlyVisible = NO;
+            UIView *playerControls = nil;
+            
+            if ([activePlayerVC respondsToSelector:@selector(playerControlsView)]) { 
+                playerControls = [activePlayerVC valueForKey:@"playerControlsView"];
+                if (playerControls) {
+                    controlsCurrentlyVisible = playerControls.alpha > 0.0f;
+                }
+            }
+            
+            // Set initial visibility based on player controls
+            BOOL isFirstLoad = ![objc_getAssociatedObject(activePlayerVC, "BHT_FirstLoadDone") boolValue];
+            timestampLabel.hidden = !(controlsCurrentlyVisible || isFirstLoad);
+            timestampLabel.alpha = (controlsCurrentlyVisible || isFirstLoad) ? 1.0 : 0.0;
+            
+            // Now store it in our map
             [playerToTimestampMap setObject:timestampLabel forKey:activePlayerVC];
-            NSLog(@"[BHTwitter Timestamp] VC %@: Associated label %@ in map.", activePlayerVC, timestampLabel);
+            NSLog(@"[BHTwitter Timestamp] VC %@: Associated label %@ in map. Controls visible: %d, FirstLoad: %d", 
+                  activePlayerVC, timestampLabel, controlsCurrentlyVisible, isFirstLoad);
         } else {
             if ([playerToTimestampMap objectForKey:activePlayerVC]) {
                  NSLog(@"[BHTwitter Timestamp] VC %@: No label found, removing existing map entry.", activePlayerVC);
@@ -3201,7 +3220,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             objc_setAssociatedObject(self, "BHT_TimerStarted", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
             
             // After a delay, allow normal behavior by marking first load as done
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.75 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            // Using a longer delay (1.25s) to ensure controls have time to appear
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.25 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
                 if (self && self.view.window) {
                     objc_setAssociatedObject(self, "BHT_FirstLoadDone", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
                     NSLog(@"[BHTwitter Timestamp] Player can now hide controls normally");
@@ -3246,10 +3266,19 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     if (labelReady) {
         UILabel *timestampLabel = [playerToTimestampMap objectForKey:activePlayerVC];
         if (timestampLabel) { 
-            // For normal operation, let the player handle visibility and animations - it was already called in %orig
-            if (showButtons) {
-                NSLog(@"[BHTwitter Timestamp] VC %@: SHOWING label %@.", activePlayerVC, timestampLabel);
+            // DIRECTLY control visibility based on the showButtons parameter
+            // This ensures the timestamp label is always in sync with player controls
+            BOOL isFixedForFirstLoad = [objc_getAssociatedObject(timestampLabel, "BHT_FixedForFirstLoad") boolValue];
+            
+            if (showButtons || isFixedForFirstLoad) {
+                // Make timestamp visible along with controls
+                timestampLabel.hidden = NO;
+                timestampLabel.alpha = 1.0;
+                NSLog(@"[BHTwitter Timestamp] VC %@: SHOWING label %@. isFixedForFirstLoad=%d", activePlayerVC, timestampLabel, isFixedForFirstLoad);
             } else {
+                // Hide timestamp when controls are hidden
+                timestampLabel.hidden = YES;
+                timestampLabel.alpha = 0.0;
                 NSLog(@"[BHTwitter Timestamp] VC %@: HIDING label %@.", activePlayerVC, timestampLabel);
             }
         } else {
@@ -3289,7 +3318,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
                 objc_setAssociatedObject(timestampLabel, "BHT_FixedForFirstLoad", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
                 
                 // After a delay, transition to normal player control
-                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                // Using a longer delay (1.5s) to ensure user sees the timestamp before allowing it to hide
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
                     if (activePlayerVC && activePlayerVC.view.window && timestampLabel && timestampLabel.superview) {
                         // End first load mode and let player take over
                         objc_setAssociatedObject(activePlayerVC, "BHT_FirstLoadDone", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
@@ -3356,22 +3386,21 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             // The key is that showHideNavigationButtons should have ALREADY run if controls became visible due to player state.
             // So, if our label is hidden but controls are visible, something is out of sync OR this state change *caused* controls to show.
 
-            if (controlsShouldBeVisible) {
-                if (timestampLabel.hidden) {
-                    NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Controls ARE visible, label WAS hidden. SHOWING label %@.", activePlayerVC, timestampLabel);
-                    timestampLabel.alpha = 1.0;
-                    timestampLabel.hidden = NO;
-                }
-                } else {
-                if (!timestampLabel.hidden) {
-                    // Only hide if playerControls view exists and is actually not visible.
-                    // Avoids hiding if playerControlsView is nil or alpha check is inconclusive.
-                    if (playerControls && playerControls.alpha == 0.0f) { 
-                        NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Controls ARE NOT visible (alpha 0), label WAS visible. HIDING label %@.", activePlayerVC, timestampLabel);
-                        timestampLabel.hidden = YES;
-                        timestampLabel.alpha = 0.0;
-                    }
-                }
+            // Get first load status (always show during first load)
+            BOOL isFixedForFirstLoad = [objc_getAssociatedObject(timestampLabel, "BHT_FixedForFirstLoad") boolValue];
+            
+            if (controlsShouldBeVisible || isFixedForFirstLoad) {
+                // Show label if controls are visible or in first load mode
+                NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Making label visible (controls visible=%d, firstLoad=%d)", 
+                      activePlayerVC, controlsShouldBeVisible, isFixedForFirstLoad);
+                timestampLabel.alpha = 1.0;
+                timestampLabel.hidden = NO;
+            } else {
+                // Always ensure label is hidden when controls are hidden (unless in first load mode)
+                NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Hiding label (controls visible=%d, firstLoad=%d)", 
+                      activePlayerVC, controlsShouldBeVisible, isFixedForFirstLoad);
+                timestampLabel.hidden = YES;
+                timestampLabel.alpha = 0.0;
             }
         } else {
             NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Label was prepared but map/superview check failed.", activePlayerVC);
