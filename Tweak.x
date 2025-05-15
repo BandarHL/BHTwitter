@@ -3851,8 +3851,7 @@ static void PlayRefreshSound(int soundType) {
     }
     
     if (soundFile) {
-        NSString *soundPath = [[BHTBundle sharedBundle].bundlePath stringByAppendingPathComponent:soundFile];
-        NSURL *soundURL = [NSURL fileURLWithPath:soundPath];
+        NSURL *soundURL = [[BHTBundle sharedBundle] pathForFile:soundFile];
         
         static SystemSoundID sounds[2] = {0, 0};
         static dispatch_once_t onceToken[2];
