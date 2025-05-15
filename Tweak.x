@@ -5086,24 +5086,23 @@ static NSMutableArray *activeTranslationContexts;
                                 [invocation setSelector:factorySelector];
                                 [invocation setTarget:twitterTranslationClass];
                                 
-                                id arg1 = translatedText;
-                                id arg2 = [NSNull null];
-                                id arg3 = @"Gemini";
-                                id arg4 = context.sourceLanguage ?: @"en";
-                                id arg5 = context.sourceLanguage ?: @"en";
-                                id arg6 = context.targetLanguage ?: @"en";
-                                id arg7 = @"Success";
-                                
-                                [invocation setArgument:&arg1 atIndex:2];
-                                [invocation setArgument:&arg2 atIndex:3];
-                                [invocation setArgument:&arg3 atIndex:4];
-                                [invocation setArgument:&arg4 atIndex:5];
-                                [invocation setArgument:&arg5 atIndex:6];
-                                [invocation setArgument:&arg6 atIndex:7];
-                                [invocation setArgument:&arg7 atIndex:8];
+                                id arg1_translation = translatedText;
+                                id arg2_entities = [NSNull null];
+                                id arg3_source = @"Gemini";
+                                id arg4_localizedLang = context.sourceLanguage ?: @"en";
+                                id arg5_sourceLang = context.sourceLanguage ?: @"en";
+                                id arg6_destLang = context.targetLanguage ?: @"en"; // Use targetLanguage here as per last attempt
+                                id arg7_state = @"Success";
+
+                                [invocation setArgument:&arg1_translation atIndex:2];
+                                [invocation setArgument:&arg2_entities atIndex:3];
+                                [invocation setArgument:&arg3_source atIndex:4];
+                                [invocation setArgument:&arg4_localizedLang atIndex:5];
+                                [invocation setArgument:&arg5_sourceLang atIndex:6];
+                                [invocation setArgument:&arg6_destLang atIndex:7];
+                                [invocation setArgument:&arg7_state atIndex:8];
                                 
                                 [invocation invoke];
-                                
                                 __unsafe_unretained id result = nil;
                                 [invocation getReturnValue:&result];
                                 translationObject = result;
@@ -5117,12 +5116,75 @@ static NSMutableArray *activeTranslationContexts;
                     }
                 } @catch (NSException *exception) {
                     NSLog(@"[GeminiTranslator] Exception creating translation with factory method: %@", exception);
+                    translationObject = nil; // Ensure nil on exception
+                }
+            }
+            
+            // Try method 2: Direct alloc/init with simpler initializers
+            if (!translationObject) {
+                @try {
+                    NSLog(@"[GeminiTranslator] Factory method failed. Trying alloc/init with simpler initializers for TFSTwitterTranslation");
+                    id instance = [twitterTranslationClass alloc];
+
+                    if (instance) {
+                        NSLog(@"[GeminiTranslator] Successfully allocated instance: %@ for TFSTwitterTranslation", instance);
+                        
+                        // Attempt to Loop through simpler initializers
+                        NSArray *simpleInitSelectors = @[
+                            @"initWithTranslatedText:",
+                            @"initWithText:",
+                            @"initWithTranslation:"
+                        ];
+
+                        for (NSString *selectorStr in simpleInitSelectors) {
+                            SEL initSelector = NSSelectorFromString(selectorStr);
+                            if ([instance respondsToSelector:initSelector]) {
+                                NSLog(@"[GeminiTranslator] Found simpler initializer: %@", selectorStr);
+                                NSMethodSignature *sig = [instance methodSignatureForSelector:initSelector];
+                                if (sig) {
+                                    if (sig.numberOfArguments == 3) { // Selector like initWithText:(id)
+                                        NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
+                                        [inv setSelector:initSelector];
+                                        [inv setTarget:instance];
+                                        id arg = translatedText;
+                                        [inv setArgument:&arg atIndex:2];
+                                        [inv invoke];
+                                        __unsafe_unretained id result = nil;
+                                        [inv getReturnValue:&result];
+                                        translationObject = result;
+
+                                        if (translationObject) {
+                                            NSLog(@"[GeminiTranslator] Successfully initialized with simpler initializer: %@", selectorStr);
+                                            // Try to set all necessary properties using KVC
+                                            @try {
+                                                NSLog(@"[GeminiTranslator] Attempting to set properties via KVC on object from simpler init.");
+                                                [translationObject setValue:translatedText forKey:@"text"]; // Or translatedText, translation
+                                                [translationObject setValue:@"Gemini" forKey:@"source"]; // Or translationSource
+                                                [translationObject setValue:(context.sourceLanguage ?: @"en") forKey:@"sourceLanguage"];
+                                                @try {
+                                                    [translationObject setValue:(context.targetLanguage ?: @"en") forKey:@"destinationLanguage"];
+                                                } @catch (NSException *e) {
+                                                    @try { [translationObject setValue:(context.targetLanguage ?: @"en") forKey:@"targetLanguage"]; } @catch (NSException *e2) {}
+                                                }
+                                                [translationObject setValue:@"Success" forKey:@"translationState"];
+                                                NSLog(@"[GeminiTranslator] Finished KVC property setting for simpler init.");
+                                            } @catch (NSException *e) {
+                                                NSLog(@"[GeminiTranslator] Error setting properties via KVC for simpler init: %@", e);
+                                            }
+                                            break; 
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        NSLog(@"[GeminiTranslator] Failed to allocate instance of TFSTwitterTranslation");
+                    }
+                } @catch (NSException *exception) {
+                    NSLog(@"[GeminiTranslator] Exception with alloc/init simpler approach: %@", exception);
                     translationObject = nil; // Ensure it's nil on exception
                 }
             }
-
-            // The old "Method 3" (copying an existing object) is removed as Attempt 0 is more direct.
-            // if (!translationObject) { ... old Method 3 logic ... }
                     
             if (!translationObject) {
                 NSLog(@"[GeminiTranslator] Could not create translation object, falling back");
