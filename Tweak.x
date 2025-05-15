@@ -4730,6 +4730,80 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
     }
 }
 
+// Hook the remove attachment method specifically to handle when photos are unselected
+- (void)removeAttachment:(id)attachment {
+    // Call original method
+    %orig(attachment);
+    
+    // Get the composition state after removal
+    id compositionState = [self valueForKey:@"_compositionState"];
+    if (!compositionState) return;
+    
+    // Check if there are any attachments left
+    BOOL hasAttachments = NO;
+    if ([compositionState respondsToSelector:@selector(hasAttachments)]) {
+        hasAttachments = [compositionState performSelector:@selector(hasAttachments)];
+    }
+    
+    // Also check for media assets directly
+    BOOL hasMediaAssets = NO;
+    if ([compositionState respondsToSelector:@selector(mediaAssets)]) {
+        NSArray *mediaAssets = [compositionState performSelector:@selector(mediaAssets)];
+        hasMediaAssets = (mediaAssets && [mediaAssets count] > 0);
+    }
+    
+    // Check if there is text
+    BOOL hasText = NO;
+    if ([compositionState respondsToSelector:@selector(text)]) {
+        NSString *text = [compositionState performSelector:@selector(text)];
+        hasText = (text && text.length > 0);
+    }
+    
+    // If no attachments/media and no text, show the media rail
+    if (!hasAttachments && !hasMediaAssets && !hasText) {
+        if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self performSelector:@selector(_t1_showMediaRail)];
+            });
+        }
+    }
+}
+
+// Also hook the attachment management method
+- (void)_t1_didUpdateAttachments {
+    %orig;
+    
+    // Check state after attachments update
+    id compositionState = [self valueForKey:@"_compositionState"];
+    if (!compositionState) return;
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        // Check if there are any attachments
+        BOOL hasAttachments = NO;
+        if ([compositionState respondsToSelector:@selector(hasAttachments)]) {
+            hasAttachments = [compositionState performSelector:@selector(hasAttachments)];
+        }
+        
+        // Check if there is text
+        BOOL hasText = NO;
+        if ([compositionState respondsToSelector:@selector(text)]) {
+            NSString *text = [compositionState performSelector:@selector(text)];
+            hasText = (text && text.length > 0);
+        }
+        
+        // Show or hide rail based on state
+        if (!hasAttachments && !hasText) {
+            if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
+                [self performSelector:@selector(_t1_showMediaRail)];
+            }
+        } else {
+            if ([self respondsToSelector:@selector(_t1_hideMediaRail)]) {
+                [self performSelector:@selector(_t1_hideMediaRail)];
+            }
+        }
+    });
+}
+
 // When text changes, update the rail visibility
 - (void)tableViewController:(id)controller tweetTextDidChange:(id)text {
     %orig(controller, text);
