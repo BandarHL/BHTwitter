@@ -5338,10 +5338,57 @@ static NSMutableArray *activeTranslationContexts;
             }
             
             if (![strongSelf respondsToSelector:handlerSelector]) {
-                NSLog(@"[GeminiTranslator] Handler method not found, falling back");
-                %orig(context.statusViewModel, context.account, context.controller);
-                cleanupContext();
-                return;
+                // Add introspection to find handler methods
+                NSLog(@"[GeminiTranslator] Handler method not found, inspecting handler object for suitable methods");
+                @try {
+                    NSLog(@"[GeminiTranslator] Inspecting methods available on handler class: %@", NSStringFromClass([strongSelf class]));
+                    Class handlerClass = [strongSelf class];
+                    unsigned int methodCount = 0;
+                    Method *methods = class_copyMethodList(handlerClass, &methodCount);
+                    
+                    if (methods) {
+                        // Look for methods that might handle translations
+                        for (unsigned int i = 0; i < methodCount; i++) {
+                            Method method = methods[i];
+                            SEL selector = method_getName(method);
+                            NSString *selectorStr = NSStringFromSelector(selector);
+                            
+                            // Filter for promising handler methods
+                            if ([selectorStr containsString:@"handle"] || 
+                                [selectorStr containsString:@"translation"] || 
+                                [selectorStr containsString:@"translat"] ||
+                                [selectorStr hasPrefix:@"_t1_"]) {
+                                NSLog(@"[GeminiTranslator] Potential handler method found: %@", selectorStr);
+                                
+                                // Check if this method takes 2 arguments (like the handlers we were looking for)
+                                char *typeEncoding = method_getTypeEncoding(method);
+                                int paramCount = 0;
+                                const char *typePtr = typeEncoding;
+                                while (*typePtr) {
+                                    if (*typePtr == ':') paramCount++;
+                                    typePtr++;
+                                }
+                                
+                                if (paramCount == 2) {
+                                    NSLog(@"[GeminiTranslator] Found promising 2-parameter handler: %@", selectorStr);
+                                    // Try this handler
+                                    handlerSelector = selector;
+                                    break;
+                                }
+                            }
+                        }
+                        free(methods);
+                    }
+                } @catch (NSException *e) {
+                    NSLog(@"[GeminiTranslator] Exception while inspecting handler methods: %@", e);
+                }
+                
+                if (![strongSelf respondsToSelector:handlerSelector]) {
+                    NSLog(@"[GeminiTranslator] Handler method not found, falling back");
+                    %orig(context.statusViewModel, context.account, context.controller);
+                    cleanupContext();
+                    return;
+                }
             }
             
             // Call the handler
