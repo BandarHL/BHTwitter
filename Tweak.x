@@ -5138,7 +5138,11 @@ static NSMutableArray *activeTranslationContexts;
 
                         for (NSString *selectorStr in simpleInitSelectors) {
                             SEL initSelector = NSSelectorFromString(selectorStr);
-                            if ([instance respondsToSelector:initSelector]) {
+                            // ADDED VERBOSE LOGGING HERE
+                            BOOL responds = [instance respondsToSelector:initSelector];
+                            NSLog(@"[GeminiTranslator] Checking instance (%@) for selector '%@': Responds = %s", instance, selectorStr, responds ? "YES" : "NO");
+
+                            if (responds) { // Original condition
                                 NSLog(@"[GeminiTranslator] Found simpler initializer: %@", selectorStr);
                                 NSMethodSignature *sig = [instance methodSignatureForSelector:initSelector];
                                 if (sig) {
@@ -5176,6 +5180,10 @@ static NSMutableArray *activeTranslationContexts;
                                     }
                                 }
                             }
+                        }
+                        // ADDED LOGGING: If loop finishes and translationObject is still nil
+                        if (!translationObject) {
+                            NSLog(@"[GeminiTranslator] All simple initializers checked. translationObject is still nil.");
                         }
                     } else {
                         NSLog(@"[GeminiTranslator] Failed to allocate instance of TFSTwitterTranslation");
