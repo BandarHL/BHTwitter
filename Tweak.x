@@ -2904,15 +2904,47 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 }
 
 - (void)immersiveViewController:(id)passedImmersiveViewController showHideNavigationButtons:(_Bool)showButtons {
+    // Store the original value for "showButtons"
+    BOOL originalShowButtons = showButtons;
+    
+    // Force buttons to be visible for first load
+    BOOL isFirstLoad = ![objc_getAssociatedObject(self, "BHT_FirstLoadDone") boolValue];
+    if (isFirstLoad && [BHTManager restoreVideoTimestamp]) {
+        // For first load, FORCE buttons to be visible (override the incoming parameter)
+        showButtons = YES;
+        
+        // Only allow normal hiding after a delay - set a timer in first call
+        if (!objc_getAssociatedObject(self, "BHT_TimerStarted")) {
+            objc_setAssociatedObject(self, "BHT_TimerStarted", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            
+            // After a delay, allow normal behavior by marking first load as done
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.75 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                if (self && self.view.window) {
+                    objc_setAssociatedObject(self, "BHT_FirstLoadDone", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                    NSLog(@"[BHTwitter Timestamp] Player can now hide controls normally");
+                }
+            });
+        }
+    }
+    
+    // Call original with possibly modified parameter
     %orig(passedImmersiveViewController, showButtons);
+    
     T1ImmersiveFullScreenViewController *activePlayerVC = self;
-    NSLog(@"[BHTwitter Timestamp] VC %@: showHideNavigationButtons: %d", activePlayerVC, showButtons);
+    NSLog(@"[BHTwitter Timestamp] VC %@: showHideNavigationButtons: %d (original: %d)", activePlayerVC, showButtons, originalShowButtons);
 
+    // The rest of the method remains unchanged
     if (![BHTManager restoreVideoTimestamp]) {
+        if (playerToTimestampMap) {
+            UILabel *labelToManage = [playerToTimestampMap objectForKey:activePlayerVC];
+            if (labelToManage) {
+                labelToManage.hidden = YES;
+                NSLog(@"[BHTwitter Timestamp] VC %@: Hiding label (feature disabled).", activePlayerVC);
+            }
+        }
         return;
     }
     
-    // Find timestamp label
     SEL findAndPrepareSelector = NSSelectorFromString(@"BHT_findAndPrepareTimestampLabelForVC:");
     BOOL labelReady = NO;
 
@@ -2921,32 +2953,27 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
         [invocation setSelector:findAndPrepareSelector];
         [invocation setTarget:self];
-        [invocation setArgument:&activePlayerVC atIndex:2];
+        [invocation setArgument:&activePlayerVC atIndex:2]; // Arguments start at index 2 (0 = self, 1 = _cmd)
         [invocation invoke];
         [invocation getReturnValue:&labelReady];
+    } else {
+        NSLog(@"[BHTwitter Timestamp] VC %@: ERROR - Does not respond to selector BHT_findAndPrepareTimestampLabelForVC:", activePlayerVC);
     }
 
     if (labelReady) {
         UILabel *timestampLabel = [playerToTimestampMap objectForKey:activePlayerVC];
         if (timestampLabel) { 
-            // Check if this label is fixed for first load
-            BOOL isFixedForFirstLoad = [objc_getAssociatedObject(timestampLabel, "BHT_FixedForFirstLoad") boolValue];
-            if (isFixedForFirstLoad) {
-                // Skip visibility changes for fixed labels - they stay visible
-                return;
-            }
-            
-            // For normal operation, let the player handle visibility and animations
+            // For normal operation, let the player handle visibility and animations - it was already called in %orig
             if (showButtons) {
-                // Regular timestamp behavior - fully synchronized with player controls
-                timestampLabel.alpha = 1.0;
-                timestampLabel.hidden = NO;
+                NSLog(@"[BHTwitter Timestamp] VC %@: SHOWING label %@.", activePlayerVC, timestampLabel);
             } else {
-                // When hiding, set alpha to 0 first (let the player animate this)
-                timestampLabel.alpha = 0.0;
-                timestampLabel.hidden = YES;
+                NSLog(@"[BHTwitter Timestamp] VC %@: HIDING label %@.", activePlayerVC, timestampLabel);
             }
+        } else {
+            NSLog(@"[BHTwitter Timestamp] VC %@: Label was ready but map returned nil.", activePlayerVC);
         }
+    } else {
+        NSLog(@"[BHTwitter Timestamp] VC %@: Label not ready after findAndPrepare.", activePlayerVC);
     }
 }
 
@@ -3699,6 +3726,8 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
     }
     
     if (isInImmersiveContext) {
+        NSLog(@"[BHTwitter Timestamp] Styling timestamp label: %@", self.text);
+        
         // Apply styling - ONLY styling, not visibility
         self.font = [UIFont systemFontOfSize:14.0];
         self.textColor = [UIColor whiteColor];
@@ -3732,21 +3761,6 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
         // Mark as styled and store reference
         objc_setAssociatedObject(self, "BHT_StyledTimestamp", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         gVideoTimestampLabel = self;
-        
-        // IMPORTANT! Force immediate visibility as soon as we style the label
-        // This ensures it's visible right from the start regardless of controls state
-        self.alpha = 1.0;
-        self.hidden = NO;
-        
-        // Mark as fixed to prevent early hiding
-        objc_setAssociatedObject(self, "BHT_FixedForFirstLoad", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        
-        // After a delay, remove the protection to let player take over visibility control
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            if (self && self.superview) {
-                objc_setAssociatedObject(self, "BHT_FixedForFirstLoad", @NO, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-            }
-        });
     }
 }
 
