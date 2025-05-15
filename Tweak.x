@@ -3886,54 +3886,49 @@ static BOOL *stateMap[128] = {0}; // Simple state map using pointer hash
     return YES;
 }
 
-// Play pull sound when the refresh is triggered by dragging
+// Play sounds based on refresh status changes
 - (void)_setStatus:(unsigned long long)status fromScrolling:(_Bool)fromScrolling {
     %orig;
     
-    // Only play pull sound for manual pulls
+    // Just play the pull sound when the pull action happens
     if (status == 1 && fromScrolling) {
         playPullSound();
     }
 }
 
-// Play pop sound when refresh animation completes
-- (void)_onRefreshAnimationComplete {
+// Hook the animation completion block directly - this is key!
+- (void)endRefreshingWithCompletionHandler:(void (^)(void))completionHandler {
+    // Create our own wrapper completion handler
+    void (^ourCompletionHandler)(void) = ^{
+        // First run the original completion handler
+        if (completionHandler) {
+            completionHandler();
+        }
+        
+        // Then play our sound
+        if (initialSoundsPlayed) {
+            playPopSound();
+        }
+    };
+    
+    // Call original with our completion handler
+    %orig(ourCompletionHandler);
+}
+
+// Additional hook point for completion - some Twitter versions use this
+- (void)endRefreshing {
     %orig;
     
-    // Play the pop sound immediately when Twitter's animation completes
     if (initialSoundsPlayed) {
         playPopSound();
     }
 }
 
-// Alternative completion point - used on some versions of Twitter
-- (void)_finishRefreshingScrollViewAnimated:(BOOL)animated {
+// Another hook point to cover all bases
+- (void)finishRefreshing {
     %orig;
     
-    // Play the pop sound only when actually finishing (not starting)
     if (initialSoundsPlayed) {
-        playPopSound();
-    }
-}
-
-// Final fallback - still needed for versions that may not call the above methods
-- (void)setLoading:(BOOL)loading {
-    // Get old loading value
-    uintptr_t hash = ((uintptr_t)self) % 128;
-    
-    // Get previous state (null = not yet set)
-    BOOL wasLoading = stateMap[hash] != NULL ? *stateMap[hash] : NO;
-    
-    // Update state - allocate if needed
-    if (stateMap[hash] == NULL) {
-        stateMap[hash] = malloc(sizeof(BOOL));
-    }
-    *stateMap[hash] = loading;
-    
-    %orig;
-    
-    // When transitioning from loading to not loading (refresh complete)
-    if (wasLoading && !loading && initialSoundsPlayed) {
         playPopSound();
     }
 }
