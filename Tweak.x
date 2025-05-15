@@ -3866,98 +3866,98 @@ static void PlayRefreshSound(int soundType) {
     }
 }
 
-// Add interface for TFNPullToRefreshControl to access properties
+// MARK: - Restore Pull-To-Refresh Sounds
+
+// Add proper interface for key methods
 @interface TFNPullToRefreshControl : UIControl
-@property (nonatomic, assign, getter=isLoading) BOOL loading;
-- (void)_setStatus:(unsigned long long)status fromScrolling:(_Bool)fromScrolling;
-- (void)startPullToRefreshAnimationInScrollView:(id)scrollView;
+- (void)_playSoundEffect:(long long)soundType;
+- (void)_viewDidCompleteLoading;
+- (void)_triggerLoading;
 @end
 
-// ULTRA SIMPLE APPROACH: Use minimal hooks with strong timestamps to avoid duplicates
-%hook TFNPullToRefreshControl
-
-// Timestamp tracking to avoid duplicated sounds
-static NSTimeInterval lastPullSoundTime = 0;
-static NSTimeInterval lastPopSoundTime = 0;
-static BOOL initialAppLaunchHandled = NO;
-
-// Always enable sound effects
-+ (_Bool)_areSoundEffectsEnabled {
-    return YES;
-}
-
-// Play "pull" sound when refresh starts
-- (void)setLoading:(_Bool)loading {
-    // Check what the current state is before %orig changes it
-    BOOL wasLoading = [self isLoading];
+// Simple helper function to play the sounds
+static void PlayRefreshSound(int soundType) {
+    static SystemSoundID sounds[2] = {0, 0};
     
-    %orig;
-    
-    // Get current time for deduplication
-    NSTimeInterval currentTime = [[NSDate date] timeIntervalSince1970];
-    
-    // If transitioning from not loading to loading, play pull sound
-    if (!wasLoading && loading) {
-        // Only play if we haven't played a pull sound too recently (within 0.5 seconds)
-        if (currentTime - lastPullSoundTime > 0.5) {
-            lastPullSoundTime = currentTime;
-            PlayRefreshSound(0);
-            
-            // Schedule the pop sound with a fixed delay that matches Twitter's typical refresh time
-            if (!initialAppLaunchHandled) {
-                // For initial app launch, use a longer delay
-                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                    lastPopSoundTime = [[NSDate date] timeIntervalSince1970];
-                    PlayRefreshSound(1);
-                });
-                initialAppLaunchHandled = YES;
+    if (sounds[soundType] == 0) {
+        NSString *soundFile = nil;
+        if (soundType == 0) {
+            // Sound when pulling down
+            soundFile = @"psst2.aac";
+        } else if (soundType == 1) {
+            // Sound when refresh completes
+            soundFile = @"pop.aac";
+        }
+        
+        if (soundFile) {
+            NSURL *soundURL = [[BHTBundle sharedBundle] pathForFile:soundFile];
+            if (soundURL) {
+                AudioServicesCreateSystemSoundID((__bridge CFURLRef)soundURL, &sounds[soundType]);
             }
         }
     }
-    // If transitioning from loading to not loading, play pop sound
-    else if (wasLoading && !loading) {
-        // Only play if we haven't played a pop sound too recently (within 0.5 seconds)
-        if (currentTime - lastPopSoundTime > 0.5) {
-            // Small delay to match the animation
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                lastPopSoundTime = [[NSDate date] timeIntervalSince1970];
-                PlayRefreshSound(1);
-            });
+    
+    if (sounds[soundType]) {
+        AudioServicesPlaySystemSound(sounds[soundType]);
+    }
+}
+
+%hook TFNPullToRefreshControl
+
+// DIRECT APPROACH: Override the exact method Twitter uses to play sounds
+- (void)_playSoundEffect:(long long)soundType {
+    // Don't call %orig because we're completely replacing the sound system
+    
+    // Add time-based deduplication
+    static NSTimeInterval lastPullSoundTime = 0;
+    static NSTimeInterval lastPopSoundTime = 0;
+    NSTimeInterval now = [[NSDate date] timeIntervalSince1970];
+    
+    if (soundType == 0) {
+        // This is the pull-down sound
+        if (now - lastPullSoundTime > 0.5) {
+            lastPullSoundTime = now;
+            PlayRefreshSound(0);
+        }
+    } else if (soundType == 1) {
+        // This is the completion sound
+        if (now - lastPopSoundTime > 0.5) {
+            lastPopSoundTime = now;
+            PlayRefreshSound(1);
         }
     }
 }
 
-// Backup trigger for the pull sound via status change
-- (void)_setStatus:(unsigned long long)status fromScrolling:(_Bool)fromScrolling {
+// Backup method to ensure sounds play even if _playSoundEffect doesn't fire
+- (void)_viewDidCompleteLoading {
     %orig;
     
-    // Only handle manual pulls, not during app launch
-    if (initialAppLaunchHandled && status == 1 && fromScrolling) {
-        NSTimeInterval currentTime = [[NSDate date] timeIntervalSince1970];
-        
-        // Only play if we haven't played a pull sound too recently
-        if (currentTime - lastPullSoundTime > 0.5) {
-            lastPullSoundTime = currentTime;
-            PlayRefreshSound(0);
-        }
-    }
-}
-
-// Handle special case for initial app launch
-- (void)startPullToRefreshAnimationInScrollView:(id)scrollView {
-    %orig;
+    // Play completion sound on a slight delay
+    static NSTimeInterval lastPopSoundTime = 0;
+    NSTimeInterval now = [[NSDate date] timeIntervalSince1970];
     
-    // Only handle if we haven't dealt with the initial app launch yet
-    if (!initialAppLaunchHandled) {
-        NSTimeInterval currentTime = [[NSDate date] timeIntervalSince1970];
-        lastPullSoundTime = currentTime;
-        
-        // Slight delay before playing the pull sound
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            PlayRefreshSound(0);
+    if (now - lastPopSoundTime > 0.5) {
+        lastPopSoundTime = now;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            PlayRefreshSound(1);
         });
+    }
+}
+
+// Ensure we handle the initial app launch case
+- (void)_triggerLoading {
+    %orig;
+    
+    // Play the initial pull sound
+    static BOOL initialSoundPlayed = NO;
+    if (!initialSoundPlayed) {
+        initialSoundPlayed = YES;
+        PlayRefreshSound(0);
         
-        // No need to schedule pop sound here, the setLoading method will handle it
+        // Schedule the pop sound for initial app launch
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            PlayRefreshSound(1);
+        });
     }
 }
 
