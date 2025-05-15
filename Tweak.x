@@ -4600,6 +4600,24 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 // Force media rail to show by overriding this key decision method
 - (BOOL)_t1_shouldShowMediaRail {
     return YES;
+
+// Force showing the media rail when view appears
+- (void)viewDidAppear:(BOOL)animated {
+    %orig(animated);
+    
+    // Find and unhide accessory view that contains the media rail
+    UIView *accessoryView = [self valueForKey:@"_accessoryWrapperView"];
+    if (accessoryView) {
+        accessoryView.hidden = NO;
+        accessoryView.alpha = 1.0;
+    }
+    
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        // Try to show media rail using its dedicated method
+        if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
+            [self performSelector:@selector(_t1_showMediaRail)];
+        }
+    });
 }
 
 %end
