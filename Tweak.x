@@ -5335,7 +5335,55 @@ static NSMutableArray *activeTranslationContexts;
             // Create view model
             id translatedViewModel = nil;
             @try {
-                translatedViewModel = [[viewModelClass alloc] init];
+                // Use the correct initializer from the header file
+                SEL properInitSelector = NSSelectorFromString(@"initWithTranslation:forUnderlyingViewModel:");
+                if ([viewModelClass instancesRespondToSelector:properInitSelector]) {
+                    NSLog(@"[GeminiTranslator] Using proper initializer from header");
+                    
+                    NSMethodSignature *sig = [viewModelClass instanceMethodSignatureForSelector:properInitSelector];
+                    if (sig) {
+                        id instance = [viewModelClass alloc];
+                        NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
+                        [inv setSelector:properInitSelector];
+                        [inv setTarget:instance];
+                        
+                        [inv setArgument:&translationObject atIndex:2];
+                        id statusVM = context.statusViewModel;
+                        [inv setArgument:&statusVM atIndex:3];
+                        
+                        [inv invoke];
+                        
+                        __unsafe_unretained id result = nil;
+                        [inv getReturnValue:&result];
+                        translatedViewModel = result;
+                        
+                        NSLog(@"[GeminiTranslator] Created T1TranslatedStatusViewModel using proper initializer");
+                    }
+                } else {
+                    // Fall back to old method if initializer not found
+                    NSLog(@"[GeminiTranslator] Proper initializer not found, falling back to property setters");
+                    translatedViewModel = [[viewModelClass alloc] init];
+                    
+                    if ([translatedViewModel respondsToSelector:@selector(setUnderlyingViewModel:)]) {
+                        [translatedViewModel performSelector:@selector(setUnderlyingViewModel:) withObject:context.statusViewModel];
+                    }
+                    
+                    if ([translatedViewModel respondsToSelector:@selector(setTranslation:)]) {
+                        [translatedViewModel performSelector:@selector(setTranslation:) withObject:translationObject];
+                    }
+                }
+                
+                // Verify that translation and underlying model are set
+                if ([translatedViewModel respondsToSelector:@selector(translation)]) {
+                    id checkTranslation = [translatedViewModel performSelector:@selector(translation)];
+                    NSLog(@"[GeminiTranslator] Translation on translated view model: %@", checkTranslation);
+                }
+                
+                if ([translatedViewModel respondsToSelector:@selector(underlyingViewModel)]) {
+                    id checkUnderlying = [translatedViewModel performSelector:@selector(underlyingViewModel)];
+                    NSLog(@"[GeminiTranslator] Underlying view model: %@", checkUnderlying);
+                }
+                
             } @catch (NSException *exception) {
                 NSLog(@"[GeminiTranslator] Exception creating view model: %@", exception);
             }
@@ -5347,30 +5395,86 @@ static NSMutableArray *activeTranslationContexts;
                 return;
             }
             
-            // Set properties
+            // Try to update the UI with the new translated view model
             @try {
-                if ([translatedViewModel respondsToSelector:@selector(setUnderlyingViewModel:)]) {
-                    [translatedViewModel performSelector:@selector(setUnderlyingViewModel:) withObject:context.statusViewModel];
-                } else {
-                    NSLog(@"[GeminiTranslator] setUnderlyingViewModel method not found");
-                    %orig(context.statusViewModel, context.account, context.controller);
-                    cleanupContext();
-                    return;
+                // Try to get the status ID to find the cell in the UI
+                NSString *statusID = nil;
+                if ([context.statusViewModel respondsToSelector:@selector(statusIDString)]) {
+                    statusID = [context.statusViewModel performSelector:@selector(statusIDString)];
+                    NSLog(@"[GeminiTranslator] Found statusID: %@", statusID);
                 }
                 
-                if ([translatedViewModel respondsToSelector:@selector(setTranslation:)]) {
-                    [translatedViewModel performSelector:@selector(setTranslation:) withObject:translationObject];
-                } else {
-                    NSLog(@"[GeminiTranslator] setTranslation method not found");
-                    %orig(context.statusViewModel, context.account, context.controller);
-                    cleanupContext();
-                    return;
+                // Try to find and update the UI cell that contains this tweet
+                if ([context.controller respondsToSelector:@selector(view)]) {
+                    UIView *controllerView = [context.controller performSelector:@selector(view)];
+                    if (controllerView) {
+                        NSLog(@"[GeminiTranslator] Looking for status views to update");
+                        
+                        // Since findAndUpdateStatusViewsIn is not implemented, do the work inline
+                        // directly implementing the recursive view update here
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            // Function to recursively find and update status views
+                            void (^findAndUpdateViews)(UIView *, id, id, NSString *) = ^(UIView *view, id translatedVM, id originalVM, NSString *idStr) {
+                                // Skip if any parameters are nil
+                                if (!view || !translatedVM || !originalVM) return;
+                                
+                                // Check if this view is a status view
+                                NSString *viewClassName = NSStringFromClass([view class]);
+                                BOOL isStatusView = [viewClassName containsString:@"StatusView"] || 
+                                                    [viewClassName containsString:@"TweetView"];
+                                
+                                if (isStatusView) {
+                                    // Try to get the view model of this status view
+                                    id viewModel = nil;
+                                    if ([view respondsToSelector:@selector(viewModel)]) {
+                                        viewModel = [view performSelector:@selector(viewModel)];
+                                    } else if ([view respondsToSelector:@selector(statusViewModel)]) {
+                                        viewModel = [view performSelector:@selector(statusViewModel)];
+                                    }
+                                    
+                                    // Check if this is the status view we're looking for
+                                    BOOL isTargetView = NO;
+                                    if (viewModel && [viewModel isEqual:originalVM]) {
+                                        isTargetView = YES;
+                                    } else if (idStr && [viewModel respondsToSelector:@selector(statusIDString)]) {
+                                        NSString *viewStatusID = [viewModel performSelector:@selector(statusIDString)];
+                                        if ([viewStatusID isEqualToString:idStr]) {
+                                            isTargetView = YES;
+                                        }
+                                    }
+                                    
+                                    // If this is our target view, update it
+                                    if (isTargetView) {
+                                        NSLog(@"[GeminiTranslator] Found matching status view: %@", view);
+                                        
+                                        // Try various ways to update the view with the translated view model
+                                        if ([view respondsToSelector:@selector(setViewModel:)]) {
+                                            [view performSelector:@selector(setViewModel:) withObject:translatedVM];
+                                            NSLog(@"[GeminiTranslator] Updated viewModel");
+                                        } else if ([view respondsToSelector:@selector(setStatusViewModel:)]) {
+                                            [view performSelector:@selector(setStatusViewModel:) withObject:translatedVM];
+                                            NSLog(@"[GeminiTranslator] Updated statusViewModel");
+                                        }
+                                        
+                                        // Force a layout update
+                                        [view setNeedsLayout];
+                                        [view layoutIfNeeded];
+                                    }
+                                }
+                                
+                                // Recursively search subviews
+                                for (UIView *subview in view.subviews) {
+                                    findAndUpdateViews(subview, translatedVM, originalVM, idStr);
+                                }
+                            };
+                            
+                            // Call the recursive function to find and update views
+                            findAndUpdateViews(controllerView, translatedViewModel, context.statusViewModel, statusID);
+                        });
+                    }
                 }
             } @catch (NSException *exception) {
-                NSLog(@"[GeminiTranslator] Exception setting properties: %@", exception);
-                %orig(context.statusViewModel, context.account, context.controller);
-                cleanupContext();
-                return;
+                NSLog(@"[GeminiTranslator] Exception in UI update: %@", exception);
             }
             
             // Find the handler method
@@ -5568,15 +5672,17 @@ static NSMutableArray *activeTranslationContexts;
                 %orig(context.statusViewModel, context.account, context.controller);
             }
             
-            // Clean up
-            cleanupContext();
-        }];
-    } @catch (NSException *exception) {
-        // If anything goes wrong, fall back to Twitter's translation
-        NSLog(@"[GeminiTranslator] Exception in translation: %@", exception);
-        %orig;
-    }
+                    // Clean up
+        cleanupContext();
+    }];
+} @catch (NSException *exception) {
+    // If anything goes wrong, fall back to Twitter's translation
+    NSLog(@"[GeminiTranslator] Exception in translation: %@", exception);
+    %orig;
 }
+}
+
+
 
 %end
 
@@ -5670,4 +5776,6 @@ static NSMutableArray *activeTranslationContexts;
 }
 
 %end
+
+// Replace Google Translate provider with Gemini
 
