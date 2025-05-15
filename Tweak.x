@@ -3838,10 +3838,9 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 // MARK: - Combined constructor to initialize all hooks and features
 // MARK: - Restore Pull-To-Refresh Sounds
-%hook TFNPullToRefreshControl
 
-// Override the sound effect playback method to always play our sounds
-- (void)_playSoundEffect:(long long)soundType {
+// Helper function to play sounds since we can't directly call methods on TFNPullToRefreshControl
+static void PlayRefreshSound(int soundType) {
     NSString *soundFile = nil;
     if (soundType == 0) {
         // Sound when pulling down
@@ -3868,25 +3867,31 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     }
 }
 
+%hook TFNPullToRefreshControl
+
+// Track status changes with static variables instead of accessing instance variables
+static unsigned long long prevStatus = 0;
+
 // Always enable sound effects
 + (_Bool)_areSoundEffectsEnabled {
     return YES;
 }
 
-// Make sure status changes trigger sound playback
+// Intercept status changes to play sounds at the right time
 - (void)_setStatus:(unsigned long long)status fromScrolling:(_Bool)fromScrolling {
-    unsigned long long oldStatus = [self valueForKey:@"_status"] ? [[self valueForKey:@"_status"] unsignedLongLongValue] : 0;
+    unsigned long long oldStatus = prevStatus;
+    prevStatus = status;
     
     %orig;
     
-    // Play sounds based on status transitions without conditional check
+    // Play sounds based on status transitions
     if (oldStatus != status) {
         if (status == 1 && fromScrolling) {
             // Status changed to "triggered" - play pull sound
-            [self _playSoundEffect:0];
+            PlayRefreshSound(0);
         } else if (oldStatus == 2 && status == 0) {
             // Status changed from "loading" to "idle" - play completion sound
-            [self _playSoundEffect:1];
+            PlayRefreshSound(1);
         }
     }
 }
