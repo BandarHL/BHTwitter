@@ -3839,129 +3839,70 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 // MARK: - Combined constructor to initialize all hooks and features
 // MARK: - Restore Pull-To-Refresh Sounds
 
-// Super simple sound system - just initialize sounds once and play directly
-static void playPullSound(void) {
-    static SystemSoundID pullSoundID = 0;
-    static dispatch_once_t pullOnce;
-    
-    dispatch_once(&pullOnce, ^{
-        NSURL *soundURL = [[BHTBundle sharedBundle] pathForFile:@"psst2.aac"];
-        if (soundURL) {
-            AudioServicesCreateSystemSoundID((__bridge CFURLRef)soundURL, &pullSoundID);
-        }
-    });
-    
-    if (pullSoundID != 0) {
-        AudioServicesPlaySystemSound(pullSoundID);
-    }
-}
+static SystemSoundID pullSound = 0;
+static SystemSoundID popSound = 0;
 
-static void playPopSound(void) {
-    static SystemSoundID popSoundID = 0;
-    static dispatch_once_t popOnce;
-    
-    dispatch_once(&popOnce, ^{
-        NSURL *soundURL = [[BHTBundle sharedBundle] pathForFile:@"pop.aac"];
-        if (soundURL) {
-            AudioServicesCreateSystemSoundID((__bridge CFURLRef)soundURL, &popSoundID);
-        }
-    });
-    
-    if (popSoundID != 0) {
-        AudioServicesPlaySystemSound(popSoundID);
-    }
-}
-
-// Simple flag to avoid playing initial sounds multiple times
-static BOOL initialSoundsPlayed = NO;
-
-// State tracking for refresh controls
-static BOOL *stateMap[128] = {0}; // Simple state map using pointer hash
-
-// Super direct hook approach
-%hook TFNPullToRefreshControl
-
-// Always enable sound effects
-+ (_Bool)_areSoundEffectsEnabled {
-    return YES;
-}
-
-// Completely override Twitter's sound system
-- (void)_playSoundEffect:(long long)soundType {
-    // soundType 0 = pull, soundType 1 = pop
-    if (soundType == 0) {
-        playPullSound();
-    } else if (soundType == 1) {
-        playPopSound();
-    } else {
-        %orig; // let Twitter handle unknown sound types
-    }
-}
-
-// Ensure the refresh control always thinks it should play sounds
-+ (_Bool)_areSoundEffectsEnabled {
-    return YES;
-}
-
-// FORCE Twitter to call playSound on status transitions
-- (void)_setStatus:(unsigned long long)status fromScrolling:(_Bool)fromScrolling {
-    unsigned long long oldStatus = 0;
-    
-    // Safely get old status
-    @try {
-        oldStatus = [[self valueForKey:@"_status"] unsignedLongLongValue];
-    } @catch (NSException *e) {
-        // Ignore errors
-    }
-    
-    %orig;
-    
-    // Force call our sound methods
-    if (oldStatus != status) {
-        if (status == 3) { // 3 = loading
-            // Call playSoundEffect for the pull sound
-            if ([self respondsToSelector:@selector(_playSoundEffect:)]) {
-                [self _playSoundEffect:0];
-            }
-        } else if (oldStatus == 3 && status != 3) { // Exiting loading state
-            // Call playSoundEffect for the pop sound
-            if ([self respondsToSelector:@selector(_playSoundEffect:)]) {
-                [self _playSoundEffect:1];
-            }
-        }
-    }
-}
-
-// Emergency fallback - manually play pop sound when refresh completes
-- (void)endRefreshing {
-    %orig;
-    
-    // Force call playSoundEffect
-    if ([self respondsToSelector:@selector(_playSoundEffect:)]) {
-        [self _playSoundEffect:1]; // 1 = pop sound
-    }
-}
-
-// Play initial sounds when app starts
-- (void)startPullToRefreshAnimationInScrollView:(id)scrollView {
-    %orig;
-    
-    // Only play initial sounds once
+// Initialize sounds once at startup
+static void initializeSounds(void) {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        // First play the pull sound
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            playPullSound();
+        // Load pull sound
+        NSURL *pullURL = [[BHTBundle sharedBundle] pathForFile:@"psst2.aac"];
+        if (pullURL) {
+            AudioServicesCreateSystemSoundID((__bridge CFURLRef)pullURL, &pullSound);
+        }
+        
+        // Load pop sound
+        NSURL *popURL = [[BHTBundle sharedBundle] pathForFile:@"pop.aac"];
+        if (popURL) {
+            AudioServicesCreateSystemSoundID((__bridge CFURLRef)popURL, &popSound);
+        }
+    });
+}
+
+// Simple hook just for the sound effect method
+%hook TFNPullToRefreshControl
+
+// Override the sound effect playback method
+- (void)_playSoundEffect:(long long)arg1 {
+    initializeSounds();
+    
+    if (arg1 == 0) { // Pull sound
+        if (pullSound != 0) {
+            AudioServicesPlaySystemSound(pullSound);
+        }
+    } else if (arg1 == 1) { // Pop sound
+        if (popSound != 0) {
+            AudioServicesPlaySystemSound(popSound);
+        }
+    }
+}
+
+%end
+
+// Simple setup on app start
+%hook UIApplication
+
+- (BOOL)_openURL:(NSURL *)url options:(NSDictionary *)options delegate:(id)delegate {
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        initializeSounds();
+        
+        // Schedule initial launch sounds
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            if (pullSound != 0) {
+                AudioServicesPlaySystemSound(pullSound);
+            }
             
-            // Then play pop sound after a longer delay
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-                playPopSound();
-                
-                // Mark that initial sounds have played
-                initialSoundsPlayed = YES;
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                if (popSound != 0) {
+                    AudioServicesPlaySystemSound(popSound);
+                }
             });
         });
     });
+    
+    return %orig;
 }
 
 %end
