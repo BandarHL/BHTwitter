@@ -3839,35 +3839,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 // MARK: - Combined constructor to initialize all hooks and features
 // MARK: - Restore Pull-To-Refresh Sounds
 
-// Helper function to play sounds with proper initialization
-static void PlayRefreshSound(int soundType) {
-    static SystemSoundID sounds[2] = {0, 0};
-    
-    if (sounds[soundType] == 0) {
-        NSString *soundFile = nil;
-        if (soundType == 0) {
-            // Sound when pulling down
-            soundFile = @"psst2.aac";
-        } else if (soundType == 1) {
-            // Sound when refresh completes
-            soundFile = @"pop.aac";
-        }
-        
-        if (soundFile) {
-            NSURL *soundURL = [[BHTBundle sharedBundle] pathForFile:soundFile];
-            if (soundURL) {
-                AudioServicesCreateSystemSoundID((__bridge CFURLRef)soundURL, &sounds[soundType]);
-            }
-        }
-    }
-    
-    if (sounds[soundType]) {
-        AudioServicesPlaySystemSound(sounds[soundType]);
-    }
-}
-
-// MARK: - Restore Pull-To-Refresh Sounds
-
 // Add proper interface for key methods
 @interface TFNPullToRefreshControl : UIControl
 - (void)_playSoundEffect:(long long)soundType;
@@ -3875,7 +3846,7 @@ static void PlayRefreshSound(int soundType) {
 - (void)_triggerLoading;
 @end
 
-// Simple helper function to play the sounds
+// Helper function to play sounds with proper initialization
 static void PlayRefreshSound(int soundType) {
     static SystemSoundID sounds[2] = {0, 0};
     
