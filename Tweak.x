@@ -3006,16 +3006,9 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
                             
                             [newString appendAttributedString:sourceSuffix];
                            
-                            // Use standard initializer and set activeRanges via KVC if available
+                            // Use standard initializer without trying to handle activeRanges
+                            // The activeRanges property is likely private and not accessible via KVC
                             TFNAttributedTextModel *newModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newString];
-                            @try {
-                                id originalActiveRanges = [model valueForKey:@"activeRanges"];
-                                if (originalActiveRanges) {
-                                    [newModel setValue:originalActiveRanges forKey:@"activeRanges"];
-            }
-                            } @catch (NSException *exception) {
-                                NSLog(@"TweetSourceTweak: Could not get/set activeRanges via KVC: %@", exception);
-                            }
                             %orig(newModel);
                             return;
                         }
@@ -3086,17 +3079,9 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
                 
                 // Update the model only if modifications were made
                 if (modified) {
-                    // Create a new model instance with the modified attributed string
-                    // and attempt to preserve active ranges if possible
+                    // Create a new model instance with the modified attributed string 
+                    // Avoid trying to access private properties
                     TFNAttributedTextModel *newModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newString];
-                     @try {
-                        id originalActiveRanges = [model valueForKey:@"activeRanges"];
-                        if (originalActiveRanges) {
-                            [newModel setValue:originalActiveRanges forKey:@"activeRanges"];
-                         }
-                    } @catch (NSException *exception) {
-                        NSLog(@"TweetSourceTweak: Could not preserve activeRanges for post/repost replacement: %@", exception);
-                    }
                     %orig(newModel);
                     return; // Important: return here to avoid calling %orig again at the end
                 }
