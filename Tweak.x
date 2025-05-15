@@ -2937,14 +2937,37 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     if (labelReady) {
         UILabel *timestampLabel = [playerToTimestampMap objectForKey:activePlayerVC];
         if (timestampLabel) { 
-            if (showButtons) {
+            // Check if this is the first load for this player instance
+            BOOL isFirstLoad = ![objc_getAssociatedObject(activePlayerVC, "BHT_FirstLoadDone") boolValue];
+            
+            if (isFirstLoad) {
+                // For the first load, always show the timestamp regardless of button visibility
                 timestampLabel.alpha = 1.0;
                 timestampLabel.hidden = NO;
-                NSLog(@"[BHTwitter Timestamp] VC %@: SHOWING label %@.", activePlayerVC, timestampLabel);
+                NSLog(@"[BHTwitter Timestamp] VC %@: FIRST LOAD - Forcing label visibility ON", activePlayerVC);
+                
+                // Mark this controller as having completed its first load
+                objc_setAssociatedObject(activePlayerVC, "BHT_FirstLoadDone", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                
+                // Schedule an extra check to ensure the timestamp stays visible
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                    if (timestampLabel && timestampLabel.superview) {
+                        timestampLabel.alpha = 1.0;
+                        timestampLabel.hidden = NO;
+                        NSLog(@"[BHTwitter Timestamp] VC %@: FIRST LOAD - Extra visibility check", activePlayerVC);
+                    }
+                });
             } else {
-                timestampLabel.hidden = YES;
-                timestampLabel.alpha = 0.0;
-                NSLog(@"[BHTwitter Timestamp] VC %@: HIDING label %@.", activePlayerVC, timestampLabel);
+                // Normal behavior for subsequent loads - sync with controls visibility
+                if (showButtons) {
+                    timestampLabel.alpha = 1.0;
+                    timestampLabel.hidden = NO;
+                    NSLog(@"[BHTwitter Timestamp] VC %@: SHOWING label %@.", activePlayerVC, timestampLabel);
+                } else {
+                    timestampLabel.hidden = YES;
+                    timestampLabel.alpha = 0.0;
+                    NSLog(@"[BHTwitter Timestamp] VC %@: HIDING label %@.", activePlayerVC, timestampLabel);
+                }
             }
         } else {
              NSLog(@"[BHTwitter Timestamp] VC %@: Label was ready but map returned nil.", activePlayerVC);
@@ -3672,20 +3695,20 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
     // Find if we're in the correct view context
     UIView *parentView = self.superview;
     BOOL isInImmersiveContext = NO;
-    UIView *cardView = nil;
     
     while (parentView) {
         NSString *className = NSStringFromClass([parentView class]);
         if ([className isEqualToString:@"T1TwitterSwift.ImmersiveCardView"] || 
             [className hasSuffix:@".ImmersiveCardView"]) {
             isInImmersiveContext = YES;
-            cardView = parentView;
             break;
         }
         parentView = parentView.superview;
     }
     
     if (isInImmersiveContext) {
+        NSLog(@"[BHTwitter Timestamp] Styling newly found timestamp label: %@", self.text);
+        
         // Apply styling
         self.font = [UIFont systemFontOfSize:14.0];
         self.textColor = [UIColor whiteColor];
@@ -3720,71 +3743,15 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
         objc_setAssociatedObject(self, "BHT_StyledTimestamp", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         gVideoTimestampLabel = self;
         
-        // Find player root view controller to check control state
-        UIView *controlsParent = cardView;
-        id playerViewController = nil;
-        
-        while (controlsParent) {
-            if ([NSStringFromClass([controlsParent class]) containsString:@"ImmersiveFullScreenViewController"]) {
-                playerViewController = controlsParent.nextResponder;
-                if ([playerViewController isKindOfClass:[UIViewController class]]) {
-                    break;
-                }
-            }
-            controlsParent = controlsParent.superview;
-        }
-        
-        // Find player controls and check their visibility
-        UIView *playerControls = findPlayerControlsInHierarchy(cardView);
-        BOOL shouldBeVisible = YES;
-        
-        if (playerControls) {
-            // If controls exist and are visible, make our label visible too
-            // If controls are hidden (alpha 0), we'll hide our label
-            shouldBeVisible = (playerControls.alpha > 0);
-        }
-        
-        // Important: For the initial load, make the label visible regardless
-        // This ensures it's visible when the player first appears
-        BOOL isFirstLoad = ![objc_getAssociatedObject(self, "BHT_InitialSetupDone") boolValue];
-        if (isFirstLoad) {
-            // First time we're styling this label - force visibility ON initially
-            // Use a short delay to let the player's controls initialize properly
-            objc_setAssociatedObject(self, "BHT_InitialSetupDone", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-            
-            // Force visibility on after a very short delay (to let player fully initialize)
-            self.alpha = 1.0;
-            self.hidden = NO;
-            
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                if (gVideoTimestampLabel == self && self.superview) {
-                    self.alpha = 1.0;
-                    self.hidden = NO;
-                    NSLog(@"[BHTwitter TimestampLabel] Force showing label on first video");
-                }
-            });
-        } else {
-            // Not first load - sync with player controls state
-            self.alpha = shouldBeVisible ? 1.0 : 0.0;
-            self.hidden = !shouldBeVisible;
-        }
+        // Let the player's controller handle visibility - no visibility changes here
     }
 }
 
-// Simple hook to prevent premature hiding in first video and log who's changing visibility
+// Log when player changes visibility to debug
 - (void)setHidden:(BOOL)hidden {
-    // Only for our timestamp label
+    // Only log changes to our timestamp label
     if (self == gVideoTimestampLabel && [BHTManager restoreVideoTimestamp]) {
-        if (![objc_getAssociatedObject(self, "BHT_InitialSetupDone") boolValue]) {
-            // If this is the first setup and someone is trying to hide the label,
-            // prevent it for a short time to ensure it's visible initially
-            if (hidden) {
-                NSLog(@"[BHTwitter TimestampLabel] Preventing early hiding on first video");
-                %orig(NO);
-                return;
-            }
-        }
-        NSLog(@"[BHTwitter TimestampLabel] setHidden:%d called by: %@", hidden, [NSThread callStackSymbols]);
+        NSLog(@"[BHTwitter Timestamp] UILabel setHidden:%d called by: %@", hidden, [NSThread callStackReturnAddresses]);
     }
     
     %orig(hidden);
