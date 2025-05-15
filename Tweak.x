@@ -3868,30 +3868,36 @@ static void PlayRefreshSound(int soundType) {
 
 %hook TFNPullToRefreshControl
 
-// Track status changes with static variables instead of accessing instance variables
-static unsigned long long prevStatus = 0;
+// Track loading state with static variables
+static BOOL isRefreshing = NO;
 
 // Always enable sound effects
 + (_Bool)_areSoundEffectsEnabled {
     return YES;
 }
 
-// Intercept status changes to play sounds at the right time
-- (void)_setStatus:(unsigned long long)status fromScrolling:(_Bool)fromScrolling {
-    unsigned long long oldStatus = prevStatus;
-    prevStatus = status;
+// Track when loading starts/stops and play appropriate sounds
+- (void)setLoading:(_Bool)loading {
+    BOOL wasRefreshing = isRefreshing;
+    isRefreshing = loading;
     
     %orig;
     
-    // Play sounds based on status transitions
-    if (oldStatus != status) {
-        if (status == 1 && fromScrolling) {
-            // Status changed to "triggered" - play pull sound
-            PlayRefreshSound(0);
-        } else if (oldStatus == 2 && status == 0) {
-            // Status changed from "loading" to "idle" - play completion sound
-            PlayRefreshSound(1);
-        }
+    // Only play the sound when transitioning from loading to not loading
+    if (wasRefreshing && !loading) {
+        // Refresh completed - play the "pop" sound
+        PlayRefreshSound(1);
+    }
+}
+
+// Keep the pull sound when we trigger a refresh
+- (void)_setStatus:(unsigned long long)status fromScrolling:(_Bool)fromScrolling {
+    %orig;
+    
+    // Just handle the pull sound here
+    if (status == 1 && fromScrolling) {
+        // Status changed to "triggered" - play pull sound
+        PlayRefreshSound(0);
     }
 }
 
