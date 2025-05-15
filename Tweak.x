@@ -4594,36 +4594,58 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 
 // MARK: - Always Show Media Rail in Composer
 
-// Simplify our approach to just intercept key methods on the TweetComposeViewController
+// Fix for restoring the media rail in the composer
 %hook T1TweetComposeViewController
 
-// Force media rail to show by overriding this key decision method
+// Show media rail conditionally based on attachments
 - (BOOL)_t1_shouldShowMediaRail {
+    // Check if there are any attachments
+    NSArray *compositions = [self valueForKey:@"_compositionState"];
+    id activeComposition = compositions ? [compositions firstObject] : nil;
+    
+    // If we have attachments, let Twitter decide (it will hide the rail)
+    if (activeComposition && [[activeComposition valueForKey:@"attachments"] count] > 0) {
+        return %orig;
+    }
+    
+    // Otherwise force the rail to be visible
     return YES;
 }
 
-// Force showing the media rail when view appears
+// Make the media rail appear immediately when view loads
+- (void)viewDidLoad {
+    %orig;
+    
+    // Initialize the media rail controller if needed
+    if ([self respondsToSelector:@selector(_t1_loadMediaRailViewController)]) {
+        [self performSelector:@selector(_t1_loadMediaRailViewController)];
+    }
+    
+    // Show the media rail immediately
+    if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
+        [self performSelector:@selector(_t1_showMediaRail)];
+    }
+}
+
+// Make sure the media rail is visible when view appears
 - (void)viewDidAppear:(BOOL)animated {
     %orig(animated);
     
-    // Find and unhide accessory view that contains the media rail
-    UIView *accessoryView = [self valueForKey:@"_accessoryWrapperView"];
-    if (accessoryView) {
-        accessoryView.hidden = NO;
-        accessoryView.alpha = 1.0;
-    }
+    // Only show rail if there are no attachments
+    NSArray *compositions = [self valueForKey:@"_compositionState"];
+    id activeComposition = compositions ? [compositions firstObject] : nil;
     
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        // Try to show media rail using its dedicated method
+    if (!activeComposition || ![[activeComposition valueForKey:@"attachments"] count]) {
+        // Show media rail 
         if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
             [self performSelector:@selector(_t1_showMediaRail)];
         }
-    });
+    }
 }
 
 %end
 
-// These getter methods will be automatically created for the forward-declared class
+// Make sure all the buttons in the rail are enabled
 %hook T1PhotoMediaRailViewController
 
 // Make sure camera button is visible
@@ -4636,8 +4658,18 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
     return NO;
 }
 
+// Make sure voice button is visible
+- (BOOL)isVoiceButtonHidden {
+    return NO;
+}
+
 // Make sure live mode is available
 - (BOOL)isLiveModeInCameraHidden {
+    return NO;
+}
+
+// Make sure go live button is visible
+- (BOOL)goLiveButtonHidden {
     return NO;
 }
 
