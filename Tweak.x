@@ -1,8 +1,8 @@
 #import <UIKit/UIKit.h>
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
-#import "SAMKeychain/AuthViewController.h"
 #import <objc/message.h> // For objc_msgSend
+#import "SAMKeychain/AuthViewController.h"
 #import "Colours/Colours.h"
 #import "BHTManager.h"
 #import <math.h>
@@ -11,22 +11,35 @@
 // Forward declare T1ColorSettings and its private method to satisfy the compiler
 @interface T1ColorSettings : NSObject
 + (void)_t1_applyPrimaryColorOption;
-+ (void)_t1_updateOverrideUserInterfaceStyle; // Add this line
++ (void)_t1_updateOverrideUserInterfaceStyle;
 @end
 
+// We don't need to declare TAEColorSettings here as it's already defined in TWHeaders.h
+
 // Forward declaration for the immersive view controller
-@interface T1ImmersiveFullScreenViewController : UIViewController // Assuming base class, adjust if known
+@interface T1ImmersiveFullScreenViewController : UIViewController
 - (void)immersiveViewController:(id)immersiveViewController showHideNavigationButtons:(_Bool)showButtons;
+- (void)playerViewController:(id)playerViewController playerStateDidChange:(NSInteger)state;
+@end
+
+// Now declare the category, after the main interface is known
+@interface T1ImmersiveFullScreenViewController (BHTwitter)
+- (BOOL)BHT_findAndPrepareTimestampLabelForVC:(T1ImmersiveFullScreenViewController *)activePlayerVC;
 @end
 
 // Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
 static void BHT_applyThemeToWindow(UIWindow *window);
 static void BHT_ensureTheming(void);
-static void BHT_forceRefreshAllWindowAppearances(void); // Renamed
+static void BHT_forceRefreshAllWindowAppearances(void);
+static void BHT_ensureThemingEngineSynchronized(BOOL forceSynchronize);
 
-// Static reference to the video timestamp label
-static __weak UILabel *gVideoTimestampLabel = nil;
+// Theme state tracking
+static BOOL BHT_themeManagerInitialized = NO;
+static BOOL BHT_isInThemeChangeOperation = NO;
+
+// Map to store timestamp labels for each player instance
+static NSMapTable<T1ImmersiveFullScreenViewController *, UILabel *> *playerToTimestampMap = nil;
 
 // Static helper function for recursive view traversal - DEFINED AT THE TOP
 static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
@@ -100,6 +113,144 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 
 // MARK: Clean cache and Padlock
+// MARK: - Core Theme Engine Hooks
+%hook TAEColorSettings
+
+- (instancetype)init {
+    id instance = %orig;
+    if (instance && !BHT_themeManagerInitialized) {
+        // Register for system theme and appearance related notifications
+        [[NSNotificationCenter defaultCenter] addObserverForName:@"UITraitCollectionDidChangeNotification"
+                                                         object:nil
+                                                          queue:[NSOperationQueue mainQueue]
+                                                     usingBlock:^(NSNotification * _Nonnull note) {
+            if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"]) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    BHT_ensureThemingEngineSynchronized(NO);
+                });
+            }
+        }];
+        
+        // Also listen for app entering foreground
+        [[NSNotificationCenter defaultCenter] addObserverForName:@"UIApplicationWillEnterForegroundNotification"
+                                                         object:nil
+                                                          queue:[NSOperationQueue mainQueue]
+                                                     usingBlock:^(NSNotification * _Nonnull note) {
+            if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"]) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    BHT_ensureThemingEngineSynchronized(YES);
+                });
+            }
+        }];
+        
+        BHT_themeManagerInitialized = YES;
+    }
+    return instance;
+}
+
+- (void)setPrimaryColorOption:(NSInteger)colorOption {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    
+    // If we have a BHTwitter theme selected, ensure it takes precedence
+    if ([defaults objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger ourSelectedOption = [defaults integerForKey:@"bh_color_theme_selectedColor"];
+        
+        // Only allow changes that match our selection (avoids fighting with Twitter's system)
+        if (colorOption == ourSelectedOption || BHT_isInThemeChangeOperation) {
+            %orig(colorOption);
+        } else {
+            // If not from our theme operation, apply our own theme instead
+            %orig(ourSelectedOption);
+            
+            // Also ensure Twitter's defaults match our setting for consistency
+            [defaults setObject:@(ourSelectedOption) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+        }
+    } else {
+        // No BHTwitter theme active, let Twitter handle it normally
+        %orig(colorOption);
+    }
+}
+
+- (void)applyCurrentColorPalette {
+    %orig;
+    
+    // Signal UI to refresh after Twitter applies its palette
+    if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"] && !BHT_isInThemeChangeOperation) {
+        // This call happens after Twitter has applied its color changes,
+        // so we need to force refresh our special UI elements
+        dispatch_async(dispatch_get_main_queue(), ^{
+            BHT_UpdateAllTabBarIcons();
+            
+            // Refresh our navigation bar bird logos
+            for (UIWindow *window in UIApplication.sharedApplication.windows) {
+                if (window.isHidden || !window.isOpaque) continue;
+                
+                if (window.rootViewController && window.rootViewController.isViewLoaded) {
+                    BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
+                        if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
+                            [(TFNNavigationBar *)currentView updateLogoTheme];
+                        }
+                    });
+                }
+            }
+        });
+    }
+}
+
+%end
+
+// Hook T1ColorSettings to intercept Twitter's internal theme application
+%hook T1ColorSettings
+
++ (void)_t1_applyPrimaryColorOption {
+    // Execute original implementation to let Twitter update its internal state
+    %orig;
+    
+    // If we have an active theme, ensure it's properly applied
+    if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"]) {
+        // Synchronize our theme if needed (without forcing)
+        BHT_ensureThemingEngineSynchronized(NO);
+    }
+}
+
++ (void)_t1_updateOverrideUserInterfaceStyle {
+    // Let Twitter update its UI style
+    %orig;
+    
+    // Ensure our theme isn't lost during dark/light mode changes
+    if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            BHT_UpdateAllTabBarIcons();
+        });
+    }
+}
+
+%end
+
+// This replaces the multiple NSUserDefaults method of protecting our theme key
+%hook NSUserDefaults
+
+- (void)setObject:(id)value forKey:(NSString *)defaultName {
+    // Protect our custom theme from being overwritten by Twitter
+    if ([defaultName isEqualToString:@"T1ColorSettingsPrimaryColorOptionKey"]) {
+        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+        id selectedColor = [defaults objectForKey:@"bh_color_theme_selectedColor"];
+        
+        if (selectedColor != nil && !BHT_isInThemeChangeOperation) {
+            // If our theme is active and this change isn't part of our operation,
+            // only allow the change if it matches our selection
+            if (![value isEqual:selectedColor]) {
+                // Silently reject the change, our theme has priority
+                return;
+            }
+        }
+    }
+    
+    %orig;
+}
+
+%end
+
 %hook T1AppDelegate
 - (_Bool)application:(UIApplication *)application didFinishLaunchingWithOptions:(id)arg2 {
     %orig;
@@ -121,58 +272,11 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         [[%c(FLEXManager) sharedManager] showExplorer];
     }
     
-    // Apply theme immediately after launch with reinforced consistency
+    // Apply theme immediately after launch - simplified version using our new system
     if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        dispatch_async(dispatch_get_main_queue(), ^ {
-            NSInteger selectedOption = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
-            // Directly set the primary color option in TAEColorSettings to force Twitter's accent system
-            id taeSettings = [%c(TAEColorSettings) sharedSettings];
-            if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
-                [taeSettings setPrimaryColorOption:selectedOption];
-            }
-            // Also update user defaults to ensure consistency
-            [[NSUserDefaults standardUserDefaults] setObject:@(selectedOption) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-            BH_changeTwitterColor(selectedOption);
-            if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
-                [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
-            }
-            if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_updateOverrideUserInterfaceStyle)]) {
-                [%c(T1ColorSettings) _t1_updateOverrideUserInterfaceStyle];
-            }
-            // Additional call to ensure TAEColorSettings applies the theme
-            if ([taeSettings respondsToSelector:@selector(applyCurrentColorPalette)]) {
-                [taeSettings performSelector:@selector(applyCurrentColorPalette)];
-            }
-            BHT_forceRefreshAllWindowAppearances(); // Force refresh all UI elements
-            BHT_UpdateAllTabBarIcons();
-            // Add a delayed refresh to catch late-loading UI elements with shorter delay
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
-                    [taeSettings setPrimaryColorOption:selectedOption];
-                }
-                BH_changeTwitterColor(selectedOption);
-                if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
-                    [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
-                }
-                if ([taeSettings respondsToSelector:@selector(applyCurrentColorPalette)]) {
-                    [taeSettings performSelector:@selector(applyCurrentColorPalette)];
-                }
-                BHT_forceRefreshAllWindowAppearances();
-            });
-            // Add another delayed refresh for even later UI initialization with shorter delay
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
-                    [taeSettings setPrimaryColorOption:selectedOption];
-                }
-                BH_changeTwitterColor(selectedOption);
-                if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
-                    [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
-                }
-                if ([taeSettings respondsToSelector:@selector(applyCurrentColorPalette)]) {
-                    [taeSettings performSelector:@selector(applyCurrentColorPalette)];
-                }
-                BHT_forceRefreshAllWindowAppearances();
-            });
+        dispatch_async(dispatch_get_main_queue(), ^{
+            // Force synchronize our theme with Twitter's internal theme system
+            BHT_ensureThemingEngineSynchronized(YES);
         });
     }
     
@@ -181,21 +285,10 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 - (void)applicationDidBecomeActive:(id)arg1 {
     %orig;
-    // Re-apply theme on becoming active without setting primary color option
+    
+    // Re-apply theme on becoming active - simpler with our new management system
     if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger selectedOption = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
-        BH_changeTwitterColor(selectedOption);
-
-        if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
-            [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
-        }
-        if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_updateOverrideUserInterfaceStyle)]) {
-            [%c(T1ColorSettings) _t1_updateOverrideUserInterfaceStyle];
-        }
-
-        BHT_forceRefreshAllWindowAppearances(); // Force refresh all UI elements
-
-        BHT_UpdateAllTabBarIcons();
+        BHT_ensureThemingEngineSynchronized(YES);
     }
 
     if ([BHTManager Padlock]) {
@@ -734,55 +827,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 
 // MARK: Color theme
-%hook TFNPagingViewController
-- (void)viewDidAppear:(_Bool)animated {
-    %orig(animated);
-    
-    // Re-apply theme when this controller appears
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        BHT_ensureTheming();
-        }
-}
-%end
-
-%hook TFNNavigationController
-- (void)viewDidAppear:(_Bool)animated {
-    %orig(animated);
-    
-    // Re-apply theme when this controller appears
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        BHT_ensureTheming();
-        }
-}
-%end
-
-%hook T1AppSplitViewController
-- (void)viewDidAppear:(_Bool)animated {
-    %orig(animated);
-    
-    // Re-apply theme when this controller appears
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        BHT_ensureTheming();
-        }
-}
-%end
-
-%hook NSUserDefaults
-- (void)setObject:(id)value forKey:(NSString *)defaultName {
-    if ([defaultName isEqualToString:@"T1ColorSettingsPrimaryColorOptionKey"]) {
-        id selectedColor = [[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"];
-        if (selectedColor != nil) {
-            if ([value isEqual:selectedColor]) {
-                return %orig;
-            } else {
-                return;
-            }
-        }
-        return %orig;
-    }
-    return %orig;
-}
-%end
+// Previous view controller hooks for theme re-application have been removed
+// We now use a centralized theme management approach through our TAEColorSettings hooks
 
 %hook TFNNavigationBar
 - (void)setPrefersLargeTitles:(BOOL)largeTitles {
@@ -1558,8 +1604,9 @@ static NSMutableDictionary *fetchPending      = nil;
 static NSMutableDictionary *cookieCache       = nil;
 static NSDate *lastCookieRefresh              = nil;
 
-// Constants for cookie refresh interval (7 days in seconds)
-#define COOKIE_REFRESH_INTERVAL (7 * 24 * 60 * 60)
+// Constants for cookie refresh interval (reduced to 1 day in seconds for more frequent refresh)
+#define COOKIE_REFRESH_INTERVAL (24 * 60 * 60)
+#define COOKIE_FORCE_REFRESH_RETRY_COUNT 1 // Force cookie refresh after this many consecutive failures
 
 // --- Networking & Helper Implementation ---
 @interface TweetSourceHelper : NSObject
@@ -1573,46 +1620,85 @@ static NSDate *lastCookieRefresh              = nil;
 + (NSDictionary *)loadCachedCookies;
 + (BOOL)shouldRefreshCookies;
 + (void)handleClearCacheNotification:(NSNotification *)notification;
-+ (void)pruneSourceCachesIfNeeded; // New method for cache pruning
++ (void)pruneSourceCachesIfNeeded;
++ (void)logDebugInfo:(NSString *)message;
 @end
 
-#define MAX_SOURCE_CACHE_SIZE 500 // Define a maximum cache size
+#define MAX_SOURCE_CACHE_SIZE 200 // Reduced cache size to prevent memory issues
+#define MAX_CONSECUTIVE_FAILURES 3 // Maximum consecutive failures before backing off
 
 @implementation TweetSourceHelper
 
++ (void)logDebugInfo:(NSString *)message {
+    if (message) {
+        NSLog(@"[BHTwitter SourceLabel] %@", message);
+    }
+}
+
 + (void)pruneSourceCachesIfNeeded {
+    if (!tweetSources) return;
+    
     if (tweetSources.count > MAX_SOURCE_CACHE_SIZE) {
-        // Attempt to remove a random key to make space. More sophisticated LRU could be used later if needed.
-        NSArray *keys = [tweetSources allKeys];
-        if (keys.count > 0) {
-            NSString *keyToRemove = keys[arc4random_uniform((uint32_t)keys.count)];
-            NSLog(@"[BHTwitter SourceLabelCache] Pruning cache, removing entry for tweetID: %@", keyToRemove);
+        [self logDebugInfo:[NSString stringWithFormat:@"Pruning cache with %ld entries", (long)tweetSources.count]];
+        
+        // Find oldest entries to remove (those with null values or "Source Unavailable")
+        NSMutableArray *keysToRemove = [NSMutableArray array];
+        
+        for (NSString *key in tweetSources) {
+            NSString *source = tweetSources[key];
+            if (!source || [source isEqualToString:@""] || [source isEqualToString:@"Source Unavailable"]) {
+                [keysToRemove addObject:key];
+                if (keysToRemove.count >= tweetSources.count / 4) break; // Remove up to 25% at once
+            }
+        }
+        
+        // If we didn't find enough "empty" entries, remove some random ones
+        if (keysToRemove.count < tweetSources.count / 5) {
+            NSArray *allKeys = [tweetSources allKeys];
+            for (int i = 0; i < 20 && keysToRemove.count < tweetSources.count / 4; i++) {
+                NSString *randomKey = allKeys[arc4random_uniform((uint32_t)allKeys.count)];
+                if (![keysToRemove containsObject:randomKey]) {
+                    [keysToRemove addObject:randomKey];
+                }
+            }
+        }
+        
+        [self logDebugInfo:[NSString stringWithFormat:@"Removing %ld cache entries", (long)keysToRemove.count]];
+        
+        // Remove the selected keys
+        for (NSString *key in keysToRemove) {
+            [tweetSources removeObjectForKey:key];
             
-            [tweetSources removeObjectForKey:keyToRemove];
-            
-            NSTimer *timeoutTimer = fetchTimeouts[keyToRemove];
+            // Also clean up associated data
+            NSTimer *timeoutTimer = fetchTimeouts[key];
             if (timeoutTimer) {
                 [timeoutTimer invalidate];
-                [fetchTimeouts removeObjectForKey:keyToRemove];
+                [fetchTimeouts removeObjectForKey:key];
             }
-            [fetchRetries removeObjectForKey:keyToRemove];
-            [updateRetries removeObjectForKey:keyToRemove];
-            [updateCompleted removeObjectForKey:keyToRemove];
-            [fetchPending removeObjectForKey:keyToRemove];
-            // viewInstances and viewToTweetID are managed by view lifecycle, not pruned here directly
-            // to avoid removing data for active views.
+            [fetchRetries removeObjectForKey:key];
+            [updateRetries removeObjectForKey:key];
+            [updateCompleted removeObjectForKey:key];
+            [fetchPending removeObjectForKey:key];
         }
     }
 }
 
 + (NSDictionary *)fetchCookies {
     NSMutableDictionary *cookiesDict = [NSMutableDictionary dictionary];
-    NSArray *domains = @[@"api.twitter.com", @".twitter.com"];
+    NSArray *domains = @[@"api.twitter.com", @".twitter.com", @"twitter.com", @"x.com", @".x.com"];
     NSArray *requiredCookies = @[@"ct0", @"auth_token", @"twid", @"guest_id", @"guest_id_ads", @"guest_id_marketing", @"personalization_id"];
     
+    // Get the shared cookie storage
+    NSHTTPCookieStorage *cookieStorage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
+    
+    // Go through each domain
     for (NSString *domain in domains) {
         NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"https://%@", domain]];
-        NSArray *cookies = [[NSHTTPCookieStorage sharedHTTPCookieStorage] cookiesForURL:url];
+        NSArray *cookies = [cookieStorage cookiesForURL:url];
+        
+        // Log the cookies we found for this domain
+        [self logDebugInfo:[NSString stringWithFormat:@"Found %ld cookies for domain %@", (long)cookies.count, domain]];
+        
         for (NSHTTPCookie *cookie in cookies) {
             if ([requiredCookies containsObject:cookie.name]) {
                 cookiesDict[cookie.name] = cookie.value;
@@ -1620,13 +1706,27 @@ static NSDate *lastCookieRefresh              = nil;
         }
     }
     
-    NSLog(@"TweetSourceTweak: Fetched cookies: %@", cookiesDict);
+    // Print the required cookies we found
+    for (NSString *requiredCookie in requiredCookies) {
+        NSString *value = cookiesDict[requiredCookie];
+        if (value) {
+            [self logDebugInfo:[NSString stringWithFormat:@"Found cookie %@: %@...", requiredCookie, [value substringToIndex:MIN(5, value.length)]]];
+        } else {
+            [self logDebugInfo:[NSString stringWithFormat:@"Missing required cookie: %@", requiredCookie]];
+        }
+    }
+    
+    // Verify the minimum required cookies for API access
+    if (!cookiesDict[@"ct0"] || !cookiesDict[@"auth_token"]) {
+        [self logDebugInfo:@"Missing critical cookies for API access"];
+    }
+    
     return cookiesDict;
 }
 
 + (void)cacheCookies:(NSDictionary *)cookies {
     if (!cookies || cookies.count == 0) {
-        NSLog(@"TweetSourceTweak: No cookies to cache");
+        [self logDebugInfo:@"No cookies to cache"];
         return;
     }
     
@@ -1639,7 +1739,7 @@ static NSDate *lastCookieRefresh              = nil;
     [defaults setObject:lastCookieRefresh forKey:@"TweetSourceTweak_LastCookieRefresh"];
     [defaults synchronize];
     
-    NSLog(@"TweetSourceTweak: Cached cookies: %@", cookies);
+    [self logDebugInfo:[NSString stringWithFormat:@"Cached %ld cookies at %@", (long)cookies.count, lastCookieRefresh]];
 }
 
 + (NSDictionary *)loadCachedCookies {
@@ -1649,9 +1749,9 @@ static NSDate *lastCookieRefresh              = nil;
     
     if (cachedCookies) {
         cookieCache = [cachedCookies mutableCopy];
-        NSLog(@"TweetSourceTweak: Loaded cached cookies: %@", cachedCookies);
+        [self logDebugInfo:[NSString stringWithFormat:@"Loaded %ld cached cookies from %@", (long)cachedCookies.count, lastCookieRefresh]];
     } else {
-        NSLog(@"TweetSourceTweak: No cached cookies found");
+        [self logDebugInfo:@"No cached cookies found, will fetch fresh cookies"];
     }
     
     return cachedCookies;
@@ -1678,22 +1778,54 @@ static NSDate *lastCookieRefresh              = nil;
 
         [self pruneSourceCachesIfNeeded]; // Prune before potentially adding a new entry
 
-        if (fetchPending[tweetID] || (tweetSources[tweetID] &&
-            ![tweetSources[tweetID] isEqualToString:@""] &&
-            ![tweetSources[tweetID] isEqualToString:@"Source Unavailable"])) {
-            return; // Skip if fetch is pending or already has a valid source
+        if (fetchPending[tweetID] && [fetchPending[tweetID] boolValue]) {
+            // Already in progress
+            [self logDebugInfo:[NSString stringWithFormat:@"Fetch already in progress for tweet %@", tweetID]];
+            return;
         }
-
-        fetchPending[tweetID] = @(YES);
-
-        if (!fetchRetries[tweetID]) fetchRetries[tweetID] = @(0);
-        NSNumber *retryCount = fetchRetries[tweetID];
-        if (retryCount.integerValue >= 2) {
-            tweetSources[tweetID] = @"Source Unavailable";
-            fetchPending[tweetID] = @(NO);
+        
+        // Check if we already have a valid source cached
+        if (tweetSources[tweetID] && 
+            ![tweetSources[tweetID] isEqualToString:@""] &&
+            ![tweetSources[tweetID] isEqualToString:@"Source Unavailable"]) {
+            [self logDebugInfo:[NSString stringWithFormat:@"Using cached source for tweet %@: %@", 
+                              tweetID, tweetSources[tweetID]]];
+            
+            // Still announce we have a source, but don't refetch
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" 
+                                                                    object:nil 
+                                                                  userInfo:@{@"tweetID": tweetID}];
+            });
             return;
         }
 
+        fetchPending[tweetID] = @(YES);
+        [self logDebugInfo:[NSString stringWithFormat:@"Starting fetch for tweet %@", tweetID]];
+
+        // Initialize or increment retry count
+        NSInteger retryCount = 0;
+        if (fetchRetries[tweetID]) {
+            retryCount = [fetchRetries[tweetID] integerValue];
+        }
+        fetchRetries[tweetID] = @(retryCount);
+        
+        // Check if we've exceeded max retries
+        if (retryCount >= MAX_CONSECUTIVE_FAILURES) {
+            [self logDebugInfo:[NSString stringWithFormat:@"Exceeded max retries (%d) for tweet %@", 
+                              MAX_CONSECUTIVE_FAILURES, tweetID]];
+            tweetSources[tweetID] = @"Source Unavailable";
+            fetchPending[tweetID] = @(NO);
+            
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" 
+                                                                    object:nil 
+                                                                  userInfo:@{@"tweetID": tweetID}];
+            });
+            return;
+        }
+
+        // Set timeout timer
         NSTimer *timeoutTimer = [NSTimer scheduledTimerWithTimeInterval:6.0
                                                                  target:self
                                                                selector:@selector(timeoutFetchForTweetID:)
@@ -1701,9 +1833,11 @@ static NSDate *lastCookieRefresh              = nil;
                                                                 repeats:NO];
         fetchTimeouts[tweetID] = timeoutTimer;
 
+        // Build request URL
         NSString *urlString = [NSString stringWithFormat:@"https://api.twitter.com/2/timeline/conversation/%@.json?include_ext_alt_text=true&include_reply_count=true&tweet_mode=extended", tweetID];
         NSURL *url = [NSURL URLWithString:urlString];
         if (!url) {
+            [self logDebugInfo:@"Invalid URL string"];
             tweetSources[tweetID] = @"Source Unavailable";
             fetchPending[tweetID] = @(NO);
             [fetchTimeouts removeObjectForKey:tweetID];
@@ -1715,19 +1849,24 @@ static NSDate *lastCookieRefresh              = nil;
         request.HTTPMethod = @"GET";
         request.timeoutInterval = 5.0;
 
-        // Load cached cookies if not already loaded
+        // Load cached cookies or fetch fresh ones
         if (!cookieCache) {
             [self loadCachedCookies];
         }
 
         NSDictionary *cookiesToUse = cookieCache;
-        if ([self shouldRefreshCookies] || !cookiesToUse) {
+        
+        // Force cookie refresh if we're retrying and previous attempts failed
+        BOOL forceRefresh = (retryCount >= COOKIE_FORCE_REFRESH_RETRY_COUNT);
+        
+        if (forceRefresh || [self shouldRefreshCookies] || !cookiesToUse || cookiesToUse.count == 0) {
+            [self logDebugInfo:@"Fetching fresh cookies"];
             NSDictionary *freshCookies = [self fetchCookies];
             if (freshCookies.count > 0) {
                 [self cacheCookies:freshCookies];
                 cookiesToUse = freshCookies;
             } else if (cookiesToUse.count == 0) {
-                NSLog(@"TweetSourceTweak: No cookies available for tweet %@", tweetID);
+                [self logDebugInfo:[NSString stringWithFormat:@"No cookies available for tweet %@", tweetID]];
                 tweetSources[tweetID] = @"Source Unavailable";
                 fetchPending[tweetID] = @(NO);
                 [fetchTimeouts removeObjectForKey:tweetID];
@@ -1736,6 +1875,7 @@ static NSDate *lastCookieRefresh              = nil;
             }
         }
 
+        // Build cookie header string
         NSMutableArray *cookieStrings = [NSMutableArray array];
         NSString *ct0Value = cookiesToUse[@"ct0"];
         for (NSString *cookieName in cookiesToUse) {
@@ -1743,38 +1883,36 @@ static NSDate *lastCookieRefresh              = nil;
             [cookieStrings addObject:[NSString stringWithFormat:@"%@=%@", cookieName, cookieValue]];
         }
 
+        // Set required HTTP headers
         [request setValue:@"Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA" forHTTPHeaderField:@"Authorization"];
         [request setValue:@"OAuth2Session" forHTTPHeaderField:@"x-twitter-auth-type"];
-        [request setValue:@"CFNetwork/1331.0.7 Darwin/16.9.0" forHTTPHeaderField:@"User-Agent"];
+        [request setValue:@"Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1" forHTTPHeaderField:@"User-Agent"];
         [request setValue:@"gzip" forHTTPHeaderField:@"Accept-Encoding"];
+        [request setValue:@"application/json" forHTTPHeaderField:@"Accept"];
 
+        // Set CSRF token if available
         if (ct0Value) {
             [request setValue:ct0Value forHTTPHeaderField:@"x-csrf-token"];
         } else {
-            NSLog(@"TweetSourceTweak: No ct0 cookie available for tweet %@", tweetID);
-            tweetSources[tweetID] = @"Source Unavailable";
-            fetchPending[tweetID] = @(NO);
-            [fetchTimeouts removeObjectForKey:tweetID];
-            [timeoutTimer invalidate];
-            return;
+            [self logDebugInfo:[NSString stringWithFormat:@"No ct0 cookie available for tweet %@", tweetID]];
+            // Still proceed with request - it might work without ct0 in some cases
         }
 
+        // Set cookie header
         if (cookieStrings.count > 0) {
             NSString *cookieHeader = [cookieStrings componentsJoinedByString:@"; "];
             [request setValue:cookieHeader forHTTPHeaderField:@"Cookie"];
         } else {
-            NSLog(@"TweetSourceTweak: No cookies to set for tweet %@", tweetID);
-            tweetSources[tweetID] = @"Source Unavailable";
-            fetchPending[tweetID] = @(NO);
-            [fetchTimeouts removeObjectForKey:tweetID];
-            [timeoutTimer invalidate];
-            return;
+            [self logDebugInfo:[NSString stringWithFormat:@"No cookies to set for tweet %@", tweetID]];
+            // Still proceed with request - it might work without cookies in some cases
         }
 
+        // Execute network request
         NSURLSession *session = [NSURLSession sharedSession];
         NSURLSessionDataTask *task = [session dataTaskWithRequest:request
                                                 completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
             @try {
+                // Cancel timeout timer
                 NSTimer *timer = fetchTimeouts[tweetID];
                 if (timer) {
                     [timer invalidate];
@@ -1784,158 +1922,305 @@ static NSDate *lastCookieRefresh              = nil;
                 fetchPending[tweetID] = @(NO);
 
                 if (error) {
-                    NSLog(@"TweetSourceTweak: Fetch error for tweet %@: %@", tweetID, error);
-                    fetchRetries[tweetID] = @(retryCount.integerValue + 1);
-                    if (retryCount.integerValue < 2) {
+                    [self logDebugInfo:[NSString stringWithFormat:@"Fetch error for tweet %@: %@", tweetID, error]];
+                    fetchRetries[tweetID] = @(retryCount + 1);
+                    
+                    // Retry with exponential backoff
+                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(pow(2, retryCount) * 0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                        if (retryCount < MAX_CONSECUTIVE_FAILURES) {
                         [self fetchSourceForTweetID:tweetID];
                     } else {
                         tweetSources[tweetID] = @"Source Unavailable";
                         [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
                     }
+                    });
                     return;
                 }
 
+                // Check HTTP status code
                 NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
                 if (httpResponse.statusCode != 200) {
-                    NSLog(@"TweetSourceTweak: Fetch failed for tweet %@ with status code %ld", tweetID, (long)httpResponse.statusCode);
-                    fetchRetries[tweetID] = @(retryCount.integerValue + 1);
-                    if (retryCount.integerValue < 2) {
+                    [self logDebugInfo:[NSString stringWithFormat:@"Fetch failed for tweet %@ with status code %ld", tweetID, (long)httpResponse.statusCode]];
+                    fetchRetries[tweetID] = @(retryCount + 1);
+                    
+                    // Special handling for auth errors - force cookie refresh
                         if (httpResponse.statusCode == 401 || httpResponse.statusCode == 403) {
                             NSDictionary *freshCookies = [self fetchCookies];
                             if (freshCookies.count > 0) {
                                 [self cacheCookies:freshCookies];
-                                [self fetchSourceForTweetID:tweetID];
-                                return;
                             }
                         }
+                    
+                    // Retry with exponential backoff
+                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(pow(2, retryCount) * 0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                        if (retryCount < MAX_CONSECUTIVE_FAILURES) {
                         [self fetchSourceForTweetID:tweetID];
                     } else {
                         tweetSources[tweetID] = @"Source Unavailable";
                         [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
                     }
+                    });
                     return;
                 }
 
+                // Parse JSON response
                 NSError *jsonError;
                 NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:0 error:&jsonError];
                 if (jsonError) {
-                    NSLog(@"TweetSourceTweak: JSON parse error for tweet %@: %@", tweetID, jsonError);
-                    fetchRetries[tweetID] = @(retryCount.integerValue + 1);
-                    if (retryCount.integerValue < 2) {
+                    [self logDebugInfo:[NSString stringWithFormat:@"JSON parse error for tweet %@: %@", tweetID, jsonError]];
+                    fetchRetries[tweetID] = @(retryCount + 1);
+                    
+                    // Retry with exponential backoff
+                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(pow(2, retryCount) * 0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                        if (retryCount < MAX_CONSECUTIVE_FAILURES) {
                         [self fetchSourceForTweetID:tweetID];
                     } else {
                         tweetSources[tweetID] = @"Source Unavailable";
                         [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
                     }
+                    });
                     return;
                 }
 
-                NSDictionary *tweets    = json[@"globalObjects"][@"tweets"];
+                // Extract tweet source from JSON
+                NSDictionary *tweets = json[@"globalObjects"][@"tweets"];
+                if (!tweets || ![tweets isKindOfClass:[NSDictionary class]]) {
+                    [self logDebugInfo:[NSString stringWithFormat:@"No tweets object in response for tweet %@", tweetID]];
+                    tweetSources[tweetID] = @"Source Unavailable";
+                    [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
+                    return;
+                }
+                
                 NSDictionary *tweetData = tweets[tweetID];
-                NSString *sourceHTML    = tweetData[@"source"];
+                if (!tweetData) {
+                    [self logDebugInfo:[NSString stringWithFormat:@"Tweet %@ not found in response", tweetID]];
+                    
+                    // Try to find the tweet in response by iterating through tweets
+                    NSString *foundTweetID = nil;
+                    for (NSString *key in tweets) {
+                        // If the ID is numeric and matches our tweetID (allowing for string/number conversion issues)
+                        if ([key longLongValue] == [tweetID longLongValue]) {
+                            foundTweetID = key;
+                            tweetData = tweets[key];
+                            [self logDebugInfo:[NSString stringWithFormat:@"Found tweet with alternate ID format: %@", key]];
+                            break;
+                        }
+                    }
+                    
+                    if (!tweetData) {
+                        tweetSources[tweetID] = @"Source Unavailable";
+                        [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
+                        return;
+                    }
+                }
+                
+                NSString *sourceHTML = tweetData[@"source"];
 
                 if (sourceHTML) {
+                    [self logDebugInfo:[NSString stringWithFormat:@"Found source HTML: %@", sourceHTML]];
                     NSString *sourceText = sourceHTML;
+                    
+                    // Extract the source text from HTML
                     NSRange startRange = [sourceHTML rangeOfString:@">"];
-                    NSRange endRange   = [sourceHTML rangeOfString:@"</a>"];
+                    NSRange endRange = [sourceHTML rangeOfString:@"</a>"];
                     if (startRange.location != NSNotFound && endRange.location != NSNotFound && startRange.location + 1 < endRange.location) {
                         sourceText = [sourceHTML substringWithRange:NSMakeRange(startRange.location + 1, endRange.location - startRange.location - 1)];
-                        // Clean up sourceText by removing leading numeric string (e.g., "1694706607912062977NinEverythi" -> "NinEverythi")
+                        
+                        // Clean up sourceText by removing leading numeric string
                         NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"^\\d+" options:0 error:nil];
+                        if (regex) {
                         sourceText = [regex stringByReplacingMatchesInString:sourceText options:0 range:NSMakeRange(0, sourceText.length) withTemplate:@""];
                     }
+                        
+                        // Trim any whitespace
+                        sourceText = [sourceText stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+                    }
+                    
+                    // Store the source
                     tweetSources[tweetID] = sourceText;
+                    [self logDebugInfo:[NSString stringWithFormat:@"Extracted source for tweet %@: %@", tweetID, sourceText]];
+                    
+                    // Reset retries on success
+                    fetchRetries[tweetID] = @(0);
+                    
+                    // Notify that source is available
+                    dispatch_async(dispatch_get_main_queue(), ^{
                     [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
                     [self performSelector:@selector(retryUpdateForTweetID:) withObject:tweetID afterDelay:0.3];
+                    });
                 } else {
+                    [self logDebugInfo:[NSString stringWithFormat:@"No source field in tweet %@", tweetID]];
                     tweetSources[tweetID] = @"Unknown Source";
+                    
+                    // Notify that source is available (even if it's "Unknown")
+                    dispatch_async(dispatch_get_main_queue(), ^{
                     [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
                     [self performSelector:@selector(retryUpdateForTweetID:) withObject:tweetID afterDelay:0.3];
+                    });
                 }
             } @catch (NSException *e) {
-                NSLog(@"TweetSourceTweak: Exception in fetch completion for tweet %@: %@", tweetID, e);
+                [self logDebugInfo:[NSString stringWithFormat:@"Exception in fetch completion for tweet %@: %@", tweetID, e]];
                 tweetSources[tweetID] = @"Source Unavailable";
                 fetchPending[tweetID] = @(NO);
+                
+                // Notify with error
+                dispatch_async(dispatch_get_main_queue(), ^{
                 [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
+                });
             }
         }];
         [task resume];
+        
     } @catch (NSException *e) {
-        NSLog(@"TweetSourceTweak: Exception in fetch setup for tweet %@: %@", tweetID, e);
+        [self logDebugInfo:[NSString stringWithFormat:@"Exception in fetch setup for tweet %@: %@", tweetID, e]];
         tweetSources[tweetID] = @"Source Unavailable";
         fetchPending[tweetID] = @(NO);
+        
         NSTimer *timer = fetchTimeouts[tweetID];
         if (timer) {
             [timer invalidate];
             [fetchTimeouts removeObjectForKey:tweetID];
         }
+        
+        // Notify with error
+        dispatch_async(dispatch_get_main_queue(), ^{
         [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
+        });
     }
 }
 
 + (void)timeoutFetchForTweetID:(NSTimer *)timer {
-    NSString *tweetID = timer.userInfo[@"tweetID"];
-    if (tweetID && fetchPending[tweetID]) {
-        NSNumber *retryCount = fetchRetries[tweetID];
+    NSDictionary *userInfo = timer.userInfo;
+    NSString *tweetID = userInfo[@"tweetID"];
+    
+    if (!tweetID) return;
+    
+    [self logDebugInfo:[NSString stringWithFormat:@"Timeout for tweet %@", tweetID]];
+    
+    if (tweetID && fetchPending[tweetID] && [fetchPending[tweetID] boolValue]) {
+        NSNumber *retryCount = fetchRetries[tweetID] ?: @(0);
         fetchRetries[tweetID] = @(retryCount.integerValue + 1);
         fetchPending[tweetID] = @(NO);
         [fetchTimeouts removeObjectForKey:tweetID];
-        if (retryCount.integerValue < 2) {
+        
+        if (retryCount.integerValue < MAX_CONSECUTIVE_FAILURES) {
+            // Retry with exponential backoff
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(pow(2, retryCount.integerValue) * 0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             [self fetchSourceForTweetID:tweetID];
+            });
         } else {
             tweetSources[tweetID] = @"Source Unavailable";
+            
+            dispatch_async(dispatch_get_main_queue(), ^{
             [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
             [self performSelector:@selector(retryUpdateForTweetID:) withObject:tweetID afterDelay:0.3];
+            });
         }
     }
 }
 
 + (void)retryUpdateForTweetID:(NSString *)tweetID {
     @try {
+        if (!tweetID) return;
+        
         if (!updateRetries)   updateRetries   = [NSMutableDictionary dictionary];
         if (!updateCompleted) updateCompleted = [NSMutableDictionary dictionary];
 
-        if (updateCompleted[tweetID] && [updateCompleted[tweetID] boolValue]) return;
-        if (!updateRetries[tweetID]) updateRetries[tweetID] = @(0);
-
-        NSNumber *retryCount = updateRetries[tweetID];
-        updateRetries[tweetID] = @(retryCount.integerValue + 1);
-
-        if (tweetSources[tweetID] && ![tweetSources[tweetID] isEqualToString:@""]) {
-            [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
-            NSTimeInterval delay = (retryCount.integerValue < 10) ? 0.5 : (retryCount.integerValue < 20) ? 1.0 : 3.0;
-            [self performSelector:@selector(retryUpdateForTweetID:) withObject:tweetID afterDelay:delay];
+        // Skip if already completed
+        if (updateCompleted[tweetID] && [updateCompleted[tweetID] boolValue]) {
+            return;
         }
-    } @catch (__unused NSException *e) {}
+        
+        // Initialize or increment retry count
+        NSInteger retryCount = 0;
+        if (updateRetries[tweetID]) {
+            retryCount = [updateRetries[tweetID] integerValue];
+        }
+        updateRetries[tweetID] = @(retryCount + 1);
+
+        // Only retry for valid sources
+        if (tweetSources[tweetID] && ![tweetSources[tweetID] isEqualToString:@""]) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
+            });
+            
+            // Schedule next retry with exponential backoff
+            NSTimeInterval delay = (retryCount < 5) ? 0.5 : 
+                                  (retryCount < 10) ? 1.0 : 
+                                  (retryCount < 15) ? 2.0 : 3.0;
+                                  
+            // Stop after 20 retries
+            if (retryCount < 20) {
+            [self performSelector:@selector(retryUpdateForTweetID:) withObject:tweetID afterDelay:delay];
+            } else {
+                // Mark as completed after max retries
+                updateCompleted[tweetID] = @(YES);
+                [self logDebugInfo:[NSString stringWithFormat:@"Max retries reached for updating tweet %@", tweetID]];
+        }
+        }
+    } @catch (__unused NSException *e) {
+        [self logDebugInfo:[NSString stringWithFormat:@"Exception in retryUpdateForTweetID: %@", e]];
+    }
 }
 
 + (void)pollForPendingUpdates {
     @try {
         if (!tweetSources || !updateCompleted) return;
+        
         NSArray *allTweetIDs = [tweetSources allKeys];
+        NSInteger updateCount = 0;
+        
         for (NSString *tweetID in allTweetIDs) {
-            if (tweetSources[tweetID] && ![tweetSources[tweetID] isEqualToString:@""] &&
+            if (tweetSources[tweetID] && 
+                ![tweetSources[tweetID] isEqualToString:@""] &&
                 ![tweetSources[tweetID] isEqualToString:@"Source Unavailable"]) {
+                
                 if (!updateCompleted[tweetID] || ![updateCompleted[tweetID] boolValue]) {
-                    [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" 
+                                                                            object:nil 
+                                                                          userInfo:@{@"tweetID": tweetID}];
+                    });
+                    
                     if (!updateRetries[tweetID] || [updateRetries[tweetID] integerValue] < 5) {
                         [self performSelector:@selector(retryUpdateForTweetID:) withObject:tweetID afterDelay:1.0];
                     }
+                    
+                    updateCount++;
+                    if (updateCount >= 10) break; // Limit batch size
                 }
             }
         }
+        
+        // Schedule next poll
         [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:5.0];
-    } @catch (__unused NSException *e) {}
+        
+    } @catch (NSException *e) {
+        [self logDebugInfo:[NSString stringWithFormat:@"Exception in pollForPendingUpdates: %@", e]];
+    }
 }
 
 + (void)handleAppForeground:(NSNotification *)notification {
     @try {
+        [self logDebugInfo:@"App became active, polling for updates"];
+        
+        // Force a fresh cookie fetch on app foreground
+        NSDictionary *freshCookies = [self fetchCookies];
+        if (freshCookies.count > 0) {
+            [self cacheCookies:freshCookies];
+        }
+        
+        // Start polling for updates
         [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:1.0];
-    } @catch (__unused NSException *e) {}
+        
+    } @catch (NSException *e) {
+        [self logDebugInfo:[NSString stringWithFormat:@"Exception in handleAppForeground: %@", e]];
+    }
 }
 
 + (void)handleClearCacheNotification:(NSNotification *)notification {
-    NSLog(@"TweetSourceTweak: Clearing source label cache via notification.");
+    [self logDebugInfo:@"Clearing source label cache via notification"];
+    
     // Invalidate all pending timeout timers
     if (fetchTimeouts) {
         for (NSTimer *timer in [fetchTimeouts allValues]) {
@@ -1944,10 +2229,10 @@ static NSDate *lastCookieRefresh              = nil;
         [fetchTimeouts removeAllObjects];
     }
 
-    // Clear actual source data and control flags
+    // Clear all dictionaries
     if (tweetSources) [tweetSources removeAllObjects];
-    if (viewToTweetID) [viewToTweetID removeAllObjects];     // Ensuring these are cleared
-    if (viewInstances) [viewInstances removeAllObjects];     // Ensuring these are cleared
+    if (viewToTweetID) [viewToTweetID removeAllObjects];
+    if (viewInstances) [viewInstances removeAllObjects];
     if (fetchPending) [fetchPending removeAllObjects];
     if (fetchRetries) [fetchRetries removeAllObjects];
     if (updateRetries) [updateRetries removeAllObjects];
@@ -1956,28 +2241,33 @@ static NSDate *lastCookieRefresh              = nil;
     // Force cookie refresh
     if (cookieCache) [cookieCache removeAllObjects];
     lastCookieRefresh = nil;
+    
+    // Clear persistent storage
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     [defaults removeObjectForKey:@"TweetSourceTweak_CookieCache"];
     [defaults removeObjectForKey:@"TweetSourceTweak_LastCookieRefresh"];
     [defaults synchronize];
     
-    // Re-initialize essential dictionaries
+    // Re-initialize dictionaries
     if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
-    if (!viewToTweetID) viewToTweetID = [NSMutableDictionary dictionary];   // Ensuring these are re-initialized
-    if (!viewInstances) viewInstances = [NSMutableDictionary dictionary];   // Ensuring these are re-initialized
+    if (!viewToTweetID) viewToTweetID = [NSMutableDictionary dictionary];
+    if (!viewInstances) viewInstances = [NSMutableDictionary dictionary];
     if (!fetchTimeouts) fetchTimeouts = [NSMutableDictionary dictionary];
     if (!fetchPending) fetchPending = [NSMutableDictionary dictionary];
-    if (!fetchRetries) fetchRetries = [NSMutableDictionary dictionary];         // RESTORING THIS LINE
-    if (!updateRetries) updateRetries = [NSMutableDictionary dictionary];     // RESTORING THIS LINE
-    if (!updateCompleted) updateCompleted = [NSMutableDictionary dictionary]; // RESTORING THIS LINE
-    if (!cookieCache) cookieCache = [NSMutableDictionary dictionary];           // RESTORING THIS LINE
+    if (!fetchRetries) fetchRetries = [NSMutableDictionary dictionary];
+    if (!updateRetries) updateRetries = [NSMutableDictionary dictionary];
+    if (!updateCompleted) updateCompleted = [NSMutableDictionary dictionary];
+    if (!cookieCache) cookieCache = [NSMutableDictionary dictionary];
 
-    // Trigger a poll to potentially refetch for visible items
-    // This needs to be done carefully to avoid immediate thundering herd.
-    // A short delay might be good.
-    [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:0.5]; // RESTORING THIS LINE
+    // Fetch fresh cookies
+    NSDictionary *freshCookies = [self fetchCookies];
+    if (freshCookies.count > 0) {
+        [self cacheCookies:freshCookies];
+    }
+    
+    // Restart polling
+    [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:0.5];
 }
-
 @end
 // --- End Helper Implementation ---
 
@@ -2798,127 +3088,259 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 // MARK: - Timestamp Label Styling via UILabel -setText:
 
-%hook UILabel
-
-- (void)setText:(NSString *)text {
-    %orig(text);
-
-    // Check if this label is the one we want to modify (e.g., video timestamp)
-    if ([BHTManager restoreVideoTimestamp] && self.text && [self.text containsString:@":"] && [self.text containsString:@"/"]) {
-        // Apply styling if in the correct context (ImmersiveCardView)
-        UIView *parentView = self.superview;
-        BOOL isInImmersiveCardView = NO;
-        while (parentView) {
-            NSString *className = NSStringFromClass([parentView class]);
-            if ([className isEqualToString:@"T1TwitterSwift.ImmersiveCardView"]) {
-                isInImmersiveCardView = YES;
-                break;
-            }
-            parentView = parentView.superview;
-        }
-
-        if (isInImmersiveCardView) {
-            self.font = [UIFont systemFontOfSize:14.0];
-            self.textColor = [UIColor whiteColor]; // White text for contrast
-            self.textAlignment = NSTextAlignmentCenter; // Center text in the pill
-            
-            // Calculate size based on current text and font
-            [self sizeToFit];
-            CGRect currentFrame = self.frame;
-
-            // Define padding - reduced horizontal padding for a narrower pill
-            CGFloat horizontalPadding = 2.0; // Reduced from 4.0 to make the pill less wide
-            CGFloat verticalPadding = 12.0; // Keep vertical padding for pronounced round pill
-
-            // Apply padding to the frame
-            // Adjust origin to keep the label centered around its original position after resizing
-            self.frame = CGRectMake(
-                currentFrame.origin.x - horizontalPadding / 2.0f,
-                currentFrame.origin.y - verticalPadding / 2.0f,
-                currentFrame.size.width + horizontalPadding,
-                currentFrame.size.height + verticalPadding
-            );
-            
-            // Ensure a minimum height for very short text (e.g., "0:01/0:05") for a good pill shape
-            if (self.frame.size.height < 22.0f) {
-                CGFloat diff = 22.0f - self.frame.size.height;
-                CGRect frame = self.frame;
-                frame.size.height = 22.0f;
-                frame.origin.y -= diff / 2.0f; // Keep it vertically centered
-                self.frame = frame;
-            }
-            
-            // Pill styling
-            self.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5]; // Dark semi-transparent
-            self.layer.cornerRadius = self.frame.size.height / 2.0f;
-            self.layer.masksToBounds = YES;
-            
-            // Set initial visibility to match the player's UI state
-            // Do not force alpha to 1.0; let T1ImmersiveFullScreenViewController manage it
-            if (self.alpha != 1.0) {
-                self.alpha = 0.0;
-            }
-            self.hidden = NO; // Ensure it's not hidden by default, let the controller manage visibility
-
-            // Store a weak reference to this label
-            gVideoTimestampLabel = self;
-        }
-    }
-}
-
-%end
-
 // MARK: - Immersive Player Timestamp Visibility Control
 
 %hook T1ImmersiveFullScreenViewController
 
-- (void)immersiveViewController:(id)immersiveViewController showHideNavigationButtons:(_Bool)showButtons {
-    %orig(immersiveViewController, showButtons);
+// Forward declare the new helper method for visibility within this hook block
+- (BOOL)BHT_findAndPrepareTimestampLabelForVC:(T1ImmersiveFullScreenViewController *)activePlayerVC;
+
+// Helper method to find, style, and map the timestamp label for a given VC instance
+%new - (BOOL)BHT_findAndPrepareTimestampLabelForVC:(T1ImmersiveFullScreenViewController *)activePlayerVC {
+    // ... (implementation as before)
+    if (!playerToTimestampMap || !activePlayerVC || !activePlayerVC.isViewLoaded) {
+        NSLog(@"[BHTwitter Timestamp] BHT_findAndPrepareTimestampLabelForVC: Pre-condition failed (map: %@, vc: %@, viewLoaded: %d)", playerToTimestampMap, activePlayerVC, activePlayerVC.isViewLoaded);
+        return NO;
+    }
+
+    UILabel *timestampLabel = [playerToTimestampMap objectForKey:activePlayerVC];
+
+    BOOL needsFreshFind = (!timestampLabel || !timestampLabel.superview || ![timestampLabel.superview isDescendantOfView:activePlayerVC.view]);
+    if (timestampLabel && timestampLabel.superview && 
+        (![timestampLabel.text containsString:@":"] || ![timestampLabel.text containsString:@"/"])) {
+        needsFreshFind = YES;
+        NSLog(@"[BHTwitter Timestamp] VC %@: Label %@ found with non-timestamp text: \"%@\". Forcing re-find.", activePlayerVC, timestampLabel, timestampLabel.text);
+        [playerToTimestampMap removeObjectForKey:activePlayerVC];
+        timestampLabel = nil;
+    }
+    
+    if (needsFreshFind) {
+        NSLog(@"[BHTwitter Timestamp] VC %@: Needs fresh find for label.", activePlayerVC);
+        __block UILabel *foundCandidate = nil;
+        UIView *searchView = activePlayerVC.view;
+
+        BH_EnumerateSubviewsRecursively(searchView, ^(UIView *currentView) {
+            if (foundCandidate) return;
+            if ([currentView isKindOfClass:[UILabel class]]) {
+                UILabel *label = (UILabel *)currentView;
+                UIView *v = label.superview;
+                BOOL inImmersiveCardViewContext = NO;
+                while(v && v != searchView.window && v != searchView) {
+                    NSString *className = NSStringFromClass([v class]);
+                    if ([className isEqualToString:@"T1TwitterSwift.ImmersiveCardView"] || [className hasSuffix:@".ImmersiveCardView"]) {
+                        inImmersiveCardViewContext = YES;
+                break;
+            }
+                    v = v.superview;
+                }
+
+                if (inImmersiveCardViewContext && label.text && [label.text containsString:@":"] && [label.text containsString:@"/"]) {
+                    NSLog(@"[BHTwitter Timestamp] VC %@: Candidate label found: Text='%@', Superview=%@", activePlayerVC, label.text, NSStringFromClass(label.superview.class));
+                    foundCandidate = label;
+                }
+            }
+        });
+
+        if (foundCandidate) {
+            timestampLabel = foundCandidate;
+            
+            // Don't set the visibility directly - let the player handle it
+            // Just style the label for proper appearance
+            
+            // Now store it in our map
+            [playerToTimestampMap setObject:timestampLabel forKey:activePlayerVC];
+            NSLog(@"[BHTwitter Timestamp] VC %@: Associated label %@ in map.", activePlayerVC, timestampLabel);
+        } else {
+            if ([playerToTimestampMap objectForKey:activePlayerVC]) {
+                 NSLog(@"[BHTwitter Timestamp] VC %@: No label found, removing existing map entry.", activePlayerVC);
+                [playerToTimestampMap removeObjectForKey:activePlayerVC];
+            }
+            return NO;
+        }
+    }
+
+    if (timestampLabel && ![objc_getAssociatedObject(timestampLabel, "BHT_StyledTimestamp") boolValue]) {
+        NSLog(@"[BHTwitter Timestamp] VC %@: Styling label %@.", activePlayerVC, timestampLabel);
+        timestampLabel.font = [UIFont systemFontOfSize:14.0];
+        timestampLabel.textColor = [UIColor whiteColor];
+        timestampLabel.textAlignment = NSTextAlignmentCenter;
+        timestampLabel.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5];
+
+        [timestampLabel sizeToFit];
+        CGRect currentFrame = timestampLabel.frame;
+        CGFloat horizontalPadding = 2.0; // Padding on EACH side
+        CGFloat verticalPadding = 12.0; // TOTAL vertical padding (6.0 on each side)
+        
+        CGRect newFrame = CGRectMake(
+            currentFrame.origin.x - horizontalPadding, 
+            currentFrame.origin.y - (verticalPadding / 2.0f),
+            currentFrame.size.width + (horizontalPadding * 2),
+                currentFrame.size.height + verticalPadding
+            );
+            
+        if (newFrame.size.height < 22.0f) {
+            CGFloat heightDiff = 22.0f - newFrame.size.height;
+            newFrame.size.height = 22.0f;
+            newFrame.origin.y -= heightDiff / 2.0f;
+        }
+        timestampLabel.frame = newFrame;
+        timestampLabel.layer.cornerRadius = newFrame.size.height / 2.0f;
+        timestampLabel.layer.masksToBounds = YES;
+        objc_setAssociatedObject(timestampLabel, "BHT_StyledTimestamp", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    return (timestampLabel != nil && timestampLabel.superview != nil); // Ensure it's also in a superview
+}
+
+- (void)immersiveViewController:(id)passedImmersiveViewController showHideNavigationButtons:(_Bool)showButtons {
+    // Store the original value for "showButtons"
+    BOOL originalShowButtons = showButtons;
+    
+    // No longer forcing controls to be visible on first load
+    // Let Twitter's player handle everything normally
+    
+    // Always pass the original parameter - no overriding
+    %orig(passedImmersiveViewController, originalShowButtons);
+    
+    T1ImmersiveFullScreenViewController *activePlayerVC = self;
+    NSLog(@"[BHTwitter Timestamp] VC %@: showHideNavigationButtons: %d (original: %d)", activePlayerVC, showButtons, originalShowButtons);
+
+    // The rest of the method remains unchanged
+    if (![BHTManager restoreVideoTimestamp]) {
+        if (playerToTimestampMap) {
+            UILabel *labelToManage = [playerToTimestampMap objectForKey:activePlayerVC];
+            if (labelToManage) {
+                labelToManage.hidden = YES;
+                NSLog(@"[BHTwitter Timestamp] VC %@: Hiding label (feature disabled).", activePlayerVC);
+            }
+        }
+        return;
+    }
+    
+    SEL findAndPrepareSelector = NSSelectorFromString(@"BHT_findAndPrepareTimestampLabelForVC:");
+    BOOL labelReady = NO;
+
+    if ([self respondsToSelector:findAndPrepareSelector]) {
+        NSMethodSignature *signature = [self methodSignatureForSelector:findAndPrepareSelector];
+        NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+        [invocation setSelector:findAndPrepareSelector];
+        [invocation setTarget:self];
+        [invocation setArgument:&activePlayerVC atIndex:2]; // Arguments start at index 2 (0 = self, 1 = _cmd)
+        [invocation invoke];
+        [invocation getReturnValue:&labelReady];
+    } else {
+        NSLog(@"[BHTwitter Timestamp] VC %@: ERROR - Does not respond to selector BHT_findAndPrepareTimestampLabelForVC:", activePlayerVC);
+    }
+
+    if (labelReady) {
+        UILabel *timestampLabel = [playerToTimestampMap objectForKey:activePlayerVC];
+        if (timestampLabel) { 
+            // Let the timestamp follow the controls visibility, but ensure it matches
+            BOOL isVisible = showButtons;
+            NSLog(@"[BHTwitter Timestamp] VC %@: Controls visibility changed to %d", activePlayerVC, isVisible);
+            
+            // Only adjust if there's a mismatch
+            if (isVisible && timestampLabel.hidden) {
+                // Controls are visible but label is hidden - fix it
+                timestampLabel.hidden = NO;
+                NSLog(@"[BHTwitter Timestamp] VC %@: Fixing hidden label to match visible controls", activePlayerVC);
+            } else if (!isVisible && !timestampLabel.hidden) {
+                // Controls are hidden but label is visible - fix it
+                NSLog(@"[BHTwitter Timestamp] VC %@: Label is incorrectly visible, will be hidden by player", activePlayerVC);
+            }
+        } else {
+            NSLog(@"[BHTwitter Timestamp] VC %@: Label was ready but map returned nil.", activePlayerVC);
+        }
+    } else {
+        NSLog(@"[BHTwitter Timestamp] VC %@: Label not ready after findAndPrepare.", activePlayerVC);
+    }
+}
+
+- (void)viewDidAppear:(BOOL)animated {
+    %orig(animated);
+    T1ImmersiveFullScreenViewController *activePlayerVC = self;
+    NSLog(@"[BHTwitter Timestamp] VC %@: viewDidAppear.", activePlayerVC);
 
     if ([BHTManager restoreVideoTimestamp]) {
-        UILabel *timestampLabelToUpdate = nil;
-
-        if (gVideoTimestampLabel && gVideoTimestampLabel.superview) {
-            timestampLabelToUpdate = gVideoTimestampLabel;
-        } else {
-            UIView *searchView = self.view;
-            if (immersiveViewController && [immersiveViewController respondsToSelector:@selector(view)]) {
-                searchView = [immersiveViewController view];
-            }
-            NSMutableArray<UILabel *> *foundLabels = [NSMutableArray array];
-            BH_EnumerateSubviewsRecursively(searchView, ^(UIView *currentView) {
-                if ([currentView isKindOfClass:[UILabel class]]) {
-                    UILabel *label = (UILabel *)currentView;
-                    if (label.text && [label.text containsString:@":"] && [label.text containsString:@"/"]) {
-                        [foundLabels addObject:label];
-                    }
-                }
-            });
-            if ([foundLabels containsObject:gVideoTimestampLabel]) {
-                 timestampLabelToUpdate = gVideoTimestampLabel;
-            } else if (foundLabels.count > 0) {
-                timestampLabelToUpdate = foundLabels.firstObject;
-                 gVideoTimestampLabel = timestampLabelToUpdate; 
-            }
+        if (!playerToTimestampMap) { 
+            playerToTimestampMap = [NSMapTable weakToStrongObjectsMapTable];
         }
         
-        if (timestampLabelToUpdate) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                // Set visibility without custom animation to avoid flicker
-                // Use a minimal delay on hide to better sync with native fade behavior
-                CGFloat targetAlpha = showButtons ? 1.0 : 0.0;
-                if (showButtons) {
-                    timestampLabelToUpdate.alpha = targetAlpha;
-                    timestampLabelToUpdate.hidden = !showButtons;
-                } else {
-                    // Immediately set alpha to 0 to reduce flicker, then hide after a tiny delay
-                    timestampLabelToUpdate.alpha = 0.0;
-                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.05 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                        timestampLabelToUpdate.hidden = !showButtons;
-                    });
+        // Check if this is the first load for this controller
+        BOOL isFirstLoad = ![objc_getAssociatedObject(activePlayerVC, "BHT_FirstLoadDone") boolValue];
+        
+        // Initial attempt to find the label
+        BOOL labelFoundAndPrepared = [self BHT_findAndPrepareTimestampLabelForVC:activePlayerVC];
+        
+        // Just mark this controller as processed for first load
+        if (isFirstLoad) {
+            // Mark first load as completed after a short delay
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.75 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                if (self && self.view.window) {
+                    objc_setAssociatedObject(self, "BHT_FirstLoadDone", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                    NSLog(@"[BHTwitter Timestamp] VC %@: First load completed", activePlayerVC);
                 }
             });
         }
+        
+        // Let the label visibility be managed by the player controls
+        // Just ensure we have the label identified and styled
+    }
+}
+
+- (void)playerViewController:(id)playerViewController playerStateDidChange:(NSInteger)state {
+    %orig(playerViewController, state);
+    T1ImmersiveFullScreenViewController *activePlayerVC = self;
+    NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange: %ld", activePlayerVC, (long)state);
+
+    if (![BHTManager restoreVideoTimestamp] || !playerToTimestampMap) {
+        NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Bailing early (feature off or map nil)", activePlayerVC);
+        return;
+    }
+
+    // Always try to find/prepare the label for the current video content.
+    // This is crucial if the VC is reused and new video content has loaded.
+    BOOL labelFoundAndPrepared = [self BHT_findAndPrepareTimestampLabelForVC:activePlayerVC];
+    NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - labelFoundAndPrepared: %d", activePlayerVC, labelFoundAndPrepared);
+
+    if (labelFoundAndPrepared) {
+        UILabel *timestampLabel = [playerToTimestampMap objectForKey:activePlayerVC];
+        if (timestampLabel && timestampLabel.superview && [timestampLabel isDescendantOfView:activePlayerVC.view]) {
+            // Determine current intended visibility of controls.
+            // This relies on the main showHideNavigationButtons method being the source of truth for user-initiated toggles.
+            // Here, we primarily react to player state changes that might imply controls should appear/disappear.
+            BOOL controlsShouldBeVisible = NO;
+            UIView *playerControls = nil;
+            if ([activePlayerVC respondsToSelector:@selector(playerControlsView)]) { 
+                playerControls = [activePlayerVC valueForKey:@"playerControlsView"];
+                if (playerControls && [playerControls respondsToSelector:@selector(alpha)]) {
+                    controlsShouldBeVisible = playerControls.alpha > 0.0f;
+                    NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - current playerControls.alpha: %f", activePlayerVC, playerControls.alpha);
+                }
+            }
+
+            // If player state implies controls *should* be visible (e.g., paused, ready and controls were already up),
+            // ensure our timestamp is visible. The primary toggling is done by showHideNavigationButtons.
+            // This is more about reacting to player-induced control visibility changes.
+            // For example, if the video pauses and Twitter automatically shows controls.
+            
+            // More direct: Mirror the state set by showHideNavigationButtons, which should be the authority.
+            // The key is that showHideNavigationButtons should have ALREADY run if controls became visible due to player state.
+            // So, if our label is hidden but controls are visible, something is out of sync OR this state change *caused* controls to show.
+
+            // Only fix visibility if there's a clear mismatch
+            if (controlsShouldBeVisible && timestampLabel.hidden) {
+                // Controls visible but label hidden - fix it
+                NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Fixing label visibility to match controls", activePlayerVC);
+                timestampLabel.hidden = NO;
+            } else if (!controlsShouldBeVisible && !timestampLabel.hidden && playerControls && playerControls.alpha == 0.0) {
+                // Controls definitely hidden but label still showing - let player hide it
+                NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Label visibility mismatch noted", activePlayerVC);
+            }
+        } else {
+            NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Label was prepared but map/superview check failed.", activePlayerVC);
+        }
+    } else {
+        NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Label not found/prepared.", activePlayerVC);
     }
 }
 
@@ -3153,12 +3575,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         }
     }];
     
-    [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
-                                                    object:nil 
-                                                     queue:[NSOperationQueue mainQueue] 
-                                                usingBlock:^(NSNotification * _Nonnull note) {
-        BHT_ensureTheming();
-    }];
+    // Note: UIApplicationDidBecomeActiveNotification is now primarily handled by
+    // BHT_ensureThemingEngineSynchronized with the appropriate flags and hooks
     
     // Observe theme changes
     // REMOVED: Observer for BHTTabBarThemingChanged (second instance)
@@ -3168,6 +3586,11 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     //                                             usingBlock:^(NSNotification * _Nonnull note) {
     //     BHT_ensureTheming(); // This was likely too broad, direct update is better.
     // }];
+
+    static dispatch_once_t onceTokenPlayerMap;
+    dispatch_once(&onceTokenPlayerMap, ^{
+        playerToTimestampMap = [NSMapTable weakToStrongObjectsMapTable];
+    });
 }
 
 // MARK: - DM Avatar Images
@@ -3391,50 +3814,92 @@ static void BHT_applyThemeToWindow(UIWindow *window) {
     }
 }
 
-static void BHT_ensureTheming(void) {
-    if (![[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) return;
+// Helper to synchronize theme engine and ensure our theme is active
+static void BHT_ensureThemingEngineSynchronized(BOOL forceSynchronize) {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    id selectedColorObj = [defaults objectForKey:@"bh_color_theme_selectedColor"];
     
-    // Apply the main color theme
-    BH_changeTwitterColor([[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]);
+    if (!selectedColorObj) return;
     
-    // Apply to all windows
-    for (UIWindow *window in [UIApplication sharedApplication].windows) {
-        BHT_applyThemeToWindow(window);
+    NSInteger selectedColor = [selectedColorObj integerValue];
+    id twitterColorObj = [defaults objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    
+    // Check if Twitter's color setting matches our desired color
+    if (forceSynchronize || !twitterColorObj || ![twitterColorObj isEqual:selectedColorObj]) {
+        // Mark that we're performing our own theme change to avoid recursion
+        BHT_isInThemeChangeOperation = YES;
+        
+        // Apply our theme color through Twitter's system
+        TAEColorSettings *taeSettings = [%c(TAEColorSettings) sharedSettings];
+        if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
+            [taeSettings setPrimaryColorOption:selectedColor];
+        }
+        
+        // Set Twitter's user defaults key to match our selection
+        [defaults setObject:selectedColorObj forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+        
+        // Call Twitter's internal theme application methods
+        if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
+            [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
+        }
+        
+        // Refresh UI to reflect these changes
+        BHT_UpdateAllTabBarIcons();
+        
+        // Apply to each window
+        for (UIWindow *window in [UIApplication sharedApplication].windows) {
+            if (!window.isOpaque || window.isHidden) continue;
+            
+            // Apply theme to the specific window
+            BHT_applyThemeToWindow(window);
+        }
+        
+        // Reset our operation flag
+        BHT_isInThemeChangeOperation = NO;
     }
 }
 
-static void BHT_forceRefreshAllWindowAppearances(void) { // Renamed and logic adjusted
-    // 1. Update our custom elements (these seem to work reliably)
+// Legacy method for backward compatibility, now just calls our new function
+static void BHT_ensureTheming(void) {
+    BHT_ensureThemingEngineSynchronized(YES);
+}
+
+// Comprehensive UI refresh - used when we need to force a UI update
+static void BHT_forceRefreshAllWindowAppearances(void) {
+    // Update tab bar icons which are specifically customized by our tweak
     BHT_UpdateAllTabBarIcons(); 
     
     for (UIWindow *window in [UIApplication sharedApplication].windows) {
-        if (!window.isOpaque || window.isHidden) continue; // Skip non-visible or transparent windows
+        if (!window.isOpaque || window.isHidden) continue;
 
         // Update our custom nav bar bird icon for this window
         if (window.rootViewController && window.rootViewController.isViewLoaded) {
             BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
                 if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
-                    if ([BHTManager classicTabBarEnabled]) { // MODIFIED: Used classicTabBarEnabled
+                    if ([BHTManager classicTabBarEnabled]) {
                         [(TFNNavigationBar *)currentView updateLogoTheme];
                     }
                 }
             });
         }
 
-        // Attempt to "jolt" this window's hierarchy
+        // Trigger UI refresh hierarchy
         UIViewController *rootVC = window.rootViewController;
         if (rootVC && rootVC.isViewLoaded) {
+            // Trigger tintColorDidChange on relevant views
             BH_EnumerateSubviewsRecursively(rootVC.view, ^(UIView *subview) {
                 if ([subview respondsToSelector:@selector(tintColorDidChange)]) {
                     [subview tintColorDidChange];
                 }
                 if ([subview respondsToSelector:@selector(setNeedsDisplay)]) {
-                    [subview setNeedsDisplay]; // Force redraw
+                    [subview setNeedsDisplay];
                 }
             });
+            
+            // Force layout update
             [rootVC.view setNeedsLayout];
             [rootVC.view layoutIfNeeded];
-            [rootVC.view setNeedsDisplay]; // Redraw the whole root view of the window
+            [rootVC.view setNeedsDisplay];
         }
     }
 }
@@ -3452,3 +3917,172 @@ static void BHT_forceRefreshAllWindowAppearances(void) { // Renamed and logic ad
     %orig(BHTCurrentAccentColor());
 }
 %end
+
+// MARK: - Timestamp Label Styling via UILabel -setText:
+
+// Global reference to the timestamp label for the active immersive player
+static UILabel *gVideoTimestampLabel = nil;
+
+// Helper method to determine if a text is likely a timestamp
+static BOOL isTimestampText(NSString *text) {
+    if (!text || text.length == 0) {
+        return NO;
+    }
+    
+    // Check for common timestamp patterns like "0:01/0:05" or "00:20/01:30"
+    NSRange colonRange = [text rangeOfString:@":"];
+    NSRange slashRange = [text rangeOfString:@"/"];
+    
+    // Must have both colon and slash
+    if (colonRange.location == NSNotFound || slashRange.location == NSNotFound) {
+        return NO;
+    }
+    
+    // Slash should come after colon in a timestamp (e.g., "0:01/0:05")
+    if (slashRange.location < colonRange.location) {
+        return NO;
+    }
+    
+    // Should have another colon after the slash
+    NSRange secondColonRange = [text rangeOfString:@":" options:0 range:NSMakeRange(slashRange.location, text.length - slashRange.location)];
+    if (secondColonRange.location == NSNotFound) {
+        return NO;
+    }
+    
+    return YES;
+}
+
+// Helper to find player controls in view hierarchy
+static UIView *findPlayerControlsInHierarchy(UIView *startView) {
+    if (!startView) return nil;
+    
+    __block UIView *playerControls = nil;
+    BH_EnumerateSubviewsRecursively(startView, ^(UIView *view) {
+        if (playerControls) return;
+        
+        NSString *className = NSStringFromClass([view class]);
+        if ([className containsString:@"PlayerControlsView"] || 
+            [className containsString:@"VideoControls"]) {
+            playerControls = view;
+        }
+    });
+    
+    return playerControls;
+}
+
+%hook UILabel
+
+- (void)setText:(NSString *)text {
+    %orig(text);
+    
+    // Skip processing if feature is disabled
+    if (![BHTManager restoreVideoTimestamp]) {
+        return;
+    }
+    
+    // Skip if already our target label
+    if (self == gVideoTimestampLabel) {
+        return;
+    }
+    
+    // Skip if text doesn't match timestamp pattern
+    if (!isTimestampText(self.text)) {
+        return;
+    }
+    
+    // Check if already styled
+    if ([objc_getAssociatedObject(self, "BHT_StyledTimestamp") boolValue]) {
+        return;
+    }
+    
+    // Find if we're in the correct view context
+    UIView *parentView = self.superview;
+    BOOL isInImmersiveContext = NO;
+    
+    while (parentView) {
+        NSString *className = NSStringFromClass([parentView class]);
+        if ([className isEqualToString:@"T1TwitterSwift.ImmersiveCardView"] || 
+            [className hasSuffix:@".ImmersiveCardView"]) {
+            isInImmersiveContext = YES;
+            break;
+        }
+        parentView = parentView.superview;
+    }
+    
+    if (isInImmersiveContext) {
+        NSLog(@"[BHTwitter Timestamp] Styling timestamp label: %@", self.text);
+        
+        // Apply styling - ONLY styling, not visibility
+        self.font = [UIFont systemFontOfSize:14.0];
+        self.textColor = [UIColor whiteColor];
+        self.textAlignment = NSTextAlignmentCenter;
+        self.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5];
+        
+        // Calculate size and apply padding
+        [self sizeToFit];
+        CGRect frame = self.frame;
+        CGFloat horizontalPadding = 4.0;
+        CGFloat verticalPadding = 12.0;
+        
+        frame = CGRectMake(
+            frame.origin.x - horizontalPadding / 2.0f,
+            frame.origin.y - verticalPadding / 2.0f,
+            frame.size.width + horizontalPadding,
+            frame.size.height + verticalPadding
+        );
+        
+        // Ensure minimum height
+        if (frame.size.height < 22.0f) {
+            CGFloat diff = 22.0f - frame.size.height;
+            frame.size.height = 22.0f;
+            frame.origin.y -= diff / 2.0f;
+        }
+        
+        self.frame = frame;
+        self.layer.cornerRadius = frame.size.height / 2.0f;
+        self.layer.masksToBounds = YES;
+        
+        // Mark as styled and store reference
+        objc_setAssociatedObject(self, "BHT_StyledTimestamp", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        gVideoTimestampLabel = self;
+    }
+}
+
+// For first-load mode, prevent hiding the timestamp
+- (void)setHidden:(BOOL)hidden {
+    // Only check labels that might be our timestamp
+    if (self == gVideoTimestampLabel && [BHTManager restoreVideoTimestamp]) {
+        // If trying to hide a fixed label, prevent it
+        if (hidden) {
+            BOOL isFixedForFirstLoad = [objc_getAssociatedObject(self, "BHT_FixedForFirstLoad") boolValue];
+            if (isFixedForFirstLoad) {
+                // Let the original method run but with "NO" instead of "YES"
+                return %orig(NO);
+            }
+        }
+    }
+    
+    // Default behavior
+    %orig(hidden);
+}
+
+// Also prevent changing alpha to 0 for first-load labels
+- (void)setAlpha:(CGFloat)alpha {
+    // Only check our timestamp label
+    if (self == gVideoTimestampLabel && [BHTManager restoreVideoTimestamp]) {
+        // If trying to make a fixed label transparent, prevent it
+        if (alpha == 0.0) {
+            BOOL isFixedForFirstLoad = [objc_getAssociatedObject(self, "BHT_FixedForFirstLoad") boolValue];
+            if (isFixedForFirstLoad) {
+                // Keep it fully opaque during protected period
+                return %orig(1.0);
+            }
+        }
+    }
+    
+    // Default behavior
+    %orig(alpha);
+}
+
+%end
+

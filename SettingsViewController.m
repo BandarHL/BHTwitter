@@ -406,7 +406,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         // debug section
         PSSpecifier *flex = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_DETAIL_TITLE"] key:@"flex_twitter" defaultValue:false changeAction:@selector(FLEXAction:)];
         
-        PSSpecifier *clearSourceCache = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CLEAR_SOURCE_LABEL_CACHE_TITLE"]
+        PSSpecifier *clearSourceLabelCache = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CLEAR_SOURCE_LABEL_CACHE_TITLE"]
                                                        detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CLEAR_SOURCE_LABEL_CACHE_DETAIL_TITLE"]
                                                        dynamicRule:nil
                                                             action:@selector(showClearSourceCacheConfirmation:)];
@@ -492,7 +492,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             
             debug, // 8
             flex,
-            clearSourceCache,
+            clearSourceLabelCache,
             
             developer, // 9
             actuallyaridan,
@@ -917,6 +917,20 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         }
     }
     return nil;
+}
+
+// Source Label Cache Clearing
+- (void)clearSourceLabelCacheAction:(PSSpecifier *)specifier {
+    [BHTManager clearSourceLabelCache];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CACHE_CLEARED_TITLE"] 
+                                                                   message:[[BHTBundle sharedBundle] localizedStringForKey:@"CACHE_CLEARED_MESSAGE"] 
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"OK_BUTTON_TITLE"] 
+                                              style:UIAlertActionStyleDefault 
+                                            handler:nil]];
+    
+    [self presentViewController:alert animated:YES completion:nil];
 }
 @end
 
