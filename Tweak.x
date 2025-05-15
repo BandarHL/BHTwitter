@@ -1673,45 +1673,98 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
 }
 
 + (void)initializeCookiesWithRetry {
-    if (isInitializingCookies) return; // Prevent multiple initializations
+    if (isInitializingCookies) {
+        [self logDebugInfo:@"Cookie initialization already in progress, skipping"];
+        return; // Prevent multiple initializations
+    }
     isInitializingCookies = YES;
     cookieRetryCount = 0;
     
+    [self logDebugInfo:@"Starting cookie initialization process"];
+    
     // First, try to load any cached cookies
     NSDictionary *cachedCookies = [self loadCachedCookies];
-    if (cachedCookies && cachedCookies.count > 0 && cachedCookies[@"ct0"] && cachedCookies[@"auth_token"]) {
+    BOOL hasValidCachedCookies = cachedCookies && cachedCookies.count > 0 && 
+                                cachedCookies[@"ct0"] && cachedCookies[@"auth_token"];
+                                
+    if (hasValidCachedCookies) {
         [self logDebugInfo:@"Successfully loaded cached cookies with auth tokens"];
+        // Even with valid cookies, let's notify that cookies are ready to update any pending tweets
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
+            
+            // Schedule a check for pending tweet updates
+            [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:0.5];
+        });
+        
         isInitializingCookies = NO;
         return;
+    } else {
+        [self logDebugInfo:@"No valid cached cookies found, will try fetching fresh ones"];
     }
     
     // Try fetching cookies once immediately before starting retry process
     NSDictionary *freshCookies = [self fetchCookies];
-    if (freshCookies && freshCookies.count > 0 && freshCookies[@"ct0"] && freshCookies[@"auth_token"]) {
+    BOOL hasValidFreshCookies = freshCookies && freshCookies.count > 0 && 
+                               freshCookies[@"ct0"] && freshCookies[@"auth_token"];
+                               
+    if (hasValidFreshCookies) {
         [self logDebugInfo:@"Successfully fetched cookies on first try"];
         [self cacheCookies:freshCookies];
-        isInitializingCookies = NO;
         
         // Notify that cookies are ready
         dispatch_async(dispatch_get_main_queue(), ^{
+            // Post notification that cookies are ready to trigger updates
             [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
+            
+            // Schedule a check for pending tweet updates
+            [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:0.5];
         });
+        
+        isInitializingCookies = NO;
         return;
+    } else {
+        [self logDebugInfo:@"Failed to fetch fresh cookies on first try, will start retry process"];
     }
     
-    // If couldn't get cookies, start the retry process with reduced logging
+    // If couldn't get cookies, start the retry process
     [self retryFetchCookies];
 }
 
 + (void)retryFetchCookies {
     if (cookieRetryCount >= MAX_COOKIE_RETRIES) {
-        [self logDebugInfo:@"Giving up cookie fetch attempts"];
+        [self logDebugInfo:@"Giving up cookie fetch attempts after reaching max retries"];
         isInitializingCookies = NO;
         
         // Invalidate any existing timer
         if (cookieRetryTimer) {
             [cookieRetryTimer invalidate];
             cookieRetryTimer = nil;
+        }
+        
+        // Even if we failed, we should update any tweets waiting for cookies
+        // to show "Source Unavailable" instead of "Fetching..."
+        if (tweetSources) {
+            // Find all tweets in "Fetching..." state and update them
+            NSMutableArray *tweetsToUpdate = [NSMutableArray array];
+            for (NSString *tweetID in tweetSources) {
+                NSString *source = tweetSources[tweetID];
+                if ([source isEqualToString:@"Fetching..."] || [source isEqualToString:@"Updating..."]) {
+                    [tweetsToUpdate addObject:tweetID];
+                    tweetSources[tweetID] = @"Source Unavailable";
+                }
+            }
+            
+            // Notify UI to update the labels
+            if (tweetsToUpdate.count > 0) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    for (NSString *tweetID in tweetsToUpdate) {
+                        [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" 
+                                                                           object:nil 
+                                                                         userInfo:@{@"tweetID": tweetID}];
+                    }
+                });
+            }
         }
         return;
     }
@@ -1722,8 +1775,9 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
                               freshCookies[@"ct0"] && freshCookies[@"auth_token"];
     
     if (hasCriticalCookies) {
+        [self logDebugInfo:[NSString stringWithFormat:@"Successfully fetched cookies on retry attempt %d", 
+                          cookieRetryCount + 1]];
         [self cacheCookies:freshCookies];
-        isInitializingCookies = NO;
         
         // Invalidate any existing timer
         if (cookieRetryTimer) {
@@ -1733,13 +1787,23 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
         
         // Post notification that cookies are ready
         dispatch_async(dispatch_get_main_queue(), ^{
+            // Mark initialization as complete
+            isInitializingCookies = NO;
+            
+            // Notify that cookies are ready to update any pending tweets
             [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
+            
+            // Schedule a check for pending tweet updates
+            [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:0.5];
         });
         return;
     }
     
     // Increment retry counter
     cookieRetryCount++;
+    
+    [self logDebugInfo:[NSString stringWithFormat:@"Cookie fetch attempt %d failed, will retry", 
+                      cookieRetryCount]];
     
     // Calculate next retry delay with exponential backoff (capped)
     NSTimeInterval nextDelay = MIN(INITIAL_RETRY_DELAY * pow(1.5, cookieRetryCount - 1), MAX_RETRY_DELAY);
@@ -1898,7 +1962,9 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
         // Check if we already have a valid source cached
         if (tweetSources[tweetID] && 
             ![tweetSources[tweetID] isEqualToString:@""] &&
-            ![tweetSources[tweetID] isEqualToString:@"Source Unavailable"]) {
+            ![tweetSources[tweetID] isEqualToString:@"Source Unavailable"] &&
+            ![tweetSources[tweetID] isEqualToString:@"Fetching..."] &&
+            ![tweetSources[tweetID] isEqualToString:@"Updating..."]) {
             [self logDebugInfo:[NSString stringWithFormat:@"Using cached source for tweet %@: %@", 
                               tweetID, tweetSources[tweetID]]];
             
@@ -1907,6 +1973,9 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
                 [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" 
                                                                     object:nil 
                                                                   userInfo:@{@"tweetID": tweetID}];
+                
+                // Make sure this tweet source appears in the UI by retrying the update
+                [self performSelector:@selector(retryUpdateForTweetID:) withObject:tweetID afterDelay:0.2];
             });
             return;
         }
@@ -1986,6 +2055,14 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
             if (freshCookiesValid) {
                 [self cacheCookies:freshCookies];
                 cookiesToUse = freshCookies;
+                
+                // If we just got valid cookies, notify listeners that cookies are ready
+                if (!hasCriticalCookies) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" 
+                                                                          object:nil];
+                    });
+                }
             } else {
                 // If we couldn't get cookies and don't have cached ones, start the retry process
                 if (!hasCriticalCookies) {
@@ -2263,6 +2340,7 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
         
         if (!updateRetries)   updateRetries   = [NSMutableDictionary dictionary];
         if (!updateCompleted) updateCompleted = [NSMutableDictionary dictionary];
+        if (!viewInstances)   viewInstances   = [NSMutableDictionary dictionary];
 
         // Skip if already completed
         if (updateCompleted[tweetID] && [updateCompleted[tweetID] boolValue]) {
@@ -2277,24 +2355,57 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
         updateRetries[tweetID] = @(retryCount + 1);
 
         // Only retry for valid sources
-        if (tweetSources[tweetID] && ![tweetSources[tweetID] isEqualToString:@""]) {
-            // Post update notification if needed 
+        NSString *currentSource = tweetSources[tweetID];
+        BOOL needsRetry = currentSource && 
+                          ![currentSource isEqualToString:@""] && 
+                          ![currentSource isEqualToString:@"Source Unavailable"];
+                          
+        // Special case for "Fetching..." to "Updating..." - these need updates too
+        BOOL isTransitionalState = [currentSource isEqualToString:@"Fetching..."] || 
+                                  [currentSource isEqualToString:@"Updating..."];
+                                  
+        if (needsRetry || isTransitionalState) {
+            // Check if we have a view instance for this tweet ID
+            BOOL hasViewInstance = viewInstances[tweetID] != nil;
+            
+            // Post update notification if needed - this refreshes the UI
             dispatch_async(dispatch_get_main_queue(), ^{
-                [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
+                [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" 
+                                                                   object:nil 
+                                                                 userInfo:@{@"tweetID": tweetID}];
             });
             
-            // Use simpler retry schedule - only retry 10 times total with fixed delays
-            // Stop after 10 retries (reduced from 20)
-            if (retryCount < 10) {
-                // Fixed delay of 1 second
-                [self performSelector:@selector(retryUpdateForTweetID:) withObject:tweetID afterDelay:1.0];
+            // Use an improved retry schedule:
+            // - More frequent for initial retries (important for transitional states)
+            // - Higher retry count for tweets in transitional states
+            // - More attempts when we know there's a view instance
+            
+            NSInteger maxRetries = hasViewInstance ? 15 : 10;
+            if (isTransitionalState) maxRetries += 5; // Extra retries for tweets waiting for login
+            
+            // Continue retrying until we reach max or source is no longer available
+            if (retryCount < maxRetries) {
+                // More frequent retries at the beginning, slower toward the end
+                NSTimeInterval delay = (retryCount < 3) ? 0.3 : 
+                                      (retryCount < 6) ? 0.5 : 
+                                      (retryCount < 10) ? 0.7 : 1.0;
+                                      
+                // For transitional states, use even faster retries at the beginning
+                if (isTransitionalState && retryCount < 5) {
+                    delay = 0.2;
+                }
+                                 
+                [self performSelector:@selector(retryUpdateForTweetID:) 
+                           withObject:tweetID 
+                           afterDelay:delay];
             } else {
                 // Mark as completed after max retries
                 updateCompleted[tweetID] = @(YES);
             }
         }
-    } @catch (__unused NSException *e) {
-        // Minimize logging in production
+    } @catch (NSException *e) {
+        // Add minimal error logging
+        NSLog(@"[BHTwitter SourceLabel] Error in retryUpdateForTweetID: %@", e);
     }
 }
 
@@ -2474,26 +2585,54 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
         // Find all tweets in "Fetching..." state
         for (NSString *tweetID in tweetSources) {
             NSString *source = tweetSources[tweetID];
-            if ([source isEqualToString:@"Fetching..."]) {
+            if ([source isEqualToString:@"Fetching..."] || [source isEqualToString:@""]) {
                 [tweetsToRetry addObject:tweetID];
             }
         }
         
-        if (tweetsToRetry.count == 0) return;
-        
-        // Use a more efficient approach for retrying tweets
-        // Batch the retries to reduce overhead
-        NSUInteger batchSize = 3; // Process 3 tweets at a time
-        for (NSUInteger i = 0; i < tweetsToRetry.count; i += batchSize) {
-            NSUInteger end = MIN(i + batchSize, tweetsToRetry.count);
-            NSUInteger batchIndex = i;
-            
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * (i/batchSize) * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                for (NSUInteger j = batchIndex; j < end; j++) {
-                    [TweetSourceHelper fetchSourceForTweetID:tweetsToRetry[j]];
-                }
-            });
+        if (tweetsToRetry.count == 0) {
+            [self logDebugInfo:@"No tweets waiting for cookies"];
+            return;
         }
+        
+        [self logDebugInfo:[NSString stringWithFormat:@"Found %lu tweets waiting for cookies", (unsigned long)tweetsToRetry.count]];
+        
+        // First, force a UI refresh for any tweets currently shown with "Fetching..." status
+        dispatch_async(dispatch_get_main_queue(), ^{
+            for (NSString *tweetID in tweetsToRetry) {
+                // Temporarily set to "Updating..." to show something is happening
+                if ([tweetSources[tweetID] isEqualToString:@"Fetching..."]) {
+                    tweetSources[tweetID] = @"Updating...";
+                    
+                    // Immediately notify UI to update the "Fetching..." to "Updating..."
+                    [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" 
+                                                                       object:nil 
+                                                                     userInfo:@{@"tweetID": tweetID}];
+                }
+            }
+            
+            // Use a more efficient approach for retrying tweets
+            // Batch the retries to reduce overhead but with faster initial response
+            NSUInteger batchSize = 5; // Process more tweets at a time
+            for (NSUInteger i = 0; i < tweetsToRetry.count; i += batchSize) {
+                NSUInteger end = MIN(i + batchSize, tweetsToRetry.count);
+                NSUInteger batchIndex = i;
+                
+                // Faster initial response, then space out subsequent batches
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.25 * (i/batchSize) * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                    [self logDebugInfo:[NSString stringWithFormat:@"Processing batch %lu-%lu", 
+                                      (unsigned long)batchIndex, (unsigned long)end-1]];
+                                      
+                    for (NSUInteger j = batchIndex; j < end; j++) {
+                        NSString *tweetID = tweetsToRetry[j];
+                        // Reset any retry counters for these tweets to give them a fresh start
+                        [fetchRetries setObject:@0 forKey:tweetID];
+                        [updateRetries setObject:@0 forKey:tweetID];
+                        [TweetSourceHelper fetchSourceForTweetID:tweetID];
+                    }
+                });
+            }
+        });
     }
 }
 @end
