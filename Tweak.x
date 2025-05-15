@@ -4617,8 +4617,131 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
             ![self valueForKey:@"_mediaRailViewController"]) {
             [self performSelector:@selector(_t1_loadMediaRailViewController)];
         }
+        
+        // Set up an object association to track state
+        objc_setAssociatedObject(self, "BHT_LastAttachmentCount", @(0), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        objc_setAssociatedObject(self, "BHT_LastTextLength", @(0), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        
+        // Start a timer to check state and force visibility when needed
+        NSTimer *checkTimer = [NSTimer scheduledTimerWithTimeInterval:0.5 
+                                                                target:self 
+                                                              selector:@selector(BHT_checkMediaRailVisibility) 
+                                                              userInfo:nil 
+                                                               repeats:YES];
+        objc_setAssociatedObject(self, "BHT_MediaRailTimer", checkTimer, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
     return result;
+}
+
+%new
+- (void)BHT_checkMediaRailVisibility {
+    // Get current composition state
+    id compositionState = [self valueForKey:@"_compositionState"];
+    if (!compositionState) return;
+    
+    // Get current attachment count
+    NSInteger currentAttachmentCount = 0;
+    if ([compositionState respondsToSelector:@selector(mediaAssets)]) {
+        NSArray *mediaAssets = [compositionState performSelector:@selector(mediaAssets)];
+        if (mediaAssets && [mediaAssets isKindOfClass:[NSArray class]]) {
+            currentAttachmentCount = mediaAssets.count;
+        }
+    }
+    
+    // Get current text length
+    NSInteger currentTextLength = 0;
+    if ([compositionState respondsToSelector:@selector(text)]) {
+        NSString *text = [compositionState performSelector:@selector(text)];
+        if (text && [text isKindOfClass:[NSString class]]) {
+            currentTextLength = text.length;
+        }
+    }
+    
+    // Get previous values
+    NSInteger lastAttachmentCount = [objc_getAssociatedObject(self, "BHT_LastAttachmentCount") integerValue];
+    NSInteger lastTextLength = [objc_getAssociatedObject(self, "BHT_LastTextLength") integerValue];
+    
+    // Store current values for next check
+    objc_setAssociatedObject(self, "BHT_LastAttachmentCount", @(currentAttachmentCount), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    objc_setAssociatedObject(self, "BHT_LastTextLength", @(currentTextLength), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    
+    // Check if attachments were removed
+    BOOL attachmentsRemoved = (currentAttachmentCount < lastAttachmentCount);
+    BOOL textCleared = (currentTextLength == 0 && lastTextLength > 0);
+    
+    // Always check if we should show the rail, but be more aggressive if attachments were
+    // removed or text was cleared
+    BOOL shouldForceUpdate = attachmentsRemoved || textCleared;
+    
+        // Show the rail if we have no text and no attachments
+    if (currentAttachmentCount == 0 && currentTextLength == 0) {
+        // Force a full refresh
+        if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
+            [self performSelector:@selector(_t1_updateAccessoryViewState)];
+        }
+        
+        if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
+            [self performSelector:@selector(_t1_showMediaRail)];
+        }
+        
+        // CRITICAL: Also ensure the accessory wrapper view is visible and at the right position
+        UIView *accessoryWrapperView = [self valueForKey:@"_accessoryWrapperView"];
+        if (accessoryWrapperView) {
+            accessoryWrapperView.hidden = NO;
+            if ([self respondsToSelector:@selector(_t1_updateAccessoryViewFrame)]) {
+                [self performSelector:@selector(_t1_updateAccessoryViewFrame)];
+            }
+        }
+        
+        // Direct manipulation of view
+        id railController = [self valueForKey:@"_mediaRailViewController"];
+        if (railController && [railController respondsToSelector:@selector(view)]) {
+            UIView *railView = [railController performSelector:@selector(view)];
+            if (railView) {
+                railView.hidden = NO;
+                railView.alpha = 1.0;
+                
+                // Place the rail view in front
+                if (railView.superview) {
+                    [railView.superview bringSubviewToFront:railView];
+                }
+            }
+        }
+        
+        // Force another refresh after a small delay to catch edge cases
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
+                [self performSelector:@selector(_t1_updateAccessoryViewState)];
+            }
+            
+            if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
+                [self performSelector:@selector(_t1_showMediaRail)];
+            }
+            
+            // Check the accessory wrapper view again
+            UIView *accessoryWrapperView = [self valueForKey:@"_accessoryWrapperView"];
+            if (accessoryWrapperView) {
+                accessoryWrapperView.hidden = NO;
+                if ([self respondsToSelector:@selector(_t1_updateAccessoryViewFrame)]) {
+                    [self performSelector:@selector(_t1_updateAccessoryViewFrame)];
+                }
+            }
+            
+            id railController = [self valueForKey:@"_mediaRailViewController"];
+            if (railController && [railController respondsToSelector:@selector(view)]) {
+                UIView *railView = [railController performSelector:@selector(view)];
+                if (railView) {
+                    // Place the view in front
+                    if (railView.superview) {
+                        [railView.superview bringSubviewToFront:railView];
+                    }
+                    railView.hidden = NO;
+                    railView.alpha = 1.0;
+                }
+            }
+        });
+        }
+    }
 }
 
 // Simply modify if the rail should be shown or not
@@ -4710,12 +4833,23 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 }
 
 // When photos are removed, update media rail visibility
+// Clean up our timer when the controller is deallocated
+- (void)dealloc {
+    NSTimer *timer = objc_getAssociatedObject(self, "BHT_MediaRailTimer");
+    if (timer) {
+        [timer invalidate];
+    }
+    %orig;
+}
+
 - (void)_t1_setAttachments:(id)attachments scribeWithSource:(id)source {
     %orig(attachments, source);
     
-    // After attachments change, force an immediate UI update
-    // with a short delay to ensure all internal state is updated first
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    // Force our visibility checker to run immediately
+    [self BHT_checkMediaRailVisibility];
+    
+    // Also run a check after a delay to catch any asynchronous updates
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         // Check if attachments array is empty
         BOOL isEmpty = YES;
         if (attachments && [attachments isKindOfClass:[NSArray class]]) {
@@ -4782,6 +4916,9 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 // When text changes, update the rail visibility
 - (void)tableViewController:(id)controller tweetTextDidChange:(id)text {
     %orig(controller, text);
+    
+    // Force our state checker to run - it will detect text changes and handle media rail visibility
+    [self BHT_checkMediaRailVisibility];
     
     // Use a static property to track the last update time to prevent too frequent updates
     static NSDate *lastUpdate = nil;
