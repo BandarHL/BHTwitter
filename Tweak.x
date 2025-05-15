@@ -4594,12 +4594,64 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 
 // MARK: - Always Show Media Rail in Composer
 
-// Super simple approach - just override this one method to always return YES
 %hook T1TweetComposeViewController
 
-// Always return YES to ensure the media rail is shown initially
+// Always show the media rail
 - (BOOL)_t1_shouldShowMediaRail {
     return YES; 
+}
+
+// Ensure the rail gets initialized when the view loads
+- (void)viewDidLoad {
+    %orig;
+    
+    // Force the media rail to load
+    SEL loadRailSelector = NSSelectorFromString(@"_t1_loadMediaRailViewController");
+    if ([self respondsToSelector:loadRailSelector]) {
+        ((void (*)(id, SEL))objc_msgSend)(self, loadRailSelector);
+    }
+}
+
+// Force the accessory view to appear when the view appears
+- (void)viewDidAppear:(BOOL)animated {
+    %orig;
+    
+    // Delayed execution to ensure UI is ready
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        // Force media rail to show by calling its show method
+        SEL showRailSelector = NSSelectorFromString(@"_t1_showMediaRail");
+        if ([self respondsToSelector:showRailSelector]) {
+            ((void (*)(id, SEL))objc_msgSend)(self, showRailSelector);
+        }
+        
+        // Also make sure the accessory wrapper view is visible
+        UIView *accessoryWrapper = [self valueForKey:@"_accessoryWrapperView"];
+        if (accessoryWrapper) {
+            accessoryWrapper.hidden = NO;
+        }
+    });
+}
+
+// Intercept the accessory view state to ensure it includes the media rail
+- (unsigned long long)accessoryViewState {
+    unsigned long long state = %orig;
+    
+    // If the state is 0 (no accessories), force it to 1 (media rail)
+    if (state == 0) {
+        return 1;
+    }
+    
+    return state;
+}
+
+// Also provide the setter to ensure we can modify the state
+- (void)setAccessoryViewState:(unsigned long long)state {
+    // If trying to hide all accessories (state 0), override to keep media rail (state 1)
+    if (state == 0) {
+        %orig(1);
+    } else {
+        %orig(state);
+    }
 }
 
 %end
