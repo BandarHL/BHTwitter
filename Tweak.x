@@ -4621,12 +4621,12 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
     return result;
 }
 
-// Simply modify if the rail should be shown or not
+// This hook defines whether the rail *should* be shown.
+// Other parts of Twitter might use this. Our primary logic will use the helper.
 - (BOOL)_t1_shouldShowMediaRail {
-    // Our logic completely overrides the original.
     id compositionState = [self valueForKey:@"_compositionState"];
     if (!compositionState) {
-        return NO; // Should not happen, but defensive.
+        return NO; 
     }
 
     BOOL hasVisualAttachments = NO;
@@ -4636,38 +4636,21 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
             hasVisualAttachments = (mediaAssets.count > 0);
         }
     }
-    // If mediaAssets is not available or not an array, assume no visual attachments for safety.
 
     BOOL hasText = NO;
     if ([compositionState respondsToSelector:@selector(text)]) {
-        NSString *text = [compositionState performSelector:@selector(text)];
-        if (text && [text isKindOfClass:[NSString class]]) {
-            hasText = (text.length > 0);
+        NSString *textValue = [compositionState performSelector:@selector(text)];
+        if (textValue && [textValue isKindOfClass:[NSString class]]) {
+            hasText = (textValue.length > 0);
         }
     }
-    // If text is not available or not a string, assume no text for safety.
     
-    // Show rail IF no text AND no visual attachments.
     return !hasText && !hasVisualAttachments;
 }
 
-// This ensures the rail shows properly on launch
-- (void)viewDidAppear:(BOOL)animated {
-    %orig(animated);
-    
-    // After the view appears and animations settle, update the accessory view state.
-    // This will use our hooked _t1_shouldShowMediaRail to determine rail visibility.
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
-            [self performSelector:@selector(_t1_updateAccessoryViewState)];
-        }
-    });
-}
-
-// These methods are critical for properly hiding/showing the media rail
+// Hook for hiding the media rail - ensure it's visually hidden.
 - (void)_t1_hideMediaRail {
-    %orig; // Let Twitter's original logic run first
-    
+    %orig;
     id railController = [self valueForKey:@"_mediaRailViewController"];
     if (railController && [railController respondsToSelector:@selector(view)]) {
         UIView *railView = [railController performSelector:@selector(view)];
@@ -4676,12 +4659,11 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
             railView.alpha = 0;
         }
     }
-    // DO NOT call _t1_updateAccessoryViewState from here.
 }
 
+// Hook for showing the media rail - ensure it's visually shown.
 - (void)_t1_showMediaRail {
-    %orig; // Let Twitter's original logic run first
-    
+    %orig;
     id railController = [self valueForKey:@"_mediaRailViewController"];
     if (railController && [railController respondsToSelector:@selector(view)]) {
         UIView *railView = [railController performSelector:@selector(view)];
@@ -4690,40 +4672,71 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
             railView.alpha = 1.0;
         }
     }
-    // DO NOT call _t1_updateAccessoryViewState from here.
 }
 
-// When selecting photos, hide the media rail
+// New helper method to centralize visibility logic and action
+%new
+- (void)_bht_updateMediaRailVisibilityBasedOnState {
+    id compositionState = [self valueForKey:@"_compositionState"];
+    if (!compositionState) {
+        // If no composition state, defensively hide the rail.
+        if ([self respondsToSelector:@selector(_t1_hideMediaRail)]) {
+            [self performSelector:@selector(_t1_hideMediaRail)];
+        }
+        return;
+    }
+
+    BOOL hasVisualAttachments = NO;
+    if ([compositionState respondsToSelector:@selector(mediaAssets)]) {
+        NSArray *mediaAssets = [compositionState performSelector:@selector(mediaAssets)];
+        if (mediaAssets && [mediaAssets isKindOfClass:[NSArray class]]) {
+            hasVisualAttachments = (mediaAssets.count > 0);
+        }
+    }
+
+    BOOL hasTextValue = NO; 
+    if ([compositionState respondsToSelector:@selector(text)]) {
+        NSString *currentText = [compositionState performSelector:@selector(text)];
+        if (currentText && [currentText isKindOfClass:[NSString class]]) {
+            hasTextValue = (currentText.length > 0);
+        }
+    }
+
+    if (!hasTextValue && !hasVisualAttachments) {
+        if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
+            [self performSelector:@selector(_t1_showMediaRail)];
+        }
+    } else {
+        if ([self respondsToSelector:@selector(_t1_hideMediaRail)]) {
+            [self performSelector:@selector(_t1_hideMediaRail)];
+        }
+    }
+}
+
+// This ensures the rail shows/hides properly on initial appearance
+- (void)viewDidAppear:(BOOL)animated {
+    %orig(animated);
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self _bht_updateMediaRailVisibilityBasedOnState];
+    });
+}
+
+// When selecting/replacing photos, update rail visibility
 - (void)addOrReplaceAttachment:(id)attachment scribeWithSource:(id)source {
     %orig(attachment, source);
-    
-    // After an attachment is added/replaced, always update the accessory view state.
-    // It will internally consult our _t1_shouldShowMediaRail hook.
-    if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
-        [self performSelector:@selector(_t1_updateAccessoryViewState)];
-    }
+    [self _bht_updateMediaRailVisibilityBasedOnState];
 }
 
-// When photos are removed, update media rail visibility
+// When attachments are set (e.g., cleared), update rail visibility
 - (void)_t1_setAttachments:(id)attachments scribeWithSource:(id)source {
     %orig(attachments, source);
-    
-    // After attachments change, always update the accessory view state.
-    // It will internally consult our _t1_shouldShowMediaRail hook.
-    if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
-        [self performSelector:@selector(_t1_updateAccessoryViewState)];
-    }
+    [self _bht_updateMediaRailVisibilityBasedOnState];
 }
 
 // When text changes, update the rail visibility
-- (void)tableViewController:(id)controller tweetTextDidChange:(id)text {
+- (void)tableViewController:(id)controller tweetTextDidChange:(id)text { 
     %orig(controller, text);
-    
-    // After text changes, always update the accessory view state.
-    // It will internally consult our _t1_shouldShowMediaRail hook.
-    if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
-        [self performSelector:@selector(_t1_updateAccessoryViewState)];
-    }
+    [self _bht_updateMediaRailVisibilityBasedOnState];
 }
 
 %end
