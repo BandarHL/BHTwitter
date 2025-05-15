@@ -5066,8 +5066,8 @@ static NSMutableArray *activeTranslationContexts;
                             @"initWithTranslatedText:",
                             @"initWithText:",
                             @"initWithTranslation:",
-                            @"initWithTranslation:entities:source:localizedLanguage:sourceLanguage:destinationLanguage:translationState:",
-                            @"init"
+                            @"initWithTranslation:entities:source:localizedLanguage:sourceLanguage:destinationLanguage:translationState:"
+                            // Removed "init" since it doesn't exist for TwitterTranslation class
                         ];
                         
                         for (NSString *selectorStr in initSelectors) {
@@ -5097,35 +5097,7 @@ static NSMutableArray *activeTranslationContexts;
                                             break;
                                         }
                                     }
-                                } else if ([selectorStr isEqualToString:@"init"]) {
-                                    // No-argument initializer
-                                    translationObject = [instance init];
-                                    
-                                    if (translationObject) {
-                                        NSLog(@"[GeminiTranslator] Successfully initialized with init");
-                                        
-                                        // Try to set translation text using KVC or methods
-                                        @try {
-                                            if ([translationObject respondsToSelector:@selector(setText:)]) {
-                                                [translationObject performSelector:@selector(setText:) withObject:translatedText];
-                                                NSLog(@"[GeminiTranslator] Set translation text with setter");
-                                            } else if ([translationObject respondsToSelector:@selector(setValue:forKey:)]) {
-                                                [translationObject setValue:translatedText forKey:@"text"];
-                                                NSLog(@"[GeminiTranslator] Set translation text with KVC");
-                                            }
-                                            
-                                            // Try to set the source to Gemini
-                                            if ([translationObject respondsToSelector:@selector(setSource:)]) {
-                                                [translationObject performSelector:@selector(setSource:) withObject:@"Gemini"];
-                                            } else if ([translationObject respondsToSelector:@selector(setValue:forKey:)]) {
-                                                [translationObject setValue:@"Gemini" forKey:@"source"];
-                                            }
-                                        } @catch (NSException *e) {
-                                            NSLog(@"[GeminiTranslator] Error setting translation properties: %@", e);
-                                        }
-                                        
-                                        break;
-                                    }
+                                // Removed init block since TwitterTranslation doesn't implement init
                                 }
                             }
                         }
