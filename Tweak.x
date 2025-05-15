@@ -5041,13 +5041,20 @@ static NSMutableSet *attemptedTranslations;
         }
         
         // Keep a strong reference to self to prevent deallocation
-        __block id strongSelf = self;
+        // Use __strong instead of __block to ensure the object stays alive throughout the block execution
+        __strong __block id strongSelf = self;
         
-        // Translate using Gemini AI
-        [[GeminiTranslator sharedInstance] translateText:tweetText 
-                                          fromLanguage:sourceLanguage 
-                                            toLanguage:targetLanguage 
-                                            completion:^(NSString *translatedText, NSError *error) {
+        // Translate using Gemini AI - with extra safety
+        @try {
+            [[GeminiTranslator sharedInstance] translateText:tweetText 
+                                              fromLanguage:sourceLanguage 
+                                                toLanguage:targetLanguage 
+                                                completion:^(NSString *translatedText, NSError *error) {
+                // Make sure everything is still valid at the start of the completion block
+                if (!strongSelf || !context) {
+                    NSLog(@"[GeminiTranslator] Self or context already deallocated - aborting completion");
+                    return;
+                }
             // Use the strong reference we kept
             if (!strongSelf) {
                 NSLog(@"[GeminiTranslator] Self deallocated during translation despite strong reference");
@@ -5073,10 +5080,11 @@ static NSMutableSet *attemptedTranslations;
                 
                 if (error || !translatedText) {
                     NSLog(@"[GeminiTranslator] Translation failed: %@", error);
-                    // Fall back to original implementation, which should be async
-                    [strongSelf _t1_fetchTranslatedStatusFromGraphQL:context.statusViewModel 
-                                                             account:context.account 
-                                                          controller:context.controller];
+                    
+                    // Instead of recursively calling our own method again (which could lead to infinite loops),
+                    // directly use Twitter's native translation logic through our helper
+                    [context useTwitterTranslationWithHandler:strongSelf];
+                    
                     cleanupContext();
                     return;
                 }
@@ -5110,8 +5118,14 @@ static NSMutableSet *attemptedTranslations;
                 
                 // Try a different direct approach - don't use init() which doesn't exist
                 SEL allocSelector = @selector(alloc);
-                // Use a safer approach to avoid the -Warc-performSelector-leaks warning
-                id instance = ((id (*)(id, SEL))objc_msgSend)(translationClass, allocSelector);
+                // Create an instance more safely - avoid using direct objc_msgSend which can cause pointer authentication issues
+                id instance = nil;
+                @try {
+                    // First try the regular alloc method
+                    instance = [translationClass alloc];
+                } @catch (NSException *allocException) {
+                    NSLog(@"[GeminiTranslator] Exception during alloc: %@", allocException);
+                }
                 
                 if (instance) {
                     NSLog(@"[GeminiTranslator] Successfully allocated instance");
@@ -5358,10 +5372,22 @@ static NSMutableSet *attemptedTranslations;
                                                         translationObj = result;
                                                     }
                                                 } else if ([initSelectorStr isEqualToString:@"initWithTranslatedText:"]) {
-                                                    // Use a safer method to avoid the performSelector leak warning
-                                                    IMP imp = [swiftInstance methodForSelector:initSelector];
-                                                    id (*initFunc)(id, SEL, id) = (id (*)(id, SEL, id))imp;
-                                                    translationObj = initFunc(swiftInstance, initSelector, translatedText);
+                                                    // Use NSInvocation instead of direct function pointer calls to avoid pointer authentication issues
+                                                    NSMethodSignature *sig = [swiftInstance methodSignatureForSelector:initSelector];
+                                                    if (sig) {
+                                                        NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
+                                                        [inv setSelector:initSelector];
+                                                        [inv setTarget:swiftInstance];
+                                                        
+                                                        id arg = translatedText;
+                                                        [inv setArgument:&arg atIndex:2];
+                                                        
+                                                        [inv invoke];
+                                                        
+                                                        __unsafe_unretained id result = nil;
+                                                        [inv getReturnValue:&result];
+                                                        translationObj = result;
+                                                    }
                                                 } else if ([initSelectorStr isEqualToString:@"initWithDictionary:"]) {
                                                     NSDictionary *params = @{
                                                         @"text": translatedText,
@@ -5370,10 +5396,22 @@ static NSMutableSet *attemptedTranslations;
                                                         @"targetLanguage": context.targetLanguage ?: @"en",
                                                         @"state": @"Success"
                                                     };
-                                                    // Use a safer method to avoid the performSelector leak warning
-                                                    IMP imp = [swiftInstance methodForSelector:initSelector];
-                                                    id (*initFunc)(id, SEL, id) = (id (*)(id, SEL, id))imp;
-                                                    translationObj = initFunc(swiftInstance, initSelector, params);
+                                                    // Use NSInvocation instead of direct function pointer calls
+                                                    NSMethodSignature *sig = [swiftInstance methodSignatureForSelector:initSelector];
+                                                    if (sig) {
+                                                        NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
+                                                        [inv setSelector:initSelector];
+                                                        [inv setTarget:swiftInstance];
+                                                        
+                                                        id arg = params;
+                                                        [inv setArgument:&arg atIndex:2];
+                                                        
+                                                        [inv invoke];
+                                                        
+                                                        __unsafe_unretained id result = nil;
+                                                        [inv getReturnValue:&result];
+                                                        translationObj = result;
+                                                    }
                                                 }
                                                 
                                                 if (translationObj) {
@@ -5545,6 +5583,13 @@ static NSMutableSet *attemptedTranslations;
                     strongSelf = nil;
             }
         }];
+        } @catch (NSException *exception) {
+            NSLog(@"[GeminiTranslator] Exception starting translation: %@", exception);
+            // Safely clean up context in case of error
+            @synchronized(activeTranslationContexts) {
+                [activeTranslationContexts removeObject:context];
+            }
+        }
     } @catch (NSException *exception) {
         NSLog(@"[GeminiTranslator] Uncaught exception in translation hook: %@", exception);
         %orig;
