@@ -3896,19 +3896,27 @@ static BOOL *stateMap[128] = {0}; // Simple state map using pointer hash
     }
 }
 
-// Most direct hook for the pop sound - when updating insets after refresh
-- (void)_updateContentInset:(id)scrollView animated:(BOOL)animated {
+// Play pop sound when refresh animation completes
+- (void)_onRefreshAnimationComplete {
     %orig;
     
-    // This is the perfect place to play the pop sound - after animation
+    // Play the pop sound immediately when Twitter's animation completes
     if (initialSoundsPlayed) {
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            playPopSound();
-        });
+        playPopSound();
     }
 }
 
-// Absolutely ensure the pop sound plays when loading state changes
+// Alternative completion point - used on some versions of Twitter
+- (void)_finishRefreshingScrollViewAnimated:(BOOL)animated {
+    %orig;
+    
+    // Play the pop sound only when actually finishing (not starting)
+    if (initialSoundsPlayed) {
+        playPopSound();
+    }
+}
+
+// Final fallback - still needed for versions that may not call the above methods
 - (void)setLoading:(BOOL)loading {
     // Get old loading value
     uintptr_t hash = ((uintptr_t)self) % 128;
@@ -3924,28 +3932,9 @@ static BOOL *stateMap[128] = {0}; // Simple state map using pointer hash
     
     %orig;
     
-    // When transitioning from loading to not loading
+    // When transitioning from loading to not loading (refresh complete)
     if (wasLoading && !loading && initialSoundsPlayed) {
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.3 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            playPopSound();
-        });
-    }
-}
-
-// Direct hook for responding to scroll completion
-- (void)scrollViewDidEndDecelerating:(id)scrollView {
-    %orig;
-    
-    // Another good point to ensure pop sound plays if needed
-    if (initialSoundsPlayed) {
-        uintptr_t hash = ((uintptr_t)self) % 128;
-        BOOL isLoading = stateMap[hash] != NULL ? *stateMap[hash] : NO;
-        
-        if (!isLoading) { // If we're no longer loading when scrolling ends
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-                playPopSound();
-            });
-        }
+        playPopSound();
     }
 }
 
