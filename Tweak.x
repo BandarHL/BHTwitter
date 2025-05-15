@@ -11,12 +11,6 @@
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
 
-@class T1TweetComposeViewController;
-
-@interface T1TweetComposeViewController (BHTwitterMediaRail)
-- (void)_bht_updateMediaRailVisibilityBasedOnState;
-@end
-
 // Forward declare T1ColorSettings and its private method to satisfy the compiler
 @interface T1ColorSettings : NSObject
 + (void)_t1_applyPrimaryColorOption;
@@ -4627,12 +4621,12 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
     return result;
 }
 
-// This hook defines whether the rail *should* be shown.
-// Other parts of Twitter might use this. Our primary logic will use the helper.
+// Simply modify if the rail should be shown or not
 - (BOOL)_t1_shouldShowMediaRail {
+    // Our logic completely overrides the original.
     id compositionState = [self valueForKey:@"_compositionState"];
     if (!compositionState) {
-        return NO; 
+        return NO; // Should not happen, but defensive.
     }
 
     BOOL hasVisualAttachments = NO;
@@ -4642,21 +4636,38 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
             hasVisualAttachments = (mediaAssets.count > 0);
         }
     }
+    // If mediaAssets is not available or not an array, assume no visual attachments for safety.
 
     BOOL hasText = NO;
     if ([compositionState respondsToSelector:@selector(text)]) {
-        NSString *textValue = [compositionState performSelector:@selector(text)];
-        if (textValue && [textValue isKindOfClass:[NSString class]]) {
-            hasText = (textValue.length > 0);
+        NSString *text = [compositionState performSelector:@selector(text)];
+        if (text && [text isKindOfClass:[NSString class]]) {
+            hasText = (text.length > 0);
         }
     }
+    // If text is not available or not a string, assume no text for safety.
     
+    // Show rail IF no text AND no visual attachments.
     return !hasText && !hasVisualAttachments;
 }
 
-// Hook for hiding the media rail - ensure it's visually hidden.
+// This ensures the rail shows properly on launch
+- (void)viewDidAppear:(BOOL)animated {
+    %orig(animated);
+    
+    // After the view appears and animations settle, update the accessory view state.
+    // This will use our hooked _t1_shouldShowMediaRail to determine rail visibility.
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
+            [self performSelector:@selector(_t1_updateAccessoryViewState)];
+        }
+    });
+}
+
+// These methods are critical for properly hiding/showing the media rail
 - (void)_t1_hideMediaRail {
     %orig;
+    
     id railController = [self valueForKey:@"_mediaRailViewController"];
     if (railController && [railController respondsToSelector:@selector(view)]) {
         UIView *railView = [railController performSelector:@selector(view)];
@@ -4665,11 +4676,15 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
             railView.alpha = 0;
         }
     }
+    // After ensuring it's hidden, tell Twitter to update its state.
+    if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
+        [self performSelector:@selector(_t1_updateAccessoryViewState)];
+    }
 }
 
-// Hook for showing the media rail - ensure it's visually shown.
 - (void)_t1_showMediaRail {
     %orig;
+    
     id railController = [self valueForKey:@"_mediaRailViewController"];
     if (railController && [railController respondsToSelector:@selector(view)]) {
         UIView *railView = [railController performSelector:@selector(view)];
@@ -4678,76 +4693,111 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
             railView.alpha = 1.0;
         }
     }
-}
-
-// New helper method to centralize visibility logic and action
-%new
-- (void)_bht_updateMediaRailVisibilityBasedOnState {
-    id compositionState = [self valueForKey:@"_compositionState"];
-    if (!compositionState) {
-        // If no composition state, defensively hide the rail.
-        if ([self respondsToSelector:@selector(_t1_hideMediaRail)]) {
-            [self performSelector:@selector(_t1_hideMediaRail)];
-        }
-        return;
-    }
-
-    BOOL hasVisualAttachments = NO;
-    if ([compositionState respondsToSelector:@selector(mediaAssets)]) {
-        NSArray *mediaAssets = [compositionState performSelector:@selector(mediaAssets)];
-        if (mediaAssets && [mediaAssets isKindOfClass:[NSArray class]]) {
-            hasVisualAttachments = (mediaAssets.count > 0);
-        }
-    }
-
-    BOOL hasTextValue = NO; 
-    if ([compositionState respondsToSelector:@selector(text)]) {
-        NSString *currentText = [compositionState performSelector:@selector(text)];
-        if (currentText && [currentText isKindOfClass:[NSString class]]) {
-            hasTextValue = (currentText.length > 0);
-        }
-    }
-
-    if (!hasTextValue && !hasVisualAttachments) {
-        if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
-            [self performSelector:@selector(_t1_showMediaRail)];
-        }
-    } else {
-        if ([self respondsToSelector:@selector(_t1_hideMediaRail)]) {
-            [self performSelector:@selector(_t1_hideMediaRail)];
-        }
+    // After ensuring it's shown, tell Twitter to update its state.
+    if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
+        [self performSelector:@selector(_t1_updateAccessoryViewState)];
     }
 }
 
-// This ensures the rail shows/hides properly on initial appearance
-- (void)viewDidAppear:(BOOL)animated {
-    %orig(animated);
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [self _bht_updateMediaRailVisibilityBasedOnState];
-    });
-}
-
-// When selecting/replacing photos, update rail visibility
+// When selecting photos, hide the media rail
 - (void)addOrReplaceAttachment:(id)attachment scribeWithSource:(id)source {
     %orig(attachment, source);
-    [self _bht_updateMediaRailVisibilityBasedOnState];
+    
+    // Always hide the media rail when a photo is added
+    if ([self respondsToSelector:@selector(_t1_hideMediaRail)]) {
+        [self performSelector:@selector(_t1_hideMediaRail)];
+    }
 }
 
-// When attachments are set (e.g., cleared), update rail visibility
+// When photos are removed, update media rail visibility
 - (void)_t1_setAttachments:(id)attachments scribeWithSource:(id)source {
     %orig(attachments, source);
-    [self _bht_updateMediaRailVisibilityBasedOnState];
+    
+    // Always update the accessory view state after any change to attachments.
+    // This will re-evaluate _t1_shouldShowMediaRail.
+    if ([self respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
+        [self performSelector:@selector(_t1_updateAccessoryViewState)];
+    }
 }
 
 // When text changes, update the rail visibility
-- (void)tableViewController:(id)controller tweetTextDidChange:(id)text { 
+- (void)tableViewController:(id)controller tweetTextDidChange:(id)text {
     %orig(controller, text);
-    [self _bht_updateMediaRailVisibilityBasedOnState];
+    
+    // Get the current text
+    NSString *textContent = nil;
+    if ([text respondsToSelector:@selector(string)]) {
+        textContent = [text performSelector:@selector(string)];
+    }
+    
+    // Hide rail when text is being typed, show otherwise if no attachments
+    if (textContent && textContent.length > 0) {
+        if ([self respondsToSelector:@selector(_t1_hideMediaRail)]) {
+            [self performSelector:@selector(_t1_hideMediaRail)];
+        }
+    } else {
+        // Check if we have attachments - only show if no attachments
+        id compositionState = [self valueForKey:@"_compositionState"];
+        if (compositionState) {
+            BOOL hasAttachments = NO;
+            if ([compositionState respondsToSelector:@selector(hasAttachments)]) {
+                hasAttachments = [compositionState performSelector:@selector(hasAttachments)];
+            }
+            
+            // No text and no attachments - show rail
+            if (!hasAttachments) {
+                if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
+                    [self performSelector:@selector(_t1_showMediaRail)];
+                }
+            }
+        }
+    }
 }
 
 %end
 
-@interface T1TweetComposeViewController (BHTwitterMediaRail)
-- (void)_bht_updateMediaRailVisibilityBasedOnState;
-@end
+%hook T1MediaAttachmentView
+
+- (void)setAttachment:(TTMAsset *)attachment animated:(_Bool)animated {
+    %orig(attachment, animated);
+
+    // If the attachment is set to nil, or if the view is hidden, 
+    // it implies this specific attachment is no longer being actively displayed.
+    BOOL isEffectivelyHidden = (attachment == nil || self.hidden || self.alpha == 0.0f);
+
+    if (isEffectivelyHidden) {
+        // Try to find the T1TweetComposeViewController to notify it.
+        UIResponder *responder = self;
+        while (responder && ![responder isKindOfClass:[UIViewController class]]) {
+            responder = [responder nextResponder];
+        }
+
+        UIViewController *parentVC = (UIViewController *)responder;
+        T1TweetComposeViewController *composeVC = nil;
+
+        // Walk up the VC hierarchy to find T1TweetComposeViewController
+        while (parentVC) {
+            if ([parentVC isKindOfClass:[%c(T1TweetComposeViewController) class]]) {
+                composeVC = (T1TweetComposeViewController *)parentVC;
+                break;
+            }
+            if (parentVC.parentViewController) {
+                parentVC = parentVC.parentViewController;
+            } else if (parentVC.presentingViewController) {
+                parentVC = parentVC.presentingViewController; // Check presenting VC as well
+            } else {
+                break;
+            }
+        }
+
+        if (composeVC && [composeVC respondsToSelector:@selector(_t1_updateAccessoryViewState)]) {
+            // Call on the main thread, possibly after a tiny delay to allow state to settle.
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [composeVC performSelector:@selector(_t1_updateAccessoryViewState)];
+            });
+        }
+    }
+}
+
+%end
 
