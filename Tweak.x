@@ -3732,6 +3732,21 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
         // Mark as styled and store reference
         objc_setAssociatedObject(self, "BHT_StyledTimestamp", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         gVideoTimestampLabel = self;
+        
+        // IMPORTANT! Force immediate visibility as soon as we style the label
+        // This ensures it's visible right from the start regardless of controls state
+        self.alpha = 1.0;
+        self.hidden = NO;
+        
+        // Mark as fixed to prevent early hiding
+        objc_setAssociatedObject(self, "BHT_FixedForFirstLoad", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        
+        // After a delay, remove the protection to let player take over visibility control
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            if (self && self.superview) {
+                objc_setAssociatedObject(self, "BHT_FixedForFirstLoad", @NO, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            }
+        });
     }
 }
 
