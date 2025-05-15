@@ -2,6 +2,9 @@
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
 #import <objc/message.h> // For objc_msgSend
+#import <AudioToolbox/AudioToolbox.h>
+#import <AVFoundation/AVFoundation.h>
+#import <dlfcn.h>
 #import "SAMKeychain/AuthViewController.h"
 #import "Colours/Colours.h"
 #import "BHTManager.h"
@@ -3834,7 +3837,74 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 
 // MARK: - Combined constructor to initialize all hooks and features
+// MARK: - Restore Pull-To-Refresh Sounds
+%hook TFNPullToRefreshControl
+
+// Override the sound effect playback method
+- (void)_playSoundEffect:(long long)soundType {
+    if (![BHTManager restorePullToRefreshSounds]) {
+        return %orig;
+    }
+    
+    NSString *soundFile = nil;
+    if (soundType == 0) {
+        // Sound when pulling down
+        soundFile = @"psst2.aac";
+    } else if (soundType == 1) {
+        // Sound when refresh completes
+        soundFile = @"pop.aac";
+    }
+    
+    if (soundFile) {
+        NSString *soundPath = [[BHTBundle sharedBundle].bundlePath stringByAppendingPathComponent:soundFile];
+        NSURL *soundURL = [NSURL fileURLWithPath:soundPath];
+        
+        static SystemSoundID sounds[2] = {0, 0};
+        static dispatch_once_t onceToken[2];
+        
+        dispatch_once(&onceToken[soundType], ^{
+            AudioServicesCreateSystemSoundID((__bridge CFURLRef)soundURL, &sounds[soundType]);
+        });
+        
+        if (sounds[soundType]) {
+            AudioServicesPlaySystemSound(sounds[soundType]);
+        }
+    }
+}
+
+// This method determines if sound effects are enabled
++ (_Bool)_areSoundEffectsEnabled {
+    return [BHTManager restorePullToRefreshSounds] ? YES : %orig;
+}
+
+// Make sure status changes trigger sound playback
+- (void)_setStatus:(unsigned long long)status fromScrolling:(_Bool)fromScrolling {
+    unsigned long long oldStatus = [self valueForKey:@"_status"] ? [[self valueForKey:@"_status"] unsignedLongLongValue] : 0;
+    
+    %orig;
+    
+    if (![BHTManager restorePullToRefreshSounds]) {
+        return;
+    }
+    
+    // Play sounds based on status transitions
+    if (oldStatus != status) {
+        if (status == 1 && fromScrolling) {
+            // Status changed to "triggered" - play pull sound
+            [self _playSoundEffect:0];
+        } else if (oldStatus == 2 && status == 0) {
+            // Status changed from "loading" to "idle" - play completion sound
+            [self _playSoundEffect:1];
+        }
+    }
+}
+
+%end
+
 %ctor {
+    // Import AudioServices framework
+    dlopen("/System/Library/Frameworks/AudioToolbox.framework/AudioToolbox", RTLD_LAZY);
+    
     NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
     NSOperationQueue *mainQueue = [NSOperationQueue mainQueue];
     // Someone needs to hold reference the to Notification

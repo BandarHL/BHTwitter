@@ -132,6 +132,9 @@
 "RESTORE_VIDEO_TIMESTAMP_TITLE" = "Restore Video Timestamp";
 "RESTORE_VIDEO_TIMESTAMP_DETAIL_TITLE" = "Shows video timestamp that may be hidden in some views.";
 
+"RESTORE_PULL_TO_REFRESH_SOUNDS_TITLE" = "Restore Pull-to-Refresh Sounds";
+"RESTORE_PULL_TO_REFRESH_SOUNDS_DETAIL_TITLE" = "Brings back the sounds when pulling down to refresh";
+
 
 /*Twitter Blue*/
 "TWITTER_BLUE_SECTION_HEADER_TITLE" = "Twitter Blue";
