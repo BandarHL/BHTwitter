@@ -3877,74 +3877,110 @@ static void PlayRefreshSound(int soundType) {
 
 %hook TFNPullToRefreshControl
 
-// Track loading state with static variables
-static BOOL isCurrentlyRefreshing = NO;
-static BOOL didPlayPullSound = NO;
-static BOOL initialRefreshPlayed = NO;
+// Track state with instance-specific variables using associated objects
+static char kRefreshingKey;
+static char kPlayedPullSoundKey;
+static char kNeedsPopSoundKey;
+static char kPopSoundTimerKey;
 
 // Always enable sound effects
 + (_Bool)_areSoundEffectsEnabled {
     return YES;
 }
 
-// Play sounds when loading state changes - this catches most cases
+// Track refresh animation completion to ensure pop sound plays after content is loaded
+- (void)_updateContentInset:(id)arg1 animated:(_Bool)arg2 {
+    %orig;
+    
+    // This method is called when animation completes - check if we should play pop sound
+    if (objc_getAssociatedObject(self, &kNeedsPopSoundKey)) {
+        // Get the timer if it exists
+        NSTimer *popTimer = objc_getAssociatedObject(self, &kPopSoundTimerKey);
+        if (popTimer) {
+            [popTimer invalidate]; // Cancel any pending timer
+        }
+        
+        // Reset state
+        objc_setAssociatedObject(self, &kNeedsPopSoundKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        objc_setAssociatedObject(self, &kPopSoundTimerKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        
+        // Play the pop sound with slight delay to ensure animation is visible
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            PlayRefreshSound(1);
+        });
+    }
+}
+
+// Play sounds when loading state changes - this catches all refreshes
 - (void)setLoading:(_Bool)loading {
-    BOOL wasRefreshing = isCurrentlyRefreshing;
-    isCurrentlyRefreshing = loading;
+    // Get previous state before changing
+    NSNumber *wasRefreshing = objc_getAssociatedObject(self, &kRefreshingKey);
+    BOOL wasRefreshingBool = wasRefreshing ? [wasRefreshing boolValue] : NO;
+    
+    // Set new state
+    objc_setAssociatedObject(self, &kRefreshingKey, @(loading), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     
     %orig;
     
     // Going from not loading to loading (start of refresh)
-    if (!wasRefreshing && loading) {
-        // Don't play pull sound here if already played by _setStatus
-        if (!didPlayPullSound) {
-            // This handles cases like app first launch
+    if (!wasRefreshingBool && loading) {
+        NSNumber *didPlayPull = objc_getAssociatedObject(self, &kPlayedPullSoundKey);
+        if (!didPlayPull || ![didPlayPull boolValue]) {
+            // This is for auto-refresh cases where _setStatus isn't called
             PlayRefreshSound(0);
         }
-        didPlayPullSound = NO; // Reset for next refresh cycle
+        
+        // Reset status for next refresh
+        objc_setAssociatedObject(self, &kPlayedPullSoundKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
     // Going from loading to not loading (end of refresh)
-    else if (wasRefreshing && !loading) {
-        // Play completion sound
-        PlayRefreshSound(1);
+    else if (wasRefreshingBool && !loading) {
+        // Mark that we need to play pop sound after animation completes
+        objc_setAssociatedObject(self, &kNeedsPopSoundKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        
+        // Set a fallback timer in case _updateContentInset doesn't get called
+        NSTimer *popTimer = [NSTimer scheduledTimerWithTimeInterval:0.7 
+                                                          repeats:NO 
+                                                            block:^(NSTimer *timer) {
+            // Only play if not already played
+            if (objc_getAssociatedObject(self, &kNeedsPopSoundKey)) {
+                objc_setAssociatedObject(self, &kNeedsPopSoundKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                objc_setAssociatedObject(self, &kPopSoundTimerKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                PlayRefreshSound(1);
+            }
+        }];
+        
+        objc_setAssociatedObject(self, &kPopSoundTimerKey, popTimer, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
 }
 
-// Play pull sound when status changes to triggered
+// Detect manual pull-to-refresh and play pull sound
 - (void)_setStatus:(unsigned long long)status fromScrolling:(_Bool)fromScrolling {
     %orig;
     
     if (status == 1 && fromScrolling) {
         // Status changed to "triggered" via pull - play the pull sound
         PlayRefreshSound(0);
-        didPlayPullSound = YES; // Mark that we've played the pull sound
+        objc_setAssociatedObject(self, &kPlayedPullSoundKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
 }
 
-// Catch the initial refresh on app start
-- (void)startPullToRefreshAnimationInScrollView:(UIScrollView *)scrollView {
+// Handle initial load refresh when app launches
+- (void)startPullToRefreshAnimationInScrollView:(id)scrollView {
     %orig;
     
-    // Only play the initial refresh sound once
-    if (!initialRefreshPlayed) {
-        initialRefreshPlayed = YES;
-        
-        // Play pull sound with slight delay
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        // For the initial app launch refresh, use slightly different timing
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            PlayRefreshSound(0);
+            PlayRefreshSound(0); // Pull sound
             
-            // Play completion sound after delay
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-                PlayRefreshSound(1);
+            // Play pop with longer delay for initial refresh
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+                PlayRefreshSound(1); // Pop sound
             });
         });
-    }
-}
-
-// Reset the initial refresh flag when scrollview is done
-- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate {
-    %orig;
-    initialRefreshPlayed = NO;
+    });
 }
 
 %end
