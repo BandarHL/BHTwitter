@@ -4592,71 +4592,96 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 
 %end
 
-// MARK: - Restore Media Rail in Tweet Composer
+// MARK: - Re-enable Media Rail in Composer
 
-// Define a static variable to track whether we've applied the fix
-static BOOL mediaRailFixApplied = NO;
-
+// Handle both loading and showing the media rail
 %hook T1TweetComposeViewController
 
-// Hook viewDidLoad to apply our media rail fix
+// Make the media rail visible in more cases
+- (BOOL)_t1_shouldShowMediaRail {
+    // Always allow the rail to show when composing
+    BOOL shouldShow = %orig;
+    
+    // If Twitter decided not to show it, we'll override to YES
+    if (!shouldShow) {
+        // Check if we're in initial compose state
+        id activeComposition = [self valueForKey:@"_compositionState"];
+        if (activeComposition) {
+            return YES;
+        }
+    }
+    
+    return shouldShow;
+}
+
+// Make sure media rail loads early and properly
 - (void)viewDidLoad {
     %orig;
     
-    // Skip if we've already applied the fix to avoid duplicate application
-    if (mediaRailFixApplied) return;
-    
-    // Log that we're applying the fix
-    NSLog(@"[BHTwitter] Attempting to restore media rail in tweet composer");
-    
-    // Set flag to avoid re-applying
-    mediaRailFixApplied = YES;
-    
-    // 1. Directly create the media rail view controller
-    Class mediaRailClass = NSClassFromString(@"T1PhotoMediaRailViewController");
-    if (mediaRailClass) {
-        id mediaRailVC = [[mediaRailClass alloc] init];
-        if (mediaRailVC) {
-            // 2. Configure the media rail
-            [mediaRailVC setValue:[self valueForKey:@"_account"] forKey:@"account"];
-            [mediaRailVC setValue:@NO forKey:@"_cameraButtonHidden"];
-            
-            // 3. Assign it to the compose view controller
-            [self setValue:mediaRailVC forKey:@"_mediaRailViewController"];
-            
-            // 4. Set accessory view state to show media rail (1)
-            [self setValue:@1 forKey:@"_accessoryViewState"];
-            
-            // 5. Update all related views with a slight delay to ensure proper layout
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                // Get the accessory wrapper view and make it visible
-                UIView *accessoryView = [self valueForKey:@"_accessoryWrapperView"];
-                if (accessoryView) {
-                    accessoryView.hidden = NO;
-                    accessoryView.alpha = 1.0;
-                    [accessoryView layoutIfNeeded];
-                }
-                
-                // Try to trigger the show media rail method
-                SEL showRailSelector = NSSelectorFromString(@"_t1_showMediaRail");
-                if ([self respondsToSelector:showRailSelector]) {
-                    ((void (*)(id, SEL))objc_msgSend)(self, showRailSelector);
-                }
-                
-                NSLog(@"[BHTwitter] Media rail restoration completed");
-            });
+    // Force-load the media rail controller if needed
+    id existingController = [self valueForKey:@"_mediaRailViewController"];
+    if (!existingController) {
+        if ([self respondsToSelector:@selector(_t1_loadMediaRailViewController)]) {
+            [self performSelector:@selector(_t1_loadMediaRailViewController)];
         }
     }
 }
 
-// Override to always return YES - forces media rail to be shown
-- (BOOL)_t1_shouldShowMediaRail {
-    return YES;
+// Override to show media rail when the view appears
+- (void)viewDidAppear:(BOOL)animated {
+    %orig(animated);
+    
+    // Schedule the media rail to show with a slight delay for animation
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        // First trigger loading if needed
+        if ([self respondsToSelector:@selector(_t1_updateMediaRailViewController)]) {
+            [self performSelector:@selector(_t1_updateMediaRailViewController)];
+        }
+        
+        // Then show the rail
+        if ([self respondsToSelector:@selector(_t1_showMediaRail)]) {
+            [self performSelector:@selector(_t1_showMediaRail)];
+        }
+    });
 }
 
-// Prevent the rail from being hidden
-- (void)_t1_hideMediaRail {
-    // Do nothing - prevent hiding
+%end
+
+// Add key methods to ensure the media rail works
+// Instead of trying to modify the PhotoMediaRailViewController directly,
+// let's focus on making sure it appears and stays visible
+%hook T1TweetComposeViewController
+
+// Force media rail to appear whenever attachments are shown
+- (void)_t1_updateForHasAttachments:(BOOL)hasAttachments {
+    %orig(hasAttachments);
+    
+    // Adding a small delay to let the UI update first
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        // If we have a media rail controller, make sure it's visible
+        id railController = [self valueForKey:@"_mediaRailViewController"];
+        if (railController) {
+            // Make sure the accessory view is visible
+            UIView *accessoryView = [self valueForKey:@"_accessoryWrapperView"];
+            if (accessoryView) {
+                accessoryView.hidden = NO;
+                accessoryView.alpha = 1.0;
+            }
+            
+            // Try to ensure the buttons are visible by setting instance variables
+            // on the rail controller using KVC
+            [railController setValue:@NO forKey:@"_cameraButtonHidden"];
+            [railController setValue:@NO forKey:@"_spaceButtonHidden"];
+            [railController setValue:@NO forKey:@"_liveModeInCameraHidden"];
+            [railController setValue:@YES forKey:@"_allowDownload"];
+            
+            // Update the collection view if it exists
+            UICollectionView *collectionView = [railController valueForKey:@"_collectionView"];
+            if (collectionView) {
+                [collectionView reloadData];
+            }
+        }
+    });
 }
 
 %end
