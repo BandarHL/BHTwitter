@@ -4955,95 +4955,226 @@ static NSMutableArray *activeTranslationContexts;
                                                  
             NSLog(@"[GeminiTranslator] Translation successful: %@", translatedText);
             
-            // Get Twitter's translation model class
-            Class twitterTranslationClass = NSClassFromString(@"TFSTwitterCore.TwitterTranslation");
-            if (!twitterTranslationClass) {
-                twitterTranslationClass = NSClassFromString(@"TFSTwitterTranslation");
-                
-                if (!twitterTranslationClass) {
-                    NSLog(@"[GeminiTranslator] Could not find Twitter's translation class, falling back");
-                    %orig(context.statusViewModel, context.account, context.controller);
-                    cleanupContext();
-                    return;
+            // Get Twitter's translation model class - try multiple possible class names
+            NSLog(@"[GeminiTranslator] Trying to find Twitter's translation class");
+            NSArray *possibleClassNames = @[
+                @"TFSTwitterCore.TwitterTranslation",
+                @"TFSTwitterTranslation",
+                @"TwitterCore.TwitterTranslation",
+                @"TwitterTranslation",
+                @"TwitterKit.TwitterTranslation"
+            ];
+            
+            Class twitterTranslationClass = nil;
+            for (NSString *className in possibleClassNames) {
+                Class cls = NSClassFromString(className);
+                if (cls) {
+                    twitterTranslationClass = cls;
+                    NSLog(@"[GeminiTranslator] Found translation class: %@", className);
+                    break;
                 }
+            }
+            
+            if (!twitterTranslationClass) {
+                // Last attempt - try to find class by looking at method signatures in existing objects
+                NSLog(@"[GeminiTranslator] Could not find translation class directly, trying to infer from existing objects");
+                
+                @try {
+                    if ([context.statusViewModel respondsToSelector:@selector(translation)]) {
+                        id existingTranslation = [context.statusViewModel performSelector:@selector(translation)];
+                        if (existingTranslation) {
+                            twitterTranslationClass = [existingTranslation class];
+                            NSLog(@"[GeminiTranslator] Found translation class from existing translation: %@", NSStringFromClass(twitterTranslationClass));
+                        }
+                    }
+                } @catch (NSException *e) {
+                    NSLog(@"[GeminiTranslator] Error getting existing translation: %@", e);
+                }
+            }
+            
+            if (!twitterTranslationClass) {
+                NSLog(@"[GeminiTranslator] Could not find Twitter's translation class, falling back");
+                %orig(context.statusViewModel, context.account, context.controller);
+                cleanupContext();
+                return;
             }
             
             // Create a translation object
             id translationObject = nil;
-            SEL factorySelector = NSSelectorFromString(@"translationWithText:entities:source:localizedLanguage:sourceLanguage:targetLanguage:state:");
             
+            // Try method 1: Class factory method
             @try {
-                // Try to create translation object
-                if ([twitterTranslationClass respondsToSelector:factorySelector]) {
-                    NSLog(@"[GeminiTranslator] Using factory method to create translation");
-                    
-                    // Use proper NSInvocation to avoid crashes
-                    NSMethodSignature *methodSig = [twitterTranslationClass methodSignatureForSelector:factorySelector];
-                    if (methodSig) {
-                        NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:methodSig];
-                        [invocation setSelector:factorySelector];
-                        [invocation setTarget:twitterTranslationClass];
-                        
-                        id arg1 = translatedText;
-                        id arg2 = [NSNull null];
-                        id arg3 = @"Gemini";
-                        id arg4 = context.sourceLanguage;
-                        id arg5 = context.sourceLanguage;
-                        id arg6 = context.targetLanguage;
-                        id arg7 = @"Success";
-                        
-                        [invocation setArgument:&arg1 atIndex:2];
-                        [invocation setArgument:&arg2 atIndex:3];
-                        [invocation setArgument:&arg3 atIndex:4];
-                        [invocation setArgument:&arg4 atIndex:5];
-                        [invocation setArgument:&arg5 atIndex:6];
-                        [invocation setArgument:&arg6 atIndex:7];
-                        [invocation setArgument:&arg7 atIndex:8];
-                        
-                        [invocation invoke];
-                        
-                        __unsafe_unretained id result = nil;
-                        [invocation getReturnValue:&result];
-                        translationObject = result;
-                    }
-                }
+                NSArray *factorySelectors = @[
+                    @"translationWithText:entities:source:localizedLanguage:sourceLanguage:targetLanguage:state:",
+                    @"translationWithTranslation:entities:source:localizedLanguage:sourceLanguage:targetLanguage:state:"
+                ];
                 
-                // If that didn't work, try allocating directly
-                if (!translationObject) {
-                    id instance = [twitterTranslationClass alloc];
-                    
-                    if (instance) {
-                        // Try multiple initializers
-                        SEL initSelector = NSSelectorFromString(@"initWithTranslatedText:");
-                        if ([instance respondsToSelector:initSelector]) {
-                            NSMethodSignature *sig = [instance methodSignatureForSelector:initSelector];
-                            if (sig) {
-                                NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
-                                [inv setSelector:initSelector];
-                                [inv setTarget:instance];
-                                
-                                id arg = translatedText;
-                                [inv setArgument:&arg atIndex:2];
-                                
-                                [inv invoke];
-                                
-                                __unsafe_unretained id result = nil;
-                                [inv getReturnValue:&result];
-                                translationObject = result;
+                for (NSString *selectorStr in factorySelectors) {
+                    SEL factorySelector = NSSelectorFromString(selectorStr);
+                    if ([twitterTranslationClass respondsToSelector:factorySelector]) {
+                        NSLog(@"[GeminiTranslator] Using factory method: %@", selectorStr);
+                        
+                        NSMethodSignature *methodSig = [twitterTranslationClass methodSignatureForSelector:factorySelector];
+                        if (methodSig) {
+                            NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:methodSig];
+                            [invocation setSelector:factorySelector];
+                            [invocation setTarget:twitterTranslationClass];
+                            
+                            id arg1 = translatedText;
+                            id arg2 = [NSNull null];
+                            id arg3 = @"Gemini";
+                            id arg4 = context.sourceLanguage ?: @"en";
+                            id arg5 = context.sourceLanguage ?: @"en";
+                            id arg6 = context.targetLanguage ?: @"en";
+                            id arg7 = @"Success";
+                            
+                            [invocation setArgument:&arg1 atIndex:2];
+                            [invocation setArgument:&arg2 atIndex:3];
+                            [invocation setArgument:&arg3 atIndex:4];
+                            [invocation setArgument:&arg4 atIndex:5];
+                            [invocation setArgument:&arg5 atIndex:6];
+                            [invocation setArgument:&arg6 atIndex:7];
+                            [invocation setArgument:&arg7 atIndex:8];
+                            
+                            [invocation invoke];
+                            
+                            __unsafe_unretained id result = nil;
+                            [invocation getReturnValue:&result];
+                            translationObject = result;
+                            
+                            if (translationObject) {
+                                NSLog(@"[GeminiTranslator] Successfully created translation with factory method: %@", NSStringFromClass([translationObject class]));
+                                break;
                             }
                         }
                     }
                 }
             } @catch (NSException *exception) {
-                NSLog(@"[GeminiTranslator] Exception creating translation object: %@", exception);
+                NSLog(@"[GeminiTranslator] Exception creating translation with factory method: %@", exception);
             }
             
+            // Try method 2: Direct alloc/init
+            if (!translationObject) {
+                @try {
+                    NSLog(@"[GeminiTranslator] Trying alloc/init approach");
+                    id instance = [twitterTranslationClass alloc];
+                    
+                    if (instance) {
+                        NSLog(@"[GeminiTranslator] Successfully allocated instance: %@", instance);
+                        // Try various initializers
+                        NSArray *initSelectors = @[
+                            @"initWithTranslatedText:",
+                            @"initWithText:",
+                            @"initWithTranslation:",
+                            @"initWithTranslation:entities:source:localizedLanguage:sourceLanguage:destinationLanguage:translationState:",
+                            @"init"
+                        ];
+                        
+                        for (NSString *selectorStr in initSelectors) {
+                            SEL initSelector = NSSelectorFromString(selectorStr);
+                            if ([instance respondsToSelector:initSelector]) {
+                                NSLog(@"[GeminiTranslator] Found initializer: %@", selectorStr);
+                                
+                                if ([selectorStr hasSuffix:@":"]) {
+                                    // Single-argument initializer
+                                    NSMethodSignature *sig = [instance methodSignatureForSelector:initSelector];
+                                    if (sig) {
+                                        NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
+                                        [inv setSelector:initSelector];
+                                        [inv setTarget:instance];
+                                        
+                                        id arg = translatedText;
+                                        [inv setArgument:&arg atIndex:2];
+                                        
+                                        [inv invoke];
+                                        
+                                        __unsafe_unretained id result = nil;
+                                        [inv getReturnValue:&result];
+                                        translationObject = result;
+                                        
+                                        if (translationObject) {
+                                            NSLog(@"[GeminiTranslator] Successfully initialized with %@", selectorStr);
+                                            break;
+                                        }
+                                    }
+                                } else if ([selectorStr isEqualToString:@"init"]) {
+                                    // No-argument initializer
+                                    translationObject = [instance init];
+                                    
+                                    if (translationObject) {
+                                        NSLog(@"[GeminiTranslator] Successfully initialized with init");
+                                        
+                                        // Try to set translation text using KVC or methods
+                                        @try {
+                                            if ([translationObject respondsToSelector:@selector(setText:)]) {
+                                                [translationObject performSelector:@selector(setText:) withObject:translatedText];
+                                                NSLog(@"[GeminiTranslator] Set translation text with setter");
+                                            } else if ([translationObject respondsToSelector:@selector(setValue:forKey:)]) {
+                                                [translationObject setValue:translatedText forKey:@"text"];
+                                                NSLog(@"[GeminiTranslator] Set translation text with KVC");
+                                            }
+                                            
+                                            // Try to set the source to Gemini
+                                            if ([translationObject respondsToSelector:@selector(setSource:)]) {
+                                                [translationObject performSelector:@selector(setSource:) withObject:@"Gemini"];
+                                            } else if ([translationObject respondsToSelector:@selector(setValue:forKey:)]) {
+                                                [translationObject setValue:@"Gemini" forKey:@"source"];
+                                            }
+                                        } @catch (NSException *e) {
+                                            NSLog(@"[GeminiTranslator] Error setting translation properties: %@", e);
+                                        }
+                                        
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } @catch (NSException *exception) {
+                    NSLog(@"[GeminiTranslator] Exception with alloc/init approach: %@", exception);
+                }
+            }
+            
+            // Try method 3: Take existing translation and modify it
+            if (!translationObject) {
+                @try {
+                    NSLog(@"[GeminiTranslator] Trying to reuse existing translation object");
+                    
+                    if ([context.statusViewModel respondsToSelector:@selector(translation)]) {
+                        id existingTranslation = [context.statusViewModel performSelector:@selector(translation)];
+                        if (existingTranslation) {
+                            // Try to make a copy
+                            if ([existingTranslation respondsToSelector:@selector(copy)]) {
+                                translationObject = [existingTranslation copy];
+                                
+                                // Update the translation text and source
+                                if ([translationObject respondsToSelector:@selector(setText:)]) {
+                                    [translationObject performSelector:@selector(setText:) withObject:translatedText];
+                                } else if ([translationObject respondsToSelector:@selector(setValue:forKey:)]) {
+                                    @try {
+                                        [translationObject setValue:translatedText forKey:@"text"];
+                                        [translationObject setValue:@"Gemini" forKey:@"source"];
+                                        NSLog(@"[GeminiTranslator] Updated existing translation with KVC");
+                                    } @catch (NSException *e) {
+                                        NSLog(@"[GeminiTranslator] Error updating existing translation: %@", e);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } @catch (NSException *exception) {
+                    NSLog(@"[GeminiTranslator] Exception modifying existing translation: %@", exception);
+                }
+            }
+                    
             if (!translationObject) {
                 NSLog(@"[GeminiTranslator] Could not create translation object, falling back");
                 %orig(context.statusViewModel, context.account, context.controller);
                 cleanupContext();
                 return;
             }
+            
+            NSLog(@"[GeminiTranslator] Successfully created translation object: %@", translationObject);
             
             // Get the view model class
             Class viewModelClass = NSClassFromString(@"T1TranslatedStatusViewModel");
@@ -5160,21 +5291,41 @@ static NSMutableArray *activeTranslationContexts;
         // We're now creating a "Gemini" translation provider
         // This is mainly for branding in the UI
         
-        // Use KVC to update the provider's properties
-        @try {
-            if ([provider respondsToSelector:@selector(setValue:forKey:)]) {
-                // Change the translation source name
-                [provider setValue:@"Gemini" forKey:@"_translationSource"];
-                
-                // You could also update the logo images if you have Gemini logos
-                // [provider setValue:@"gemini_logo" forKey:@"_imageName"];
-                // [provider setValue:@"gemini_logo_dark" forKey:@"_darkImageName"];
-                
-                NSLog(@"[GeminiTranslator] Successfully changed provider branding to Gemini");
+                    // Use proper method to update provider if available
+            @try {
+                // Try direct methods first if they exist
+                if ([provider respondsToSelector:@selector(setTranslationSource:)]) {
+                    [provider performSelector:@selector(setTranslationSource:) withObject:@"Gemini"];
+                    NSLog(@"[GeminiTranslator] Successfully changed provider source to Gemini");
+                } 
+                // Fall back to instance variable access
+                else if ([provider respondsToSelector:@selector(setValue:forKey:)]) {
+                    // Try different potential key names
+                    NSArray *possibleKeys = @[
+                        @"translationSource",
+                        @"_source", 
+                        @"source"
+                    ];
+                    
+                    BOOL success = NO;
+                    for (NSString *key in possibleKeys) {
+                        @try {
+                            [provider setValue:@"Gemini" forKey:key];
+                            NSLog(@"[GeminiTranslator] Set provider branding using key: %@", key);
+                            success = YES;
+                            break;
+                        } @catch (NSException *keyException) {
+                            // Just try next key
+                        }
+                    }
+                    
+                    if (!success) {
+                        NSLog(@"[GeminiTranslator] Could not update provider branding with KVC");
+                    }
+                }
+            } @catch (NSException *exception) {
+                NSLog(@"[GeminiTranslator] Exception updating provider: %@", exception);
             }
-        } @catch (NSException *exception) {
-            NSLog(@"[GeminiTranslator] Exception updating provider: %@", exception);
-        }
         
         return provider;
     } @catch (NSException *exception) {
