@@ -5005,8 +5005,8 @@ static NSMutableArray *activeTranslationContexts;
             // Try method 1: Class factory method
             @try {
                 NSArray *factorySelectors = @[
-                    @"translationWithText:entities:source:localizedLanguage:sourceLanguage:targetLanguage:state:",
-                    @"translationWithTranslation:entities:source:localizedLanguage:sourceLanguage:targetLanguage:state:"
+                    @"translationWithText:entities:source:localizedLanguage:sourceLanguage:destinationLanguage:state:",
+                    @"translationWithTranslation:entities:source:localizedLanguage:sourceLanguage:destinationLanguage:state:"
                 ];
                 
                 for (NSString *selectorStr in factorySelectors) {
