@@ -5129,6 +5129,34 @@ static NSMutableArray *activeTranslationContexts;
                     if (instance) {
                         NSLog(@"[GeminiTranslator] Successfully allocated instance: %@ for TFSTwitterTranslation", instance);
                         
+                        // Inspect the class to see what methods it actually has
+                        @try {
+                            NSLog(@"[GeminiTranslator] Inspecting methods available on TFSTwitterTranslation class:");
+                            Class cls = [instance class];
+                            unsigned int methodCount = 0;
+                            Method *methods = class_copyMethodList(cls, &methodCount);
+                            if (methods) {
+                                for (unsigned int i = 0; i < methodCount; i++) {
+                                    Method method = methods[i];
+                                    SEL selector = method_getName(method);
+                                    const char *selectorName = sel_getName(selector);
+                                    NSString *selectorString = NSStringFromSelector(selector);
+                                    // Filter for init methods and interesting patterns
+                                    if ([selectorString hasPrefix:@"init"] || 
+                                        [selectorString hasPrefix:@"translation"] ||
+                                        [selectorString isEqualToString:@"text"] ||
+                                        [selectorString hasSuffix:@"Text"]) {
+                                        NSLog(@"[GeminiTranslator] Found method: %@", selectorString);
+                                    }
+                                }
+                                free(methods);
+                            } else {
+                                NSLog(@"[GeminiTranslator] No methods found or unable to inspect class.");
+                            }
+                        } @catch (NSException *e) {
+                            NSLog(@"[GeminiTranslator] Exception while inspecting methods: %@", e);
+                        }
+                        
                         // Attempt to Loop through simpler initializers
                         NSArray *simpleInitSelectors = @[
                             @"initWithTranslatedText:",
