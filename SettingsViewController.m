@@ -365,7 +365,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         PSSpecifier *tabBarTheming = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CLASSIC_TAB_BAR_SETTINGS_TITLE"]
                                                         detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CLASSIC_TAB_BAR_SETTINGS_DETAIL"]
                                                                 key:@"tab_bar_theming" 
-                                                       defaultValue:true 
+                                                       defaultValue:false 
                                                        changeAction:@selector(tabBarThemingAction:)];
         
         PSSpecifier *hideViewCount = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE"] key:@"hide_view_count" defaultValue:false changeAction:nil];
