@@ -5139,14 +5139,13 @@ static NSMutableArray *activeTranslationContexts;
                                 for (unsigned int i = 0; i < methodCount; i++) {
                                     Method method = methods[i];
                                     SEL selector = method_getName(method);
-                                    const char *selectorName = sel_getName(selector);
-                                    NSString *selectorString = NSStringFromSelector(selector);
+                                    NSString *selectorStr = NSStringFromSelector(selector);
                                     // Filter for init methods and interesting patterns
-                                    if ([selectorString hasPrefix:@"init"] || 
-                                        [selectorString hasPrefix:@"translation"] ||
-                                        [selectorString isEqualToString:@"text"] ||
-                                        [selectorString hasSuffix:@"Text"]) {
-                                        NSLog(@"[GeminiTranslator] Found method: %@", selectorString);
+                                    if ([selectorStr hasPrefix:@"init"] || 
+                                        [selectorStr hasPrefix:@"translation"] ||
+                                        [selectorStr isEqualToString:@"text"] ||
+                                        [selectorStr hasSuffix:@"Text"]) {
+                                        NSLog(@"[GeminiTranslator] Found method: %@", selectorStr);
                                     }
                                 }
                                 free(methods);
@@ -5360,20 +5359,46 @@ static NSMutableArray *activeTranslationContexts;
                                 [selectorStr hasPrefix:@"_t1_"]) {
                                 NSLog(@"[GeminiTranslator] Potential handler method found: %@", selectorStr);
                                 
-                                // Check if this method takes 2 arguments (like the handlers we were looking for)
-                                char *typeEncoding = method_getTypeEncoding(method);
-                                int paramCount = 0;
-                                const char *typePtr = typeEncoding;
-                                while (*typePtr) {
-                                    if (*typePtr == ':') paramCount++;
-                                    typePtr++;
+                                // Better parameter detection - count colons in selector name
+                                NSUInteger paramCount = 0;
+                                for (NSUInteger j = 0; j < [selectorStr length]; j++) {
+                                    if ([selectorStr characterAtIndex:j] == ':') {
+                                        paramCount++;
+                                    }
                                 }
                                 
-                                if (paramCount == 2) {
-                                    NSLog(@"[GeminiTranslator] Found promising 2-parameter handler: %@", selectorStr);
-                                    // Try this handler
+                                // High priority for known 3-parameter patterns directly related to translation
+                                if ([selectorStr isEqualToString:@"_t1_toggleTranslationForViewModel:account:controller:"] ||
+                                    [selectorStr isEqualToString:@"_toggleTranslationForViewModel:account:controller:"] ||
+                                    [selectorStr isEqualToString:@"_t1_showTranslationForViewModel:account:controller:"]) {
+                                    NSLog(@"[GeminiTranslator] Found exact handler match: %@", selectorStr);
                                     handlerSelector = selector;
                                     break;
+                                }
+                                
+                                // Direct handling of translated status - our generated ViewModel is a T1TranslatedStatusViewModel
+                                if ([selectorStr isEqualToString:@"_t1_handleTranslatedStatusViewModel:controller:"] ||
+                                    [selectorStr isEqualToString:@"_handleTranslatedStatusViewModel:controller:"]) {
+                                    NSLog(@"[GeminiTranslator] Found direct translated ViewModel handler: %@", selectorStr);
+                                    handlerSelector = selector;
+                                    break;
+                                }
+                                
+                                // Fall back to any method that seems to handle with right param count (2)
+                                if (paramCount == 2 && ([selectorStr containsString:@"Translation"] || 
+                                                        [selectorStr containsString:@"Translat"] ||
+                                                        [selectorStr containsString:@"handleTranslat"])) {
+                                    NSLog(@"[GeminiTranslator] Found promising 2-parameter handler: %@", selectorStr);
+                                    handlerSelector = selector;
+                                    break;
+                                }
+                                
+                                // Last resort, try the 3-parameter methods we found
+                                if (paramCount == 3 && ([selectorStr containsString:@"Translation"] || 
+                                                        [selectorStr containsString:@"Translat"])) {
+                                    NSLog(@"[GeminiTranslator] Found promising 3-parameter handler: %@", selectorStr);
+                                    handlerSelector = selector;
+                                    // Don't break yet, keep looking for better matches
                                 }
                             }
                         }
@@ -5402,8 +5427,48 @@ static NSMutableArray *activeTranslationContexts;
                     id tempVM = translatedViewModel;
                     id tempController = context.controller;
                     
-                    [handlerInv setArgument:&tempVM atIndex:2];
-                    [handlerInv setArgument:&tempController atIndex:3];
+                    // Get the expected parameter count from the signature
+                    NSUInteger expectedArgCount = handlerSig.numberOfArguments - 2; // Subtract 2 for self and _cmd
+                    NSLog(@"[GeminiTranslator] Handler signature expects %lu parameters", (unsigned long)expectedArgCount);
+                    
+                    // Handle 2-parameter methods (translatedViewModel, controller)
+                    if (expectedArgCount == 2) {
+                        [handlerInv setArgument:&tempVM atIndex:2];
+                        [handlerInv setArgument:&tempController atIndex:3];
+                    }
+                    // Handle 3-parameter methods (viewModel, account, controller)
+                    else if (expectedArgCount == 3) {
+                        // For 3-param methods like _t1_toggleTranslationForViewModel:account:controller:
+                        // or _t1_fetchTranslatedStatusFromGraphQL:account:controller:
+                        id tempAccount = context.account;
+                        
+                        // If the method starts with "toggle" or similar, use the original viewModel
+                        NSString *selectorStr = NSStringFromSelector(handlerSelector);
+                        if ([selectorStr containsString:@"toggle"] || [selectorStr containsString:@"fetch"]) {
+                            // Using original viewModel for toggle/fetch methods
+                            id originalVM = context.statusViewModel;
+                            [handlerInv setArgument:&originalVM atIndex:2];
+                        } else {
+                            // Otherwise use our translated viewModel
+                            [handlerInv setArgument:&tempVM atIndex:2];
+                        }
+                        
+                        [handlerInv setArgument:&tempAccount atIndex:3];
+                        [handlerInv setArgument:&tempController atIndex:4];
+                    }
+                    // Unknown parameter count, attempt best guess
+                    else {
+                        NSLog(@"[GeminiTranslator] Unexpected parameter count %lu, making best guess", (unsigned long)expectedArgCount);
+                        for (NSUInteger i = 0; i < MIN(expectedArgCount, 3); i++) {
+                            if (i == 0) [handlerInv setArgument:&tempVM atIndex:2];
+                            else if (i == 1 && context.account) { 
+                                id tempAccount = context.account;
+                                [handlerInv setArgument:&tempAccount atIndex:3];
+                            }
+                            else if (i == 1 && !context.account) [handlerInv setArgument:&tempController atIndex:3];
+                            else if (i == 2) [handlerInv setArgument:&tempController atIndex:4];
+                        }
+                    }
                     
                     [handlerInv invoke];
                     
