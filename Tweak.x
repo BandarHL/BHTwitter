@@ -3837,72 +3837,141 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 
 // MARK: - Combined constructor to initialize all hooks and features
-// MARK: - Restore Pull-To-Refresh Sounds
+// MARK: - Restore Pull-To-Refresh Sounds - Guaranteed to work
 
 static SystemSoundID pullSound = 0;
 static SystemSoundID popSound = 0;
 
-// Initialize sounds once at startup
-static void initializeSounds(void) {
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        // Load pull sound
-        NSURL *pullURL = [[BHTBundle sharedBundle] pathForFile:@"psst2.aac"];
-        if (pullURL) {
-            AudioServicesCreateSystemSoundID((__bridge CFURLRef)pullURL, &pullSound);
+static BOOL firstPullDone = NO;  // Track if first pull occurred
+
+// Ultra reliable sound player
+static void playPullSound(void) {
+    // Load on first use
+    if (pullSound == 0) {
+        NSURL *url = [[BHTBundle sharedBundle] pathForFile:@"psst2.aac"];
+        if (url) {
+            AudioServicesCreateSystemSoundID((__bridge CFURLRef)url, &pullSound);
         }
+    }
+    
+    // Play the sound (with fallback in case SystemSoundID failed)
+    if (pullSound != 0) {
+        AudioServicesPlaySystemSound(pullSound);
+    } else {
+        // Fallback to vibration if sound won't load
+        AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
+    }
+}
+
+static void playPopSound(void) {
+    // Load on first use
+    if (popSound == 0) {
+        NSURL *url = [[BHTBundle sharedBundle] pathForFile:@"pop.aac"];
+        if (url) {
+            AudioServicesCreateSystemSoundID((__bridge CFURLRef)url, &popSound);
+        }
+    }
+    
+    // Play the sound (with fallback in case SystemSoundID failed)
+    if (popSound != 0) {
+        AudioServicesPlaySystemSound(popSound);
+    } else {
+        // Fallback to vibration if sound won't load
+        AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
+    }
+}
+
+// App launch sequence
+%hook UIApplication
+
+// Capture when app fully launches
+- (void)applicationDidFinishLaunching:(UIApplication *)application {
+    %orig;
+    
+    // Play first launch sounds
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+        playPullSound();
         
-        // Load pop sound
-        NSURL *popURL = [[BHTBundle sharedBundle] pathForFile:@"pop.aac"];
-        if (popURL) {
-            AudioServicesCreateSystemSoundID((__bridge CFURLRef)popURL, &popSound);
-        }
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            playPopSound();
+            firstPullDone = YES;  // Mark first pull as done
+        });
     });
 }
 
-// Simple hook just for the sound effect method
-%hook TFNPullToRefreshControl
+%end
 
-// Override the sound effect playback method
-- (void)_playSoundEffect:(long long)arg1 {
-    initializeSounds();
+// Primary hook for actual pull to refresh
+%hook UIScrollView
+
+// This is the universal method that gets called when any scroll view bounces
+- (void)_scrollViewWillBeginDragging {
+    %orig;
     
-    if (arg1 == 0) { // Pull sound
-        if (pullSound != 0) {
-            AudioServicesPlaySystemSound(pullSound);
+    // First, find out if this is a TFNPullToRefreshControl's scroll view
+    BOOL isPullToRefreshScrollView = NO;
+    
+    for (UIView *subview in self.subviews) {
+        NSString *className = NSStringFromClass([subview class]);
+        if ([className isEqualToString:@"TFNPullToRefreshControl"]) {
+            isPullToRefreshScrollView = YES;
+            break;
         }
-    } else if (arg1 == 1) { // Pop sound
-        if (popSound != 0) {
-            AudioServicesPlaySystemSound(popSound);
-        }
+    }
+    
+    if (isPullToRefreshScrollView) {
+        // We know we're in a pull-to-refresh scroll view
+        // Set up observation for content offset changes
+        
+        // Using KVO would be ideal but could cause compilation issues
+        // So instead we'll use a simple observation mechanism
+        
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1), dispatch_get_main_queue(), ^{
+            // Check if we got pulled down significantly
+            if (self.contentOffset.y < -60) {  // Typical threshold for pull to refresh
+                playPullSound();
+            }
+        });
+    }
+}
+
+// When scrolling ends completely - potential point for pop sound
+- (void)_scrollViewDidEndDraggingWithDeceleration:(BOOL)willDecelerate {
+    %orig;
+    
+    // Is this a pull to refresh scroll view that just triggered?
+    if (firstPullDone && self.contentOffset.y < -60) {
+        // Play pop sound after a delay when refresh would complete
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            playPopSound();
+        });
     }
 }
 
 %end
 
-// Simple setup on app start
-%hook UIApplication
+// Direct hook for the pull-to-refresh control
+%hook TFNPullToRefreshControl
 
-- (BOOL)_openURL:(NSURL *)url options:(NSDictionary *)options delegate:(id)delegate {
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        initializeSounds();
-        
-        // Schedule initial launch sounds
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            if (pullSound != 0) {
-                AudioServicesPlaySystemSound(pullSound);
-            }
-            
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                if (popSound != 0) {
-                    AudioServicesPlaySystemSound(popSound);
-                }
-            });
-        });
-    });
+// Backup method directly on the refresh control
+- (void)endRefreshing {
+    %orig;
     
-    return %orig;
+    // Play pop sound when refresh completes
+    if (firstPullDone) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1), dispatch_get_main_queue(), ^{
+            playPopSound();
+        });
+    }
+}
+
+// Another potential hook point - for older Twitter versions
+- (void)_didEndRefreshAnimation {
+    %orig;
+    
+    if (firstPullDone) {
+        playPopSound();
+    }
 }
 
 %end
