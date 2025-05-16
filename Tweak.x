@@ -4887,83 +4887,157 @@ static GeminiTranslator *_sharedInstance;
 
 %new
 - (id)bht_findAssociatedTweetStatus {
-    // Try accessing common properties where tweet status might be stored
-    NSArray *propertyNames = @[@"status", @"tweet", @"tweetStatus", @"statusModel"];
+    // Try to directly find TFNTwitterStatus with statusID property
+    NSLog(@"[BHTwitter] Looking for TFNTwitterStatus in %@", NSStringFromClass([self class]));
+    
+    // Find the status by checking properties with common names for tweet models
+    NSArray *propertyNames = @[@"status", @"tweet", @"tweetStatus", @"statusModel", @"model"];
     
     for (NSString *propertyName in propertyNames) {
         if ([self respondsToSelector:NSSelectorFromString(propertyName)]) {
-            id potentialStatus = [self valueForKey:propertyName];
-            if (potentialStatus) {
-                if ([NSStringFromClass([potentialStatus class]) containsString:@"Status"] ||
-                    [NSStringFromClass([potentialStatus class]) containsString:@"Tweet"]) {
-                    return potentialStatus;
+            @try {
+                // Get the property value
+                id potentialStatus = [self valueForKey:propertyName];
+                if (potentialStatus) {
+                    NSString *className = NSStringFromClass([potentialStatus class]);
+                    NSLog(@"[BHTwitter] Found property %@ of class %@", propertyName, className);
+                    
+                    // Check if it's TFNTwitterStatus or has statusID
+                    if ([className isEqualToString:@"TFNTwitterStatus"] || 
+                        [potentialStatus respondsToSelector:@selector(statusID)]) {
+                        NSLog(@"[BHTwitter] Found direct TFNTwitterStatus object");
+                        return potentialStatus;
+                    }
+                    
+                    // Check if it has a nested status property
+                    if ([potentialStatus respondsToSelector:@selector(status)]) {
+                        id nestedStatus = [potentialStatus valueForKey:@"status"];
+                        if (nestedStatus) {
+                            NSString *nestedClassName = NSStringFromClass([nestedStatus class]);
+                            NSLog(@"[BHTwitter] Found nested status of class %@", nestedClassName);
+                            
+                            // Check if nested object is TFNTwitterStatus
+                            if ([nestedClassName isEqualToString:@"TFNTwitterStatus"] || 
+                                [nestedStatus respondsToSelector:@selector(statusID)]) {
+                                NSLog(@"[BHTwitter] Found nested TFNTwitterStatus object");
+                                return nestedStatus;
+                            }
+                        }
+                    }
+                    
+                    // Check common tweet view model patterns
+                    for (NSString *vmProp in @[@"viewModel", @"statusViewModel", @"tweetViewModel"]) {
+                        if ([potentialStatus respondsToSelector:NSSelectorFromString(vmProp)]) {
+                            id viewModel = [potentialStatus valueForKey:vmProp];
+                            if (viewModel && [viewModel respondsToSelector:@selector(status)]) {
+                                id vmStatus = [viewModel valueForKey:@"status"];
+                                if ([NSStringFromClass([vmStatus class]) isEqualToString:@"TFNTwitterStatus"] || 
+                                    [vmStatus respondsToSelector:@selector(statusID)]) {
+                                    NSLog(@"[BHTwitter] Found TFNTwitterStatus in viewModel");
+                                    return vmStatus;
+                                }
+                            }
+                        }
+                    }
                 }
-            }
-            
-            // Check one level deeper for view models
-            if ([potentialStatus respondsToSelector:@selector(status)]) {
-                // Use valueForKey to avoid performSelector leak warning
-                id nestedStatus = [potentialStatus valueForKey:@"status"];
-                if (nestedStatus) {
-                    return nestedStatus;
-                }
+            } @catch (NSException *e) {
+                NSLog(@"[BHTwitter] Exception checking property %@: %@", propertyName, e);
             }
         }
     }
     
-    // Special case for timeline view controllers
-    if ([NSStringFromClass([self class]) containsString:@"TimelineViewController"]) {
-        // Try to get selected status or focused item
-        NSArray *selectors = @[@"selectedStatus", @"focusedStatus", @"visibleStatuses", @"currentVisibleItem"];
+    // Special case for known view controller types
+    NSString *className = NSStringFromClass([self class]);
+    NSLog(@"[BHTwitter] Checking special cases for %@", className);
+    
+    // Timeline/TweetDetail controllers often have special methods
+    if ([className containsString:@"TimelineViewController"] || 
+        [className containsString:@"TweetDetailViewController"] ||
+        [className containsString:@"StatusView"]) {
         
-        for (NSString *selectorStr in selectors) {
-            SEL selector = NSSelectorFromString(selectorStr);
+        NSArray *selectorNames = @[
+            @"selectedStatus", @"focusedStatus", @"visibleStatuses", 
+            @"currentVisibleItem", @"status", @"statusViewModel"
+        ];
+        
+        for (NSString *selectorName in selectorNames) {
+            SEL selector = NSSelectorFromString(selectorName);
             if ([self respondsToSelector:selector]) {
                 @try {
-                    // Use NSInvocation to avoid the performSelector leak warning
-                    NSMethodSignature *signature = [self methodSignatureForSelector:selector];
-                    NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
-                    [invocation setSelector:selector];
-                    [invocation setTarget:self];
-                    [invocation invoke];
+                    id result = [self valueForKey:selectorName];
+                    NSLog(@"[BHTwitter] Trying selector %@ -> %@", selectorName, 
+                          result ? NSStringFromClass([result class]) : @"nil");
                     
-                    id result = nil;
-                    [invocation getReturnValue:&result];
+                    // Check if direct result is TFNTwitterStatus
+                    if ([NSStringFromClass([result class]) isEqualToString:@"TFNTwitterStatus"]) {
+                        return result;
+                    }
                     
                     // If we got an array (like visibleStatuses), take the first item
                     if ([result isKindOfClass:[NSArray class]] && [(NSArray *)result count] > 0) {
-                        return [(NSArray *)result firstObject];
-                    } else if (result) {
-                        return result;
+                        id firstItem = [(NSArray *)result firstObject];
+                        if ([NSStringFromClass([firstItem class]) isEqualToString:@"TFNTwitterStatus"]) {
+                            return firstItem;
+                        }
                     }
                 } @catch (NSException *e) {
-                    NSLog(@"[BHTwitter] Exception in bht_findAssociatedTweetStatus: %@", e);
+                    NSLog(@"[BHTwitter] Exception with %@: %@", selectorName, e);
                 }
             }
         }
     }
     
+    NSLog(@"[BHTwitter] Could not find TFNTwitterStatus object");
     return nil;
 }
 
 %new
 - (NSString *)bht_extractTweetText {
-    // Get the TFNTwitterStatus object
+    // First try: Direct TFNTwitterStatus route
     id tweetStatus = [self bht_findAssociatedTweetStatus];
     
-    // Just directly access the text property as instructed
-    if (tweetStatus && [tweetStatus respondsToSelector:@selector(text)]) {
-        NSString *tweetText = [tweetStatus valueForKey:@"text"];
-        if (tweetText && [tweetText isKindOfClass:[NSString class]] && tweetText.length > 0) {
-            NSLog(@"[BHTwitter] Successfully extracted text from TFNTwitterStatus: %@", tweetText);
-            return tweetText;
+    if (tweetStatus) {
+        NSLog(@"[BHTwitter] Found status object of class: %@", NSStringFromClass([tweetStatus class]));
+        
+        // Try to get statusID to verify it's a proper tweet
+        if ([tweetStatus respondsToSelector:@selector(statusID)]) {
+            NSInteger statusID = [[tweetStatus valueForKey:@"statusID"] integerValue];
+            NSLog(@"[BHTwitter] Tweet statusID: %ld", (long)statusID);
+        }
+        
+        // Try getting text directly
+        if ([tweetStatus respondsToSelector:@selector(text)]) {
+            NSString *directText = [tweetStatus valueForKey:@"text"];
+            if (directText && [directText isKindOfClass:[NSString class]] && directText.length > 0) {
+                NSLog(@"[BHTwitter] Got text directly from status: %@", directText);
+                return directText;
+            }
+        }
+        
+        // Try common text-related properties
+        for (NSString *prop in @[@"text", @"tweet", @"fullText", @"originalText"]) {
+            if ([tweetStatus respondsToSelector:NSSelectorFromString(prop)]) {
+                id textObj = [tweetStatus valueForKey:prop];
+                
+                // If the property itself is a string
+                if ([textObj isKindOfClass:[NSString class]] && ((NSString *)textObj).length > 0) {
+                    NSLog(@"[BHTwitter] Found text in status.%@: %@", prop, textObj);
+                    return (NSString *)textObj;
+                }
+                
+                // If it's an object with a text property
+                if (textObj && [textObj respondsToSelector:@selector(text)]) {
+                    NSString *nestedText = [textObj valueForKey:@"text"];
+                    if ([nestedText isKindOfClass:[NSString class]] && nestedText.length > 0) {
+                        NSLog(@"[BHTwitter] Found text in status.%@.text: %@", prop, nestedText);
+                        return nestedText;
+                    }
+                }
+            }
         }
     }
     
-    // If we get here, something went wrong with direct access
-    NSLog(@"[BHTwitter] Failed to access text property directly, status class: %@", 
-          tweetStatus ? NSStringFromClass([tweetStatus class]) : @"nil");
-    
+    NSLog(@"[BHTwitter] Failed to find text in TFNTwitterStatus, will try view hierarchy");
     return @"";
 }
 
