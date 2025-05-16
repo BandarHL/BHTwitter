@@ -4661,9 +4661,44 @@ static char kTranslateButtonKey;
         
         objc_setAssociatedObject(self, &kTranslateButtonKey, translateButton, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         
+        // Find existing right buttons to avoid collision
+        CGFloat trailingOffset = -16;
+        NSMutableArray *existingRightButtons = [NSMutableArray array];
+        
+        // Find existing buttons on the right side
+        for (UIView *subview in self.subviews) {
+            if (subview != translateButton && 
+                [subview isKindOfClass:[UIButton class]] && 
+                subview.frame.origin.x > (self.bounds.size.width / 2)) {
+                [existingRightButtons addObject:subview];
+                NSLog(@"[BHTwitter Translate] Found existing right button: %@", subview);
+            }
+        }
+        
+        // Adjust trailing offset based on existing buttons
+        if (existingRightButtons.count > 0) {
+            // Sort buttons by their x position (right to left)
+            [existingRightButtons sortUsingComparator:^NSComparisonResult(UIView *view1, UIView *view2) {
+                if (view1.frame.origin.x > view2.frame.origin.x) {
+                    return NSOrderedAscending;
+                } else if (view1.frame.origin.x < view2.frame.origin.x) {
+                    return NSOrderedDescending;
+                }
+                return NSOrderedSame;
+            }];
+            
+            // Get the rightmost button
+            UIView *rightmostButton = existingRightButtons.firstObject;
+            CGFloat buttonWidth = rightmostButton.frame.size.width;
+            
+            // Place our button to the left of the rightmost button with padding
+            trailingOffset = -(buttonWidth + 16.0 + 44.0);
+            NSLog(@"[BHTwitter Translate] Adjusted trailing offset to: %f", trailingOffset);
+        }
+        
         [NSLayoutConstraint activateConstraints:@[
             [translateButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
-            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16],
+            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:trailingOffset],
             [translateButton.widthAnchor constraintEqualToConstant:44],
             [translateButton.heightAnchor constraintEqualToConstant:44]
         ]];
