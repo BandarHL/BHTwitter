@@ -4871,35 +4871,126 @@ static GeminiTranslator *_sharedInstance;
 
 
 @interface _UINavigationBarContentView : UIView
+- (NSString *)findTweetTextInController:(UIViewController *)controller;
+- (void)findTextInView:(UIView *)view completion:(void(^)(NSString *text))completion;
+- (void)showTranslatePopup:(UIButton *)sender;
 @end
 
 
 %hook _UINavigationBarContentView
+
+static char kTranslateButtonKey;
+
 - (void)setTitle:(id)arg1 {
     %orig;
     NSString *title = (NSString *)arg1;
+    
+    // First, remove any existing translate button
+    UIButton *existingButton = objc_getAssociatedObject(self, &kTranslateButtonKey);
+    if (existingButton) {
+        [existingButton removeFromSuperview];
+        objc_setAssociatedObject(self, &kTranslateButtonKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    
+    // Only add the button for Post or Tweet screens
     if ([title isEqualToString:@"Post"] || [title isEqualToString:@"Tweet"]) {
         UIButton *translateButton = [UIButton buttonWithType:UIButtonTypeSystem];
         [translateButton setImage:[UIImage systemImageNamed:@"bubble.left.and.bubble.right"] forState:UIControlStateNormal];
         [translateButton addTarget:self action:@selector(showTranslatePopup:) forControlEvents:UIControlEventTouchUpInside];
+        translateButton.tag = 12345; // Unique tag to identify our button
         [self addSubview:translateButton];
         translateButton.translatesAutoresizingMaskIntoConstraints = NO;
+        
+        // Store the button with associated object to track and remove it later
+        objc_setAssociatedObject(self, &kTranslateButtonKey, translateButton, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        
+        // Position button on the right side of navigation bar
         [NSLayoutConstraint activateConstraints:@[
             [translateButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
-            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16]
+            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16],
+            [translateButton.widthAnchor constraintEqualToConstant:44],
+            [translateButton.heightAnchor constraintEqualToConstant:44]
         ]];
     }
 }
 
+%new
 - (void)showTranslatePopup:(UIButton *)sender {
-    // Use GeminiTranslator to fetch and display translated text
-    UIViewController *topController = UIApplication.sharedApplication.windows.firstObject.rootViewController;
+    // Find the current view controller
+    UIViewController *topController = nil;
+    UIWindow *keyWindow = nil;
+    
+    // iOS 13 and later
+    NSSet *connectedScenes = UIApplication.sharedApplication.connectedScenes;
+    for (UIScene *scene in connectedScenes) {
+        if (scene.activationState == UISceneActivationStateForegroundActive && [scene isKindOfClass:[UIWindowScene class]]) {
+            UIWindowScene *windowScene = (UIWindowScene *)scene;
+            for (UIWindow *window in windowScene.windows) {
+                if (window.isKeyWindow) {
+                    keyWindow = window;
+                    break;
+                }
+            }
+            if (keyWindow) break;
+        }
+    }
+    
+    // Fallback for older iOS versions
+    if (!keyWindow) {
+        keyWindow = UIApplication.sharedApplication.keyWindow;
+    }
+    
+    topController = keyWindow.rootViewController;
     while (topController.presentedViewController) {
         topController = topController.presentedViewController;
     }
-    // Placeholder text to translate - in a real implementation, this should extract the tweet text
-    NSString *textToTranslate = @"This is a placeholder tweet text to be translated.";
+    
+    // Try to find the tweet text from the current view
+    NSString *textToTranslate = [self findTweetTextInController:topController];
+    
+    // If we couldn't find any text, use a placeholder
+    if (!textToTranslate || textToTranslate.length == 0) {
+        textToTranslate = @"Could not find tweet text to translate.";
+    }
+    
+    // Use GeminiTranslator to translate the text
     [[GeminiTranslator sharedInstance] simplifiedTranslateAndDisplay:textToTranslate sourceLanguage:@"auto" targetLanguage:@"en" inViewController:topController];
+}
+
+%new
+- (NSString *)findTweetTextInController:(UIViewController *)controller {
+    // Try to find text in the current view hierarchy
+    __block NSString *foundText = nil;
+    
+    // First, try to find a text view or label with the tweet content
+    [self findTextInView:controller.view completion:^(NSString *text) {
+        foundText = text;
+    }];
+    
+    return foundText ?: @"";
+}
+
+%new
+- (void)findTextInView:(UIView *)view completion:(void(^)(NSString *text))completion {
+    // Recursively search for text in labels and text views
+    for (UIView *subview in view.subviews) {
+        if ([subview isKindOfClass:[UILabel class]]) {
+            UILabel *label = (UILabel *)subview;
+            if (label.text.length > 20) { // Likely the tweet content (longer text)
+                completion(label.text);
+                return;
+            }
+        } else if ([subview isKindOfClass:[UITextView class]]) {
+            UITextView *textView = (UITextView *)subview;
+            if (textView.text.length > 20) {
+                completion(textView.text);
+                return;
+            }
+        } else if (subview.subviews.count > 0) {
+            // Continue searching in subviews
+            [self findTextInView:subview completion:completion];
+        }
+    }
 }
 %end
 
