@@ -4948,53 +4948,21 @@ static GeminiTranslator *_sharedInstance;
 
 %new
 - (NSString *)bht_extractTweetText {
-    id tweetObject = [self bht_findAssociatedTweetStatus];
-    if (!tweetObject) {
-        return @"";
-    }
+    // Get the TFNTwitterStatus object
+    id tweetStatus = [self bht_findAssociatedTweetStatus];
     
-    // Try various text property names that might exist on the tweet object
-    NSArray *textPropertyNames = @[@"text", @"fullText", @"originalText", @"displayText"];
-    
-    for (NSString *propName in textPropertyNames) {
-        if ([tweetObject respondsToSelector:NSSelectorFromString(propName)]) {
-            @try {
-                id textValue = [tweetObject valueForKey:propName];
-                if ([textValue isKindOfClass:[NSString class]] && [(NSString *)textValue length] > 0) {
-                    return (NSString *)textValue;
-                }
-            } @catch (NSException *e) {
-                NSLog(@"[BHTwitter] Exception accessing %@ property: %@", propName, e);
-            }
+    // Just directly access the text property as instructed
+    if (tweetStatus && [tweetStatus respondsToSelector:@selector(text)]) {
+        NSString *tweetText = [tweetStatus valueForKey:@"text"];
+        if (tweetText && [tweetText isKindOfClass:[NSString class]] && tweetText.length > 0) {
+            NSLog(@"[BHTwitter] Successfully extracted text from TFNTwitterStatus: %@", tweetText);
+            return tweetText;
         }
     }
     
-    // If we didn't find a direct text property, check for text in attribute models
-    if ([tweetObject respondsToSelector:@selector(attributedString)]) {
-        // Use valueForKey to avoid performSelector leak warning
-        NSAttributedString *attrString = [tweetObject valueForKey:@"attributedString"];
-        if (attrString && attrString.string.length > 0) {
-            return attrString.string;
-        }
-    }
-    
-    // If still no text found, try common view model patterns
-    if ([tweetObject respondsToSelector:@selector(viewModel)]) {
-        // Use valueForKey to avoid performSelector leak warning
-        id viewModel = [tweetObject valueForKey:@"viewModel"];
-        for (NSString *propName in textPropertyNames) {
-            if ([viewModel respondsToSelector:NSSelectorFromString(propName)]) {
-                @try {
-                    id textValue = [viewModel valueForKey:propName];
-                    if ([textValue isKindOfClass:[NSString class]] && [(NSString *)textValue length] > 0) {
-                        return (NSString *)textValue;
-                    }
-                } @catch (NSException *e) {
-                    // Ignore property access errors
-                }
-            }
-        }
-    }
+    // If we get here, something went wrong with direct access
+    NSLog(@"[BHTwitter] Failed to access text property directly, status class: %@", 
+          tweetStatus ? NSStringFromClass([tweetStatus class]) : @"nil");
     
     return @"";
 }
