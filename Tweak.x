@@ -4620,6 +4620,7 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 // Add missing method declarations
 - (void)searchAndUpdateTranslationElementsIn:(UIView *)view withTranslatedText:(NSString *)translatedText;
 - (void)searchAndUpdateTwitterTextViewsIn:(UIView *)view;
+- (void)performDirectTextUpdateOnController:(id)controller withText:(NSString *)translatedText;
 @end
 
 @interface T1TranslateButton : UIButton
@@ -5250,6 +5251,101 @@ static NSMutableArray *activeTranslationContexts;
     }
 }
 
+%new
+- (void)performDirectTextUpdateOnController:(id)controller withText:(NSString *)translatedText {
+    if (!controller || !translatedText) return;
+    
+    NSLog(@"[GeminiTranslator] DIRECT UPDATE: Starting direct text view update for tweet text");
+    
+    // Get the controller's view
+    UIView *controllerView = [controller respondsToSelector:@selector(view)] ? [controller performSelector:@selector(view)] : nil;
+    if (!controllerView) return;
+    
+    // First approach: Find TTAStatusBodySelectableContentTextView directly
+    // This is the specific view class that most likely contains the tweet text based on logs
+    NSMutableArray *queue = [NSMutableArray arrayWithObject:controllerView];
+    NSInteger iterations = 0;
+    NSInteger maxIterations = 200;
+    
+    while (queue.count > 0 && iterations < maxIterations) {
+        UIView *currentView = [queue firstObject];
+        [queue removeObjectAtIndex:0];
+        iterations++;
+        
+        NSString *className = NSStringFromClass([currentView class]);
+        
+        // Looking for either the main text view or the translation view
+        if ([className isEqualToString:@"TTAStatusBodySelectableContentTextView"] || 
+            [className isEqualToString:@"T1StandardStatusTranslateView"]) {
+            
+            NSLog(@"[GeminiTranslator] DIRECT UPDATE: Found relevant text view: %@", className);
+            
+            // Found the main tweet text view - attempt multiple update strategies
+            if ([currentView isKindOfClass:[UITextView class]]) {
+                UITextView *textView = (UITextView *)currentView;
+                
+                // Strategy 1: Direct text replacement
+                NSLog(@"[GeminiTranslator] DIRECT UPDATE: Setting text directly");
+                
+                // Save the original attributes if we have attributed text
+                NSDictionary *originalAttributes = nil;
+                NSAttributedString *originalAttributedText = textView.attributedText;
+                if (originalAttributedText && originalAttributedText.length > 0) {
+                    originalAttributes = [originalAttributedText attributesAtIndex:0 effectiveRange:NULL];
+                }
+                
+                // Update the text
+                textView.text = translatedText;
+                
+                // If we had attributes, recreate the attributed text with them
+                if (originalAttributes) {
+                    NSAttributedString *newAttributedText = [[NSAttributedString alloc] 
+                                                            initWithString:translatedText 
+                                                            attributes:originalAttributes];
+                    textView.attributedText = newAttributedText;
+                }
+                
+                // Strategy 2: Force updates on the text view
+                [textView setNeedsDisplay];
+                [textView layoutIfNeeded];
+                
+                // Strategy 3: Try to invoke known text update methods
+                NSArray *updateMethods = @[
+                    @"refreshTextViewIfNecessary", 
+                    @"updateWithText:", 
+                    @"updateText",
+                    @"updateDisplay",
+                    @"refresh",
+                    @"renderTranslation",
+                    @"reloadTextView",
+                    @"invalidateIntrinsicContentSize",
+                    @"sizeToFit"
+                ];
+                
+                for (NSString *methodName in updateMethods) {
+                    SEL selector = NSSelectorFromString(methodName);
+                    if ([textView respondsToSelector:selector]) {
+                        NSLog(@"[GeminiTranslator] DIRECT UPDATE: Calling %@ on text view", methodName);
+                        #pragma clang diagnostic push
+                        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                        [textView performSelector:selector];
+                        #pragma clang diagnostic pop
+                    }
+                }
+                
+                return; // Found and updated, no need to continue
+            }
+        }
+        
+        // Add all subviews to the queue
+        for (UIView *subview in currentView.subviews) {
+            [queue addObject:subview];
+        }
+    }
+    
+    NSLog(@"[GeminiTranslator] DIRECT UPDATE: Could not find TTAStatusBodySelectableContentTextView");
+}
+
 + (void)load {
     activeTranslationContexts = [NSMutableArray new];
 }
@@ -5843,6 +5939,10 @@ static NSMutableArray *activeTranslationContexts;
                                 NSLog(@"[GeminiTranslator] Forced layout update on controller view");
                             }
                             
+                            // DIRECT approach - try to find TTAStatusBodySelectableContentTextView which contains the tweet text
+                            // This is a targeted search for the specific view class that we know holds tweet content
+                            [self performDirectTextUpdateOnController:context.controller withText:[translatedViewModel performSelector:@selector(displayText)]];
+                            
                             // Try to find the status cell using a queue-based approach instead of recursion
                             NSMutableArray *viewsToCheck = [NSMutableArray arrayWithObject:controllerView];
                             NSInteger maxChecks = 100; // Limit checks to avoid potential infinite loops
@@ -5971,7 +6071,7 @@ static NSMutableArray *activeTranslationContexts;
                                 }
                                 
                                 // Add subviews to the queue
-                                for (UIView *subview in currentView.subviews) {
+        for (UIView *subview in currentView.subviews) {
                                     [viewsToCheck addObject:subview];
                                 }
                             }
@@ -6247,6 +6347,106 @@ static NSMutableArray *activeTranslationContexts;
                                  (unsigned long)range.location, (unsigned long)range.length);
                         } else {
                             NSLog(@"[GeminiTranslator] DETAILED DEBUG: Could not get method signature for displayTextRange");
+                        }
+                        
+                        // IMPORTANT: Post notification for Twitter's translation system
+                        // This is key - Twitter has its own notification system for translation updates
+                        if ([translatedViewModel respondsToSelector:@selector(statusIDString)]) {
+                            NSString *translatedStatusID = [translatedViewModel performSelector:@selector(statusIDString)];
+                            if (translatedStatusID) {
+                                NSMutableDictionary *notificationInfo = [NSMutableDictionary dictionary];
+                                notificationInfo[@"statusID"] = translatedStatusID;
+                                notificationInfo[@"isTranslated"] = @YES;
+                                
+                                // Try standard notification patterns
+                                [[NSNotificationCenter defaultCenter] postNotificationName:@"StatusTranslationUpdatedNotification" 
+                                                                                    object:nil 
+                                                                                  userInfo:notificationInfo];
+                                
+                                // And Twitter-specific patterns - try every possible pattern Twitter might be using
+                                // Based on common Twitter naming conventions for notifications
+                                NSArray *possibleNotificationNames = @[
+                                    @"TFNTwitterStatusTranslationUpdatedNotification",
+                                    @"TFNStatusTranslatedNotification",
+                                    @"T1StatusTranslatedNotification", 
+                                    @"StatusTranslationDidChangeNotification",
+                                    @"StatusDidTranslateNotification", 
+                                    @"StatusViewModelDidUpdateNotification",
+                                    @"TranslationDidCompleteNotification",
+                                    @"TranslationStateDidChangeNotification",
+                                    @"TFSStatusDisplayTextDidChangeNotification"
+                                ];
+                                
+                                // Post all of these notifications to try to trigger the UI update
+                                for (NSString *notificationName in possibleNotificationNames) {
+                                    [[NSNotificationCenter defaultCenter] postNotificationName:notificationName 
+                                                                                      object:nil 
+                                                                                    userInfo:notificationInfo];
+                                }
+                                
+                                // Now that we've sent all possible notifications, directly modify any visible translation views
+                                // This is a last-resort approach that manually updates the UI
+                                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                                    UIWindow *keyWindow = nil;
+                                    
+                                    // Get the key window safely for iOS 13+
+                                    if (@available(iOS 13.0, *)) {
+                                        NSArray *windows = [[UIApplication sharedApplication] windows];
+                                        for (UIWindow *window in windows) {
+                                            if (window.isKeyWindow) {
+                                                keyWindow = window;
+                                                break;
+                                            }
+                                        }
+                                    } else {
+                                        // Fallback for older iOS versions
+                                        keyWindow = [[UIApplication sharedApplication] keyWindow];
+                                    }
+                                    
+                                    if (keyWindow) {
+                                        // Function to recursively find and update translation views
+                                        void (^findAndUpdateTranslationViews)(UIView *) = ^(UIView *view) {
+                                            // Target specific Twitter translation views based on log inspection
+                                            NSString *className = NSStringFromClass([view class]);
+                                            if ([className isEqualToString:@"T1StandardStatusTranslateView"] ||
+                                                [className containsString:@"TranslateView"] ||
+                                                [className containsString:@"Translation"]) {
+                                                
+                                                NSLog(@"[GeminiTranslator] GLOBAL SEARCH: Found translation related view: %@", className);
+                                                
+                                                // Find any text labels/views within this view
+                                                for (UIView *subview in view.subviews) {
+                                                    if ([subview isKindOfClass:[UILabel class]]) {
+                                                        UILabel *label = (UILabel *)subview;
+                                                        if (label.text.length > 20) { // Likely the main content
+                                                            NSLog(@"[GeminiTranslator] GLOBAL SEARCH: Directly updating translation label");
+                                                            label.text = translatedText;
+                                                        }
+                                                    } else if ([subview isKindOfClass:[UITextView class]]) {
+                                                        UITextView *textView = (UITextView *)subview;
+                                                        if (textView.text.length > 20) { // Likely the main content
+                                                            NSLog(@"[GeminiTranslator] GLOBAL SEARCH: Directly updating translation text view");
+                                                            textView.text = translatedText;
+                                                        }
+                                                    }
+                                                }
+                                                
+                                                // Force layout update
+                                                [view setNeedsLayout];
+                                                [view layoutIfNeeded];
+                                            }
+                                            
+                                            // Continue searching recursively
+                                            for (UIView *subview in view.subviews) {
+                                                findAndUpdateTranslationViews(subview);
+                                            }
+                                        };
+                                        
+                                        // Start the search from the key window
+                                        findAndUpdateTranslationViews(keyWindow);
+                                    }
+                                });
+                            }
                         }
                     }
                     
