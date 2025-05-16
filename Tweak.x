@@ -5428,7 +5428,15 @@ static NSMutableArray *activeTranslationContexts;
                                 SEL displayViewModelSelector = NSSelectorFromString(@"displayViewModel:");
                                 if ([context.controller respondsToSelector:displayViewModelSelector]) {
                                     NSLog(@"[GeminiTranslator] Calling displayViewModel: with translated model");
-                                    [context.controller performSelector:displayViewModelSelector withObject:translatedViewModel];
+                                    // Using NSInvocation to avoid ARC warnings
+                                    NSMethodSignature *signature = [context.controller methodSignatureForSelector:displayViewModelSelector];
+                                    if (signature) {
+                                        NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+                                        [invocation setSelector:displayViewModelSelector];
+                                        [invocation setTarget:context.controller];
+                                        [invocation setArgument:&translatedViewModel atIndex:2];
+                                        [invocation invoke];
+                                    }
                                 }
                                 
                                 // Try updating any status cells we can find
@@ -5462,13 +5470,29 @@ static NSMutableArray *activeTranslationContexts;
                                         
                                         // Try updateViewModel: first
                                         if ([statusView respondsToSelector:@selector(updateViewModel:)]) {
-                                            [statusView performSelector:@selector(updateViewModel:) withObject:translatedViewModel];
-                                            NSLog(@"[GeminiTranslator] Called updateViewModel:");
+                                            // Using NSInvocation to avoid ARC warnings
+                                            NSMethodSignature *sig = [statusView methodSignatureForSelector:@selector(updateViewModel:)];
+                                            if (sig) {
+                                                NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
+                                                [inv setSelector:@selector(updateViewModel:)];
+                                                [inv setTarget:statusView];
+                                                [inv setArgument:&translatedViewModel atIndex:2];
+                                                [inv invoke];
+                                                NSLog(@"[GeminiTranslator] Called updateViewModel:");
+                                            }
                                         }
                                         // Then try setViewModel: if available
                                         else if ([statusView respondsToSelector:@selector(setViewModel:)]) {
-                                            [statusView performSelector:@selector(setViewModel:) withObject:translatedViewModel];
-                                            NSLog(@"[GeminiTranslator] Called setViewModel:");
+                                            // Using NSInvocation to avoid ARC warnings
+                                            NSMethodSignature *sig = [statusView methodSignatureForSelector:@selector(setViewModel:)];
+                                            if (sig) {
+                                                NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
+                                                [inv setSelector:@selector(setViewModel:)];
+                                                [inv setTarget:statusView];
+                                                [inv setArgument:&translatedViewModel atIndex:2];
+                                                [inv invoke];
+                                                NSLog(@"[GeminiTranslator] Called setViewModel:");
+                                            }
                                         }
                                         
                                         [statusView setNeedsLayout];
@@ -5479,7 +5503,14 @@ static NSMutableArray *activeTranslationContexts;
                                 // Try reloading the controller as a last resort
                                 if ([context.controller respondsToSelector:@selector(reloadData)]) {
                                     NSLog(@"[GeminiTranslator] Reloading controller data");
-                                    [context.controller performSelector:@selector(reloadData)];
+                                    // Using NSInvocation to avoid ARC warnings
+                                    NSMethodSignature *sig = [context.controller methodSignatureForSelector:@selector(reloadData)];
+                                    if (sig) {
+                                        NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
+                                        [inv setSelector:@selector(reloadData)];
+                                        [inv setTarget:context.controller];
+                                        [inv invoke];
+                                    }
                                 }
                             } @catch (NSException *e) {
                                 NSLog(@"[GeminiTranslator] Exception during UI update: %@", e);
@@ -5515,11 +5546,19 @@ static NSMutableArray *activeTranslationContexts;
                         if ([context.controller isKindOfClass:tweetDetailsClass]) {
                             NSLog(@"[GeminiTranslator] Controller is T1TweetDetailsViewController, trying specific methods");
                             
-                            SEL translationCompletedSel = NSSelectorFromString(@"_handleTranslationCompleted:");
-                            if ([context.controller respondsToSelector:translationCompletedSel]) {
-                                NSLog(@"[GeminiTranslator] Calling _handleTranslationCompleted:");
-                                [context.controller performSelector:translationCompletedSel withObject:translatedViewModel];
-                            }
+                                                         SEL translationCompletedSel = NSSelectorFromString(@"_handleTranslationCompleted:");
+                                if ([context.controller respondsToSelector:translationCompletedSel]) {
+                                    NSLog(@"[GeminiTranslator] Calling _handleTranslationCompleted:");
+                                    // Using NSInvocation to avoid ARC warnings
+                                    NSMethodSignature *signature = [context.controller methodSignatureForSelector:translationCompletedSel];
+                                    if (signature) {
+                                        NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+                                        [invocation setSelector:translationCompletedSel];
+                                        [invocation setTarget:context.controller];
+                                        [invocation setArgument:&translatedViewModel atIndex:2];
+                                        [invocation invoke];
+                                    }
+                                }
                         }
                         
                         // 3. Finally fall back to the Twitter handler but with our translated view model
