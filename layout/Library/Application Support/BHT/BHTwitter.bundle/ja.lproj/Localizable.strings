@@ -1,5 +1,5 @@
 /*
-  Language: ja
+  Language: en
   NeoFreeBird
 */
 
@@ -120,7 +120,7 @@
 
 
 /*Photos & Videos*/
-"PHOTOS_VIDEOS_SECTION_HEADER_TITLE" = "Photos and videos";
+"PHOTOS_VIDEOS_SECTION_HEADER_TITLE" = "画像と動画";
 
 "AUTO_HIGHEST_LOAD_OPTION_TITLE" = "高画質メディア";
 "AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE" = "メディアを最高画質でアップロード/表示します。";
