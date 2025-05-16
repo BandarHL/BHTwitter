@@ -4594,6 +4594,13 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 
 // MARK: - Gemini AI Translation Integration
 
+// Helper class to communicate with Gemini AI API
+@interface GeminiTranslator : NSObject
++ (instancetype)sharedInstance;
+- (void)translateText:(NSString *)text fromLanguage:(NSString *)sourceLanguage toLanguage:(NSString *)targetLanguage completion:(void (^)(NSString *translatedText, NSError *error))completion;
+- (void)simplifiedTranslateAndDisplay:(NSString *)text fromViewController:(UIViewController *)viewController;
+@end
+
 // Required interface declarations to fix compiler errors
 @interface TFSTwitterTranslation : NSObject
 - (id)initWithTranslation:(NSString *)translation 
@@ -4606,454 +4613,23 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 - (NSString *)sourceLanguage;
 @end
 
-// The TTACoreStatusViewModel is already defined in TWHeaders.h
-
-
-
-// Helper class to communicate with Gemini AI API
-@interface GeminiTranslator : NSObject
-+ (instancetype)sharedInstance;
-- (void)translateText:(NSString *)text fromLanguage:(NSString *)sourceLanguage toLanguage:(NSString *)targetLanguage completion:(void (^)(NSString *translatedText, NSError *error))completion;
-// Simplified approach that doesn't interact with Swift objects
-- (void)simplifiedTranslateAndDisplay:(NSString *)text sourceLanguage:(NSString *)sourceLanguage targetLanguage:(NSString *)targetLanguage inViewController:(UIViewController *)viewController;
+// Do not redeclare T1StatusBodyTextView as it is already in TWHeaders.h
+// Just declare T1CoreStatusViewModel with its status property
+@interface T1CoreStatusViewModel : NSObject
+@property (nonatomic, readonly) id status; // Using 'id' to match property in TWHeaders.h
 @end
 
-@implementation GeminiTranslator
+// The TFNTwitterStatus is already defined in TWHeaders.h
 
-static GeminiTranslator *_sharedInstance;
-
-+ (instancetype)sharedInstance {
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        _sharedInstance = [[GeminiTranslator alloc] init];
-    });
-    return _sharedInstance;
-}
-
-// Simple method to show a translation alert - doesn't interact with Twitter's internal structures
-- (void)simplifiedTranslateAndDisplay:(NSString *)text sourceLanguage:(NSString *)sourceLanguage targetLanguage:(NSString *)targetLanguage inViewController:(UIViewController *)viewController {
-    if (!text || text.length == 0 || !viewController) {
-        return;
-    }
-    
-    // Show a loading indicator
-    UIAlertController *loadingAlert = [UIAlertController alertControllerWithTitle:@"Translating with Gemini AI" 
-                                                                          message:@"Please wait..." 
-                                                                   preferredStyle:UIAlertControllerStyleAlert];
-    
-    [viewController presentViewController:loadingAlert animated:YES completion:^{
-        // Call Gemini API to translate text
-        [self translateText:text fromLanguage:sourceLanguage toLanguage:targetLanguage completion:^(NSString *translatedText, NSError *error) {
-            // Dismiss loading indicator
-            [loadingAlert dismissViewControllerAnimated:YES completion:^{
-                if (error || !translatedText) {
-                    // Show error alert
-                    UIAlertController *errorAlert = [UIAlertController alertControllerWithTitle:@"Translation Failed" 
-                                                                                        message:[NSString stringWithFormat:@"Error: %@", error.localizedDescription ?: @"Unknown error"] 
-                                                                                 preferredStyle:UIAlertControllerStyleAlert];
-                    
-                    [errorAlert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-                    [viewController presentViewController:errorAlert animated:YES completion:nil];
-                } else {
-                    // Show translation result
-                    UIAlertController *resultAlert = [UIAlertController alertControllerWithTitle:@"Translated by Gemini AI" 
-                                                                                         message:translatedText 
-                                                                                  preferredStyle:UIAlertControllerStyleAlert];
-                    
-                    [resultAlert addAction:[UIAlertAction actionWithTitle:@"Copy" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-                        // Copy to clipboard
-                        UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
-                        pasteboard.string = translatedText;
-                    }]];
-                    
-                    [resultAlert addAction:[UIAlertAction actionWithTitle:@"Done" style:UIAlertActionStyleCancel handler:nil]];
-                    
-                    [viewController presentViewController:resultAlert animated:YES completion:nil];
-                }
-            }];
-        }];
-    }];
-}
-
-- (void)translateText:(NSString *)text fromLanguage:(NSString *)sourceLanguage toLanguage:(NSString *)targetLanguage completion:(void (^)(NSString *translatedText, NSError *error))completion {
-    @try {
-        // Defensive check for empty text
-        if (!text || text.length == 0) {
-            if (completion) {
-                NSError *error = [NSError errorWithDomain:@"GeminiTranslator" code:400 userInfo:@{NSLocalizedDescriptionKey: @"Empty text to translate"}];
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    completion(nil, error);
-                });
-            }
-            return;
-        }
-        
-        // Prepare API request parameters - with simplified prompt
-        NSString *apiKey = @"AIzaSyB-bQ6f2dEzlN_mMOljHazxbJEH1BsS6cQ";
-        NSString *apiUrl = @"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
-        
-        // Check if we have a valid API key
-        if (!apiKey || apiKey.length == 0 || [apiKey isEqualToString:@"YOUR_API_KEY_HERE"]) {
-            NSLog(@"[GeminiTranslator] Missing or invalid API key, falling back to Twitter translation");
-            if (completion) {
-                NSError *error = [NSError errorWithDomain:@"GeminiTranslator" code:401 userInfo:@{NSLocalizedDescriptionKey: @"Invalid API key"}];
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    completion(nil, error);
-                });
-            }
-            return;
-        }
-        
-        // Use an even simpler prompt
-        NSString *prompt = [NSString stringWithFormat:@"Translate this from %@ to %@: %@", 
-                            sourceLanguage, targetLanguage, text];
-        
-        NSLog(@"[GeminiTranslator] Using prompt: %@", prompt);
-        
-        // Create simplified request JSON
-        NSDictionary *requestBody = @{
-            @"contents": @[
-                @{
-                    @"parts": @[
-                        @{
-                            @"text": prompt
-                        }
-                    ]
-                }
-            ],
-            @"generationConfig": @{
-                @"temperature": @0.2
-            }
-        };
-        
-        NSError *jsonError;
-        NSData *jsonData = [NSJSONSerialization dataWithJSONObject:requestBody options:0 error:&jsonError];
-        
-        if (jsonError) {
-            if (completion) {
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    completion(nil, jsonError);
-                });
-            }
-            return;
-        }
-        
-        // Create URL with API key
-        NSString *urlWithKey = [NSString stringWithFormat:@"%@?key=%@", apiUrl, apiKey];
-        NSURL *url = [NSURL URLWithString:urlWithKey];
-        
-        if (!url) {
-            if (completion) {
-                NSError *error = [NSError errorWithDomain:@"GeminiTranslator" code:400 userInfo:@{NSLocalizedDescriptionKey: @"Invalid URL formed"}];
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    completion(nil, error);
-                });
-            }
-            return;
-        }
-        
-        // Create and configure request
-        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
-        [request setHTTPMethod:@"POST"];
-        [request setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
-        [request setHTTPBody:jsonData];
-        
-        // Set timeout and caching policy
-        [request setTimeoutInterval:10.0]; // 10 seconds timeout
-        [request setCachePolicy:NSURLRequestReloadIgnoringLocalCacheData];
-        
-        // Log for debugging
-        NSLog(@"[GeminiTranslator] Sending translation request for text: %@", text);
-        
-        // Create and start task
-        NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
-            // Response handling inside a try-catch block to capture all possible exceptions
-            @try {
-                // Check for network errors
-                if (error) {
-                    NSLog(@"[GeminiTranslator] Network error: %@", error);
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        if (completion) completion(nil, error);
-                    });
-                    return;
-                }
-                
-                // Basic response validation
-                NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
-                if (httpResponse.statusCode != 200 || !data || data.length == 0) {
-                    NSString *errorMsg = [NSString stringWithFormat:@"API error: %ld", (long)httpResponse.statusCode];
-                    NSError *apiError = [NSError errorWithDomain:@"GeminiTranslator" code:httpResponse.statusCode userInfo:@{NSLocalizedDescriptionKey: errorMsg}];
-                    
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        if (completion) completion(nil, apiError);
-                    });
-                    return;
-                }
-                
-                // Parse JSON
-                NSError *parseError;
-                NSDictionary *responseDict = [NSJSONSerialization JSONObjectWithData:data options:0 error:&parseError];
-                
-                if (parseError) {
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        if (completion) completion(nil, parseError);
-                    });
-                    return;
-                }
-                
-                // Extract translated text - simplified approach
-                NSString *translatedText = nil;
-                
-                if (responseDict[@"candidates"] && [responseDict[@"candidates"] isKindOfClass:[NSArray class]]) {
-                    NSArray *candidates = responseDict[@"candidates"];
-                    if (candidates.count > 0 && candidates[0][@"content"] && candidates[0][@"content"][@"parts"]) {
-                        NSArray *parts = candidates[0][@"content"][@"parts"];
-                        for (NSDictionary *part in parts) {
-                            if (part[@"text"] && [part[@"text"] isKindOfClass:[NSString class]]) {
-                                translatedText = part[@"text"];
-                                break;
-                            }
-                        }
-                    }
-                }
-                
-                // If extraction failed, use original text
-                if (!translatedText) {
-                    translatedText = text;
-                    NSLog(@"[GeminiTranslator] Couldn't extract translation, using original text");
-                } else {
-                    NSLog(@"[GeminiTranslator] Translation successful");
-                }
-                
-                // Return result on main thread
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    if (completion) completion(translatedText, nil);
-                });
-                
-            } @catch (NSException *exception) {
-                NSLog(@"[GeminiTranslator] Exception in network completion: %@", exception);
-                
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    NSError *exceptionError = [NSError errorWithDomain:@"GeminiTranslator" 
-                                                                  code:500 
-                                                              userInfo:@{NSLocalizedDescriptionKey: exception.description ?: @"Unknown error"}];
-                    if (completion) completion(nil, exceptionError);
-                });
-            }
-        }];
-        
-        [task resume];
-        
-    } @catch (NSException *exception) {
-        NSLog(@"[GeminiTranslator] Exception in translateText: %@", exception);
-        
-        if (completion) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                NSError *error = [NSError errorWithDomain:@"GeminiTranslator" 
-                                                     code:500 
-                                                 userInfo:@{NSLocalizedDescriptionKey: exception.description ?: @"Unknown error"}];
-                completion(nil, error);
-            });
-        }
-    }
-}
-
-@end
-
-// Forward declarations for Twitter's classes
-// TFNTwitterStatus already declared in TWHeaders.h
-
-@interface TFSTwitterAPITranslationDetails : NSObject
-- (id)initWithStatus:(TFNTwitterStatus *)status fromLanguage:(NSString *)fromLanguage toLanguage:(NSString *)toLanguage;
-@end
-
-// No longer need complex context management or tracking since we're using a simpler approach
-
-
-@interface UIViewController (TFNTwitterStatus)
-- (id)bht_findAssociatedTweetStatus;
-- (NSString *)bht_extractTweetText;
-@end
-
+// Define _UINavigationBarContentView first since it's forward declared
 @interface _UINavigationBarContentView : UIView
-// Removed old method declarations: 
-// - (NSString *)findTweetTextInController:(UIViewController *)controller;
-// - (void)showTranslatePopup:(UIButton *)sender;
-// - (void(^)(UIView *))createTextFinderWithTextRef:(NSString * __strong *)longestTextRef lengthRef:(NSUInteger *)lengthRef;
-// - (void)processView:(UIView *)view textRef:(NSString * __strong *)textRef lengthRef:(NSUInteger *)lengthRef;
+@end
 
-// Add new method declarations for the translation feature
-- (void)BHT_translateCurrentTweetAction:(UIButton *)sender;
+@interface _UINavigationBarContentView (BHTwitter)
 - (TFNTwitterStatus *)BHT_findStatusObjectInController:(UIViewController *)controller;
 - (NSString *)BHT_extractTextFromStatusObjectInController:(UIViewController *)controller;
+- (void)BHT_translateCurrentTweetAction:(UIButton *)sender;
 @end
-
-
-%hook UIViewController
-
-%new
-- (id)bht_findAssociatedTweetStatus {
-    // First, try to find the TFNTwitterStatus in the current view controller context
-    id statusObject = nil;
-
-    // Common property names for status objects
-    NSArray *statusPropertyNames = @[@"status", @"tweet", @"tweetStatus", @"statusModel", @"representedObject"];
-    for (NSString *propertyName in statusPropertyNames) {
-        if ([self respondsToSelector:NSSelectorFromString(propertyName)]) {
-            id potentialStatus = [self valueForKey:propertyName];
-            if (potentialStatus && ([NSStringFromClass([potentialStatus class]) containsString:@"Status"] || [NSStringFromClass([potentialStatus class]) containsString:@"Tweet"])) {
-                statusObject = potentialStatus;
-                NSLog(@"[BHTwitter] Found TFNTwitterStatus via property: %@ on %@", propertyName, NSStringFromClass([self class]));
-                break;
-            }
-            // Check one level deeper for view models that might wrap the status
-            if ([potentialStatus respondsToSelector:@selector(status)] && !statusObject) {
-                id nestedStatus = [potentialStatus valueForKey:@"status"];
-                 if (nestedStatus && ([NSStringFromClass([nestedStatus class]) containsString:@"Status"] || [NSStringFromClass([nestedStatus class]) containsString:@"Tweet"])) {
-                    statusObject = nestedStatus;
-                    NSLog(@"[BHTwitter] Found TFNTwitterStatus via nested property: %@.status on %@", propertyName, NSStringFromClass([self class]));
-                    break;
-                }
-            }
-        }
-    }
-
-    // Special handling for T1URTViewController (often used in timelines/detail views)
-    if (!statusObject && [NSStringFromClass([self class]) isEqualToString:@"T1URTViewController"]) {
-        NSLog(@"[BHTwitter] Checking special cases for T1URTViewController");
-        if ([self respondsToSelector:@selector(items)]) {
-            NSArray *items = [self valueForKey:@"items"];
-            if (items.count > 0) {
-                // Iterate through items to find a TFNTwitterStatus, as it might not always be the first
-                for (id item in items) {
-                    if ([item isKindOfClass:%c(TFNTwitterStatus)]) {
-                        statusObject = item;
-                        NSLog(@"[BHTwitter] Found TFNTwitterStatus in T1URTViewController items array.");
-                        break;
-                    }
-                    // Sometimes the status is wrapped, e.g., in a T1URTTimelineStatusItemViewModel
-                    if ([item respondsToSelector:@selector(statusViewModel)]) {
-                        id statusViewModel = [item valueForKey:@"statusViewModel"];
-                        if ([statusViewModel respondsToSelector:@selector(status)]) {
-                            id potentialStatus = [statusViewModel valueForKey:@"status"];
-                             if ([potentialStatus isKindOfClass:%c(TFNTwitterStatus)]) {
-                                statusObject = potentialStatus;
-                                NSLog(@"[BHTwitter] Found TFNTwitterStatus via statusViewModel.status in T1URTViewController items.");
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        if (!statusObject && [self respondsToSelector:@selector(viewModel)]) {
-             id mainViewModel = [self valueForKey:@"viewModel"];
-             if ([mainViewModel respondsToSelector:@selector(items)]) {
-                 NSArray *viewModelItems = [mainViewModel valueForKey:@"items"];
-                 if (viewModelItems.count > 0) {
-                     for (id item in viewModelItems) {
-                         if ([item isKindOfClass:%c(TFNTwitterStatus)]) {
-                             statusObject = item;
-                             NSLog(@"[BHTwitter] Found TFNTwitterStatus in T1URTViewController viewModel.items array.");
-                             break;
-                         }
-                          // Check wrapped status again
-                         if ([item respondsToSelector:@selector(statusViewModel)]) {
-                             id statusViewModel = [item valueForKey:@"statusViewModel"];
-                             if ([statusViewModel respondsToSelector:@selector(status)]) {
-                                 id potentialStatus = [statusViewModel valueForKey:@"status"];
-                                 if ([potentialStatus isKindOfClass:%c(TFNTwitterStatus)]) {
-                                     statusObject = potentialStatus;
-                                     NSLog(@"[BHTwitter] Found TFNTwitterStatus via viewModel.statusViewModel.status in T1URTViewController items.");
-                                     break;
-                                 }
-                             }
-                         }
-                     }
-                 }
-             }
-        }
-    }
-
-    // If not found, traverse up the parent view controller chain
-    // Ensure we don't get into an infinite loop with parentViewController checks
-    // by only attempting parent check if current self is not the root or a known top-level container.
-    if (!statusObject && self.parentViewController && self.parentViewController != self) {
-        BOOL shouldCheckParent = YES;
-        // Avoid re-checking if parent is something like UINavigationController and we are its root.
-        if ([self.parentViewController isKindOfClass:[UINavigationController class]] && ((UINavigationController*)self.parentViewController).viewControllers.firstObject == self) {
-            shouldCheckParent = NO; 
-        }
-        if ([self.parentViewController isKindOfClass:[UITabBarController class]]) {
-            shouldCheckParent = NO; 
-        }
-
-        if (shouldCheckParent) {
-            NSLog(@"[BHTwitter] TFNTwitterStatus not found in %@, checking parent: %@", NSStringFromClass([self class]), NSStringFromClass([self.parentViewController class]));
-            statusObject = [self.parentViewController bht_findAssociatedTweetStatus]; // Recursive call
-        }
-    }
-
-    if (statusObject) {
-        NSLog(@"[BHTwitter] Successfully found TFNTwitterStatus object for %@: %@", NSStringFromClass([self class]), NSStringFromClass([statusObject class]));
-    } else {
-        NSLog(@"[BHTwitter] Could not find TFNTwitterStatus object for %@ after all checks.", NSStringFromClass([self class]));
-    }
-    return statusObject;
-}
-
-%new
-- (NSString *)bht_extractTweetText {
-    id tweetObject = [self bht_findAssociatedTweetStatus];
-
-    if (!tweetObject) {
-        NSLog(@"[BHTwitter] No TFNTwitterStatus object found by bht_findAssociatedTweetStatus for VC: %@. Returning empty string.", NSStringFromClass([self class]));
-        return @""; // STRICT: Return empty if no status object found
-    }
-
-    NSLog(@"[BHTwitter] TFNTwitterStatus object found (%@) for VC: %@. Attempting to extract text.", NSStringFromClass([tweetObject class]), NSStringFromClass([self class]));
-
-    NSArray *textPropertyNames = @[@"text", @"fullText", @"full_text", @"expandedText", @"displayText"];
-    NSString *extractedText = nil;
-
-    for (NSString *propName in textPropertyNames) {
-        if ([tweetObject respondsToSelector:NSSelectorFromString(propName)]) {
-            @try {
-                id textValue = [tweetObject valueForKey:propName];
-                if ([textValue isKindOfClass:[NSString class]] && [(NSString *)textValue length] > 0) {
-                    extractedText = (NSString *)textValue;
-                    NSLog(@"[BHTwitter] Extracted text for VC '%@' via '%@' property: %@", NSStringFromClass([self class]), propName, extractedText);
-                    break; 
-                }
-            } @catch (NSException *e) {
-                NSLog(@"[BHTwitter] Exception accessing %@ property on TFNTwitterStatus for VC %@: %@", propName, NSStringFromClass([self class]), e);
-            }
-        }
-    }
-
-    if (!extractedText && [tweetObject respondsToSelector:@selector(attributedString)]) {
-        @try {
-            NSAttributedString *attrString = [tweetObject valueForKey:@"attributedString"];
-            if (attrString && attrString.string.length > 0) {
-                extractedText = attrString.string;
-                NSLog(@"[BHTwitter] Extracted text for VC '%@' via attributedString.string: %@", NSStringFromClass([self class]), extractedText);
-            }
-        } @catch (NSException *e) {
-            NSLog(@"[BHTwitter] Exception accessing attributedString on TFNTwitterStatus for VC %@: %@", NSStringFromClass([self class]), e);
-        }
-    }
-
-    if (extractedText && extractedText.length > 0) {
-        return extractedText;
-    } else {
-        NSLog(@"[BHTwitter] Failed to extract text from TFNTwitterStatus object (%@) for VC %@. All known text properties were nil or empty. Returning empty string.", NSStringFromClass([tweetObject class]), NSStringFromClass([self class]));
-        return @""; // STRICT: Return empty if status object found but no text extracted
-    }
-}
-
-%end
-
-// ... (The rest of Tweak.x, including the _UINavigationBarContentView hook, remains unchanged from the previous correct version) ...
 
 %hook _UINavigationBarContentView
 
@@ -5142,15 +4718,43 @@ static char kTranslateButtonKey;
 
     if (!textToTranslate || textToTranslate.length == 0) {
         NSLog(@"[BHTwitter Translate] No tweet text found for VC: %@. Displaying fallback message.", NSStringFromClass([targetController class]));
-        textToTranslate = @"Could not find tweet text to translate.";
+        
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
+                                                                       message:@"Could not find tweet text to translate." 
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+        [targetController presentViewController:alert animated:YES completion:nil];
     } else {
         NSLog(@"[BHTwitter Translate] Text to translate: '%@' (from VC: %@)", textToTranslate, NSStringFromClass([targetController class]));
+        
+        // Call the GeminiTranslator with the extracted text
+        [[GeminiTranslator sharedInstance] translateText:textToTranslate 
+                                           fromLanguage:@"auto" 
+                                             toLanguage:@"en" 
+                                             completion:^(NSString *translatedText, NSError *error) {
+            if (error || !translatedText) {
+                UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
+                                                                               message:error ? error.localizedDescription : @"Failed to translate text." 
+                                                                        preferredStyle:UIAlertControllerStyleAlert];
+                [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+                [targetController presentViewController:alert animated:YES completion:nil];
+                return;
+            }
+            
+            // Show translation with Copy and Cancel options
+            UIAlertController *resultAlert = [UIAlertController alertControllerWithTitle:@"Translation" 
+                                                                                 message:translatedText 
+                                                                          preferredStyle:UIAlertControllerStyleAlert];
+            
+            [resultAlert addAction:[UIAlertAction actionWithTitle:@"Copy" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+                UIPasteboard.generalPasteboard.string = translatedText;
+            }]];
+            
+            [resultAlert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+            
+            [targetController presentViewController:resultAlert animated:YES completion:nil];
+        }];
     }
-
-    [[GeminiTranslator sharedInstance] simplifiedTranslateAndDisplay:textToTranslate
-                                                      sourceLanguage:@"auto"
-                                                      targetLanguage:@"en"
-                                                    inViewController:targetController];
 }
 
 %new - (TFNTwitterStatus *)BHT_findStatusObjectInController:(UIViewController *)controller {
@@ -5158,92 +4762,91 @@ static char kTranslateButtonKey;
         NSLog(@"[BHTwitter Translate] BHT_findStatusObjectInController: Passed a nil controller.");
         return nil;
     }
-    id statusObject = nil;
-
+    
+    // FIRST APPROACH: Look for T1StatusBodyTextView directly in the view hierarchy
+    __block TFNTwitterStatus *statusObject = nil;
+    __block T1StatusBodyTextView *bodyTextView = nil;
+    
+    if (controller.isViewLoaded) {
+        __block void (^findBodyTextView)(UIView *) = ^(UIView *view) {
+            if ([NSStringFromClass([view class]) isEqualToString:@"T1StatusBodyTextView"]) {
+                bodyTextView = (T1StatusBodyTextView *)view;
+                return;
+            }
+            
+            for (UIView *subview in view.subviews) {
+                if (!bodyTextView) { // Only continue if we haven't found it yet
+                    findBodyTextView(subview);
+                }
+            }
+        };
+        
+        findBodyTextView(controller.view);
+        
+        // If we found T1StatusBodyTextView, extract the TFNTwitterStatus from it
+        if (bodyTextView) {
+            NSLog(@"[BHTwitter Translate] Found T1StatusBodyTextView in view hierarchy");
+            
+            @try {
+                if ([bodyTextView respondsToSelector:@selector(viewModel)]) {
+                    id viewModel = [bodyTextView valueForKey:@"viewModel"];
+                    if (viewModel && [viewModel respondsToSelector:@selector(status)]) {
+                        id status = [viewModel valueForKey:@"status"];
+                        if (status && [status isKindOfClass:%c(TFNTwitterStatus)]) {
+                            statusObject = (TFNTwitterStatus *)status;
+                            NSLog(@"[BHTwitter Translate] Successfully extracted TFNTwitterStatus from T1StatusBodyTextView.viewModel.status");
+                            return statusObject;
+                        }
+                    }
+                }
+            } @catch (NSException *e) {
+                NSLog(@"[BHTwitter Translate] Exception accessing T1StatusBodyTextView properties: %@", e);
+            }
+        }
+    }
+    
+    // SECOND APPROACH: Check controller for status object
     NSArray *statusPropertyNames = @[@"status", @"tweet", @"tweetStatus", @"statusModel", @"representedObject"];
     for (NSString *propertyName in statusPropertyNames) {
         if ([controller respondsToSelector:NSSelectorFromString(propertyName)]) {
             id potentialStatus = [controller valueForKey:propertyName];
-            if (potentialStatus && ([NSStringFromClass([potentialStatus class]) hasSuffix:@"Status"] || [NSStringFromClass([potentialStatus class]) hasSuffix:@"Tweet"])) { // More flexible check
-                if ([potentialStatus isKindOfClass:%c(TFNTwitterStatus)]) {
-                    statusObject = potentialStatus;
-                    NSLog(@"[BHTwitter Translate] Found status object via property '%@' on VC: %@", propertyName, NSStringFromClass([controller class]));
-                    break;
-                }
+            if (potentialStatus && [potentialStatus isKindOfClass:%c(TFNTwitterStatus)]) {
+                statusObject = potentialStatus;
+                NSLog(@"[BHTwitter Translate] Found status object via property '%@' on VC: %@", propertyName, NSStringFromClass([controller class]));
+                return statusObject;
             }
-            // Check one level deeper for view models that might wrap the status
-            if ([potentialStatus respondsToSelector:@selector(status)] && !statusObject) {
+            
+            // Check for view model wrappers
+            if ([potentialStatus respondsToSelector:@selector(status)]) {
                 id nestedStatus = [potentialStatus valueForKey:@"status"];
-                 if (nestedStatus && ([NSStringFromClass([nestedStatus class]) hasSuffix:@"Status"] || [NSStringFromClass([nestedStatus class]) hasSuffix:@"Tweet"])) {
-                    if ([nestedStatus isKindOfClass:%c(TFNTwitterStatus)]) {
-                        statusObject = nestedStatus;
-                        NSLog(@"[BHTwitter Translate] Found status object via nested property '%@.status' on VC: %@", propertyName, NSStringFromClass([controller class]));
-                        break;
-                    }
+                if (nestedStatus && [nestedStatus isKindOfClass:%c(TFNTwitterStatus)]) {
+                    statusObject = nestedStatus;
+                    NSLog(@"[BHTwitter Translate] Found status object via nested property '%@.status' on VC: %@", propertyName, NSStringFromClass([controller class]));
+                    return statusObject;
                 }
             }
         }
     }
-
-    // Special handling for T1URTViewController (and similar URT controllers)
-    if (!statusObject && ([NSStringFromClass([controller class]) isEqualToString:@"T1URTViewController"] || [NSStringFromClass([controller class]) containsString:@"URTTimelineViewController"])) {
-        NSLog(@"[BHTwitter Translate] Special handling for URT-type ViewController: %@", NSStringFromClass([controller class]));
-        // Check 'items' array directly on the controller
-        if ([controller respondsToSelector:@selector(items)]) {
-            NSArray *items = [controller valueForKey:@"items"];
-            for (id item in items) {
-                if ([item isKindOfClass:%c(TFNTwitterStatus)]) {
-                    statusObject = item;
-                    NSLog(@"[BHTwitter Translate] Found TFNTwitterStatus in VC items array.");
-                    break;
-                }
-                // Check for common view model wrappers
-                if ([item respondsToSelector:@selector(statusViewModel)]) {
-                    id statusViewModel = [item valueForKey:@"statusViewModel"];
-                    if ([statusViewModel respondsToSelector:@selector(status)]) {
-                        id potentialStatus = [statusViewModel valueForKey:@"status"];
-                        if ([potentialStatus isKindOfClass:%c(TFNTwitterStatus)]) {
-                            statusObject = potentialStatus;
-                            NSLog(@"[BHTwitter Translate] Found TFNTwitterStatus via item.statusViewModel.status in VC items.");
-                            break;
-                        }
-                    }
-                }
+    
+    // THIRD APPROACH: Check viewModel property which might hold the status
+    if ([controller respondsToSelector:@selector(viewModel)]) {
+        id viewModel = [controller valueForKey:@"viewModel"];
+        
+        // Check if viewModel is T1CoreStatusViewModel or similar
+        if ([viewModel respondsToSelector:@selector(status)]) {
+            id status = [viewModel valueForKey:@"status"];
+            if (status && [status isKindOfClass:%c(TFNTwitterStatus)]) {
+                statusObject = status;
+                NSLog(@"[BHTwitter Translate] Found status object via controller.viewModel.status");
+                return statusObject;
             }
         }
-        // Check 'viewModel' property and its 'items' or 'status'
-        if (!statusObject && [controller respondsToSelector:@selector(viewModel)]) {
-             id mainViewModel = [controller valueForKey:@"viewModel"];
-             if ([mainViewModel isKindOfClass:%c(TFNTwitterStatus)]) {
-                 statusObject = mainViewModel;
-                 NSLog(@"[BHTwitter Translate] VC's viewModel is a TFNTwitterStatus.");
-             } else if ([mainViewModel respondsToSelector:@selector(status)]) {
-                 id potentialStatus = [mainViewModel valueForKey:@"status"];
-                 if ([potentialStatus isKindOfClass:%c(TFNTwitterStatus)]) {
-                    statusObject = potentialStatus;
-                    NSLog(@"[BHTwitter Translate] Found TFNTwitterStatus on VC's viewModel.status.");
-                 }
-             } else if ([mainViewModel respondsToSelector:@selector(items)]) {
-                 NSArray *viewModelItems = [mainViewModel valueForKey:@"items"];
-                 for (id item in viewModelItems) {
-                     if ([item isKindOfClass:%c(TFNTwitterStatus)]) {
-                         statusObject = item;
-                         NSLog(@"[BHTwitter Translate] Found TFNTwitterStatus in VC viewModel.items array.");
-                         break;
-                     }
-                     if ([item respondsToSelector:@selector(statusViewModel)]) {
-                        id statusViewModel = [item valueForKey:@"statusViewModel"];
-                        if ([statusViewModel respondsToSelector:@selector(status)]) {
-                            id potentialStatus = [statusViewModel valueForKey:@"status"];
-                            if ([potentialStatus isKindOfClass:%c(TFNTwitterStatus)]) {
-                                statusObject = potentialStatus;
-                                NSLog(@"[BHTwitter Translate] Found TFNTwitterStatus via viewModel.item.statusViewModel.status in VC items.");
-                                break;
-                            }
-                        }
-                    }
-                 }
-             }
+        
+        // Check if viewModel itself is the status
+        if (viewModel && [viewModel isKindOfClass:%c(TFNTwitterStatus)]) {
+            statusObject = viewModel;
+            NSLog(@"[BHTwitter Translate] Found status object directly as controller.viewModel");
+            return statusObject;
         }
     }
     
@@ -5264,7 +4867,6 @@ static char kTranslateButtonKey;
             }
         }
     }
-
 
     // Final check for the parent if not found and not already at the top of a nav/tab stack
     if (!statusObject && controller.parentViewController && controller.parentViewController != controller) {
@@ -5289,12 +4891,6 @@ static char kTranslateButtonKey;
         }
     }
 
-
-    if (statusObject && ![statusObject isKindOfClass:%c(TFNTwitterStatus)]) {
-        NSLog(@"[BHTwitter Translate] Found an object via properties/items, but it's NOT a TFNTwitterStatus instance: %@. Discarding.", NSStringFromClass([statusObject class]));
-        return nil; 
-    }
-    
     if (!statusObject) {
         NSLog(@"[BHTwitter Translate] Ultimately could not find TFNTwitterStatus for VC: %@ and its hierarchy.", NSStringFromClass([controller class]));
     } else {
@@ -5304,18 +4900,87 @@ static char kTranslateButtonKey;
 }
 
 %new - (NSString *)BHT_extractTextFromStatusObjectInController:(UIViewController *)controller {
+    // First try to find T1StatusBodyTextView directly
+    __block T1StatusBodyTextView *bodyTextView = nil;
+    
+    if (controller.isViewLoaded) {
+        __block void (^findBodyTextView)(UIView *) = ^(UIView *view) {
+            if ([NSStringFromClass([view class]) isEqualToString:@"T1StatusBodyTextView"]) {
+                bodyTextView = (T1StatusBodyTextView *)view;
+                return;
+            }
+            
+            for (UIView *subview in view.subviews) {
+                if (!bodyTextView) { // Only continue if we haven't found it yet
+                    findBodyTextView(subview);
+                }
+            }
+        };
+        
+        findBodyTextView(controller.view);
+        
+        // If we found T1StatusBodyTextView, get the text from its viewModel.status
+        if (bodyTextView) {
+            NSLog(@"[BHTwitter Translate] Found T1StatusBodyTextView in view hierarchy for text extraction");
+            
+            @try {
+                if ([bodyTextView respondsToSelector:@selector(viewModel)]) {
+                    id viewModel = [bodyTextView valueForKey:@"viewModel"];
+                    if (viewModel && [viewModel respondsToSelector:@selector(status)]) {
+                        id status = [viewModel valueForKey:@"status"];
+                        if (status && [status isKindOfClass:%c(TFNTwitterStatus)]) {
+                            // Try to get text from common properties
+                            NSArray *textProperties = @[@"text", @"fullText", @"full_text", @"displayText"];
+                            for (NSString *property in textProperties) {
+                                if ([status respondsToSelector:NSSelectorFromString(property)]) {
+                                    NSString *text = [status valueForKey:property];
+                                    if (text && [text isKindOfClass:[NSString class]] && text.length > 0) {
+                                        NSLog(@"[BHTwitter Translate] Found text from T1StatusBodyTextView.viewModel.status.%@: %@", property, text);
+                                        return text;
+                                    }
+                                }
+                            }
+                            
+                            // Try attributedStringValue if direct text properties failed
+                            if ([status respondsToSelector:@selector(attributedStringValue)]) {
+                                id attrStringModel = [status valueForKey:@"attributedStringValue"];
+                                if ([attrStringModel respondsToSelector:@selector(attributedString)]) {
+                                    NSAttributedString *attrString = [attrStringModel valueForKey:@"attributedString"];
+                                    if (attrString && attrString.string.length > 0) {
+                                        NSLog(@"[BHTwitter Translate] Found text from T1StatusBodyTextView.viewModel.status.attributedStringValue.attributedString.string");
+                                        return attrString.string;
+                                    }
+                                } else if ([attrStringModel isKindOfClass:[NSAttributedString class]]) {
+                                    NSAttributedString *attrString = (NSAttributedString *)attrStringModel;
+                                    if (attrString && attrString.string.length > 0) {
+                                        NSLog(@"[BHTwitter Translate] Found text from T1StatusBodyTextView.viewModel.status.attributedStringValue (as NSAttributedString)");
+                                        return attrString.string;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } @catch (NSException *e) {
+                NSLog(@"[BHTwitter Translate] Exception accessing T1StatusBodyTextView text extraction: %@", e);
+            }
+        }
+    }
+    
+    // If we couldn't get text from T1StatusBodyTextView, fallback to finding TFNTwitterStatus
     TFNTwitterStatus *tweetStatus = [self BHT_findStatusObjectInController:controller];
-
+    
     if (!tweetStatus) {
         NSLog(@"[BHTwitter Translate] No TFNTwitterStatus object found for VC: %@. Cannot extract text.", NSStringFromClass([controller class]));
         return @""; // Return empty string if no status object.
     }
-
+    
     NSLog(@"[BHTwitter Translate] TFNTwitterStatus object found (%@) for VC: %@. Attempting to extract text.", NSStringFromClass([tweetStatus class]), NSStringFromClass([controller class]));
     NSString *extractedText = nil;
+    
     // Prioritize fullText or text, then attributedStringValue
     NSArray *textPropertyNames = @[@"fullText", @"text", @"full_text", @"expandedText", @"displayText"];
-
+    
     for (NSString *propName in textPropertyNames) {
         if ([tweetStatus respondsToSelector:NSSelectorFromString(propName)]) {
             @try {
@@ -5325,9 +4990,9 @@ static char kTranslateButtonKey;
                     NSLog(@"[BHTwitter Translate] Extracted text from TFNTwitterStatus via '%@': %@", propName, extractedText);
                     // Clean the text from potential HTML entities or XML tags
                     if (extractedText) {
-                         NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"<[^>]+>|&[a-zA-Z0-9#]+;" options:NSRegularExpressionCaseInsensitive error:nil];
-                         extractedText = [regex stringByReplacingMatchesInString:extractedText options:0 range:NSMakeRange(0, extractedText.length) withTemplate:@""];
-                         extractedText = [extractedText stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+                        NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"<[^>]+>|&[a-zA-Z0-9#]+;" options:NSRegularExpressionCaseInsensitive error:nil];
+                        extractedText = [regex stringByReplacingMatchesInString:extractedText options:0 range:NSMakeRange(0, extractedText.length) withTemplate:@""];
+                        extractedText = [extractedText stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
                     }
                     break; 
                 }
@@ -5336,30 +5001,30 @@ static char kTranslateButtonKey;
             }
         }
     }
-
+    
     // If direct text properties fail, try attributedStringValue
     if (!extractedText && [tweetStatus respondsToSelector:@selector(attributedStringValue)]) {
-         @try {
+        @try {
             // TFNTwitterStatus's 'attributedStringValue' often holds a TFNAttributedTextModel
             id attrStringModel = [tweetStatus valueForKey:@"attributedStringValue"]; 
             if ([attrStringModel respondsToSelector:@selector(attributedString)]) {
                 NSAttributedString *attrString = [attrStringModel valueForKey:@"attributedString"];
-                 if (attrString && attrString.string.length > 0) {
+                if (attrString && attrString.string.length > 0) {
                     extractedText = attrString.string;
                     NSLog(@"[BHTwitter Translate] Extracted text from TFNTwitterStatus via attributedStringValue.attributedString.string: %@", extractedText);
                 }
             } else if ([attrStringModel isKindOfClass:[NSAttributedString class]]) { 
-                 NSAttributedString *attrString = (NSAttributedString *)attrStringModel;
-                 if (attrString && attrString.string.length > 0) {
+                NSAttributedString *attrString = (NSAttributedString *)attrStringModel;
+                if (attrString && attrString.string.length > 0) {
                     extractedText = attrString.string;
                     NSLog(@"[BHTwitter Translate] Extracted text from TFNTwitterStatus directly from attributedStringValue (as NSAttributedString): %@", extractedText);
-                 }
+                }
             }
             // Clean the text from potential HTML entities or XML tags
             if (extractedText) {
-                 NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"<[^>]+>|&[a-zA-Z0-9#]+;" options:NSRegularExpressionCaseInsensitive error:nil];
-                 extractedText = [regex stringByReplacingMatchesInString:extractedText options:0 range:NSMakeRange(0, extractedText.length) withTemplate:@""];
-                 extractedText = [extractedText stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+                NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"<[^>]+>|&[a-zA-Z0-9#]+;" options:NSRegularExpressionCaseInsensitive error:nil];
+                extractedText = [regex stringByReplacingMatchesInString:extractedText options:0 range:NSMakeRange(0, extractedText.length) withTemplate:@""];
+                extractedText = [extractedText stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
             }
         } @catch (NSException *e) {
             NSLog(@"[BHTwitter Translate] Exception accessing attributedStringValue from TFNTwitterStatus: %@", e);
