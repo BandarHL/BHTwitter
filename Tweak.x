@@ -4626,6 +4626,7 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 @end
 
 @interface _UINavigationBarContentView (BHTwitter)
+- (void)BHT_addTranslateButtonIfNeeded;
 - (TFNTwitterStatus *)BHT_findStatusObjectInController:(UIViewController *)controller;
 - (NSString *)BHT_extractTextFromStatusObjectInController:(UIViewController *)controller;
 - (void)BHT_translateCurrentTweetAction:(UIButton *)sender;
@@ -4637,39 +4638,77 @@ static char kTranslateButtonKey;
 
 // Removed createTextFinderWithTextRef and processView as they are not used by this feature.
 
-- (void)setTitle:(id)arg1 {
-    %orig;
-    NSString *title = (NSString *)arg1;
-    
-    UIButton *existingButton = objc_getAssociatedObject(self, &kTranslateButtonKey);
-    if (existingButton) {
-        [existingButton removeFromSuperview];
-        objc_setAssociatedObject(self, &kTranslateButtonKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+%new
+- (void)BHT_addTranslateButtonIfNeeded {
+    // Check if we're in a Post/Tweet view by examining the title
+    UILabel *titleLabel = nil;
+    for (UIView *subview in self.subviews) {
+        if ([subview isKindOfClass:%c(UILabel)]) {
+            UILabel *label = (UILabel *)subview;
+            if ([label.text isEqualToString:@"Post"] || [label.text isEqualToString:@"Tweet"]) {
+                titleLabel = label;
+                break;
+            }
+        }
     }
     
-    if ([title isEqualToString:@"Post"] || [title isEqualToString:@"Tweet"]) {
-        UIButton *translateButton = [UIButton buttonWithType:UIButtonTypeSystem];
-        if (@available(iOS 13.0, *)) {
-            [translateButton setImage:[UIImage systemImageNamed:@"bubble.left.and.bubble.right.fill"] forState:UIControlStateNormal];
-        } else {
-            [translateButton setTitle:@"Translate" forState:UIControlStateNormal]; // Fallback for older iOS
+    // Only proceed if this is a Post/Tweet screen
+    if (titleLabel) {
+        // Check if button already exists
+        UIButton *existingButton = objc_getAssociatedObject(self, &kTranslateButtonKey);
+        
+        // If button doesn't exist, create it
+        if (!existingButton) {
+            UIButton *translateButton = [UIButton buttonWithType:UIButtonTypeSystem];
+            if (@available(iOS 13.0, *)) {
+                [translateButton setImage:[UIImage systemImageNamed:@"bubble.left.and.bubble.right.fill"] forState:UIControlStateNormal];
+            } else {
+                [translateButton setTitle:@"Translate" forState:UIControlStateNormal]; // Fallback for older iOS
+            }
+            [translateButton addTarget:self action:@selector(BHT_translateCurrentTweetAction:) forControlEvents:UIControlEventTouchUpInside];
+            translateButton.tag = 12345; // Unique tag
+            
+            // Add button with higher z-index
+            [self insertSubview:translateButton aboveSubview:titleLabel];
+            translateButton.translatesAutoresizingMaskIntoConstraints = NO;
+            
+            // Store button reference in associated object
+            objc_setAssociatedObject(self, &kTranslateButtonKey, translateButton, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            
+            // Place the button on the right with a moderate offset to avoid collisions
+            NSArray *constraints = @[
+                [translateButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
+                [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-65], // Adjusted offset
+                [translateButton.widthAnchor constraintEqualToConstant:44],
+                [translateButton.heightAnchor constraintEqualToConstant:44]
+            ];
+            
+            // Store constraints reference to prevent deallocation
+            objc_setAssociatedObject(translateButton, "translateButtonConstraints", constraints, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            
+            [NSLayoutConstraint activateConstraints:constraints];
         }
-        [translateButton addTarget:self action:@selector(BHT_translateCurrentTweetAction:) forControlEvents:UIControlEventTouchUpInside];
-        translateButton.tag = 12345; // Unique tag
-        [self addSubview:translateButton];
-        translateButton.translatesAutoresizingMaskIntoConstraints = NO;
-        
-        objc_setAssociatedObject(self, &kTranslateButtonKey, translateButton, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        
-        // Place the button on the right but with a larger offset to avoid collisions
-        // Use a much larger offset from the right edge to avoid most controls
-        
-        [NSLayoutConstraint activateConstraints:@[
-            [translateButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
-            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-80], // Much larger offset from right edge
-            [translateButton.widthAnchor constraintEqualToConstant:44],
-            [translateButton.heightAnchor constraintEqualToConstant:44]
-        ]];
+    }
+}
+
+- (void)setTitle:(id)arg1 {
+    %orig;
+    
+    // Use a dispatch_after to ensure we add the button after layout is complete
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self BHT_addTranslateButtonIfNeeded];
+    });
+}
+
+// Also hook didMoveToWindow to improve persistence
+- (void)didMoveToWindow {
+    %orig;
+    
+    if (self.window) {
+        // Use a short delay to ensure view is fully set up
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [self BHT_addTranslateButtonIfNeeded];
+        });
     }
 }
 
