@@ -5536,11 +5536,29 @@ static NSMutableArray *activeTranslationContexts;
     UIView *controllerView = [controller respondsToSelector:@selector(view)] ? [controller performSelector:@selector(view)] : nil;
     if (!controllerView) return;
     
-    // First approach: Find TTAStatusBodySelectableContentTextView directly
-    // This is the specific view class that most likely contains the tweet text based on logs
+    // First, send a notification that translation is complete - might trigger Twitter's internal systems
+    NSMutableDictionary *userInfo = [NSMutableDictionary dictionary];
+    [userInfo setValue:@YES forKey:@"translationCompleted"];
+    [userInfo setValue:translatedText forKey:@"translatedText"];
+    
+    // Try several notification names that might work
+    NSArray *possibleNotificationNames = @[
+        @"TwitterTranslationCompletedNotification",
+        @"T1TranslationCompletedNotification",
+        @"TranslationFinishedNotification",
+        @"StatusTranslationUpdatedNotification"
+    ];
+    
+    for (NSString *notificationName in possibleNotificationNames) {
+        [[NSNotificationCenter defaultCenter] postNotificationName:notificationName
+                                                          object:nil
+                                                        userInfo:userInfo];
+    }
+    
+    // First approach: Find translation views directly with a higher iteration limit
     NSMutableArray *queue = [NSMutableArray arrayWithObject:controllerView];
     NSInteger iterations = 0;
-    NSInteger maxIterations = 200;
+    NSInteger maxIterations = 300;
     
     while (queue.count > 0 && iterations < maxIterations) {
         UIView *currentView = [queue firstObject];
@@ -5557,6 +5575,63 @@ static NSMutableArray *activeTranslationContexts;
             // Found the translation view - try to stop the spinner and show translation
             // First check if it has a target method to properly complete the translation
             BOOL didUpdateTranslationState = NO;
+            
+            // New approach: forcefully manipulate the translate view's content
+            
+            // First, look for any loading view or spinner and hide it regardless of class
+            for (UIView *subview in currentView.subviews) {
+                NSString *subClassName = NSStringFromClass([subview class]);
+                if ([subClassName containsString:@"Loading"] || 
+                    [subClassName containsString:@"Activity"] || 
+                    [subClassName containsString:@"Spinner"] || 
+                    [subClassName containsString:@"Indicator"]) {
+                    
+                    subview.hidden = YES;
+                    if ([subview respondsToSelector:@selector(stopAnimating)]) {
+                        [(UIActivityIndicatorView *)subview stopAnimating];
+                    }
+                }
+            }
+            
+            // Next, try to create or update a label with our translation
+            UILabel *translationLabel = nil;
+            
+            // First, search for an existing label
+            for (UIView *subview in currentView.subviews) {
+                if ([subview isKindOfClass:[UILabel class]]) {
+                    translationLabel = (UILabel *)subview;
+                    break;
+                }
+            }
+            
+            // If no label exists, create one
+            if (!translationLabel) {
+                translationLabel = [[UILabel alloc] init];
+                translationLabel.translatesAutoresizingMaskIntoConstraints = NO;
+                translationLabel.numberOfLines = 0;
+                translationLabel.lineBreakMode = NSLineBreakByWordWrapping;
+                translationLabel.backgroundColor = [UIColor clearColor];
+                translationLabel.textColor = [UIColor blackColor];
+                translationLabel.font = [UIFont systemFontOfSize:16];
+                [currentView addSubview:translationLabel];
+                
+                // Add constraints to make it fill the view with padding
+                [NSLayoutConstraint activateConstraints:@[
+                    [translationLabel.topAnchor constraintEqualToAnchor:currentView.topAnchor constant:8],
+                    [translationLabel.leadingAnchor constraintEqualToAnchor:currentView.leadingAnchor constant:8],
+                    [translationLabel.trailingAnchor constraintEqualToAnchor:currentView.trailingAnchor constant:-8],
+                    [translationLabel.bottomAnchor constraintEqualToAnchor:currentView.bottomAnchor constant:-8]
+                ]];
+            }
+            
+            // Set the translated text
+            translationLabel.text = translatedText;
+            translationLabel.hidden = NO;
+            
+            // Force layout and make the view visible
+            currentView.hidden = NO;
+            [currentView setNeedsLayout];
+            [currentView layoutIfNeeded];
             
             // Try to call known completion methods on the translate view
             NSArray *completionMethods = @[
@@ -5679,6 +5754,18 @@ static NSMutableArray *activeTranslationContexts;
             
             NSLog(@"[GeminiTranslator] DIRECT UPDATE: Found another translation-related view: %@", className);
             
+            // Special handling for loading view
+            if ([className isEqualToString:@"T1ConversationTranslationLoadingView"]) {
+                // This is the loading spinner view - hide it completely
+                currentView.hidden = YES;
+                
+                // Force this view to be removed from its parent
+                [currentView removeFromSuperview];
+                
+                // Continue with the queue - hiding this is important
+                continue;
+            }
+            
             // Try to call methods that might show translation
             NSArray *translationMethods = @[
                 @"showTranslation", 
@@ -5686,7 +5773,9 @@ static NSMutableArray *activeTranslationContexts;
                 @"setTranslatedText:",
                 @"showTranslatedText:",
                 @"finishTranslation",
-                @"updateTranslationContent"
+                @"updateTranslationContent",
+                @"didCompleteTranslation",
+                @"translationDidFinish"
             ];
             
             for (NSString *methodName in translationMethods) {
