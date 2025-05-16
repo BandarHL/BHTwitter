@@ -4762,10 +4762,8 @@ static char kTranslateButtonKey;
         return nil;
     }
     
-    // Simple direct approach - find T1StatusBodyTextView in the view hierarchy
+    // Direct approach to find T1StatusBodyTextView
     T1StatusBodyTextView *bodyTextView = nil;
-    
-    // Use a non-recursive approach with an array acting as a queue
     NSMutableArray *viewsToCheck = [NSMutableArray arrayWithObject:controller.view];
     
     while (viewsToCheck.count > 0) {
@@ -4777,25 +4775,22 @@ static char kTranslateButtonKey;
             break;
         }
         
-        // Add subviews to the queue
         [viewsToCheck addObjectsFromArray:currentView.subviews];
     }
     
-    // If found, extract status from bodyTextView
+    // Extract status from bodyTextView
     if (bodyTextView) {
-        NSLog(@"[BHTwitter Translate] Found T1StatusBodyTextView");
-        
         @try {
             id viewModel = [bodyTextView valueForKey:@"viewModel"];
             if (viewModel && [viewModel respondsToSelector:@selector(status)]) {
                 id status = [viewModel valueForKey:@"status"];
                 if (status && [status isKindOfClass:%c(TFNTwitterStatus)]) {
-                    NSLog(@"[BHTwitter Translate] Found TFNTwitterStatus from T1StatusBodyTextView");
+                    NSLog(@"[BHTwitter Translate] Found TFNTwitterStatus");
                     return status;
                 }
             }
         } @catch (NSException *e) {
-            NSLog(@"[BHTwitter Translate] Exception accessing T1StatusBodyTextView: %@", e);
+            NSLog(@"[BHTwitter Translate] Exception: %@", e);
         }
     }
     
@@ -4803,74 +4798,26 @@ static char kTranslateButtonKey;
 }
 
 %new - (NSString *)BHT_extractTextFromStatusObjectInController:(UIViewController *)controller {
-    // Direct approach - just find the view and get text
+    // Get TFNTwitterStatus and simply access its text property
     TFNTwitterStatus *status = [self BHT_findStatusObjectInController:controller];
     
     if (status) {
-        // Try get text directly from status properties
-        NSArray *textProperties = @[@"text", @"fullText", @"full_text", @"displayText"];
-        for (NSString *property in textProperties) {
-            if ([status respondsToSelector:NSSelectorFromString(property)]) {
-                NSString *text = [status valueForKey:property];
-                if (text && [text isKindOfClass:[NSString class]] && text.length > 0) {
-                    NSLog(@"[BHTwitter Translate] Found text from status.%@: %@", property, text);
-                    return text;
-                }
-            }
+        // Just directly access the text property
+        NSString *text = [status valueForKey:@"text"];
+        if (text && [text isKindOfClass:[NSString class]] && text.length > 0) {
+            NSLog(@"[BHTwitter Translate] Found tweet text: %@", text);
+            return text;
         }
         
-        // Try attributedStringValue if direct text properties failed
-        if ([status respondsToSelector:@selector(attributedStringValue)]) {
-            id attrStringModel = [status valueForKey:@"attributedStringValue"];
-            if ([attrStringModel respondsToSelector:@selector(attributedString)]) {
-                NSAttributedString *attrString = [attrStringModel valueForKey:@"attributedString"];
-                if (attrString && attrString.string.length > 0) {
-                    NSLog(@"[BHTwitter Translate] Found text from attributedStringValue.attributedString.string");
-                    return attrString.string;
-                }
-            } else if ([attrStringModel isKindOfClass:[NSAttributedString class]]) {
-                NSAttributedString *attrString = (NSAttributedString *)attrStringModel;
-                if (attrString && attrString.string.length > 0) {
-                    NSLog(@"[BHTwitter Translate] Found text from attributedStringValue (as NSAttributedString)");
-                    return attrString.string;
-                }
-            }
+        // If text wasn't available, try fullText as a backup
+        NSString *fullText = [status valueForKey:@"fullText"];
+        if (fullText && [fullText isKindOfClass:[NSString class]] && fullText.length > 0) {
+            NSLog(@"[BHTwitter Translate] Found tweet fullText: %@", fullText);
+            return fullText;
         }
     }
     
-    // If a direct approach to status fails, try looking for the text in the view hierarchy
-    if (controller.isViewLoaded) {
-        NSString *longestText = nil;
-        NSUInteger longestLength = 20; // Minimum text length threshold to consider
-        
-        // Non-recursive approach using an array
-        NSMutableArray *viewsToCheck = [NSMutableArray arrayWithObject:controller.view];
-        
-        while (viewsToCheck.count > 0) {
-            UIView *currentView = viewsToCheck[0];
-            [viewsToCheck removeObjectAtIndex:0];
-            
-            if ([currentView isKindOfClass:[UILabel class]]) {
-                UILabel *label = (UILabel *)currentView;
-                NSString *text = label.text;
-                
-                if (text && text.length > longestLength) {
-                    longestText = text;
-                    longestLength = text.length;
-                }
-            }
-            
-            // Add subviews to the queue
-            [viewsToCheck addObjectsFromArray:currentView.subviews];
-        }
-        
-        if (longestText) {
-            NSLog(@"[BHTwitter Translate] Found text via view hierarchy: %@", longestText);
-            return longestText;
-        }
-    }
-    
-    NSLog(@"[BHTwitter Translate] Failed to find any tweet text");
+    NSLog(@"[BHTwitter Translate] Failed to find tweet text");
     return nil;
 }
 
