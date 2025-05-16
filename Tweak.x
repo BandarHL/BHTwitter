@@ -4971,63 +4971,124 @@ static NSMutableArray *activeTranslationContexts;
 - (void)searchAndUpdateTranslationElementsIn:(UIView *)view withTranslatedText:(NSString *)translatedText {
     if (!view || !translatedText) return;
     
-    // Check if this view might be a translation-related view
+    // More aggressive text view detection
     NSString *className = NSStringFromClass([view class]);
     BOOL isTextView = [className containsString:@"Label"] || 
                       [className containsString:@"Text"] || 
-                      [className containsString:@"Translat"];
+                      [className containsString:@"Translat"] ||
+                      [className containsString:@"Content"] ||
+                      [className containsString:@"Status"] ||
+                      [className containsString:@"Tweet"];
     
-    if (isTextView) {
+    // Look for text content even if not directly a text view
+    if ([view respondsToSelector:@selector(text)] || 
+        [view respondsToSelector:@selector(attributedText)] || 
+        isTextView) {
+        
         NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Found text view to update: %@", className);
         
-        // Try to update text if it's a UILabel
-        if ([view isKindOfClass:[UILabel class]]) {
-            UILabel *label = (UILabel *)view;
-            NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: UILabel before update: %@", label.text);
-            label.text = translatedText;
-            NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Updated UILabel text");
+        // Try to get the current text to see if this is a main content view
+        NSString *currentText = nil;
+        if ([view respondsToSelector:@selector(text)]) {
+            currentText = [view performSelector:@selector(text)];
+        } else if ([view respondsToSelector:@selector(string)]) {
+            // For some text storage classes
+            currentText = [view performSelector:@selector(string)];
         }
         
-        // Handle attributed text views
-        if ([view respondsToSelector:@selector(setAttributedText:)]) {
-            NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: View supports attributed text");
-            // Get existing attributes if possible
+        // Only proceed if this looks like the main content (not metadata)
+        BOOL isPrimaryContentView = NO;
+        if (currentText.length > 20) {
+            isPrimaryContentView = YES;
+        }
+        
+        // Special case for UILabel - update directly
+        if ([view isKindOfClass:[UILabel class]]) {
+            UILabel *label = (UILabel *)view;
+            
+            // Check if this is a status text label (longer than typical metadata)
+            if (label.text.length > 20) {
+                NSLog(@"[GeminiTranslator] Found main content label: %@", [label.text substringToIndex:MIN(20, label.text.length)]);
+                
+                // Preserve attributes if present
+                if (label.attributedText) {
+                    NSMutableAttributedString *newAttributedText = [[NSMutableAttributedString alloc] initWithAttributedString:label.attributedText];
+                    [newAttributedText replaceCharactersInRange:NSMakeRange(0, newAttributedText.length) 
+                                                     withString:translatedText];
+                    label.attributedText = newAttributedText;
+                } else {
+                    label.text = translatedText;
+                }
+                NSLog(@"[GeminiTranslator] Updated label text to translated version");
+            }
+        }
+        
+        // Handle attributed text on any view type
+        if ([view respondsToSelector:@selector(setAttributedText:)] && isPrimaryContentView) {
+            NSLog(@"[GeminiTranslator] View supports attributed text");
+            
+            // Get existing attributes to preserve formatting
             NSAttributedString *existingText = nil;
             if ([view respondsToSelector:@selector(attributedText)]) {
                 existingText = [view performSelector:@selector(attributedText)];
             }
             
-            // Create new attributed string with existing attributes if available
-            NSAttributedString *newAttributedText = nil;
+            // Create new attributed string preserving all attributes 
             if (existingText && existingText.length > 0) {
+                // Create a mutable attributed string with the translated text
                 NSMutableAttributedString *mutableText = [[NSMutableAttributedString alloc] initWithString:translatedText];
-                [existingText enumerateAttributesInRange:NSMakeRange(0, MIN(existingText.length, 1)) options:0 usingBlock:^(NSDictionary<NSAttributedStringKey,id> *attrs, NSRange range, BOOL *stop) {
-                    [mutableText addAttributes:attrs range:NSMakeRange(0, mutableText.length)];
-                    *stop = YES; // Just take attributes from the first character
+                
+                // Copy attributes from original text (spanning multiple attributes if needed)
+                NSMutableDictionary *allAttributes = [NSMutableDictionary dictionary];
+                [existingText enumerateAttributesInRange:NSMakeRange(0, MIN(existingText.length, 10)) 
+                                                 options:0 
+                                              usingBlock:^(NSDictionary<NSAttributedStringKey,id> *attrs, NSRange range, BOOL *stop) {
+                    [allAttributes addEntriesFromDictionary:attrs];
                 }];
-                newAttributedText = mutableText;
+                
+                // Apply all collected attributes to the entire new string
+                if (allAttributes.count > 0) {
+                    [mutableText addAttributes:allAttributes range:NSMakeRange(0, mutableText.length)];
+                }
+                
+                // Set the fully-styled attributed text on the view
+                [view performSelector:@selector(setAttributedText:) withObject:mutableText];
+                NSLog(@"[GeminiTranslator] Updated attributed text with preserved styling");
             } else {
-                newAttributedText = [[NSAttributedString alloc] initWithString:translatedText];
+                // No existing attributes to preserve, use simple text
+                NSAttributedString *newText = [[NSAttributedString alloc] initWithString:translatedText];
+                [view performSelector:@selector(setAttributedText:) withObject:newText];
+                NSLog(@"[GeminiTranslator] Updated attributed text (simple)");
             }
-            
-            // Set the attributed text
-            [view performSelector:@selector(setAttributedText:) withObject:newAttributedText];
-            NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Updated attributed text");
         }
         
-        // Try text property as a fallback
-        if ([view respondsToSelector:@selector(setText:)]) {
+        // Direct text property update (for UITextView and similar)
+        if ([view respondsToSelector:@selector(setText:)] && isPrimaryContentView) {
             [view performSelector:@selector(setText:) withObject:translatedText];
-            NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Updated text property");
+            NSLog(@"[GeminiTranslator] Updated text property directly");
         }
         
-        // Force layout update
+        // Force updates
         [view setNeedsLayout];
         [view layoutIfNeeded];
         
-        // Force display update
         if ([view respondsToSelector:@selector(setNeedsDisplay)]) {
             [view performSelector:@selector(setNeedsDisplay)];
+        }
+        
+        if ([view respondsToSelector:@selector(invalidateIntrinsicContentSize)]) {
+            [view performSelector:@selector(invalidateIntrinsicContentSize)];
+        }
+    }
+    
+    // Look for StorageView which often contains text
+    if ([className containsString:@"Storage"] || [className containsString:@"Container"]) {
+        if ([view respondsToSelector:@selector(string)] && [view respondsToSelector:@selector(setString:)]) {
+            NSString *currentString = [view performSelector:@selector(string)];
+            if (currentString.length > 20) {
+                [view performSelector:@selector(setString:) withObject:translatedText];
+                NSLog(@"[GeminiTranslator] Updated text storage");
+            }
         }
     }
     
@@ -5041,35 +5102,98 @@ static NSMutableArray *activeTranslationContexts;
 - (void)searchAndUpdateTwitterTextViewsIn:(UIView *)view {
     if (!view) return;
     
-    // Look specifically for TwitterTextView or TFSTwitterTextView which are likely the main content holders
+    // Enhanced detection - look for ANY view that might contain tweet text
     NSString *className = NSStringFromClass([view class]);
-    if ([className containsString:@"TwitterTextView"] || 
-        [className containsString:@"TextContainer"] || 
-        [className containsString:@"T1StatusText"]) {
+    BOOL isPotentialTextContainer = 
+        [className containsString:@"TwitterTextView"] || 
+        [className containsString:@"StatusTextView"] ||
+        [className containsString:@"Text"] ||
+        [className containsString:@"Content"] ||
+        [className containsString:@"Label"] ||
+        [className containsString:@"Tweet"] ||
+        [className containsString:@"Post"] ||
+        [className containsString:@"Status"];
+    
+    // Check if this is a text-related view 
+    if (isPotentialTextContainer) {
+        NSLog(@"[GeminiTranslator] Found potential text container: %@", className);
         
-        NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Found Twitter text view: %@", className);
+        // Get underlying textview if there is one
+        UIView *textView = nil;
         
-        // Try to trigger a text update by using known methods
+        // Try to get the text view through various common properties
+        if ([view respondsToSelector:@selector(textView)]) {
+            textView = [view performSelector:@selector(textView)];
+        } else if ([view respondsToSelector:@selector(contentView)]) {
+            textView = [view performSelector:@selector(contentView)];
+        } else if ([view respondsToSelector:@selector(textContentView)]) {
+            textView = [view performSelector:@selector(textContentView)];
+        }
+        
+        // Update the found text view
+        if (textView) {
+            NSLog(@"[GeminiTranslator] Found inner text view: %@", NSStringFromClass([textView class]));
+            [self searchAndUpdateTwitterTextViewsIn:textView];
+        }
+        
+        // Check for specific text views we know about from the logs
+        if ([className isEqualToString:@"_UITextContainerView"] ||
+            [className containsString:@"UIText"]) {
+            NSLog(@"[GeminiTranslator] Direct text container found");
+            
+            // Force refreshes on key Twitter text views
+            if ([view respondsToSelector:@selector(setNeedsDisplay)]) {
+                [view performSelector:@selector(setNeedsDisplay)];
+            }
+            
+            if ([view respondsToSelector:@selector(setNeedsLayout)]) {
+                [view setNeedsLayout];
+                [view layoutIfNeeded];
+            }
+        }
+        
+        // Try to trigger methods that would refresh the contents
         NSArray *updateMethods = @[
+            // Content update methods
+            @"updateContent",
+            @"refreshContent",
+            @"reloadContent", 
+            @"refresh",
+            @"refreshDisplay",
+            @"reloadData",
+            
+            // Translation-specific methods  
+            @"showTranslation",
+            @"displayTranslation",
+            @"renderTranslation",
+            @"_renderTranslation",
+            @"_t1_showTranslation",
+            
+            // Any refresh methods
             @"refreshTextViewIfNecessary", 
             @"updateWithText:", 
             @"updateText",
-            @"updateDisplay",
-            @"refresh",
-            @"renderTranslation",
-            @"reloadTextView"
+            @"render"
         ];
         
         for (NSString *methodName in updateMethods) {
             SEL selector = NSSelectorFromString(methodName);
             if ([view respondsToSelector:selector]) {
-                NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Calling %@ on %@", methodName, className);
+                NSLog(@"[GeminiTranslator] Calling refresh method: %@ on %@", methodName, className);
                 
                 // Handle methods with parameters differently
                 if ([methodName hasSuffix:@":"]) {
-                    // For methods that take a parameter, we need to pass the displayText
+                    // For methods that take a parameter, pass appropriate objects
                     if ([view respondsToSelector:@selector(attributedText)]) {
                         id text = [view performSelector:@selector(attributedText)];
+                        if (text) {
+                            #pragma clang diagnostic push
+                            #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                            [view performSelector:selector withObject:text];
+                            #pragma clang diagnostic pop
+                        }
+                    } else if ([view respondsToSelector:@selector(text)]) {
+                        id text = [view performSelector:@selector(text)];
                         if (text) {
                             #pragma clang diagnostic push
                             #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
@@ -5087,11 +5211,34 @@ static NSMutableArray *activeTranslationContexts;
             }
         }
         
-        // Force layout update
+        // Check if the view has display delegate methods it should trigger
+        if ([view respondsToSelector:@selector(delegate)]) {
+            id delegate = [view performSelector:@selector(delegate)];
+            if (delegate) {
+                // Try to call key delegate methods that might refresh the display
+                SEL delegateSelectors[] = {
+                    @selector(textViewDidChange:),
+                    @selector(textDidChange:),
+                    @selector(viewDidUpdateContent:),
+                    @selector(contentDidChange:)
+                };
+                
+                for (int i = 0; i < 4; i++) {
+                    if ([delegate respondsToSelector:delegateSelectors[i]]) {
+                        #pragma clang diagnostic push
+                        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                        [delegate performSelector:delegateSelectors[i] withObject:view];
+                        #pragma clang diagnostic pop
+                        NSLog(@"[GeminiTranslator] Called delegate method to refresh");
+                    }
+                }
+            }
+        }
+        
+        // Force layout update and recalculate size
         [view setNeedsLayout];
         [view layoutIfNeeded];
         
-        // Ensure content size is recalculated
         if ([view respondsToSelector:@selector(invalidateIntrinsicContentSize)]) {
             [view performSelector:@selector(invalidateIntrinsicContentSize)];
         }
