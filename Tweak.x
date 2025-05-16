@@ -4877,17 +4877,20 @@ static char kTranslateButtonKey;
         return nil;
     }
     
-    // Step 2: Find T1StatusBodyTextView in T1URTViewController
-    __block T1StatusBodyTextView *bodyTextView = nil;
+    // Step 2: Find TTAStatusBodySelectableContextTextView in T1URTViewController
+    __block UITextView *tweetTextView = nil;
     
-    void (^findTextView)(UIView *) = ^(UIView *view) {
-        if ([NSStringFromClass([view class]) isEqualToString:@"T1StatusBodyTextView"]) {
-            bodyTextView = (T1StatusBodyTextView *)view;
+    // Fix the block recursion warning with __block
+    __block void (^findTextView)(UIView *);
+    findTextView = ^(UIView *view) {
+        if ([NSStringFromClass([view class]) isEqualToString:@"TTAStatusBodySelectableContextTextView"]) {
+            tweetTextView = (UITextView *)view;
+            NSLog(@"[BHTwitter Translate] Found TTAStatusBodySelectableContextTextView");
             return;
         }
         
         for (UIView *subview in view.subviews) {
-            if (!bodyTextView) {
+            if (!tweetTextView) {
                 findTextView(subview);
             }
         }
@@ -4895,64 +4898,16 @@ static char kTranslateButtonKey;
     
     findTextView(targetController.view);
     
-    if (!bodyTextView) {
-        NSLog(@"[BHTwitter Translate] No T1StatusBodyTextView found in T1URTViewController");
-        return nil;
+    if (tweetTextView) {
+        // Get the text directly from the UITextView
+        NSString *tweetText = tweetTextView.text;
+        if (tweetText && tweetText.length > 0) {
+            NSLog(@"[BHTwitter Translate] Got tweet text directly: %@", tweetText);
+            return tweetText;
+        }
     }
     
-    // Step 3: Get the text directly from T1StatusBodyTextView
-    NSLog(@"[BHTwitter Translate] Found T1StatusBodyTextView in T1URTViewController");
-    NSString *text = nil;
-    
-    @try {
-        // First try to get text directly from property
-        if ([bodyTextView respondsToSelector:@selector(text)]) {
-            text = [bodyTextView valueForKey:@"text"];
-            if (text && [text isKindOfClass:[NSString class]] && text.length > 0) {
-                NSLog(@"[BHTwitter Translate] Got text directly from T1StatusBodyTextView.text");
-                return text;
-            }
-        }
-        
-        // Otherwise try through the viewModel
-        if ([bodyTextView respondsToSelector:@selector(viewModel)]) {
-            id viewModel = [bodyTextView valueForKey:@"viewModel"];
-            
-            // Try to get text from viewModel directly
-            if ([viewModel respondsToSelector:@selector(text)]) {
-                text = [viewModel valueForKey:@"text"];
-                if (text && [text isKindOfClass:[NSString class]] && text.length > 0) {
-                    NSLog(@"[BHTwitter Translate] Got text from T1StatusBodyTextView.viewModel.text");
-                    return text;
-                }
-            }
-            
-            // Otherwise try through viewModel's status
-            if ([viewModel respondsToSelector:@selector(status)]) {
-                id status = [viewModel valueForKey:@"status"];
-                
-                if ([status respondsToSelector:@selector(text)]) {
-                    text = [status valueForKey:@"text"];
-                    if (text && [text isKindOfClass:[NSString class]] && text.length > 0) {
-                        NSLog(@"[BHTwitter Translate] Got text from T1StatusBodyTextView.viewModel.status.text");
-                        return text;
-                    }
-                }
-                
-                if ([status respondsToSelector:@selector(fullText)]) {
-                    text = [status valueForKey:@"fullText"];
-                    if (text && [text isKindOfClass:[NSString class]] && text.length > 0) {
-                        NSLog(@"[BHTwitter Translate] Got text from T1StatusBodyTextView.viewModel.status.fullText");
-                        return text;
-                    }
-                }
-            }
-        }
-    } @catch (NSException *e) {
-        NSLog(@"[BHTwitter Translate] Exception while extracting text: %@", e);
-    }
-    
-    NSLog(@"[BHTwitter Translate] Found T1StatusBodyTextView but couldn't extract text");
+    NSLog(@"[BHTwitter Translate] Could not find text in TTAStatusBodySelectableContextTextView");
     return nil;
 }
 
