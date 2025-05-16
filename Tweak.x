@@ -4856,47 +4856,40 @@ static char kTranslateButtonKey;
     return nil;
 }
 
+// Helper function for finding the text view
+static void findTextView(UIView *view, UITextView **tweetTextView) {
+    // Check for TTAStatusBodySelectableContextTextView
+    if ([NSStringFromClass([view class]) isEqualToString:@"TTAStatusBodySelectableContextTextView"]) {
+        *tweetTextView = (UITextView *)view;
+        NSLog(@"[BHTwitter Translate] Found TTAStatusBodySelectableContextTextView");
+        return;
+    }
+    
+    // Recurse into subviews
+    for (UIView *subview in view.subviews) {
+        if (!*tweetTextView) {
+            findTextView(subview, tweetTextView);
+        }
+    }
+}
+
 %new - (NSString *)BHT_extractTextFromStatusObjectInController:(UIViewController *)controller {
-    // Step 1: Find T1URTViewController 
-    UIViewController *targetController = nil;
+    // Don't limit to specific view controllers - search everywhere
+    NSLog(@"[BHTwitter Translate] Searching for tweet text in %@", NSStringFromClass([controller class]));
     
-    if ([NSStringFromClass([controller class]) isEqualToString:@"T1URTViewController"]) {
-        targetController = controller;
-    } else if ([NSStringFromClass([controller class]) isEqualToString:@"T1ConversationContainerViewController"]) {
-        // If in container, look for T1URTViewController child
-        for (UIViewController *childVC in controller.childViewControllers) {
-            if ([NSStringFromClass([childVC class]) isEqualToString:@"T1URTViewController"]) {
-                targetController = childVC;
-                break;
-            }
-        }
+    // Get the root view controller to search the entire hierarchy
+    UIViewController *rootVC = controller;
+    while (rootVC.parentViewController) {
+        rootVC = rootVC.parentViewController;
     }
     
-    if (!targetController) {
-        NSLog(@"[BHTwitter Translate] No T1URTViewController found");
-        return nil;
+    // Find TTAStatusBodySelectableContextTextView in the entire view hierarchy
+    UITextView *tweetTextView = nil;
+    
+    // Start search from root view controller's view
+    if (rootVC.isViewLoaded) {
+        findTextView(rootVC.view, &tweetTextView);
     }
-    
-    // Step 2: Find TTAStatusBodySelectableContextTextView in T1URTViewController
-    __block UITextView *tweetTextView = nil;
-    
-    // Fix the block recursion warning with __block
-    __block void (^findTextView)(UIView *);
-    findTextView = ^(UIView *view) {
-        if ([NSStringFromClass([view class]) isEqualToString:@"TTAStatusBodySelectableContextTextView"]) {
-            tweetTextView = (UITextView *)view;
-            NSLog(@"[BHTwitter Translate] Found TTAStatusBodySelectableContextTextView");
-            return;
-        }
-        
-        for (UIView *subview in view.subviews) {
-            if (!tweetTextView) {
-                findTextView(subview);
-            }
-        }
-    };
-    
-    findTextView(targetController.view);
     
     if (tweetTextView) {
         // Get the text directly from the UITextView
@@ -4907,7 +4900,27 @@ static char kTranslateButtonKey;
         }
     }
     
-    NSLog(@"[BHTwitter Translate] Could not find text in TTAStatusBodySelectableContextTextView");
+    // As a backup, search child view controllers explicitly
+    if (!tweetTextView && [rootVC respondsToSelector:@selector(childViewControllers)]) {
+        for (UIViewController *childVC in rootVC.childViewControllers) {
+            NSLog(@"[BHTwitter Translate] Searching child VC: %@", NSStringFromClass([childVC class]));
+            if (childVC.isViewLoaded) {
+                findTextView(childVC.view, &tweetTextView);
+                if (tweetTextView) break;
+            }
+        }
+    }
+    
+    if (tweetTextView) {
+        // Get the text directly from the UITextView
+        NSString *tweetText = tweetTextView.text;
+        if (tweetText && tweetText.length > 0) {
+            NSLog(@"[BHTwitter Translate] Got tweet text directly from child VC: %@", tweetText);
+            return tweetText;
+        }
+    }
+    
+    NSLog(@"[BHTwitter Translate] Could not find any TTAStatusBodySelectableContextTextView");
     return nil;
 }
 
