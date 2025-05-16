@@ -4858,6 +4858,142 @@ static NSMutableArray *activeTranslationContexts;
 // Replace Google translation with Gemini
 %hook T1TranslationToggleEventHandler
 
+%new
+- (void)searchAndUpdateTranslationElementsIn:(UIView *)view withTranslatedText:(NSString *)translatedText {
+    if (!view || !translatedText) return;
+    
+    // Check if this view might be a translation-related view
+    NSString *className = NSStringFromClass([view class]);
+    BOOL isTextView = [className containsString:@"Label"] || 
+                      [className containsString:@"Text"] || 
+                      [className containsString:@"Translat"];
+    
+    if (isTextView) {
+        NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Found text view to update: %@", className);
+        
+        // Try to update text if it's a UILabel
+        if ([view isKindOfClass:[UILabel class]]) {
+            UILabel *label = (UILabel *)view;
+            NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: UILabel before update: %@", label.text);
+            label.text = translatedText;
+            NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Updated UILabel text");
+        }
+        
+        // Handle attributed text views
+        if ([view respondsToSelector:@selector(setAttributedText:)]) {
+            NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: View supports attributed text");
+            // Get existing attributes if possible
+            NSAttributedString *existingText = nil;
+            if ([view respondsToSelector:@selector(attributedText)]) {
+                existingText = [view performSelector:@selector(attributedText)];
+            }
+            
+            // Create new attributed string with existing attributes if available
+            NSAttributedString *newAttributedText = nil;
+            if (existingText && existingText.length > 0) {
+                NSMutableAttributedString *mutableText = [[NSMutableAttributedString alloc] initWithString:translatedText];
+                [existingText enumerateAttributesInRange:NSMakeRange(0, MIN(existingText.length, 1)) options:0 usingBlock:^(NSDictionary<NSAttributedStringKey,id> *attrs, NSRange range, BOOL *stop) {
+                    [mutableText addAttributes:attrs range:NSMakeRange(0, mutableText.length)];
+                    *stop = YES; // Just take attributes from the first character
+                }];
+                newAttributedText = mutableText;
+            } else {
+                newAttributedText = [[NSAttributedString alloc] initWithString:translatedText];
+            }
+            
+            // Set the attributed text
+            [view performSelector:@selector(setAttributedText:) withObject:newAttributedText];
+            NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Updated attributed text");
+        }
+        
+        // Try text property as a fallback
+        if ([view respondsToSelector:@selector(setText:)]) {
+            [view performSelector:@selector(setText:) withObject:translatedText];
+            NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Updated text property");
+        }
+        
+        // Force layout update
+        [view setNeedsLayout];
+        [view layoutIfNeeded];
+        
+        // Force display update
+        if ([view respondsToSelector:@selector(setNeedsDisplay)]) {
+            [view performSelector:@selector(setNeedsDisplay)];
+        }
+    }
+    
+    // Recursively check subviews
+    for (UIView *subview in view.subviews) {
+        [self searchAndUpdateTranslationElementsIn:subview withTranslatedText:translatedText];
+    }
+}
+
+%new
+- (void)searchAndUpdateTwitterTextViewsIn:(UIView *)view {
+    if (!view) return;
+    
+    // Look specifically for TwitterTextView or TFSTwitterTextView which are likely the main content holders
+    NSString *className = NSStringFromClass([view class]);
+    if ([className containsString:@"TwitterTextView"] || 
+        [className containsString:@"TextContainer"] || 
+        [className containsString:@"T1StatusText"]) {
+        
+        NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Found Twitter text view: %@", className);
+        
+        // Try to trigger a text update by using known methods
+        NSArray *updateMethods = @[
+            @"refreshTextViewIfNecessary", 
+            @"updateWithText:", 
+            @"updateText",
+            @"updateDisplay",
+            @"refresh",
+            @"renderTranslation",
+            @"reloadTextView"
+        ];
+        
+        for (NSString *methodName in updateMethods) {
+            SEL selector = NSSelectorFromString(methodName);
+            if ([view respondsToSelector:selector]) {
+                NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Calling %@ on %@", methodName, className);
+                
+                // Handle methods with parameters differently
+                if ([methodName hasSuffix:@":"]) {
+                    // For methods that take a parameter, we need to pass the displayText
+                    if ([view respondsToSelector:@selector(attributedText)]) {
+                        id text = [view performSelector:@selector(attributedText)];
+                        if (text) {
+                            #pragma clang diagnostic push
+                            #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                            [view performSelector:selector withObject:text];
+                            #pragma clang diagnostic pop
+                        }
+                    }
+                } else {
+                    // For methods without parameters
+                    #pragma clang diagnostic push
+                    #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                    [view performSelector:selector];
+                    #pragma clang diagnostic pop
+                }
+            }
+        }
+        
+        // Force layout update
+        [view setNeedsLayout];
+        [view layoutIfNeeded];
+        
+        // Ensure content size is recalculated
+        if ([view respondsToSelector:@selector(invalidateIntrinsicContentSize)]) {
+            [view performSelector:@selector(invalidateIntrinsicContentSize)];
+        }
+    }
+    
+    // Recursively check subviews
+    for (UIView *subview in view.subviews) {
+        [self searchAndUpdateTwitterTextViewsIn:subview];
+    }
+}
+
 + (void)load {
     activeTranslationContexts = [NSMutableArray new];
 }
@@ -5501,21 +5637,36 @@ static NSMutableArray *activeTranslationContexts;
                                         }
                                         
                                         @try {
-                                            // Try to extract content details from the current view
+                                            // Try to extract and update content details from the current view
                                             if ([currentView respondsToSelector:@selector(contentView)]) {
                                                 UIView *contentView = [currentView performSelector:@selector(contentView)];
                                                 NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Content view: %@", contentView);
                                                 
-                                                // Try to find text labels in content view
+                                                // Try to find and update text labels in content view
                                                 if ([contentView isKindOfClass:[UIView class]]) {
+                                                    // Search for and update key UI components
+                                                    [self searchAndUpdateTranslationElementsIn:contentView withTranslatedText:[translatedViewModel performSelector:@selector(displayText)]];
+                                                    
+                                                    // Force contentView to update
+                                                    [contentView setNeedsLayout];
+                                                    [contentView layoutIfNeeded];
+                                                    
+                                                    // Try to find specific translation container
                                                     for (UIView *subview in contentView.subviews) {
-                                                        if ([subview isKindOfClass:[UILabel class]]) {
-                                                            UILabel *label = (UILabel *)subview;
-                                                            NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Found label with text: %@", label.text);
+                                                        NSString *className = NSStringFromClass([subview class]);
+                                                        if ([className containsString:@"TranslatedContent"] || 
+                                                            [className containsString:@"Translation"] ||
+                                                            [className containsString:@"Text"]) {
+                                                            NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Found potential translation container: %@", className);
+                                                            [subview setNeedsLayout];
+                                                            [subview layoutIfNeeded];
                                                         }
                                                     }
                                                 }
                                             }
+                                            
+                                            // Directly search for any TwitterTextView which is likely the main content view
+                                            [self searchAndUpdateTwitterTextViewsIn:currentView];
                                             
                                             // Attempt to update the view model
                                             if ([currentView respondsToSelector:@selector(setViewModel:)]) {
@@ -5877,6 +6028,50 @@ static NSMutableArray *activeTranslationContexts;
                     NSLog(@"[GeminiTranslator] DETAILED DEBUG: About to invoke handler method %@", NSStringFromSelector(handlerSelector));
                     [handlerInv invoke];
                     
+                    // After invoking handler, try to directly trigger translation display on controller
+                    NSArray *translationDisplayMethods = @[
+                        @"displayTranslation", 
+                        @"showTranslation",
+                        @"_t1_showTranslation",
+                        @"_t1_displayTranslation", 
+                        @"_internal_displayTranslation",
+                        @"updateTranslationState"
+                    ];
+                    
+                    // Try methods on the controller first
+                    for (NSString *methodName in translationDisplayMethods) {
+                        SEL selector = NSSelectorFromString(methodName);
+                        if ([context.controller respondsToSelector:selector]) {
+                            NSLog(@"[GeminiTranslator] DETAILED DEBUG: Calling %@ on controller", methodName);
+                            #pragma clang diagnostic push
+                            #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                            [context.controller performSelector:selector];
+                            #pragma clang diagnostic pop
+                        }
+                    }
+                    
+                    // Also look for any contentview property on controller that might need updating
+                    if ([context.controller respondsToSelector:@selector(contentView)]) {
+                        UIView *contentView = [context.controller performSelector:@selector(contentView)];
+                        if (contentView) {
+                            NSLog(@"[GeminiTranslator] DETAILED DEBUG: Found controller content view: %@", contentView);
+                            [contentView setNeedsLayout];
+                            [contentView layoutIfNeeded];
+                            
+                            // Try to find and trigger translation display methods on content view
+                            for (NSString *methodName in translationDisplayMethods) {
+                                SEL selector = NSSelectorFromString(methodName);
+                                if ([contentView respondsToSelector:selector]) {
+                                    NSLog(@"[GeminiTranslator] DETAILED DEBUG: Calling %@ on content view", methodName);
+                                    #pragma clang diagnostic push
+                                    #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                                    [contentView performSelector:selector];
+                                    #pragma clang diagnostic pop
+                                }
+                            }
+                        }
+                    }
+                    
                     // Try to get any return value
                     if (handlerSig.methodReturnLength > 0) {
                         NSLog(@"[GeminiTranslator] DETAILED DEBUG: Handler method has return type of length %lu", 
@@ -6014,4 +6209,12 @@ static NSMutableArray *activeTranslationContexts;
 %end
 
 // Replace Google Translate provider with Gemini
+
+
+
+}
+
+// Continue with existing code...
+%end
+
 
