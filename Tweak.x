@@ -4661,12 +4661,12 @@ static char kTranslateButtonKey;
         
         objc_setAssociatedObject(self, &kTranslateButtonKey, translateButton, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         
-        // Change strategy: place button on the left side instead to avoid collision
-        // This is more reliable than trying to detect right buttons which may not be laid out yet
+        // Place the button on the right but with a larger offset to avoid collisions
+        // Use a much larger offset from the right edge to avoid most controls
         
         [NSLayoutConstraint activateConstraints:@[
             [translateButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
-            [translateButton.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:12], // Place on left side
+            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-80], // Much larger offset from right edge
             [translateButton.widthAnchor constraintEqualToConstant:44],
             [translateButton.heightAnchor constraintEqualToConstant:44]
         ]];
