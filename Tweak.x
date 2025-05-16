@@ -5410,163 +5410,237 @@ static NSMutableArray *activeTranslationContexts;
                     if (controllerView) {
                         NSLog(@"[GeminiTranslator] Looking for status views to update");
                         
-                        // Abandon our custom view update approach and force Twitter's native handlers to do the work
-                        // Skip all the custom view finding logic and rely on Twitter's existing handlers
-                        
-                        NSLog(@"[GeminiTranslator] Trying to use Twitter's native translation display mechanisms");
-                        
-                        // Force immediate notification on main thread that translation is complete
+                        // Since findAndUpdateStatusViewsIn is not implemented, use a simpler approach
+                        // without recursion to avoid potential performance issues
                         dispatch_async(dispatch_get_main_queue(), ^{
-                            // Forget about trying to attach to current viewModel - use translatedViewModel directly
-                            @try {
-                                NSLog(@"[GeminiTranslator] Trying alternative UI refresh methods");
+                            NSLog(@"[GeminiTranslator] Starting view update with non-recursive approach");
+                            
+                            // Log details about translation and view model
+                            NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Controller class: %@", NSStringFromClass([context.controller class]));
+                            NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Controller view class: %@", NSStringFromClass([controllerView class]));
+                            
+                            // Examine what's in the translated view model
+                            if ([translatedViewModel respondsToSelector:@selector(translation)]) {
+                                id translationObj = [translatedViewModel performSelector:@selector(translation)];
+                                NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Translation object in view model: %@", translationObj);
+                            }
+                            
+                            // Check if we have a displayText property
+                            if ([translatedViewModel respondsToSelector:@selector(displayText)]) {
+                                NSString *displayText = [translatedViewModel performSelector:@selector(displayText)];
+                                NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Display text: %@", displayText);
+                            }
+                            
+                            // Check for UI relevant properties
+                            if ([translatedViewModel respondsToSelector:@selector(isTranslated)]) {
+                                BOOL isTranslated = [translatedViewModel performSelector:@selector(isTranslated)];
+                                NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: isTranslated: %@", isTranslated ? @"YES" : @"NO");
+                            }
+                            
+                            // Just try a simple, direct update on the controller's view if possible
+                            if ([controllerView respondsToSelector:@selector(setNeedsLayout)]) {
+                                [controllerView setNeedsLayout];
+                                [controllerView layoutIfNeeded];
+                                NSLog(@"[GeminiTranslator] Forced layout update on controller view");
+                            }
+                            
+                            // Try to find the status cell using a queue-based approach instead of recursion
+                            NSMutableArray *viewsToCheck = [NSMutableArray arrayWithObject:controllerView];
+                            NSInteger maxChecks = 100; // Limit checks to avoid potential infinite loops
+                            NSInteger checksPerformed = 0;
+                            BOOL foundAndUpdated = NO;
+                            
+                            NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Beginning view hierarchy search");
+                            
+                            while (viewsToCheck.count > 0 && checksPerformed < maxChecks && !foundAndUpdated) {
+                                UIView *currentView = viewsToCheck.firstObject;
+                                [viewsToCheck removeObjectAtIndex:0];
+                                checksPerformed++;
                                 
-                                // We've seen that we can't directly modify the TFNTwitterStatus with translation
-                                // So instead, focus on methods that work with the translatedViewModel directly
+                                // Check if this view is a status view
+                                NSString *viewClassName = NSStringFromClass([currentView class]);
+                                BOOL isStatusView = [viewClassName containsString:@"StatusView"] || 
+                                                    [viewClassName containsString:@"TweetView"];
                                 
-                                // Check if the controller has a displayViewModel: method
-                                SEL displayViewModelSelector = NSSelectorFromString(@"displayViewModel:");
-                                if ([context.controller respondsToSelector:displayViewModelSelector]) {
-                                    NSLog(@"[GeminiTranslator] Calling displayViewModel: with translated model");
-                                    // Using NSInvocation to avoid ARC warnings
-                                    NSMethodSignature *signature = [context.controller methodSignatureForSelector:displayViewModelSelector];
-                                    if (signature) {
-                                        NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
-                                        [invocation setSelector:displayViewModelSelector];
-                                        [invocation setTarget:context.controller];
-                                        [invocation setArgument:&translatedViewModel atIndex:2];
-                                        [invocation invoke];
+                                if (isStatusView) {
+                                    // Try to get the view model
+                                    id viewModel = nil;
+                                    if ([currentView respondsToSelector:@selector(viewModel)]) {
+                                        viewModel = [currentView performSelector:@selector(viewModel)];
+                                    } else if ([currentView respondsToSelector:@selector(statusViewModel)]) {
+                                        viewModel = [currentView performSelector:@selector(statusViewModel)];
+                                    }
+                                    
+                                    // Check if this is our target
+                                    BOOL isTarget = NO;
+                                    if (viewModel && [viewModel isEqual:context.statusViewModel]) {
+                                        isTarget = YES;
+                                    } else if (statusID && [viewModel respondsToSelector:@selector(statusIDString)]) {
+                                        NSString *viewID = [viewModel performSelector:@selector(statusIDString)];
+                                        if ([viewID isEqualToString:statusID]) {
+                                            isTarget = YES;
+                                        }
+                                    }
+                                    
+                                    // Update if it's our target
+                                    if (isTarget) {
+                                        NSLog(@"[GeminiTranslator] Found matching status view: %@", currentView);
+                                        NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Target view class: %@", NSStringFromClass([currentView class]));
+                                        
+                                        // Log all methods the view responds to that might be relevant
+                                        NSArray *potentialMethods = @[@"setViewModel:", @"setStatusViewModel:", @"setViewModelAndUpdateUI:", 
+                                                                    @"configureWithViewModel:", @"updateWithViewModel:", @"showTranslation", 
+                                                                    @"updateWithTranslation:", @"displayTranslation", @"render", @"renderTranslation",
+                                                                    @"reloadData", @"refreshUI", @"updateUI"];
+                                        
+                                        for (NSString *methodName in potentialMethods) {
+                                            SEL selector = NSSelectorFromString(methodName);
+                                            BOOL responds = [currentView respondsToSelector:selector];
+                                            NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: View responds to %@: %@", 
+                                                methodName, responds ? @"YES" : @"NO");
+                                        }
+                                        
+                                        @try {
+                                            // Try to extract content details from the current view
+                                            if ([currentView respondsToSelector:@selector(contentView)]) {
+                                                UIView *contentView = [currentView performSelector:@selector(contentView)];
+                                                NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Content view: %@", contentView);
+                                                
+                                                // Try to find text labels in content view
+                                                if ([contentView isKindOfClass:[UIView class]]) {
+                                                    for (UIView *subview in contentView.subviews) {
+                                                        if ([subview isKindOfClass:[UILabel class]]) {
+                                                            UILabel *label = (UILabel *)subview;
+                                                            NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Found label with text: %@", label.text);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            
+                                            // Attempt to update the view model
+                                            if ([currentView respondsToSelector:@selector(setViewModel:)]) {
+                                                [currentView performSelector:@selector(setViewModel:) withObject:translatedViewModel];
+                                                NSLog(@"[GeminiTranslator] Updated viewModel");
+                                                foundAndUpdated = YES;
+                                            } else if ([currentView respondsToSelector:@selector(setStatusViewModel:)]) {
+                                                [currentView performSelector:@selector(setStatusViewModel:) withObject:translatedViewModel];
+                                                NSLog(@"[GeminiTranslator] Updated statusViewModel");
+                                                foundAndUpdated = YES;
+                                            }
+                                            
+                                            // Try additional update methods
+                                            if ([currentView respondsToSelector:@selector(setNeedsUpdateConfiguration)]) {
+                                                [currentView performSelector:@selector(setNeedsUpdateConfiguration)];
+                                                NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Called setNeedsUpdateConfiguration");
+                                            }
+                                            
+                                            if ([currentView respondsToSelector:@selector(showTranslation)]) {
+                                                [currentView performSelector:@selector(showTranslation)];
+                                                NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Called showTranslation");
+                                            }
+                                            
+                                            // Force layout update
+                                            [currentView setNeedsLayout];
+                                            [currentView layoutIfNeeded];
+                                            NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Forced layout update on target view");
+                                            
+                                            // Try to invalidate display
+                                            if ([currentView respondsToSelector:@selector(invalidateIntrinsicContentSize)]) {
+                                                [currentView performSelector:@selector(invalidateIntrinsicContentSize)];
+                                                NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Invalidated intrinsic content size");
+                                            }
+                                            
+                                        } @catch (NSException *e) {
+                                            NSLog(@"[GeminiTranslator] Exception updating view: %@", e);
+                                        }
                                     }
                                 }
                                 
-                                // Try updating any status cells we can find
-                                UIView *containerView = [context.controller valueForKey:@"view"];
-                                if (containerView) {
-                                    // Look for status cells/views
-                                    NSMutableArray *statusViews = [NSMutableArray array];
-                                    // Queue-based approach to find status views
-                                    NSMutableArray *queue = [NSMutableArray arrayWithObject:containerView];
+                                // Add subviews to the queue
+                                for (UIView *subview in currentView.subviews) {
+                                    [viewsToCheck addObject:subview];
+                                }
+                            }
+                            
+                            if (!foundAndUpdated) {
+                                NSLog(@"[GeminiTranslator] Could not find specific status view to update (checked %ld views)", (long)checksPerformed);
+                                NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Attempting fallback methods on controller");
+                                
+                                // Introspect available controller methods
+                                Class controllerClass = [context.controller class];
+                                unsigned int methodCount = 0;
+                                Method *methods = class_copyMethodList(controllerClass, &methodCount);
+                                
+                                if (methods) {
+                                    NSMutableArray *refreshMethods = [NSMutableArray array];
                                     
-                                    while (queue.count > 0) {
-                                        UIView *view = queue.firstObject;
-                                        [queue removeObjectAtIndex:0];
+                                    // Look for promising refresh methods
+                                    for (unsigned int i = 0; i < methodCount; i++) {
+                                        Method method = methods[i];
+                                        SEL selector = method_getName(method);
+                                        NSString *selectorName = NSStringFromSelector(selector);
                                         
-                                        // Check if this is a status view
-                                        NSString *className = NSStringFromClass([view class]);
-                                        if ([className containsString:@"StatusView"] || 
-                                            [className containsString:@"TweetView"]) {
-                                            [statusViews addObject:view];
-                                        }
-                                        
-                                        // Add subviews to queue
-                                        for (UIView *subview in view.subviews) {
-                                            [queue addObject:subview];
+                                        if ([selectorName containsString:@"reload"] || 
+                                            [selectorName containsString:@"refresh"] || 
+                                            [selectorName containsString:@"update"] || 
+                                            [selectorName containsString:@"display"] || 
+                                            [selectorName containsString:@"translation"]) {
+                                            
+                                            [refreshMethods addObject:selectorName];
                                         }
                                     }
                                     
-                                    // Update all found status views
-                                    for (UIView *statusView in statusViews) {
-                                        NSLog(@"[GeminiTranslator] Found status view to update: %@", statusView);
-                                        
-                                        // Try updateViewModel: first
-                                        if ([statusView respondsToSelector:@selector(updateViewModel:)]) {
-                                            // Using NSInvocation to avoid ARC warnings
-                                            NSMethodSignature *sig = [statusView methodSignatureForSelector:@selector(updateViewModel:)];
-                                            if (sig) {
-                                                NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
-                                                [inv setSelector:@selector(updateViewModel:)];
-                                                [inv setTarget:statusView];
-                                                [inv setArgument:&translatedViewModel atIndex:2];
-                                                [inv invoke];
-                                                NSLog(@"[GeminiTranslator] Called updateViewModel:");
+                                    free(methods);
+                                    NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Found potential refresh methods: %@", refreshMethods);
+                                }
+                                
+                                // Try various controller refresh methods as fallback
+                                NSArray *methodsToTry = @[@"reloadData", @"refreshUI", @"updateUI", @"invalidateDisplay", 
+                                                        @"refresh", @"updateViewModelAndUI", @"updateContent", 
+                                                        @"_t1_reloadData", @"_internal_refreshDisplay"];
+                                
+                                for (NSString *methodName in methodsToTry) {
+                                    SEL selector = NSSelectorFromString(methodName);
+                                    if ([context.controller respondsToSelector:selector]) {
+                                        NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Calling %@ on controller", methodName);
+                                        @try {
+                                            // Use NSInvocation to avoid ARC warnings about performSelector leaks
+                                            NSMethodSignature *signature = [[context.controller class] instanceMethodSignatureForSelector:selector];
+                                            if (signature) {
+                                                NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+                                                [invocation setSelector:selector];
+                                                [invocation setTarget:context.controller];
+                                                [invocation invoke];
+                                            } else {
+                                                // Fallback to performSelector if signature can't be obtained
+                                                #pragma clang diagnostic push
+                                                #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                                                [context.controller performSelector:selector];
+                                                #pragma clang diagnostic pop
                                             }
+                                        } @catch (NSException *e) {
+                                            NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Exception in %@: %@", methodName, e);
                                         }
-                                        // Then try setViewModel: if available
-                                        else if ([statusView respondsToSelector:@selector(setViewModel:)]) {
-                                            // Using NSInvocation to avoid ARC warnings
-                                            NSMethodSignature *sig = [statusView methodSignatureForSelector:@selector(setViewModel:)];
-                                            if (sig) {
-                                                NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
-                                                [inv setSelector:@selector(setViewModel:)];
-                                                [inv setTarget:statusView];
-                                                [inv setArgument:&translatedViewModel atIndex:2];
-                                                [inv invoke];
-                                                NSLog(@"[GeminiTranslator] Called setViewModel:");
-                                            }
-                                        }
-                                        
-                                        [statusView setNeedsLayout];
-                                        [statusView layoutIfNeeded];
                                     }
                                 }
                                 
-                                // Try reloading the controller as a last resort
+                                // Special case for reloadData (highest priority)
                                 if ([context.controller respondsToSelector:@selector(reloadData)]) {
-                                    NSLog(@"[GeminiTranslator] Reloading controller data");
-                                    // Using NSInvocation to avoid ARC warnings
-                                    NSMethodSignature *sig = [context.controller methodSignatureForSelector:@selector(reloadData)];
-                                    if (sig) {
-                                        NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
-                                        [inv setSelector:@selector(reloadData)];
-                                        [inv setTarget:context.controller];
-                                        [inv invoke];
+                                    NSLog(@"[GeminiTranslator] Trying reloadData on controller as fallback");
+                                    [context.controller performSelector:@selector(reloadData)];
+                                }
+                                
+                                // Also try to force a complete layout update on the controller's view
+                                if ([context.controller respondsToSelector:@selector(view)]) {
+                                    UIView *view = [context.controller performSelector:@selector(view)];
+                                    if (view) {
+                                        [view setNeedsLayout];
+                                        [view layoutIfNeeded];
+                                        NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Forced full layout on controller view");
                                     }
                                 }
-                            } @catch (NSException *e) {
-                                NSLog(@"[GeminiTranslator] Exception during UI update: %@", e);
                             }
                         });
-                        
-                        // Use a completely different approach - directly push the translated view model
-                        // into Twitter's UI system
-                        NSLog(@"[GeminiTranslator] Using direct UI update approach");
-                        
-                        // Tried direct KVC and it failed - Twitter doesn't allow us to set translation directly
-                        // Instead, we need to make our T1TranslatedStatusViewModel visible to the UI
-                        
-                        // 1. First attempt - use the T1StatusInlineActionsContainer to push our model
-                        UIResponder *responder = context.controller;
-                        while (responder && ![responder isKindOfClass:NSClassFromString(@"T1StatusInlineActionsContainer")] &&
-                               ![responder isKindOfClass:NSClassFromString(@"TTAStatusInlineActionsContainer")]) {
-                            responder = [responder nextResponder];
-                        }
-                        
-                        if (responder) {
-                            NSLog(@"[GeminiTranslator] Found T1StatusInlineActionsContainer: %@", responder);
-                            
-                            // Try to set our translated model in the actions container
-                            if ([responder respondsToSelector:@selector(setStatusViewModel:)]) {
-                                NSLog(@"[GeminiTranslator] Setting translated view model on actions container");
-                                [responder performSelector:@selector(setStatusViewModel:) withObject:translatedViewModel];
-                            }
-                        }
-                        
-                        // 2. Second attempt - hook into specific translation methods
-                        Class tweetDetailsClass = NSClassFromString(@"T1TweetDetailsViewController");
-                        if ([context.controller isKindOfClass:tweetDetailsClass]) {
-                            NSLog(@"[GeminiTranslator] Controller is T1TweetDetailsViewController, trying specific methods");
-                            
-                                                         SEL translationCompletedSel = NSSelectorFromString(@"_handleTranslationCompleted:");
-                                if ([context.controller respondsToSelector:translationCompletedSel]) {
-                                    NSLog(@"[GeminiTranslator] Calling _handleTranslationCompleted:");
-                                    // Using NSInvocation to avoid ARC warnings
-                                    NSMethodSignature *signature = [context.controller methodSignatureForSelector:translationCompletedSel];
-                                    if (signature) {
-                                        NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
-                                        [invocation setSelector:translationCompletedSel];
-                                        [invocation setTarget:context.controller];
-                                        [invocation setArgument:&translatedViewModel atIndex:2];
-                                        [invocation invoke];
-                                    }
-                                }
-                        }
-                        
-                        // 3. Finally fall back to the Twitter handler but with our translated view model
-                        NSLog(@"[GeminiTranslator] Falling back to Twitter handler with translated model");
-                        
-                        // This is a key change - we're calling the original with our *translated* view model
-                        // instead of the original status view model
-                        %orig(translatedViewModel, context.account, context.controller);
                     }
                 }
             } @catch (NSException *exception) {
@@ -5716,6 +5790,47 @@ static NSMutableArray *activeTranslationContexts;
                     id tempVM = translatedViewModel;
                     id tempController = context.controller;
                     
+                    // Extensive logging about the view model and translation
+                    NSLog(@"[GeminiTranslator] DETAILED DEBUG: Handler method: %@", NSStringFromSelector(handlerSelector));
+                    NSLog(@"[GeminiTranslator] DETAILED DEBUG: Original view model class: %@", NSStringFromClass([context.statusViewModel class]));
+                    NSLog(@"[GeminiTranslator] DETAILED DEBUG: Translated view model class: %@", NSStringFromClass([translatedViewModel class]));
+                    
+                    // Check what translation text we have
+                    if ([translationObject respondsToSelector:@selector(translation)]) {
+                        NSString *translatedText = [translationObject performSelector:@selector(translation)];
+                        NSLog(@"[GeminiTranslator] DETAILED DEBUG: Translation text: %@", translatedText);
+                    }
+                    
+                    // Check if translation is present in the translated view model
+                    if ([translatedViewModel respondsToSelector:@selector(translation)]) {
+                        id translation = [translatedViewModel performSelector:@selector(translation)];
+                        NSLog(@"[GeminiTranslator] DETAILED DEBUG: Translation in translated view model: %@", translation);
+                        
+                        if ([translation respondsToSelector:@selector(translation)]) {
+                            NSString *translationText = [translation performSelector:@selector(translation)];
+                            NSLog(@"[GeminiTranslator] DETAILED DEBUG: Inner translation text: %@", translationText);
+                        }
+                    }
+                    
+                    // Check display text range if available
+                    if ([translatedViewModel respondsToSelector:@selector(displayTextRange)]) {
+                        // Use NSInvocation to properly handle struct return value
+                        NSMethodSignature *signature = [[translatedViewModel class] instanceMethodSignatureForSelector:@selector(displayTextRange)];
+                        if (signature) {
+                            NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+                            [invocation setSelector:@selector(displayTextRange)];
+                            [invocation setTarget:translatedViewModel];
+                            [invocation invoke];
+                            
+                            NSRange range;
+                            [invocation getReturnValue:&range];
+                            NSLog(@"[GeminiTranslator] DETAILED DEBUG: Display text range: location=%lu, length=%lu", 
+                                 (unsigned long)range.location, (unsigned long)range.length);
+                        } else {
+                            NSLog(@"[GeminiTranslator] DETAILED DEBUG: Could not get method signature for displayTextRange");
+                        }
+                    }
+                    
                     // Get the expected parameter count from the signature
                     NSUInteger expectedArgCount = handlerSig.numberOfArguments - 2; // Subtract 2 for self and _cmd
                     NSLog(@"[GeminiTranslator] Handler signature expects %lu parameters", (unsigned long)expectedArgCount);
@@ -5759,12 +5874,37 @@ static NSMutableArray *activeTranslationContexts;
                         }
                     }
                     
+                    NSLog(@"[GeminiTranslator] DETAILED DEBUG: About to invoke handler method %@", NSStringFromSelector(handlerSelector));
                     [handlerInv invoke];
                     
+                    // Try to get any return value
+                    if (handlerSig.methodReturnLength > 0) {
+                        NSLog(@"[GeminiTranslator] DETAILED DEBUG: Handler method has return type of length %lu", 
+                             (unsigned long)handlerSig.methodReturnLength);
+                        
+                        if (strcmp(handlerSig.methodReturnType, @encode(id)) == 0) {
+                            __unsafe_unretained id result = nil;
+                            [handlerInv getReturnValue:&result];
+                            NSLog(@"[GeminiTranslator] DETAILED DEBUG: Handler returned object: %@", result);
+                        } else if (strcmp(handlerSig.methodReturnType, @encode(BOOL)) == 0) {
+                            BOOL result = NO;
+                            [handlerInv getReturnValue:&result];
+                            NSLog(@"[GeminiTranslator] DETAILED DEBUG: Handler returned BOOL: %@", result ? @"YES" : @"NO");
+                        }
+                    }
+                    
                     NSLog(@"[GeminiTranslator] Successfully displayed translation inline");
+                    
+                    // Attempt to check if the translation is visible now
+                    if ([translatedViewModel respondsToSelector:@selector(isTranslated)]) {
+                        BOOL isTranslated = [translatedViewModel performSelector:@selector(isTranslated)];
+                        NSLog(@"[GeminiTranslator] DETAILED DEBUG: After handler, isTranslated: %@", isTranslated ? @"YES" : @"NO");
+                    }
                 }
             } @catch (NSException *exception) {
                 NSLog(@"[GeminiTranslator] Exception in handler: %@", exception);
+                NSLog(@"[GeminiTranslator] DETAILED DEBUG: Exception occurred in handler call or preparation: %@\nReason: %@\nStack trace: %@", 
+                     exception.name, exception.reason, exception.callStackSymbols);
                 %orig(context.statusViewModel, context.account, context.controller);
             }
             
