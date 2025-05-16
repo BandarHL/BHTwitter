@@ -5651,61 +5651,146 @@ static NSMutableArray *activeTranslationContexts;
                 Class textViewClass = NSClassFromString(@"TTAStatusBodyTextView");
                 UIView *translationView = nil;
                 
+                NSLog(@"[GeminiTranslator] DEBUG: Attempting to create translation view with text: %@", translatedText);
+                
                 if (textViewClass) {
-                    // Create a proper Twitter text view
-                    translationView = [[textViewClass alloc] init];
-                } else {
-                    // Fallback to standard UITextView
+                    NSLog(@"[GeminiTranslator] DEBUG: Found TTAStatusBodyTextView class");
+                    
+                    // Try to find the initialization method
+                    SEL initSelector = NSSelectorFromString(@"initWithFrame:");
+                    if ([textViewClass instancesRespondToSelector:initSelector]) {
+                        translationView = [[textViewClass alloc] initWithFrame:CGRectZero];
+                        NSLog(@"[GeminiTranslator] DEBUG: Created TTAStatusBodyTextView instance: %@", translationView);
+                        
+                        // Try to configure the text view using Twitter's methods
+                        if ([translationView respondsToSelector:@selector(setAttributedText:)]) {
+                            NSAttributedString *attributedText = [[NSAttributedString alloc] initWithString:translatedText];
+                            [translationView performSelector:@selector(setAttributedText:) withObject:attributedText];
+                            NSLog(@"[GeminiTranslator] DEBUG: Set attributed text");
+                        }
+                        
+                        // Try to set additional properties that Twitter might use
+                        if ([translationView respondsToSelector:@selector(setSelectable:)]) {
+                            [translationView performSelector:@selector(setSelectable:) withObject:@YES];
+                        }
+                        
+                        if ([translationView respondsToSelector:@selector(setDataDetectorTypes:)]) {
+                            [translationView performSelector:@selector(setDataDetectorTypes:) withObject:@(UIDataDetectorTypeLink)];
+                        }
+                    }
+                }
+                
+                if (!translationView) {
+                    NSLog(@"[GeminiTranslator] DEBUG: Falling back to UITextView");
                     UITextView *textView = [[UITextView alloc] init];
                     textView.editable = NO;
                     textView.scrollEnabled = NO;
+                    textView.selectable = YES;
                     textView.dataDetectorTypes = UIDataDetectorTypeLink;
+                    textView.font = [UIFont systemFontOfSize:15];
+                    textView.textColor = [UIColor blackColor];
+                    textView.backgroundColor = [UIColor clearColor];
+                    textView.text = translatedText;
                     translationView = textView;
                 }
                 
                 // Configure the view
                 translationView.translatesAutoresizingMaskIntoConstraints = NO;
+                
+                // Try multiple ways to set the text
+                NSLog(@"[GeminiTranslator] DEBUG: Setting text through multiple methods");
+                
                 if ([translationView respondsToSelector:@selector(setText:)]) {
                     [translationView performSelector:@selector(setText:) withObject:translatedText];
-                } else if ([translationView isKindOfClass:[UITextView class]]) {
-                    ((UITextView *)translationView).text = translatedText;
+                    NSLog(@"[GeminiTranslator] DEBUG: Set text via setText:");
                 }
                 
-                // Add to container
-                [containerView addSubview:translationView];
+                if ([translationView respondsToSelector:@selector(setAttributedText:)]) {
+                    NSAttributedString *attributedText = [[NSAttributedString alloc] initWithString:translatedText];
+                    [translationView performSelector:@selector(setAttributedText:) withObject:attributedText];
+                    NSLog(@"[GeminiTranslator] DEBUG: Set text via setAttributedText:");
+                }
                 
-                // Try to position it properly in the container - relative to existing subviews
-                NSMutableArray *constraints = [NSMutableArray array];
-                
-                if (foundTranslateButton) {
-                    // Find translate button again to create constraint
-                    for (UIView *subview in containerView.subviews) {
-                        if ([NSStringFromClass([subview class]) isEqualToString:@"T1TranslateButton"]) {
-                            [constraints addObject:[translationView.topAnchor constraintEqualToAnchor:subview.bottomAnchor constant:8]];
-                            break;
-                        }
+                // Try to configure any Twitter-specific properties
+                if ([translationView respondsToSelector:@selector(setValue:forKey:)]) {
+                    @try {
+                        [translationView setValue:@YES forKey:@"isTranslation"];
+                        [translationView setValue:translatedText forKey:@"translatedText"];
+                        NSLog(@"[GeminiTranslator] DEBUG: Set Twitter-specific properties");
+                    } @catch (NSException *e) {
+                        NSLog(@"[GeminiTranslator] DEBUG: Exception setting properties: %@", e);
                     }
                 }
                 
-                // Add horizontal constraints - try to match existing layout
-                [constraints addObject:[translationView.leadingAnchor constraintEqualToAnchor:containerView.leadingAnchor constant:16]];
-                [constraints addObject:[translationView.trailingAnchor constraintEqualToAnchor:containerView.trailingAnchor constant:-16]];
+                NSLog(@"[GeminiTranslator] DEBUG: Adding translation view to container");
                 
-                // If we couldn't find translate button, add top constraint
-                if (constraints.count < 3) {
-                    [constraints addObject:[translationView.topAnchor constraintEqualToAnchor:containerView.topAnchor constant:yPositionAfterTranslateButton]];
+                // First, try to find where to insert the view
+                NSInteger insertIndex = -1;
+                UIView *translateButton = nil;
+                
+                // Find the translate button and determine insert position
+                for (NSInteger i = 0; i < containerView.subviews.count; i++) {
+                    UIView *subview = containerView.subviews[i];
+                    NSString *className = NSStringFromClass([subview class]);
+                    
+                    if ([className isEqualToString:@"T1TranslateButton"]) {
+                        translateButton = subview;
+                        insertIndex = i + 1;
+                        NSLog(@"[GeminiTranslator] DEBUG: Found translate button at index %ld", (long)i);
+                        break;
+                    }
                 }
                 
-                // Add a height constraint to ensure it's visible
+                // Add to container at the right position
+                if (insertIndex != -1 && insertIndex < containerView.subviews.count) {
+                    [containerView insertSubview:translationView atIndex:insertIndex];
+                    NSLog(@"[GeminiTranslator] DEBUG: Inserted translation view at index %ld", (long)insertIndex);
+                } else {
+                    [containerView addSubview:translationView];
+                    NSLog(@"[GeminiTranslator] DEBUG: Added translation view as last subview");
+                }
+                
+                // Set up constraints
+                NSMutableArray *constraints = [NSMutableArray array];
+                
+                if (translateButton) {
+                    NSLayoutConstraint *topConstraint = [translationView.topAnchor constraintEqualToAnchor:translateButton.bottomAnchor constant:8];
+                    topConstraint.priority = UILayoutPriorityRequired;
+                    [constraints addObject:topConstraint];
+                    NSLog(@"[GeminiTranslator] DEBUG: Added top constraint relative to translate button");
+                } else {
+                    NSLayoutConstraint *topConstraint = [translationView.topAnchor constraintEqualToAnchor:containerView.topAnchor constant:yPositionAfterTranslateButton];
+                    topConstraint.priority = UILayoutPriorityRequired;
+                    [constraints addObject:topConstraint];
+                    NSLog(@"[GeminiTranslator] DEBUG: Added fallback top constraint");
+                }
+                
+                // Add horizontal constraints with required priority
+                NSLayoutConstraint *leadingConstraint = [translationView.leadingAnchor constraintEqualToAnchor:containerView.leadingAnchor constant:16];
+                NSLayoutConstraint *trailingConstraint = [translationView.trailingAnchor constraintEqualToAnchor:containerView.trailingAnchor constant:-16];
+                leadingConstraint.priority = UILayoutPriorityRequired;
+                trailingConstraint.priority = UILayoutPriorityRequired;
+                [constraints addObject:leadingConstraint];
+                [constraints addObject:trailingConstraint];
+                
+                // Calculate proper height
                 CGFloat estimatedHeight = [translatedText boundingRectWithSize:CGSizeMake(containerView.bounds.size.width - 32, CGFLOAT_MAX)
                                                   options:NSStringDrawingUsesLineFragmentOrigin
                                                attributes:@{NSFontAttributeName: [UIFont systemFontOfSize:15]}
                                                   context:nil].size.height;
                 
-                [constraints addObject:[translationView.heightAnchor constraintGreaterThanOrEqualToConstant:MAX(estimatedHeight, 40)]];
+                NSLayoutConstraint *heightConstraint = [translationView.heightAnchor constraintGreaterThanOrEqualToConstant:MAX(estimatedHeight + 16, 44)];
+                heightConstraint.priority = UILayoutPriorityRequired - 1;
+                [constraints addObject:heightConstraint];
                 
-                // Activate constraints
+                NSLog(@"[GeminiTranslator] DEBUG: Activating %lu constraints", (unsigned long)constraints.count);
+                
+                // Activate all constraints at once
                 [NSLayoutConstraint activateConstraints:constraints];
+                
+                // Make sure the view is visible
+                translationView.hidden = NO;
+                translationView.alpha = 1.0;
                 
                 // Force container to extend as needed
                 [containerView setNeedsLayout];
@@ -5718,9 +5803,28 @@ static NSMutableArray *activeTranslationContexts;
                 }
                 
                 if (focalView) {
-                    // Ensure the focal view recalculates its content size to include our new view
+                    NSLog(@"[GeminiTranslator] DEBUG: Found focal view: %@", focalView);
+                    
+                    // Try to update the focal view's content size
                     if ([focalView respondsToSelector:@selector(invalidateIntrinsicContentSize)]) {
                         [focalView performSelector:@selector(invalidateIntrinsicContentSize)];
+                        NSLog(@"[GeminiTranslator] DEBUG: Invalidated intrinsic content size");
+                    }
+                    
+                    // Try to trigger any Twitter-specific layout updates
+                    NSArray *updateMethods = @[
+                        @"setNeedsStatusViewUpdate",
+                        @"updateStatusView",
+                        @"invalidateLayout",
+                        @"setNeedsDisplay",
+                        @"reloadData"
+                    ];
+                    
+                    for (NSString *method in updateMethods) {
+                        if ([focalView respondsToSelector:NSSelectorFromString(method)]) {
+                            NSLog(@"[GeminiTranslator] DEBUG: Calling %@ on focal view", method);
+                            [focalView performSelector:NSSelectorFromString(method)];
+                        }
                     }
                     
                     // Find and update any scroll views that might contain this
@@ -5730,17 +5834,44 @@ static NSMutableArray *activeTranslationContexts;
                     }
                     
                     if ([scrollView isKindOfClass:[UIScrollView class]]) {
+                        NSLog(@"[GeminiTranslator] DEBUG: Found containing scroll view");
+                        
                         // Force content size recalculation
                         [(UIScrollView *)scrollView setNeedsLayout];
                         [(UIScrollView *)scrollView layoutIfNeeded];
+                        
+                        // Try to update scroll view content size
+                        CGSize contentSize = [(UIScrollView *)scrollView contentSize];
+                        contentSize.height += estimatedHeight + 32; // Add some padding
+                        [(UIScrollView *)scrollView setContentSize:contentSize];
+                        
+                        NSLog(@"[GeminiTranslator] DEBUG: Updated scroll view content size to height: %f", contentSize.height);
                     }
                     
-                    // Post a notification to trigger Twitter's layout system
+                    // Post notifications to trigger Twitter's layout system
+                    NSArray *notificationNames = @[
+                        @"StatusViewNeedsLayoutUpdateNotification",
+                        @"StatusViewDidUpdateNotification",
+                        @"T1StatusViewNeedsUpdateNotification",
+                        @"StatusViewContentDidChangeNotification"
+                    ];
+                    
                     NSMutableDictionary *userInfo = [NSMutableDictionary dictionary];
                     [userInfo setValue:translatedText forKey:@"translatedText"];
-                    [[NSNotificationCenter defaultCenter] postNotificationName:@"StatusViewNeedsLayoutUpdateNotification" 
-                                                                        object:nil 
+                    [userInfo setValue:@YES forKey:@"isTranslated"];
+                    if ([focalView respondsToSelector:@selector(statusID)]) {
+                        id statusID = [focalView performSelector:@selector(statusID)];
+                        if (statusID) {
+                            [userInfo setValue:statusID forKey:@"statusID"];
+                        }
+                    }
+                    
+                    for (NSString *notificationName in notificationNames) {
+                        [[NSNotificationCenter defaultCenter] postNotificationName:notificationName 
+                                                                        object:focalView 
                                                                       userInfo:userInfo];
+                        NSLog(@"[GeminiTranslator] DEBUG: Posted notification: %@", notificationName);
+                    }
                 }
             }
             
