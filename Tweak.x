@@ -4615,10 +4615,10 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 
 @interface T1TranslationToggleEventHandler : NSObject
 - (void)_t1_fetchTranslatedStatusFromGraphQL:(id)statusViewModel account:(id)account controller:(id)controller;
+- (void)_t1_toggleTranslationForViewModel:(id)statusViewModel account:(id)account controller:(id)controller;
 - (BOOL)respondsToSelector:(SEL)selector;
 - (NSMethodSignature *)methodSignatureForSelector:(SEL)selector;
 // Add missing method declarations
-- (void)updateTranslationDisplay:(NSString *)translatedText inView:(UIView *)containerView;
 - (void)searchAndUpdateTranslationElementsIn:(UIView *)view withTranslatedText:(NSString *)translatedText;
 - (void)searchAndUpdateTwitterTextViewsIn:(UIView *)view;
 - (void)performDirectTextUpdateOnController:(id)controller withText:(NSString *)translatedText;
@@ -5039,32 +5039,21 @@ static NSMutableArray *activeTranslationContexts;
             if ([statusViewModel respondsToSelector:@selector(statusIDString)]) {
                 NSString *statusID = [statusViewModel performSelector:@selector(statusIDString)];
                 
-                // The safest approach: pass the translatedViewModel to the original method
-                // so Twitter's own UI update logic is triggered
+                // Use Twitter's native display mechanism
+                // But replace the view model with our translated one to show Gemini's translation
                 if ([translatedViewModel respondsToSelector:@selector(displayText)]) {
                     NSLog(@"[GeminiTranslator] Display text from translated model: %@", 
                           [translatedViewModel performSelector:@selector(displayText)]);
+                    
+                    // Call the original method but with our translated view model
+                    // This tells Twitter to show the translation using its native UI
+                    %orig(translatedViewModel, account, controller);
+                } else {
+                    // Fallback to original Twitter translation if our model doesn't have display text
+                    NSLog(@"[GeminiTranslator] Cannot get display text from model, falling back to Twitter translation");
+                    %orig(statusViewModel, account, controller);
                 }
-                
-                // Use the notify-and-set approach instead of messing with the views directly
-                [[NSNotificationCenter defaultCenter] postNotificationName:@"StatusTranslationUpdatedNotification" 
-                                                              object:nil 
-                                                            userInfo:@{
-                    @"statusID": statusID,
-                    @"isTranslated": @YES,
-                    @"translation": translatedText
-                }];
-                
-                NSLog(@"[GeminiTranslator] Posted translation notification for statusID: %@", statusID);
-                
-                // Set the translation on any views we can find related to this status
-                if ([controller respondsToSelector:@selector(view)]) {
-                    UIView *containerView = [controller performSelector:@selector(view)];
-                    if (containerView) {
-                        // Use our helper method to update the text view safely
-                        [self updateTranslationDisplay:translatedText inView:containerView];
-                    }
-                }
+                return;
             } else {
                 // Fallback to original method if we can't find the status ID
                 NSLog(@"[GeminiTranslator] Could not get status ID, falling back to original");
