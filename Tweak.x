@@ -4621,7 +4621,7 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 - (void)searchAndUpdateTranslationElementsIn:(UIView *)view withTranslatedText:(NSString *)translatedText;
 - (void)searchAndUpdateTwitterTextViewsIn:(UIView *)view;
 - (void)performDirectTextUpdateOnController:(id)controller withText:(NSString *)translatedText;
-- (void)findAndUpdateTranslateViewForController:(id)controller;
+- (void)findAndUpdateTranslateViewForController:(id)controller withViewModel:(id)translatedViewModel;
 @end
 
 @interface T1TranslateButton : UIButton
@@ -5253,10 +5253,10 @@ static NSMutableArray *activeTranslationContexts;
 }
 
 %new
-- (void)findAndUpdateTranslateViewForController:(id)controller {
-    if (!controller) return;
+- (void)findAndUpdateTranslateViewForController:(id)controller withViewModel:(id)translatedViewModel {
+    if (!controller || !translatedViewModel) return;
     
-    NSLog(@"[GeminiTranslator] Specifically searching for translation view to update");
+    NSLog(@"[GeminiTranslator] Specifically searching for translation view to update with translated text");
     
     UIView *controllerView = [controller respondsToSelector:@selector(view)] ? [controller performSelector:@selector(view)] : nil;
     if (!controllerView) return;
@@ -5300,13 +5300,57 @@ static NSMutableArray *activeTranslationContexts;
                 }
             }
             
-            // 2. Try to call methods that would complete the translation
+            // First look for any labels or text views inside the translation view to directly update
+            for (UIView *subview in currentView.subviews) {
+                NSString *subviewClass = NSStringFromClass([subview class]);
+                // If this is a text container or content view, it might have our translate text
+                if ([subviewClass containsString:@"Text"] || 
+                    [subviewClass containsString:@"Label"] ||
+                    [subviewClass containsString:@"Content"]) {
+                    
+                    NSLog(@"[GeminiTranslator] Found potential text view in translation view: %@", subviewClass);
+                    
+                    // Try to update text directly on label
+                    if ([subview isKindOfClass:[UILabel class]]) {
+                        UILabel *label = (UILabel *)subview;
+                        NSLog(@"[GeminiTranslator] Setting text directly on UILabel in translation view");
+                        label.text = [translatedViewModel performSelector:@selector(displayText)];
+                    }
+                    
+                    // Try to update text directly on text view
+                    if ([subview isKindOfClass:[UITextView class]]) {
+                        UITextView *textView = (UITextView *)subview;
+                        NSLog(@"[GeminiTranslator] Setting text directly on UITextView in translation view");
+                        textView.text = [translatedViewModel performSelector:@selector(displayText)];
+                    }
+                    
+                    // Recursively check this subview's subviews too
+                    for (UIView *deeperView in subview.subviews) {
+                        if ([deeperView isKindOfClass:[UILabel class]]) {
+                            UILabel *label = (UILabel *)deeperView;
+                            NSLog(@"[GeminiTranslator] Setting text directly on UILabel in deeper view");
+                            label.text = [translatedViewModel performSelector:@selector(displayText)];
+                        } else if ([deeperView isKindOfClass:[UITextView class]]) {
+                            UITextView *textView = (UITextView *)deeperView;
+                            NSLog(@"[GeminiTranslator] Setting text directly on UITextView in deeper view");
+                            textView.text = [translatedViewModel performSelector:@selector(displayText)];
+                        }
+                    }
+                }
+            }
+            
+            // 2. Try to call methods that would complete the translation and inject the text
             NSArray *completionMethods = @[
                 @"translationDidComplete",
-                @"translationSucceeded",
+                @"translationSucceeded", 
                 @"setTranslationState:",
                 @"setLoading:",
+                @"showTranslation:",
+                @"setTranslation:",
+                @"setTranslatedText:",
+                @"displayTranslatedText:",
                 @"completeWithTranslation:",
+                @"setTranslationObject:",
                 @"_updateTranslationViewWithTranslation:",
                 @"_finishTranslation",
                 @"finishWithTranslation:",
@@ -5329,8 +5373,25 @@ static NSMutableArray *activeTranslationContexts;
                             // Try to set state to 2 (success)
                             [currentView performSelector:selector withObject:@2];
                             [currentView performSelector:selector withObject:@1];
+                        } else if ([methodName containsString:@"Translation"] || 
+                                  [methodName containsString:@"Translated"] ||
+                                  [methodName containsString:@"Text"]) {
+                            // For translation or text-related methods, pass the translated text
+                            NSString *translatedText = [translatedViewModel performSelector:@selector(displayText)];
+                            NSLog(@"[GeminiTranslator] Calling %@ with translated text: %@", methodName, translatedText);
+                            [currentView performSelector:selector withObject:translatedText];
+                            
+                            // Also try with the translation object itself
+                            if ([translatedViewModel respondsToSelector:@selector(translation)]) {
+                                id translationObj = [translatedViewModel performSelector:@selector(translation)];
+                                if (translationObj) {
+                                    [currentView performSelector:selector withObject:translationObj];
+                                }
+                            }
                         } else {
-                            // For other methods, try with nil
+                            // For other methods, try with the translated text first, then nil
+                            NSString *translatedText = [translatedViewModel performSelector:@selector(displayText)];
+                            [currentView performSelector:selector withObject:translatedText];
                             [currentView performSelector:selector withObject:nil];
                         }
                     } else {
@@ -5341,9 +5402,109 @@ static NSMutableArray *activeTranslationContexts;
                 }
             }
             
-            // 3. Set the layout needs update
+            // 3. Try to add a completely new label with the translation if none exists
+            // This is a more aggressive approach to ensure the translation is displayed
+            BOOL foundContentLabel = NO;
+            
+            // Check if we already found and updated a content label
+            for (UIView *subview in currentView.subviews) {
+                if ([subview isKindOfClass:[UILabel class]] && 
+                    [[(UILabel *)subview text] isEqualToString:[translatedViewModel performSelector:@selector(displayText)]]) {
+                    foundContentLabel = YES;
+                    break;
+                }
+            }
+            
+            // If we didn't find a proper content label, create one
+            if (!foundContentLabel) {
+                NSLog(@"[GeminiTranslator] No existing label found with translated text, creating one");
+                
+                // Create a new label with the translation
+                UILabel *translationLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, currentView.bounds.size.width, 0)];
+                translationLabel.text = [translatedViewModel performSelector:@selector(displayText)];
+                translationLabel.numberOfLines = 0;
+                translationLabel.lineBreakMode = NSLineBreakByWordWrapping;
+                translationLabel.font = [UIFont systemFontOfSize:15];
+                translationLabel.textColor = [UIColor blackColor];
+                
+                // Set autoresizing
+                translationLabel.translatesAutoresizingMaskIntoConstraints = NO;
+                
+                // Add to the view
+                [currentView addSubview:translationLabel];
+                
+                // Add constraints
+                [NSLayoutConstraint activateConstraints:@[
+                    [translationLabel.topAnchor constraintEqualToAnchor:currentView.topAnchor constant:10],
+                    [translationLabel.leadingAnchor constraintEqualToAnchor:currentView.leadingAnchor constant:10],
+                    [translationLabel.trailingAnchor constraintEqualToAnchor:currentView.trailingAnchor constant:-10],
+                    [translationLabel.bottomAnchor constraintLessThanOrEqualToAnchor:currentView.bottomAnchor constant:-10]
+                ]];
+                
+                // Ensure it sizes to fit
+                [translationLabel sizeToFit];
+            }
+            
+            // 4. Find any other translation or content views in the hierarchy and update them
+            NSMutableArray *queue = [NSMutableArray arrayWithObject:currentView];
+            NSInteger iterations = 0;
+            NSInteger maxIterations = 50;
+            
+            while (queue.count > 0 && iterations < maxIterations) {
+                UIView *view = [queue firstObject];
+                [queue removeObjectAtIndex:0];
+                iterations++;
+                
+                // Look for translation content views in the hierarchy
+                NSString *viewClass = NSStringFromClass([view class]);
+                if ([viewClass containsString:@"Content"] || 
+                    [viewClass containsString:@"Text"] ||
+                    [viewClass containsString:@"Translation"]) {
+                    
+                    NSLog(@"[GeminiTranslator] Found potential translation content: %@", viewClass);
+                    
+                    // Update it if it's a text view or label
+                    if ([view isKindOfClass:[UILabel class]]) {
+                        [(UILabel *)view setText:[translatedViewModel performSelector:@selector(displayText)]];
+                    } else if ([view isKindOfClass:[UITextView class]]) {
+                        [(UITextView *)view setText:[translatedViewModel performSelector:@selector(displayText)]];
+                    }
+                    
+                    // Try calling any display methods
+                    NSArray *displayMethods = @[@"setText:", @"setAttributedText:", @"setDisplayText:", @"setTranslationText:", @"display", @"refresh", @"update"];
+                    for (NSString *methodName in displayMethods) {
+                        SEL selector = NSSelectorFromString(methodName);
+                        if ([view respondsToSelector:selector]) {
+                            NSLog(@"[GeminiTranslator] Calling %@ on content view", methodName);
+                            #pragma clang diagnostic push
+                            #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                            if ([methodName hasSuffix:@":"]) {
+                                NSString *translatedText = [translatedViewModel performSelector:@selector(displayText)];
+                                [view performSelector:selector withObject:translatedText];
+                            } else {
+                                [view performSelector:selector];
+                            }
+                            #pragma clang diagnostic pop
+                        }
+                    }
+                }
+                
+                // Add subviews to queue
+                for (UIView *subview in view.subviews) {
+                    [queue addObject:subview];
+                }
+            }
+            
+            // 5. Set the layout needs update
             [currentView setNeedsLayout];
             [currentView layoutIfNeeded];
+            
+            // Force parent views to update too
+            UIView *parentView = [currentView superview];
+            if (parentView) {
+                [parentView setNeedsLayout];
+                [parentView layoutIfNeeded];
+            }
             
             // Once found and updated, no need to continue
             return;
@@ -6157,7 +6318,7 @@ static NSMutableArray *activeTranslationContexts;
             [self performDirectTextUpdateOnController:context.controller withText:[translatedViewModel performSelector:@selector(displayText)]];
             
             // Then find and update the translation view specifically since we know that's where the issue is
-            [self findAndUpdateTranslateViewForController:context.controller];
+            [self findAndUpdateTranslateViewForController:context.controller withViewModel:translatedViewModel];
                             
                             // Try to find the status cell using a queue-based approach instead of recursion
                             NSMutableArray *viewsToCheck = [NSMutableArray arrayWithObject:controllerView];
