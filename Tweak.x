@@ -4617,6 +4617,9 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 - (void)_t1_fetchTranslatedStatusFromGraphQL:(id)statusViewModel account:(id)account controller:(id)controller;
 - (BOOL)respondsToSelector:(SEL)selector;
 - (NSMethodSignature *)methodSignatureForSelector:(SEL)selector;
+// Add missing method declarations
+- (void)searchAndUpdateTranslationElementsIn:(UIView *)view withTranslatedText:(NSString *)translatedText;
+- (void)searchAndUpdateTwitterTextViewsIn:(UIView *)view;
 @end
 
 @interface T1TranslateButton : UIButton
@@ -4857,6 +4860,112 @@ static NSMutableArray *activeTranslationContexts;
 
 // Replace Google translation with Gemini
 %hook T1TranslationToggleEventHandler
+
+// Add the missing method that's being referenced elsewhere in the code
+%new
+- (void)findAndUpdateStatusViewsIn:(UIView *)view withViewModel:(id)viewModel originalViewModel:(id)originalViewModel statusID:(NSString *)statusID {
+    // This implements a safer alternative to the recursive view search
+    // using a queue-based approach to avoid stack overflow issues
+    
+    if (!view || !viewModel) return;
+    
+    NSLog(@"[GeminiTranslator] Finding status views for statusID: %@", statusID);
+    
+    // Use a queue-based approach instead of recursion to avoid stack issues
+    NSMutableArray *queue = [NSMutableArray arrayWithObject:view];
+    NSInteger maxIterations = 200; // Safety limit
+    NSInteger iteration = 0;
+    
+    while (queue.count > 0 && iteration < maxIterations) {
+        UIView *currentView = queue.firstObject;
+        [queue removeObjectAtIndex:0];
+        iteration++;
+        
+        // Check if this view is a status view
+        NSString *className = NSStringFromClass([currentView class]);
+        if ([className containsString:@"StatusView"] || 
+            [className containsString:@"TweetView"] ||
+            [className containsString:@"T1Standard"]) {
+            
+            // Try to get the view model
+            id currentViewModel = nil;
+            if ([currentView respondsToSelector:@selector(viewModel)]) {
+                currentViewModel = [currentView performSelector:@selector(viewModel)];
+            } else if ([currentView respondsToSelector:@selector(statusViewModel)]) {
+                currentViewModel = [currentView performSelector:@selector(statusViewModel)];
+            }
+            
+            // Check if this view's model matches our target
+            BOOL isMatch = NO;
+            
+            // Compare view models
+            if (currentViewModel && (currentViewModel == originalViewModel || 
+                                    [currentViewModel isEqual:originalViewModel])) {
+                isMatch = YES;
+            }
+            
+            // Additional check using status ID
+            if (!isMatch && statusID && [currentViewModel respondsToSelector:@selector(statusIDString)]) {
+                NSString *viewStatusID = [currentViewModel performSelector:@selector(statusIDString)];
+                if ([statusID isEqualToString:viewStatusID]) {
+                    isMatch = YES;
+                }
+            }
+            
+            // If match found, update the view
+            if (isMatch) {
+                NSLog(@"[GeminiTranslator] Found matching status view: %@", className);
+                
+                // Try to update the view model
+                if ([currentView respondsToSelector:@selector(setViewModel:)]) {
+                    [currentView performSelector:@selector(setViewModel:) withObject:viewModel];
+                    NSLog(@"[GeminiTranslator] Updated viewModel on %@", className);
+                } else if ([currentView respondsToSelector:@selector(setStatusViewModel:)]) {
+                    [currentView performSelector:@selector(setStatusViewModel:) withObject:viewModel];
+                    NSLog(@"[GeminiTranslator] Updated statusViewModel on %@", className);
+                }
+                
+                // Force UI update
+                [currentView setNeedsLayout];
+                [currentView layoutIfNeeded];
+                
+                // Look for the text content views to update directly
+                NSString *displayText = nil;
+                if ([viewModel respondsToSelector:@selector(displayText)]) {
+                    displayText = [viewModel performSelector:@selector(displayText)];
+                }
+                
+                if (displayText) {
+                    [self searchAndUpdateTranslationElementsIn:currentView withTranslatedText:displayText];
+                    [self searchAndUpdateTwitterTextViewsIn:currentView];
+                }
+                
+                // Additional methods to try refreshing the view
+                SEL selectors[] = {
+                    @selector(showTranslation),
+                    @selector(refreshUI),
+                    @selector(reloadData),
+                    @selector(updateTranslationState),
+                    @selector(setNeedsUpdateConfiguration)
+                };
+                
+                for (int i = 0; i < 5; i++) {
+                    if ([currentView respondsToSelector:selectors[i]]) {
+                        #pragma clang diagnostic push
+                        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                        [currentView performSelector:selectors[i]];
+                        #pragma clang diagnostic pop
+                    }
+                }
+            }
+        }
+        
+        // Add subviews to the queue
+        for (UIView *subview in currentView.subviews) {
+            [queue addObject:subview];
+        }
+    }
+}
 
 %new
 - (void)searchAndUpdateTranslationElementsIn:(UIView *)view withTranslatedText:(NSString *)translatedText {
@@ -5484,6 +5593,7 @@ static NSMutableArray *activeTranslationContexts;
                         [inv setTarget:instance];
                         
                         [inv setArgument:&translationObject atIndex:2];
+                        // Create a local variable to avoid "address of property expression requested" error
                         id statusVM = context.statusViewModel;
                         [inv setArgument:&statusVM atIndex:3];
                         
@@ -5501,11 +5611,17 @@ static NSMutableArray *activeTranslationContexts;
                     translatedViewModel = [[viewModelClass alloc] init];
                     
                     if ([translatedViewModel respondsToSelector:@selector(setUnderlyingViewModel:)]) {
+                        #pragma clang diagnostic push
+                        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
                         [translatedViewModel performSelector:@selector(setUnderlyingViewModel:) withObject:context.statusViewModel];
+                        #pragma clang diagnostic pop
                     }
                     
                     if ([translatedViewModel respondsToSelector:@selector(setTranslation:)]) {
+                        #pragma clang diagnostic push
+                        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
                         [translatedViewModel performSelector:@selector(setTranslation:) withObject:translationObject];
+                        #pragma clang diagnostic pop
                     }
                 }
                 
@@ -5970,9 +6086,14 @@ static NSMutableArray *activeTranslationContexts;
                         if (signature) {
                             NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
                             [invocation setSelector:@selector(displayTextRange)];
-                            [invocation setTarget:translatedViewModel];
+                            
+                            // IMPORTANT: Create a local variable for the target to avoid "address of property expression requested" error
+                            id target = translatedViewModel;
+                            [invocation setTarget:target];
+                            
                             [invocation invoke];
                             
+                            // Create a local variable to receive the struct
                             NSRange range;
                             [invocation getReturnValue:&range];
                             NSLog(@"[GeminiTranslator] DETAILED DEBUG: Display text range: location=%lu, length=%lu", 
@@ -5997,19 +6118,20 @@ static NSMutableArray *activeTranslationContexts;
                         // or _t1_fetchTranslatedStatusFromGraphQL:account:controller:
                         id tempAccount = context.account;
                         
-                        // If the method starts with "toggle" or similar, use the original viewModel
-                        NSString *selectorStr = NSStringFromSelector(handlerSelector);
-                        if ([selectorStr containsString:@"toggle"] || [selectorStr containsString:@"fetch"]) {
-                            // Using original viewModel for toggle/fetch methods
-                            id originalVM = context.statusViewModel;
-                            [handlerInv setArgument:&originalVM atIndex:2];
-                        } else {
-                            // Otherwise use our translated viewModel
-                            [handlerInv setArgument:&tempVM atIndex:2];
-                        }
-                        
-                        [handlerInv setArgument:&tempAccount atIndex:3];
-                        [handlerInv setArgument:&tempController atIndex:4];
+                                                    // If the method starts with "toggle" or similar, use the original viewModel
+                            NSString *selectorStr = NSStringFromSelector(handlerSelector);
+                            if ([selectorStr containsString:@"toggle"] || [selectorStr containsString:@"fetch"]) {
+                                // Using original viewModel for toggle/fetch methods - create a local variable
+                                id originalVM = context.statusViewModel;
+                                [handlerInv setArgument:&originalVM atIndex:2];
+                            } else {
+                                // Otherwise use our translated viewModel
+                                [handlerInv setArgument:&tempVM atIndex:2];
+                            }
+                            
+                            // Ensure we have local variables for NSInvocation arguments
+                            [handlerInv setArgument:&tempAccount atIndex:3];
+                            [handlerInv setArgument:&tempController atIndex:4];
                     }
                     // Unknown parameter count, attempt best guess
                     else {
@@ -6209,12 +6331,5 @@ static NSMutableArray *activeTranslationContexts;
 %end
 
 // Replace Google Translate provider with Gemini
-
-
-
-}
-
-// Continue with existing code...
-%end
 
 
