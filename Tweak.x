@@ -4858,10 +4858,11 @@ static char kTranslateButtonKey;
 
 // Helper function for finding the text view
 static void findTextView(UIView *view, UITextView **tweetTextView) {
-    // Check for TTAStatusBodySelectableContextTextView
-    if ([NSStringFromClass([view class]) isEqualToString:@"TTAStatusBodySelectableContextTextView"]) {
+    // Check for TTAStatusBodySelectableContextTextView or any UITextView in T1URTViewController
+    if ([NSStringFromClass([view class]) isEqualToString:@"TTAStatusBodySelectableContextTextView"] ||
+        [view isKindOfClass:[UITextView class]]) {
         *tweetTextView = (UITextView *)view;
-        NSLog(@"[BHTwitter Translate] Found TTAStatusBodySelectableContextTextView");
+        NSLog(@"[BHTwitter Translate] Found text view: %@", NSStringFromClass([view class]));
         return;
     }
     
@@ -4877,13 +4878,76 @@ static void findTextView(UIView *view, UITextView **tweetTextView) {
     // Don't limit to specific view controllers - search everywhere
     NSLog(@"[BHTwitter Translate] Searching for tweet text in %@", NSStringFromClass([controller class]));
     
-    // Get the root view controller to search the entire hierarchy
+    // First, try to find the T1URTViewController
+    UIViewController *urtViewController = nil;
+    
+    // Check if the current controller is a T1URTViewController
+    if ([NSStringFromClass([controller class]) isEqualToString:@"T1URTViewController"]) {
+        urtViewController = controller;
+        NSLog(@"[BHTwitter Translate] Found T1URTViewController directly");
+    }
+    
+    // If not found, look through the view hierarchy for a T1URTViewController
+    if (!urtViewController) {
+        UIViewController *currentVC = controller;
+        
+        // First check child view controllers
+        NSArray *childVCs = [currentVC childViewControllers];
+        for (UIViewController *childVC in childVCs) {
+            if ([NSStringFromClass([childVC class]) isEqualToString:@"T1URTViewController"]) {
+                urtViewController = childVC;
+                NSLog(@"[BHTwitter Translate] Found T1URTViewController in children");
+                break;
+            }
+        }
+        
+        // Then check parent view controllers if not found
+        if (!urtViewController) {
+            while (currentVC.parentViewController) {
+                currentVC = currentVC.parentViewController;
+                
+                if ([NSStringFromClass([currentVC class]) isEqualToString:@"T1URTViewController"]) {
+                    urtViewController = currentVC;
+                    NSLog(@"[BHTwitter Translate] Found T1URTViewController in parent hierarchy");
+                    break;
+                }
+                
+                // Also check siblings
+                for (UIViewController *childVC in [currentVC childViewControllers]) {
+                    if ([NSStringFromClass([childVC class]) isEqualToString:@"T1URTViewController"]) {
+                        urtViewController = childVC;
+                        NSLog(@"[BHTwitter Translate] Found T1URTViewController in sibling");
+                        break;
+                    }
+                }
+                
+                if (urtViewController) break;
+            }
+        }
+    }
+    
+    // If we found T1URTViewController, extract text from it
+    if (urtViewController && urtViewController.isViewLoaded) {
+        NSLog(@"[BHTwitter Translate] Found T1URTViewController, searching for text");
+        UITextView *tweetTextView = nil;
+        findTextView(urtViewController.view, &tweetTextView);
+        
+        if (tweetTextView) {
+            NSString *tweetText = tweetTextView.text;
+            if (tweetText && tweetText.length > 0) {
+                NSLog(@"[BHTwitter Translate] Got tweet text from T1URTViewController: %@", tweetText);
+                return tweetText;
+            }
+        }
+    }
+    
+    // Fallback: Get the root view controller to search the entire hierarchy
     UIViewController *rootVC = controller;
     while (rootVC.parentViewController) {
         rootVC = rootVC.parentViewController;
     }
     
-    // Find TTAStatusBodySelectableContextTextView in the entire view hierarchy
+    // Find text view in the entire view hierarchy
     UITextView *tweetTextView = nil;
     
     // Start search from root view controller's view
@@ -4920,7 +4984,7 @@ static void findTextView(UIView *view, UITextView **tweetTextView) {
         }
     }
     
-    NSLog(@"[BHTwitter Translate] Could not find any TTAStatusBodySelectableContextTextView");
+    NSLog(@"[BHTwitter Translate] Could not find any text in T1URTViewController or elsewhere");
     return nil;
 }
 
