@@ -4762,7 +4762,65 @@ static char kTranslateButtonKey;
         return nil;
     }
     
-    // Direct approach to find T1StatusBodyTextView
+    // First, if the controller is T1ConversationContainerViewController, we need to find its T1URTViewController child
+    if ([NSStringFromClass([controller class]) isEqualToString:@"T1ConversationContainerViewController"]) {
+        NSLog(@"[BHTwitter Translate] Found container controller, searching for T1URTViewController...");
+        for (UIViewController *childVC in controller.childViewControllers) {
+            if ([NSStringFromClass([childVC class]) isEqualToString:@"T1URTViewController"]) {
+                NSLog(@"[BHTwitter Translate] Found T1URTViewController, switching target");
+                controller = childVC;
+                break;
+            }
+        }
+    }
+    
+    // Try to directly access the status from the view controller
+    if ([controller respondsToSelector:@selector(viewModel)]) {
+        id viewModel = [controller valueForKey:@"viewModel"];
+        
+        // If it's a T1URTViewController, we need to handle it specially
+        if ([NSStringFromClass([controller class]) isEqualToString:@"T1URTViewController"]) {
+            NSLog(@"[BHTwitter Translate] Extracting from T1URTViewController.viewModel");
+            @try {
+                // Inspect the view model or try to access specific properties
+                if ([viewModel respondsToSelector:@selector(statusViewModel)]) {
+                    id statusViewModel = [viewModel valueForKey:@"statusViewModel"];
+                    if (statusViewModel && [statusViewModel respondsToSelector:@selector(status)]) {
+                        id status = [statusViewModel valueForKey:@"status"];
+                        if (status && [status isKindOfClass:%c(TFNTwitterStatus)]) {
+                            NSLog(@"[BHTwitter Translate] Found TFNTwitterStatus from T1URTViewController.viewModel.statusViewModel.status");
+                            return status;
+                        }
+                    }
+                }
+                
+                // Try another common pattern
+                if ([viewModel respondsToSelector:@selector(item)]) {
+                    id item = [viewModel valueForKey:@"item"];
+                    if ([item respondsToSelector:@selector(status)]) {
+                        id status = [item valueForKey:@"status"];
+                        if (status && [status isKindOfClass:%c(TFNTwitterStatus)]) {
+                            NSLog(@"[BHTwitter Translate] Found TFNTwitterStatus from T1URTViewController.viewModel.item.status");
+                            return status;
+                        }
+                    }
+                }
+            } @catch (NSException *e) {
+                NSLog(@"[BHTwitter Translate] Exception accessing T1URTViewController viewModel: %@", e);
+            }
+        }
+        
+        // Generic approach - check if viewModel has status directly
+        if ([viewModel respondsToSelector:@selector(status)]) {
+            id status = [viewModel valueForKey:@"status"];
+            if (status && [status isKindOfClass:%c(TFNTwitterStatus)]) {
+                NSLog(@"[BHTwitter Translate] Found TFNTwitterStatus from controller.viewModel.status");
+                return status;
+            }
+        }
+    }
+    
+    // Fallback to looking for T1StatusBodyTextView for other controllers
     T1StatusBodyTextView *bodyTextView = nil;
     NSMutableArray *viewsToCheck = [NSMutableArray arrayWithObject:controller.view];
     
@@ -4785,7 +4843,7 @@ static char kTranslateButtonKey;
             if (viewModel && [viewModel respondsToSelector:@selector(status)]) {
                 id status = [viewModel valueForKey:@"status"];
                 if (status && [status isKindOfClass:%c(TFNTwitterStatus)]) {
-                    NSLog(@"[BHTwitter Translate] Found TFNTwitterStatus");
+                    NSLog(@"[BHTwitter Translate] Found TFNTwitterStatus from T1StatusBodyTextView");
                     return status;
                 }
             }
@@ -4794,6 +4852,7 @@ static char kTranslateButtonKey;
         }
     }
     
+    NSLog(@"[BHTwitter Translate] Failed to find TFNTwitterStatus in controller: %@", NSStringFromClass([controller class]));
     return nil;
 }
 
@@ -4802,22 +4861,46 @@ static char kTranslateButtonKey;
     TFNTwitterStatus *status = [self BHT_findStatusObjectInController:controller];
     
     if (status) {
-        // Just directly access the text property
-        NSString *text = [status valueForKey:@"text"];
-        if (text && [text isKindOfClass:[NSString class]] && text.length > 0) {
-            NSLog(@"[BHTwitter Translate] Found tweet text: %@", text);
-            return text;
+        // Check all likely text properties
+        NSArray *textProperties = @[@"text", @"fullText", @"full_text", @"displayText"];
+        
+        for (NSString *property in textProperties) {
+            if ([status respondsToSelector:NSSelectorFromString(property)]) {
+                NSString *text = [status valueForKey:property];
+                if (text && [text isKindOfClass:[NSString class]] && text.length > 0) {
+                    NSLog(@"[BHTwitter Translate] Found tweet text from property '%@': %@", property, text);
+                    return text;
+                }
+            }
         }
         
-        // If text wasn't available, try fullText as a backup
-        NSString *fullText = [status valueForKey:@"fullText"];
-        if (fullText && [fullText isKindOfClass:[NSString class]] && fullText.length > 0) {
-            NSLog(@"[BHTwitter Translate] Found tweet fullText: %@", fullText);
-            return fullText;
+        // Try attributedStringValue as a last resort
+        if ([status respondsToSelector:@selector(attributedStringValue)]) {
+            id attrStringModel = [status valueForKey:@"attributedStringValue"];
+            if (attrStringModel) {
+                NSString *result = nil;
+                
+                if ([attrStringModel respondsToSelector:@selector(attributedString)]) {
+                    NSAttributedString *attrString = [attrStringModel valueForKey:@"attributedString"];
+                    if (attrString && attrString.string.length > 0) {
+                        result = attrString.string;
+                    }
+                } else if ([attrStringModel isKindOfClass:[NSAttributedString class]]) {
+                    NSAttributedString *attrString = (NSAttributedString *)attrStringModel;
+                    if (attrString && attrString.string.length > 0) {
+                        result = attrString.string;
+                    }
+                }
+                
+                if (result) {
+                    NSLog(@"[BHTwitter Translate] Found tweet text from attributedStringValue: %@", result);
+                    return result;
+                }
+            }
         }
     }
     
-    NSLog(@"[BHTwitter Translate] Failed to find tweet text");
+    NSLog(@"[BHTwitter Translate] Failed to find tweet text in controller: %@", NSStringFromClass([controller class]));
     return nil;
 }
 
