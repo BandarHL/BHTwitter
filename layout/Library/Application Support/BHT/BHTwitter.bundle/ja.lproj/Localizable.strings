@@ -37,7 +37,7 @@
 "PADLOCK_OPTION_TITLE" = "Twitterをロック";
 "PADLOCK_OPTION_DETAIL_TITLE" = "Face IDまたはパスコード認証を有効化";
 
-"ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "外部ブラウザを利用";
+"ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "外部ブラウザを使用";
 "ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "Safariまたはデフォルトのブラウザでリンクを開きます。";
 
 "STRIP_URL_TRACKING_PARAMETERS_TITLE" = "リンクのカスタマイズ";
