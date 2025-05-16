@@ -4758,285 +4758,120 @@ static char kTranslateButtonKey;
 }
 
 %new - (TFNTwitterStatus *)BHT_findStatusObjectInController:(UIViewController *)controller {
-    if (!controller) {
-        NSLog(@"[BHTwitter Translate] BHT_findStatusObjectInController: Passed a nil controller.");
+    if (!controller || !controller.isViewLoaded) {
         return nil;
     }
     
-    // FIRST APPROACH: Look for T1StatusBodyTextView directly in the view hierarchy
-    __block TFNTwitterStatus *statusObject = nil;
-    __block T1StatusBodyTextView *bodyTextView = nil;
+    // Simple direct approach - find T1StatusBodyTextView in the view hierarchy
+    T1StatusBodyTextView *bodyTextView = nil;
     
-    if (controller.isViewLoaded) {
-        __block void (^findBodyTextView)(UIView *) = ^(UIView *view) {
-            if ([NSStringFromClass([view class]) isEqualToString:@"T1StatusBodyTextView"]) {
-                bodyTextView = (T1StatusBodyTextView *)view;
-                return;
-            }
-            
-            for (UIView *subview in view.subviews) {
-                if (!bodyTextView) { // Only continue if we haven't found it yet
-                    findBodyTextView(subview);
+    // Use a non-recursive approach with an array acting as a queue
+    NSMutableArray *viewsToCheck = [NSMutableArray arrayWithObject:controller.view];
+    
+    while (viewsToCheck.count > 0) {
+        UIView *currentView = viewsToCheck[0];
+        [viewsToCheck removeObjectAtIndex:0];
+        
+        if ([currentView isKindOfClass:%c(T1StatusBodyTextView)]) {
+            bodyTextView = (T1StatusBodyTextView *)currentView;
+            break;
+        }
+        
+        // Add subviews to the queue
+        [viewsToCheck addObjectsFromArray:currentView.subviews];
+    }
+    
+    // If found, extract status from bodyTextView
+    if (bodyTextView) {
+        NSLog(@"[BHTwitter Translate] Found T1StatusBodyTextView");
+        
+        @try {
+            id viewModel = [bodyTextView valueForKey:@"viewModel"];
+            if (viewModel && [viewModel respondsToSelector:@selector(status)]) {
+                id status = [viewModel valueForKey:@"status"];
+                if (status && [status isKindOfClass:%c(TFNTwitterStatus)]) {
+                    NSLog(@"[BHTwitter Translate] Found TFNTwitterStatus from T1StatusBodyTextView");
+                    return status;
                 }
             }
-        };
-        
-        findBodyTextView(controller.view);
-        
-        // If we found T1StatusBodyTextView, extract the TFNTwitterStatus from it
-        if (bodyTextView) {
-            NSLog(@"[BHTwitter Translate] Found T1StatusBodyTextView in view hierarchy");
-            
-            @try {
-                if ([bodyTextView respondsToSelector:@selector(viewModel)]) {
-                    id viewModel = [bodyTextView valueForKey:@"viewModel"];
-                    if (viewModel && [viewModel respondsToSelector:@selector(status)]) {
-                        id status = [viewModel valueForKey:@"status"];
-                        if (status && [status isKindOfClass:%c(TFNTwitterStatus)]) {
-                            statusObject = (TFNTwitterStatus *)status;
-                            NSLog(@"[BHTwitter Translate] Successfully extracted TFNTwitterStatus from T1StatusBodyTextView.viewModel.status");
-                            return statusObject;
-                        }
-                    }
-                }
-            } @catch (NSException *e) {
-                NSLog(@"[BHTwitter Translate] Exception accessing T1StatusBodyTextView properties: %@", e);
-            }
+        } @catch (NSException *e) {
+            NSLog(@"[BHTwitter Translate] Exception accessing T1StatusBodyTextView: %@", e);
         }
     }
     
-    // SECOND APPROACH: Check controller for status object
-    NSArray *statusPropertyNames = @[@"status", @"tweet", @"tweetStatus", @"statusModel", @"representedObject"];
-    for (NSString *propertyName in statusPropertyNames) {
-        if ([controller respondsToSelector:NSSelectorFromString(propertyName)]) {
-            id potentialStatus = [controller valueForKey:propertyName];
-            if (potentialStatus && [potentialStatus isKindOfClass:%c(TFNTwitterStatus)]) {
-                statusObject = potentialStatus;
-                NSLog(@"[BHTwitter Translate] Found status object via property '%@' on VC: %@", propertyName, NSStringFromClass([controller class]));
-                return statusObject;
-            }
-            
-            // Check for view model wrappers
-            if ([potentialStatus respondsToSelector:@selector(status)]) {
-                id nestedStatus = [potentialStatus valueForKey:@"status"];
-                if (nestedStatus && [nestedStatus isKindOfClass:%c(TFNTwitterStatus)]) {
-                    statusObject = nestedStatus;
-                    NSLog(@"[BHTwitter Translate] Found status object via nested property '%@.status' on VC: %@", propertyName, NSStringFromClass([controller class]));
-                    return statusObject;
-                }
-            }
-        }
-    }
-    
-    // THIRD APPROACH: Check viewModel property which might hold the status
-    if ([controller respondsToSelector:@selector(viewModel)]) {
-        id viewModel = [controller valueForKey:@"viewModel"];
-        
-        // Check if viewModel is T1CoreStatusViewModel or similar
-        if ([viewModel respondsToSelector:@selector(status)]) {
-            id status = [viewModel valueForKey:@"status"];
-            if (status && [status isKindOfClass:%c(TFNTwitterStatus)]) {
-                statusObject = status;
-                NSLog(@"[BHTwitter Translate] Found status object via controller.viewModel.status");
-                return statusObject;
-            }
-        }
-        
-        // Check if viewModel itself is the status
-        if (viewModel && [viewModel isKindOfClass:%c(TFNTwitterStatus)]) {
-            statusObject = viewModel;
-            NSLog(@"[BHTwitter Translate] Found status object directly as controller.viewModel");
-            return statusObject;
-        }
-    }
-    
-    // If still not found, and it's a container, try its children (e.g., T1ConversationContainerViewController)
-    if (!statusObject && [controller respondsToSelector:@selector(childViewControllers)]) {
-        if ([NSStringFromClass([controller class]) containsString:@"ContainerViewController"]) { // Heuristic for containers
-            NSLog(@"[BHTwitter Translate] VC %@ is a container, checking children.", NSStringFromClass([controller class]));
-            for (UIViewController *childController in controller.childViewControllers) {
-                // Recursive call, but prevent infinite loops by not re-calling on self or already checked parent types.
-                if (childController != controller) {
-                     NSLog(@"[BHTwitter Translate] Checking child VC: %@", NSStringFromClass([childController class]));
-                    statusObject = [self BHT_findStatusObjectInController:childController]; // Recursive call
-                    if (statusObject) {
-                        NSLog(@"[BHTwitter Translate] Found status object in child VC: %@", NSStringFromClass([childController class]));
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    // Final check for the parent if not found and not already at the top of a nav/tab stack
-    if (!statusObject && controller.parentViewController && controller.parentViewController != controller) {
-        BOOL shouldCheckParent = YES;
-        if ([controller.parentViewController isKindOfClass:[UINavigationController class]] &&
-            [((UINavigationController*)controller.parentViewController).viewControllers containsObject:controller]) {
-           // If parent is Nav and current is in its stack, often the Nav itself doesn't hold the status.
-           // The status is more likely on `controller` or its children already checked.
-           // However, sometimes the Nav controller's top VC might be different if `controller` is not top.
-           // For simplicity, if `controller` is top of its nav, we don't recheck parent nav.
-           if (((UINavigationController*)controller.parentViewController).topViewController == controller) {
-                shouldCheckParent = NO;
-           }
-        }
-        if ([controller.parentViewController isKindOfClass:[UITabBarController class]]) {
-             shouldCheckParent = NO; // TabBarController itself usually doesn't hold the specific tweet status.
-        }
-
-        if (shouldCheckParent) {
-            NSLog(@"[BHTwitter Translate] Status not found in %@. Attempting to check parent: %@", NSStringFromClass([controller class]), NSStringFromClass([controller.parentViewController class]));
-            statusObject = [self BHT_findStatusObjectInController:controller.parentViewController]; // Recursive call to parent
-        }
-    }
-
-    if (!statusObject) {
-        NSLog(@"[BHTwitter Translate] Ultimately could not find TFNTwitterStatus for VC: %@ and its hierarchy.", NSStringFromClass([controller class]));
-    } else {
-        NSLog(@"[BHTwitter Translate] Successfully found TFNTwitterStatus: %@ for VC: %@", NSStringFromClass([statusObject class]), NSStringFromClass([controller class]));
-    }
-    return statusObject;
+    return nil;
 }
 
 %new - (NSString *)BHT_extractTextFromStatusObjectInController:(UIViewController *)controller {
-    // First try to find T1StatusBodyTextView directly
-    __block T1StatusBodyTextView *bodyTextView = nil;
+    // Direct approach - just find the view and get text
+    TFNTwitterStatus *status = [self BHT_findStatusObjectInController:controller];
     
-    if (controller.isViewLoaded) {
-        __block void (^findBodyTextView)(UIView *) = ^(UIView *view) {
-            if ([NSStringFromClass([view class]) isEqualToString:@"T1StatusBodyTextView"]) {
-                bodyTextView = (T1StatusBodyTextView *)view;
-                return;
-            }
-            
-            for (UIView *subview in view.subviews) {
-                if (!bodyTextView) { // Only continue if we haven't found it yet
-                    findBodyTextView(subview);
+    if (status) {
+        // Try get text directly from status properties
+        NSArray *textProperties = @[@"text", @"fullText", @"full_text", @"displayText"];
+        for (NSString *property in textProperties) {
+            if ([status respondsToSelector:NSSelectorFromString(property)]) {
+                NSString *text = [status valueForKey:property];
+                if (text && [text isKindOfClass:[NSString class]] && text.length > 0) {
+                    NSLog(@"[BHTwitter Translate] Found text from status.%@: %@", property, text);
+                    return text;
                 }
-            }
-        };
-        
-        findBodyTextView(controller.view);
-        
-        // If we found T1StatusBodyTextView, get the text from its viewModel.status
-        if (bodyTextView) {
-            NSLog(@"[BHTwitter Translate] Found T1StatusBodyTextView in view hierarchy for text extraction");
-            
-            @try {
-                if ([bodyTextView respondsToSelector:@selector(viewModel)]) {
-                    id viewModel = [bodyTextView valueForKey:@"viewModel"];
-                    if (viewModel && [viewModel respondsToSelector:@selector(status)]) {
-                        id status = [viewModel valueForKey:@"status"];
-                        if (status && [status isKindOfClass:%c(TFNTwitterStatus)]) {
-                            // Try to get text from common properties
-                            NSArray *textProperties = @[@"text", @"fullText", @"full_text", @"displayText"];
-                            for (NSString *property in textProperties) {
-                                if ([status respondsToSelector:NSSelectorFromString(property)]) {
-                                    NSString *text = [status valueForKey:property];
-                                    if (text && [text isKindOfClass:[NSString class]] && text.length > 0) {
-                                        NSLog(@"[BHTwitter Translate] Found text from T1StatusBodyTextView.viewModel.status.%@: %@", property, text);
-                                        return text;
-                                    }
-                                }
-                            }
-                            
-                            // Try attributedStringValue if direct text properties failed
-                            if ([status respondsToSelector:@selector(attributedStringValue)]) {
-                                id attrStringModel = [status valueForKey:@"attributedStringValue"];
-                                if ([attrStringModel respondsToSelector:@selector(attributedString)]) {
-                                    NSAttributedString *attrString = [attrStringModel valueForKey:@"attributedString"];
-                                    if (attrString && attrString.string.length > 0) {
-                                        NSLog(@"[BHTwitter Translate] Found text from T1StatusBodyTextView.viewModel.status.attributedStringValue.attributedString.string");
-                                        return attrString.string;
-                                    }
-                                } else if ([attrStringModel isKindOfClass:[NSAttributedString class]]) {
-                                    NSAttributedString *attrString = (NSAttributedString *)attrStringModel;
-                                    if (attrString && attrString.string.length > 0) {
-                                        NSLog(@"[BHTwitter Translate] Found text from T1StatusBodyTextView.viewModel.status.attributedStringValue (as NSAttributedString)");
-                                        return attrString.string;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            } @catch (NSException *e) {
-                NSLog(@"[BHTwitter Translate] Exception accessing T1StatusBodyTextView text extraction: %@", e);
             }
         }
-    }
-    
-    // If we couldn't get text from T1StatusBodyTextView, fallback to finding TFNTwitterStatus
-    TFNTwitterStatus *tweetStatus = [self BHT_findStatusObjectInController:controller];
-    
-    if (!tweetStatus) {
-        NSLog(@"[BHTwitter Translate] No TFNTwitterStatus object found for VC: %@. Cannot extract text.", NSStringFromClass([controller class]));
-        return @""; // Return empty string if no status object.
-    }
-    
-    NSLog(@"[BHTwitter Translate] TFNTwitterStatus object found (%@) for VC: %@. Attempting to extract text.", NSStringFromClass([tweetStatus class]), NSStringFromClass([controller class]));
-    NSString *extractedText = nil;
-    
-    // Prioritize fullText or text, then attributedStringValue
-    NSArray *textPropertyNames = @[@"fullText", @"text", @"full_text", @"expandedText", @"displayText"];
-    
-    for (NSString *propName in textPropertyNames) {
-        if ([tweetStatus respondsToSelector:NSSelectorFromString(propName)]) {
-            @try {
-                id textValue = [tweetStatus valueForKey:propName];
-                if ([textValue isKindOfClass:[NSString class]] && [(NSString *)textValue length] > 0) {
-                    extractedText = (NSString *)textValue;
-                    NSLog(@"[BHTwitter Translate] Extracted text from TFNTwitterStatus via '%@': %@", propName, extractedText);
-                    // Clean the text from potential HTML entities or XML tags
-                    if (extractedText) {
-                        NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"<[^>]+>|&[a-zA-Z0-9#]+;" options:NSRegularExpressionCaseInsensitive error:nil];
-                        extractedText = [regex stringByReplacingMatchesInString:extractedText options:0 range:NSMakeRange(0, extractedText.length) withTemplate:@""];
-                        extractedText = [extractedText stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-                    }
-                    break; 
-                }
-            } @catch (NSException *e) {
-                NSLog(@"[BHTwitter Translate] Exception accessing TFNTwitterStatus property '%@': %@", propName, e);
-            }
-        }
-    }
-    
-    // If direct text properties fail, try attributedStringValue
-    if (!extractedText && [tweetStatus respondsToSelector:@selector(attributedStringValue)]) {
-        @try {
-            // TFNTwitterStatus's 'attributedStringValue' often holds a TFNAttributedTextModel
-            id attrStringModel = [tweetStatus valueForKey:@"attributedStringValue"]; 
+        
+        // Try attributedStringValue if direct text properties failed
+        if ([status respondsToSelector:@selector(attributedStringValue)]) {
+            id attrStringModel = [status valueForKey:@"attributedStringValue"];
             if ([attrStringModel respondsToSelector:@selector(attributedString)]) {
                 NSAttributedString *attrString = [attrStringModel valueForKey:@"attributedString"];
                 if (attrString && attrString.string.length > 0) {
-                    extractedText = attrString.string;
-                    NSLog(@"[BHTwitter Translate] Extracted text from TFNTwitterStatus via attributedStringValue.attributedString.string: %@", extractedText);
+                    NSLog(@"[BHTwitter Translate] Found text from attributedStringValue.attributedString.string");
+                    return attrString.string;
                 }
-            } else if ([attrStringModel isKindOfClass:[NSAttributedString class]]) { 
+            } else if ([attrStringModel isKindOfClass:[NSAttributedString class]]) {
                 NSAttributedString *attrString = (NSAttributedString *)attrStringModel;
                 if (attrString && attrString.string.length > 0) {
-                    extractedText = attrString.string;
-                    NSLog(@"[BHTwitter Translate] Extracted text from TFNTwitterStatus directly from attributedStringValue (as NSAttributedString): %@", extractedText);
+                    NSLog(@"[BHTwitter Translate] Found text from attributedStringValue (as NSAttributedString)");
+                    return attrString.string;
                 }
             }
-            // Clean the text from potential HTML entities or XML tags
-            if (extractedText) {
-                NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"<[^>]+>|&[a-zA-Z0-9#]+;" options:NSRegularExpressionCaseInsensitive error:nil];
-                extractedText = [regex stringByReplacingMatchesInString:extractedText options:0 range:NSMakeRange(0, extractedText.length) withTemplate:@""];
-                extractedText = [extractedText stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-            }
-        } @catch (NSException *e) {
-            NSLog(@"[BHTwitter Translate] Exception accessing attributedStringValue from TFNTwitterStatus: %@", e);
         }
     }
     
-    if (extractedText && extractedText.length > 0) {
-        return extractedText;
-    } else {
-        NSLog(@"[BHTwitter Translate] Failed to extract text from the found TFNTwitterStatus object. All known text properties/methods were nil or empty.");
-        return @""; // Return empty string if status found but no text extracted.
+    // If a direct approach to status fails, try looking for the text in the view hierarchy
+    if (controller.isViewLoaded) {
+        NSString *longestText = nil;
+        NSUInteger longestLength = 20; // Minimum text length threshold to consider
+        
+        // Non-recursive approach using an array
+        NSMutableArray *viewsToCheck = [NSMutableArray arrayWithObject:controller.view];
+        
+        while (viewsToCheck.count > 0) {
+            UIView *currentView = viewsToCheck[0];
+            [viewsToCheck removeObjectAtIndex:0];
+            
+            if ([currentView isKindOfClass:[UILabel class]]) {
+                UILabel *label = (UILabel *)currentView;
+                NSString *text = label.text;
+                
+                if (text && text.length > longestLength) {
+                    longestText = text;
+                    longestLength = text.length;
+                }
+            }
+            
+            // Add subviews to the queue
+            [viewsToCheck addObjectsFromArray:currentView.subviews];
+        }
+        
+        if (longestText) {
+            NSLog(@"[BHTwitter Translate] Found text via view hierarchy: %@", longestText);
+            return longestText;
+        }
     }
+    
+    NSLog(@"[BHTwitter Translate] Failed to find any tweet text");
+    return nil;
 }
 
 %end
