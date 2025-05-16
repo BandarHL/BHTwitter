@@ -4880,6 +4880,7 @@ static GeminiTranslator *_sharedInstance;
 - (void)showTranslatePopup:(UIButton *)sender;
 - (void(^)(UIView *))createTextFinderWithTextRef:(NSString * __strong *)longestTextRef lengthRef:(NSUInteger *)lengthRef;
 - (void)processView:(UIView *)view textRef:(NSString * __strong *)textRef lengthRef:(NSUInteger *)lengthRef;
+- (UIViewController *)findT1URTViewControllerInHierarchy:(UIViewController *)startController;
 @end
 
 
@@ -4950,10 +4951,84 @@ static GeminiTranslator *_sharedInstance;
     NSString *className = NSStringFromClass([self class]);
     NSLog(@"[BHTwitter] Checking special cases for %@", className);
     
+    // Check for T1URTViewController specifically, as pointed out for tweet data
+    if ([className isEqualToString:@"T1URTViewController"] || 
+        [className containsString:@"T1URTViewController"]) {
+        NSLog(@"[BHTwitter] Found T1URTViewController, trying specific tweet access patterns");
+        
+        // T1URTViewController specific patterns
+        if ([self respondsToSelector:@selector(dataItem)]) {
+            id dataItem = [self valueForKey:@"dataItem"];
+            NSLog(@"[BHTwitter] T1URTViewController.dataItem -> %@", 
+                  dataItem ? NSStringFromClass([dataItem class]) : @"nil");
+            
+            if (dataItem) {
+                // Try accessing status through common paths in T1URT* classes
+                if ([dataItem respondsToSelector:@selector(statusViewModel)]) {
+                    id statusViewModel = [dataItem valueForKey:@"statusViewModel"];
+                    NSLog(@"[BHTwitter] Found statusViewModel: %@", 
+                          statusViewModel ? NSStringFromClass([statusViewModel class]) : @"nil");
+                    
+                    if ([statusViewModel respondsToSelector:@selector(status)]) {
+                        id status = [statusViewModel valueForKey:@"status"];
+                        NSLog(@"[BHTwitter] Found status: %@", 
+                              status ? NSStringFromClass([status class]) : @"nil");
+                        if ([status isKindOfClass:NSClassFromString(@"TFNTwitterStatus")]) {
+                            return status;
+                        }
+                    }
+                }
+                
+                // Try item.content.status for URT items
+                if ([dataItem respondsToSelector:@selector(content)]) {
+                    id content = [dataItem valueForKey:@"content"];
+                    if (content && [content respondsToSelector:@selector(status)]) {
+                        id status = [content valueForKey:@"status"];
+                        if (status) {
+                            NSLog(@"[BHTwitter] Found status through item.content.status: %@", 
+                                  NSStringFromClass([status class]));
+                            return status;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // For URT views, let's also try the focusedItems pattern
+        if ([self respondsToSelector:@selector(focusedItems)] || 
+            [self respondsToSelector:@selector(visibleItems)]) {
+            NSArray *items = nil;
+            if ([self respondsToSelector:@selector(focusedItems)]) {
+                items = [self valueForKey:@"focusedItems"];
+            } else if ([self respondsToSelector:@selector(visibleItems)]) {
+                items = [self valueForKey:@"visibleItems"];
+            }
+            
+            if (items && [items isKindOfClass:[NSArray class]] && items.count > 0) {
+                id item = items[0];
+                NSLog(@"[BHTwitter] First item in items array: %@", NSStringFromClass([item class]));
+                
+                // Try common patterns in URT items
+                if ([item respondsToSelector:@selector(content)]) {
+                    id content = [item valueForKey:@"content"];
+                    if (content && [content respondsToSelector:@selector(status)]) {
+                        id status = [content valueForKey:@"status"];
+                        if (status) {
+                            NSLog(@"[BHTwitter] Found status through item.content.status: %@", 
+                                  NSStringFromClass([status class]));
+                            return status;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
     // Timeline/TweetDetail controllers often have special methods
     if ([className containsString:@"TimelineViewController"] || 
         [className containsString:@"TweetDetailViewController"] ||
-        [className containsString:@"StatusView"]) {
+        [className containsString:@"StatusView"] ||
+        [className containsString:@"T1Conversation"]) {
         
         NSArray *selectorNames = @[
             @"selectedStatus", @"focusedStatus", @"visibleStatuses", 
@@ -5219,44 +5294,26 @@ static char kTranslateButtonKey;
     
     // If we couldn't find a controller through the responder chain, try the standard approach
     if (!targetController) {
-        UIWindow *keyWindow = nil;
-        
-        // iOS 13+ approach
-        if (@available(iOS 13.0, *)) {
-            NSSet *connectedScenes = UIApplication.sharedApplication.connectedScenes;
-            for (UIScene *scene in connectedScenes) {
-                if (scene.activationState == UISceneActivationStateForegroundActive && 
-                    [scene isKindOfClass:[UIWindowScene class]]) {
-                    UIWindowScene *windowScene = (UIWindowScene *)scene;
-                    for (UIWindow *window in windowScene.windows) {
-                        if (window.isKeyWindow) {
-                            keyWindow = window;
-                            break;
-                        }
-                    }
-                    if (keyWindow) break;
-                }
-            }
-        } else {
-            // Pre-iOS 13 approach
-            keyWindow = UIApplication.sharedApplication.keyWindow;
-        }
-        
-        if (keyWindow) {
-            targetController = keyWindow.rootViewController;
-            while (targetController.presentedViewController) {
-                targetController = targetController.presentedViewController;
-            }
-        }
-    }
-    
-    if (!targetController) {
         NSLog(@"[BHTwitter] Could not find a suitable view controller for translation");
         return;
     }
     
-    // Try to find the tweet text from the view controller hierarchy
-    NSString *textToTranslate = [self findTweetTextInController:targetController];
+    // Declare the variable before first use
+    NSString *textToTranslate = nil;
+    
+    // First, specifically look for T1URTViewController in parent hierarchy
+    UIViewController *urtController = [self findT1URTViewControllerInHierarchy:targetController];
+    if (urtController) {
+        NSLog(@"[BHTwitter] Found T1URTViewController in parent hierarchy");
+        NSString *textFromURT = [self findTweetTextInController:urtController];
+        if (textFromURT && textFromURT.length > 0) {
+            textToTranslate = textFromURT;
+            NSLog(@"[BHTwitter] Successfully extracted text from T1URTViewController");
+        }
+    } else {
+        // Fall back to trying the direct controller
+        textToTranslate = [self findTweetTextInController:targetController];
+    }
     
     // If we couldn't find text in the immediate controller, try navigation stack
     if ((!textToTranslate || textToTranslate.length == 0) && 
@@ -5265,6 +5322,14 @@ static char kTranslateButtonKey;
         NSArray *viewControllers = targetController.navigationController.viewControllers;
         for (UIViewController *vc in viewControllers) {
             if (vc != targetController) { // Don't check the one we already tried
+                // Extra logging to help identify the right controller
+                NSLog(@"[BHTwitter] Checking view controller in nav stack: %@", NSStringFromClass([vc class]));
+                
+                // Specifically look for T1URTViewController
+                if ([NSStringFromClass([vc class]) containsString:@"T1URTViewController"]) {
+                    NSLog(@"[BHTwitter] Found T1URTViewController in navigation stack");
+                }
+                
                 NSString *possibleText = [self findTweetTextInController:vc];
                 if (possibleText && possibleText.length > 0) {
                     textToTranslate = possibleText;
@@ -5287,6 +5352,89 @@ static char kTranslateButtonKey;
                                                       sourceLanguage:@"auto" 
                                                       targetLanguage:@"en" 
                                                     inViewController:targetController];
+}
+
+%new
+- (UIViewController *)findT1URTViewControllerInHierarchy:(UIViewController *)startController {
+    // Check if the controller itself is T1URTViewController
+    if ([NSStringFromClass([startController class]) containsString:@"T1URTViewController"]) {
+        return startController;
+    }
+    
+    // 1. Check childViewControllers
+    for (UIViewController *child in startController.childViewControllers) {
+        if ([NSStringFromClass([child class]) containsString:@"T1URTViewController"]) {
+            return child;
+        }
+        
+        // Recursive check
+        UIViewController *foundInChild = [self findT1URTViewControllerInHierarchy:child];
+        if (foundInChild) {
+            return foundInChild;
+        }
+    }
+    
+    // 2. Check parentViewController
+    UIViewController *parent = startController.parentViewController;
+    while (parent) {
+        if ([NSStringFromClass([parent class]) containsString:@"T1URTViewController"]) {
+            return parent;
+        }
+        parent = parent.parentViewController;
+    }
+    
+    // 3. Check presentingViewController and presentedViewController
+    if (startController.presentingViewController) {
+        if ([NSStringFromClass([startController.presentingViewController class]) containsString:@"T1URTViewController"]) {
+            return startController.presentingViewController;
+        }
+        
+        UIViewController *foundInPresenting = [self findT1URTViewControllerInHierarchy:startController.presentingViewController];
+        if (foundInPresenting) {
+            return foundInPresenting;
+        }
+    }
+    
+    if (startController.presentedViewController) {
+        if ([NSStringFromClass([startController.presentedViewController class]) containsString:@"T1URTViewController"]) {
+            return startController.presentedViewController;
+        }
+        
+        UIViewController *foundInPresented = [self findT1URTViewControllerInHierarchy:startController.presentedViewController];
+        if (foundInPresented) {
+            return foundInPresented;
+        }
+    }
+    
+    // 4. Check navigation controller stack
+    if ([startController isKindOfClass:[UINavigationController class]]) {
+        UINavigationController *navController = (UINavigationController *)startController;
+        for (UIViewController *vc in navController.viewControllers) {
+            if ([NSStringFromClass([vc class]) containsString:@"T1URTViewController"]) {
+                return vc;
+            }
+            
+            UIViewController *foundInVC = [self findT1URTViewControllerInHierarchy:vc];
+            if (foundInVC) {
+                return foundInVC;
+            }
+        }
+    } else if (startController.navigationController) {
+        for (UIViewController *vc in startController.navigationController.viewControllers) {
+            if ([NSStringFromClass([vc class]) containsString:@"T1URTViewController"]) {
+                return vc;
+            }
+            
+            if (vc != startController) { // Avoid infinite recursion
+                UIViewController *foundInVC = [self findT1URTViewControllerInHierarchy:vc];
+                if (foundInVC) {
+                    return foundInVC;
+                }
+            }
+        }
+    }
+    
+    return nil;
 }
 
 %new
