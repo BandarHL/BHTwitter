@@ -5593,40 +5593,156 @@ static NSMutableArray *activeTranslationContexts;
                 }
             }
             
-            // Next, try to create or update a label with our translation
-            UILabel *translationLabel = nil;
+            // Don't create label directly in TranslateView - find the parent container
+            UIView *containerView = currentView;
+            while (containerView && ![NSStringFromClass([containerView class]) isEqualToString:@"T1ConversationFocalStatusView"]) {
+                containerView = containerView.superview;
+            }
             
-            // First, search for an existing label
-            for (UIView *subview in currentView.subviews) {
-                if ([subview isKindOfClass:[UILabel class]]) {
-                    translationLabel = (UILabel *)subview;
-                    break;
+            if (!containerView) {
+                containerView = currentView.superview; // Fallback if we can't find the focal view
+            }
+            
+            // Search for an existing TTAStatusBodyTextView for translation
+            UIView *existingTranslationView = nil;
+            BOOL foundTranslateButton = NO;
+            CGFloat yPositionAfterTranslateButton = 0;
+            
+            // First find the translate button to position our view after it
+            for (UIView *subview in containerView.subviews) {
+                NSString *subviewClass = NSStringFromClass([subview class]);
+                
+                // Find the translate button to get its position
+                if ([subviewClass isEqualToString:@"T1TranslateButton"]) {
+                    foundTranslateButton = YES;
+                    yPositionAfterTranslateButton = CGRectGetMaxY(subview.frame) + 4; // 4pt spacing
+                }
+                
+                // Check if there's already a translation text view
+                if ([subviewClass isEqualToString:@"TTAStatusBodyTextView"] || 
+                    [subviewClass containsString:@"TranslationTextView"]) {
+                    // If it's positioned after the translate button, it's likely our target
+                    if (subview.frame.origin.y > yPositionAfterTranslateButton && foundTranslateButton) {
+                        existingTranslationView = subview;
+                        break;
+                    }
                 }
             }
             
-            // If no label exists, create one
-            if (!translationLabel) {
-                translationLabel = [[UILabel alloc] init];
-                translationLabel.translatesAutoresizingMaskIntoConstraints = NO;
-                translationLabel.numberOfLines = 0;
-                translationLabel.lineBreakMode = NSLineBreakByWordWrapping;
-                translationLabel.backgroundColor = [UIColor clearColor];
-                translationLabel.textColor = [UIColor blackColor];
-                translationLabel.font = [UIFont systemFontOfSize:16];
-                [currentView addSubview:translationLabel];
+            // If we found an existing translation view, update it
+            if (existingTranslationView) {
+                NSLog(@"[GeminiTranslator] Found existing translation text view to update");
                 
-                // Add constraints to make it fill the view with padding
-                [NSLayoutConstraint activateConstraints:@[
-                    [translationLabel.topAnchor constraintEqualToAnchor:currentView.topAnchor constant:8],
-                    [translationLabel.leadingAnchor constraintEqualToAnchor:currentView.leadingAnchor constant:8],
-                    [translationLabel.trailingAnchor constraintEqualToAnchor:currentView.trailingAnchor constant:-8],
-                    [translationLabel.bottomAnchor constraintEqualToAnchor:currentView.bottomAnchor constant:-8]
-                ]];
+                // Try different methods to update the text
+                if ([existingTranslationView respondsToSelector:@selector(setText:)]) {
+                    [existingTranslationView performSelector:@selector(setText:) withObject:translatedText];
+                } else if ([existingTranslationView isKindOfClass:[UITextView class]]) {
+                    ((UITextView *)existingTranslationView).text = translatedText;
+                } else if ([existingTranslationView isKindOfClass:[UILabel class]]) {
+                    ((UILabel *)existingTranslationView).text = translatedText;
+                }
+                
+                existingTranslationView.hidden = NO;
+                
+            } else if (foundTranslateButton && containerView) {
+                NSLog(@"[GeminiTranslator] Creating new TTAStatusBodyTextView for translation");
+                
+                // Try to create the proper Twitter text view class if possible
+                Class textViewClass = NSClassFromString(@"TTAStatusBodyTextView");
+                UIView *translationView = nil;
+                
+                if (textViewClass) {
+                    // Create a proper Twitter text view
+                    translationView = [[textViewClass alloc] init];
+                } else {
+                    // Fallback to standard UITextView
+                    UITextView *textView = [[UITextView alloc] init];
+                    textView.editable = NO;
+                    textView.scrollEnabled = NO;
+                    textView.dataDetectorTypes = UIDataDetectorTypeLink;
+                    translationView = textView;
+                }
+                
+                // Configure the view
+                translationView.translatesAutoresizingMaskIntoConstraints = NO;
+                if ([translationView respondsToSelector:@selector(setText:)]) {
+                    [translationView performSelector:@selector(setText:) withObject:translatedText];
+                } else if ([translationView isKindOfClass:[UITextView class]]) {
+                    ((UITextView *)translationView).text = translatedText;
+                }
+                
+                // Add to container
+                [containerView addSubview:translationView];
+                
+                // Try to position it properly in the container - relative to existing subviews
+                NSMutableArray *constraints = [NSMutableArray array];
+                
+                if (foundTranslateButton) {
+                    // Find translate button again to create constraint
+                    for (UIView *subview in containerView.subviews) {
+                        if ([NSStringFromClass([subview class]) isEqualToString:@"T1TranslateButton"]) {
+                            [constraints addObject:[translationView.topAnchor constraintEqualToAnchor:subview.bottomAnchor constant:8]];
+                            break;
+                        }
+                    }
+                }
+                
+                // Add horizontal constraints - try to match existing layout
+                [constraints addObject:[translationView.leadingAnchor constraintEqualToAnchor:containerView.leadingAnchor constant:16]];
+                [constraints addObject:[translationView.trailingAnchor constraintEqualToAnchor:containerView.trailingAnchor constant:-16]];
+                
+                // If we couldn't find translate button, add top constraint
+                if (constraints.count < 3) {
+                    [constraints addObject:[translationView.topAnchor constraintEqualToAnchor:containerView.topAnchor constant:yPositionAfterTranslateButton]];
+                }
+                
+                // Add a height constraint to ensure it's visible
+                CGFloat estimatedHeight = [translatedText boundingRectWithSize:CGSizeMake(containerView.bounds.size.width - 32, CGFLOAT_MAX)
+                                                  options:NSStringDrawingUsesLineFragmentOrigin
+                                               attributes:@{NSFontAttributeName: [UIFont systemFontOfSize:15]}
+                                                  context:nil].size.height;
+                
+                [constraints addObject:[translationView.heightAnchor constraintGreaterThanOrEqualToConstant:MAX(estimatedHeight, 40)]];
+                
+                // Activate constraints
+                [NSLayoutConstraint activateConstraints:constraints];
+                
+                // Force container to extend as needed
+                [containerView setNeedsLayout];
+                [containerView layoutIfNeeded];
+                
+                // Find and update parent ConversationFocalStatusView to ensure it extends
+                UIView *focalView = containerView;
+                while (focalView && ![NSStringFromClass([focalView class]) isEqualToString:@"T1ConversationFocalStatusView"]) {
+                    focalView = focalView.superview;
+                }
+                
+                if (focalView) {
+                    // Ensure the focal view recalculates its content size to include our new view
+                    if ([focalView respondsToSelector:@selector(invalidateIntrinsicContentSize)]) {
+                        [focalView performSelector:@selector(invalidateIntrinsicContentSize)];
+                    }
+                    
+                    // Find and update any scroll views that might contain this
+                    UIView *scrollView = focalView.superview;
+                    while (scrollView && ![scrollView isKindOfClass:[UIScrollView class]]) {
+                        scrollView = scrollView.superview;
+                    }
+                    
+                    if ([scrollView isKindOfClass:[UIScrollView class]]) {
+                        // Force content size recalculation
+                        [(UIScrollView *)scrollView setNeedsLayout];
+                        [(UIScrollView *)scrollView layoutIfNeeded];
+                    }
+                    
+                    // Post a notification to trigger Twitter's layout system
+                    NSMutableDictionary *userInfo = [NSMutableDictionary dictionary];
+                    [userInfo setValue:translatedText forKey:@"translatedText"];
+                    [[NSNotificationCenter defaultCenter] postNotificationName:@"StatusViewNeedsLayoutUpdateNotification" 
+                                                                        object:nil 
+                                                                      userInfo:userInfo];
+                }
             }
-            
-            // Set the translated text
-            translationLabel.text = translatedText;
-            translationLabel.hidden = NO;
             
             // Force layout and make the view visible
             currentView.hidden = NO;
