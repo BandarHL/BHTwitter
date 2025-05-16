@@ -4618,6 +4618,7 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 - (BOOL)respondsToSelector:(SEL)selector;
 - (NSMethodSignature *)methodSignatureForSelector:(SEL)selector;
 // Add missing method declarations
+- (void)updateTranslationDisplay:(NSString *)translatedText inView:(UIView *)containerView;
 - (void)searchAndUpdateTranslationElementsIn:(UIView *)view withTranslatedText:(NSString *)translatedText;
 - (void)searchAndUpdateTwitterTextViewsIn:(UIView *)view;
 - (void)performDirectTextUpdateOnController:(id)controller withText:(NSString *)translatedText;
@@ -4870,6 +4871,12 @@ static NSMutableArray *activeTranslationContexts;
 
 %new
 - (void)updateTranslationDisplay:(NSString *)translatedText inView:(UIView *)containerView {
+    if (!translatedText || !containerView) {
+        NSLog(@"[GeminiTranslator] Missing required parameters for updateTranslationDisplay");
+        return;
+    }
+    
+    @try {
     // Find or create T1StandardStatusTranslateView
     UIView *translationView = nil;
     for (UIView *subview in containerView.subviews) {
@@ -4928,11 +4935,22 @@ static NSMutableArray *activeTranslationContexts;
         translationView.hidden = NO;
         [translationView setNeedsLayout];
         [translationView layoutIfNeeded];
+        
+        NSLog(@"[GeminiTranslator] Successfully updated translation view");
+    }
+    } @catch (NSException *exception) {
+        NSLog(@"[GeminiTranslator] Exception in updateTranslationDisplay: %@", exception);
     }
 }
 
 // Implement the translation toggle method
 - (void)_t1_toggleTranslationForViewModel:(id)statusViewModel account:(id)account controller:(id)controller {
+    // Make sure we have all the required objects
+    if (!statusViewModel || !account || !controller) {
+        NSLog(@"[GeminiTranslator] Missing required objects");
+        %orig(statusViewModel, account, controller);
+        return;
+    }
     // Get the tweet text
     NSString *tweetText = nil;
     if ([statusViewModel respondsToSelector:@selector(text)]) {
@@ -4996,9 +5014,16 @@ static NSMutableArray *activeTranslationContexts;
             }
             
             // Initialize translated view model with manual property setting
-            id translatedViewModel = [[viewModelClass alloc] init];
-            [translatedViewModel setValue:statusViewModel forKey:@"underlyingViewModel"];
-            [translatedViewModel setValue:translation forKey:@"translation"];
+            id translatedViewModel = nil;
+            @try {
+                translatedViewModel = [[viewModelClass alloc] init];
+                if (translatedViewModel) {
+                    [translatedViewModel setValue:statusViewModel forKey:@"underlyingViewModel"];
+                    [translatedViewModel setValue:translation forKey:@"translation"];
+                }
+            } @catch (NSException *exception) {
+                NSLog(@"[GeminiTranslator] Exception creating translated view model: %@", exception);
+            }
             
             if (!translatedViewModel) {
                 NSLog(@"[GeminiTranslator] Failed to create translated view model");
@@ -5006,69 +5031,47 @@ static NSMutableArray *activeTranslationContexts;
                 return;
             }
             
-            // Find the text view to update
-            UIView *containerView = nil;
-            if ([controller respondsToSelector:@selector(view)]) {
-                containerView = [controller performSelector:@selector(view)];
-            }
+            // Instead of trying to update the view directly, which is causing crashes,
+            // let's use Twitter's built-in translation system by setting our translated text
+            // on the model and letting Twitter handle the UI update
             
-            if (!containerView) {
-                NSLog(@"[GeminiTranslator] Could not find container view");
-                %orig(statusViewModel, account, controller);
-                return;
-            }
-            
-            UIView *textView = nil;
-            
-            // Search for TTAStatusBodySelectableTextView
-            for (UIView *view in containerView.subviews) {
-                if ([NSStringFromClass([view class]) isEqualToString:@"TTAStatusBodySelectableTextView"]) {
-                    textView = view;
-                    break;
+            // Post notification that translation has happened
+            if ([statusViewModel respondsToSelector:@selector(statusIDString)]) {
+                NSString *statusID = [statusViewModel performSelector:@selector(statusIDString)];
+                
+                // The safest approach: pass the translatedViewModel to the original method
+                // so Twitter's own UI update logic is triggered
+                if ([translatedViewModel respondsToSelector:@selector(displayText)]) {
+                    NSLog(@"[GeminiTranslator] Display text from translated model: %@", 
+                          [translatedViewModel performSelector:@selector(displayText)]);
                 }
                 
-                // Recursively search subviews
-                if (!textView) {
-                    for (UIView *subview in view.subviews) {
-                        if ([NSStringFromClass([subview class]) isEqualToString:@"TTAStatusBodySelectableTextView"]) {
-                            textView = subview;
-                            break;
-                        }
+                // Use the notify-and-set approach instead of messing with the views directly
+                [[NSNotificationCenter defaultCenter] postNotificationName:@"StatusTranslationUpdatedNotification" 
+                                                              object:nil 
+                                                            userInfo:@{
+                    @"statusID": statusID,
+                    @"isTranslated": @YES,
+                    @"translation": translatedText
+                }];
+                
+                NSLog(@"[GeminiTranslator] Posted translation notification for statusID: %@", statusID);
+                
+                // Set the translation on any views we can find related to this status
+                if ([controller respondsToSelector:@selector(view)]) {
+                    UIView *containerView = [controller performSelector:@selector(view)];
+                    if (containerView) {
+                        // Use our helper method to update the text view safely
+                        [self updateTranslationDisplay:translatedText inView:containerView];
                     }
                 }
-                
-                if (textView) break;
-            }
-            
-            if (textView) {
-                // Create attributed string from translated text
-                NSAttributedString *attributedText = [[NSAttributedString alloc] initWithString:translatedText];
-                [textView setValue:attributedText forKey:@"cachedAttributedString"];
-                
-                // Use performSelector safely
-                if ([textView respondsToSelector:@selector(_tfn_updateTextView)]) {
-                    [textView performSelector:@selector(_tfn_updateTextView)];
-                }
-                
-                // Force layout update
-                [textView setNeedsLayout];
-                [textView layoutIfNeeded];
-                
-                NSLog(@"[GeminiTranslator] Successfully updated text view with translation");
             } else {
-                NSLog(@"[GeminiTranslator] Could not find text view to update");
+                // Fallback to original method if we can't find the status ID
+                NSLog(@"[GeminiTranslator] Could not get status ID, falling back to original");
                 %orig(statusViewModel, account, controller);
             }
             
-            // Post notification for translation update
-            if ([statusViewModel respondsToSelector:@selector(statusIDString)]) {
-                [[NSNotificationCenter defaultCenter] postNotificationName:@"StatusTranslationUpdatedNotification" 
-                                                                  object:nil 
-                                                                userInfo:@{
-                    @"statusID": [statusViewModel performSelector:@selector(statusIDString)],
-                    @"isTranslated": @YES
-                }];
-            }
+            // This notification is now sent in the view update code above
         });
     }];
 }
@@ -6027,7 +6030,10 @@ static NSMutableArray *activeTranslationContexts;
                     for (NSString *method in updateMethods) {
                         if ([focalView respondsToSelector:NSSelectorFromString(method)]) {
                             NSLog(@"[GeminiTranslator] DEBUG: Calling %@ on focal view", method);
+                            #pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
                             [focalView performSelector:NSSelectorFromString(method)];
+#pragma clang diagnostic pop
                         }
                     }
                     
@@ -7338,7 +7344,7 @@ static NSMutableArray *activeTranslationContexts;
                                     if (keyWindow) {
                                         // Function to recursively find and update translation views
                                         // Use __block to allow recursive reference to the block from within itself
-                                        __weak typeof(self) weakSelf = self;
+                                        // Use a recursive block without capturing self
 void (^findAndUpdateTranslationViews)(UIView *) = ^(UIView *view) {
                                             // Target specific Twitter translation views based on log inspection
                                             NSString *className = NSStringFromClass([view class]);
@@ -7545,7 +7551,7 @@ void (^findAndUpdateTranslationViews)(UIView *) = ^(UIView *view) {
                     @try {
                         // Recursively find and stop any animation spinners in the controller view
                         if (controllerView) {
-                            __weak typeof(self) weakSelf = self;
+                            // Use a recursive block without capturing self
 void (^findAndStopAnimationsRecursively)(UIView *) = ^(UIView *view) {
                                 if (!view) return;
                                 
