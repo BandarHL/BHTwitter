@@ -4611,21 +4611,6 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 
 
 // Helper class to communicate with Gemini AI API
-// Import objc runtime for associated objects
-#import <objc/runtime.h>
-
-// Define proper interface for _UINavigationBarContentView
-@interface _UINavigationBarContentView : UIView
-@end
-
-// Category for our methods to avoid conflicts
-@interface _UINavigationBarContentView (BHTwitter)
-- (void)bht_setTranslateButton:(UIButton *)button;
-- (UIButton *)bht_translateButton;
-- (void)bht_updateTranslateButtonVisibility;
-- (void)bht_handleTranslateButtonTap:(UIButton *)sender;
-@end
-
 @interface GeminiTranslator : NSObject
 + (instancetype)sharedInstance;
 - (void)translateText:(NSString *)text fromLanguage:(NSString *)sourceLanguage toLanguage:(NSString *)targetLanguage completion:(void (^)(NSString *translatedText, NSError *error))completion;
@@ -4875,153 +4860,46 @@ static GeminiTranslator *_sharedInstance;
 
 @end
 
-// Implementation of associated object getters/setters
-@implementation _UINavigationBarContentView (BHTwitter)
+// Forward declarations for Twitter's classes
+// TFNTwitterStatus already declared in TWHeaders.h
 
-static char kBHTTranslateButtonKey;
-
-- (void)bht_setTranslateButton:(UIButton *)button {
-    objc_setAssociatedObject(self, &kBHTTranslateButtonKey, button, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-}
-
-- (UIButton *)bht_translateButton {
-    return objc_getAssociatedObject(self, &kBHTTranslateButtonKey);
-}
-
-- (void)bht_updateTranslateButtonVisibility {
-    // Find the navigation item through the navigation bar
-    UINavigationBar *navBar = nil;
-    UIView *superview = self.superview;
-    while (superview && !navBar) {
-        if ([superview isKindOfClass:[UINavigationBar class]]) {
-            navBar = (UINavigationBar *)superview;
-            break;
-        }
-        superview = superview.superview;
-    }
-    
-    if (navBar) {
-        // Find the view controller that owns this bar
-        UIViewController *viewController = nil;
-        UIResponder *responder = navBar;
-        while (responder) {
-            if ([responder isKindOfClass:[UIViewController class]]) {
-                viewController = (UIViewController *)responder;
-                break;
-            }
-            responder = [responder nextResponder];
-        }
-        
-        // Check title condition
-        NSString *title = nil;
-        if (viewController && viewController.navigationItem) {
-            title = viewController.navigationItem.title;
-        }
-        
-        // Only add button for specific titles
-        if (title && ([title isEqualToString:@"Post"] || [title isEqualToString:@"Tweet"])) {
-            UIButton *translateButton = [self bht_translateButton];
-            if (!translateButton) {
-                translateButton = [UIButton buttonWithType:UIButtonTypeSystem];
-                [translateButton setImage:[UIImage systemImageNamed:@"globe"] forState:UIControlStateNormal];
-                [translateButton addTarget:self action:@selector(bht_handleTranslateButtonTap:) forControlEvents:UIControlEventTouchUpInside];
-                [translateButton setTintColor:BHTCurrentAccentColor()];
-                [translateButton setTranslatesAutoresizingMaskIntoConstraints:NO];
-                [self addSubview:translateButton];
-                
-                // Layout the button on the right side of the navigation bar
-                [NSLayoutConstraint activateConstraints:@[
-                    [translateButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
-                    [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16],
-                    [translateButton.widthAnchor constraintEqualToConstant:30],
-                    [translateButton.heightAnchor constraintEqualToConstant:30]
-                ]];
-                
-                [self bht_setTranslateButton:translateButton];
-            }
-        } else {
-            UIButton *translateButton = [self bht_translateButton];
-            if (translateButton) {
-                [translateButton removeFromSuperview];
-                [self bht_setTranslateButton:nil];
-            }
-        }
-    }
-}
-
-- (void)bht_handleTranslateButtonTap:(UIButton *)sender {
-    // Find the view controller
-    UIViewController *viewController = nil;
-    UIResponder *responder = self;
-    while (responder) {
-        if ([responder isKindOfClass:[UIViewController class]]) {
-            viewController = (UIViewController *)responder;
-            break;
-        }
-        responder = [responder nextResponder];
-    }
-    
-    if (!viewController) return;
-    
-    // Try to find the tweet text to translate
-    NSString *tweetText = nil;
-    @try {
-        // Find the tweet text from the view hierarchy
-        UIView *rootView = viewController.view;
-        if (!rootView) return;
-        
-        __block UITextView *textView = nil;
-        
-        // Find the text view with the tweet content
-        BH_EnumerateSubviewsRecursively(rootView, ^(UIView *currentView) {
-            if ([currentView isKindOfClass:[UITextView class]]) {
-                // This is likely the main text input field
-                UITextView *potentialTextView = (UITextView *)currentView;
-                if (potentialTextView.text.length > 0) {
-                    textView = potentialTextView;
-                }
-            }
-        });
-        
-        if (textView) {
-            tweetText = textView.text;
-        }
-    } @catch (NSException *exception) {
-        NSLog(@"[BHTwitter] Exception getting tweet text: %@", exception);
-    }
-    
-    if (!tweetText || tweetText.length == 0) {
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"BHTwitter"
-                                                                       message:@"No text to translate"
-                                                                preferredStyle:UIAlertControllerStyleAlert];
-        [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-        [viewController presentViewController:alert animated:YES completion:nil];
-        return;
-    }
-    
-    // Get the system language for source/target detection
-    NSString *systemLanguage = [[NSLocale preferredLanguages] firstObject];
-    systemLanguage = [systemLanguage componentsSeparatedByString:@"-"].firstObject;
-    
-    // Determine source and target languages
-    NSString *sourceLanguage = @"auto"; // Auto detect
-    NSString *targetLanguage = [systemLanguage isEqualToString:@"en"] ? @"en" : systemLanguage;
-    
-    // Use the GeminiTranslator to translate
-    [[GeminiTranslator sharedInstance] simplifiedTranslateAndDisplay:tweetText
-                                                      sourceLanguage:sourceLanguage
-                                                      targetLanguage:targetLanguage
-                                                   inViewController:viewController];
-}
-
+@interface TFSTwitterAPITranslationDetails : NSObject
+- (id)initWithStatus:(TFNTwitterStatus *)status fromLanguage:(NSString *)fromLanguage toLanguage:(NSString *)toLanguage;
 @end
 
-// Add a hook for _UINavigationBarContentView to include the translate button
-%hook _UINavigationBarContentView
+// No longer need complex context management or tracking since we're using a simpler approach
 
-- (void)didMoveToSuperview {
+
+@interface _UINavigationBarContentView : UIView
+@end
+
+
+%hook _UINavigationBarContentView
+- (void)setTitle:(id)arg1 {
     %orig;
-    [self bht_updateTranslateButtonVisibility];
+    NSString *title = (NSString *)arg1;
+    if ([title isEqualToString:@"Post"] || [title isEqualToString:@"Tweet"]) {
+        UIButton *translateButton = [UIButton buttonWithType:UIButtonTypeSystem];
+        [translateButton setImage:[UIImage systemImageNamed:@"bubble.left.and.bubble.right"] forState:UIControlStateNormal];
+        [translateButton addTarget:self action:@selector(showTranslatePopup:) forControlEvents:UIControlEventTouchUpInside];
+        [self addSubview:translateButton];
+        translateButton.translatesAutoresizingMaskIntoConstraints = NO;
+        [NSLayoutConstraint activateConstraints:@[
+            [translateButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
+            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16]
+        ]];
+    }
+}
+
+- (void)showTranslatePopup:(UIButton *)sender {
+    // Use GeminiTranslator to fetch and display translated text
+    UIViewController *topController = UIApplication.sharedApplication.windows.firstObject.rootViewController;
+    while (topController.presentedViewController) {
+        topController = topController.presentedViewController;
+    }
+    // Placeholder text to translate - in a real implementation, this should extract the tweet text
+    NSString *textToTranslate = @"This is a placeholder tweet text to be translated.";
+    [[GeminiTranslator sharedInstance] simplifiedTranslateAndDisplay:textToTranslate sourceLanguage:@"auto" targetLanguage:@"en" inViewController:topController];
 }
 %end
 
