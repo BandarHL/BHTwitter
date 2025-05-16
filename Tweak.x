@@ -4621,6 +4621,7 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 - (void)searchAndUpdateTranslationElementsIn:(UIView *)view withTranslatedText:(NSString *)translatedText;
 - (void)searchAndUpdateTwitterTextViewsIn:(UIView *)view;
 - (void)performDirectTextUpdateOnController:(id)controller withText:(NSString *)translatedText;
+- (void)findAndUpdateTranslateViewForController:(id)controller;
 @end
 
 @interface T1TranslateButton : UIButton
@@ -5252,6 +5253,110 @@ static NSMutableArray *activeTranslationContexts;
 }
 
 %new
+- (void)findAndUpdateTranslateViewForController:(id)controller {
+    if (!controller) return;
+    
+    NSLog(@"[GeminiTranslator] Specifically searching for translation view to update");
+    
+    UIView *controllerView = [controller respondsToSelector:@selector(view)] ? [controller performSelector:@selector(view)] : nil;
+    if (!controllerView) return;
+    
+    // Use a queue-based approach
+    NSMutableArray *queue = [NSMutableArray arrayWithObject:controllerView];
+    NSInteger iterations = 0;
+    NSInteger maxIterations = 200;
+    
+    while (queue.count > 0 && iterations < maxIterations) {
+        UIView *currentView = [queue firstObject];
+        [queue removeObjectAtIndex:0];
+        iterations++;
+        
+        NSString *className = NSStringFromClass([currentView class]);
+        
+        // Look specifically for the translation view
+        if ([className isEqualToString:@"T1StandardStatusTranslateView"]) {
+            NSLog(@"[GeminiTranslator] Found T1StandardStatusTranslateView to update");
+            
+            // Try to explicitly finish the translation process
+            // 1. Look for the activity indicator and stop it
+            for (UIView *subview in currentView.subviews) {
+                // This is already correctly checking the class type before calling the method
+                if ([subview isKindOfClass:[UIActivityIndicatorView class]]) {
+                    UIActivityIndicatorView *spinner = (UIActivityIndicatorView *)subview;
+                    NSLog(@"[GeminiTranslator] Stopping spinner animation");
+                    [spinner stopAnimating];
+                    spinner.hidden = YES;
+                }
+                
+                // Look for indicator in deeper subviews too
+                for (UIView *deepSubview in subview.subviews) {
+                    // This is also correct - already checking class before calling method
+                if ([deepSubview isKindOfClass:[UIActivityIndicatorView class]]) {
+                        UIActivityIndicatorView *spinner = (UIActivityIndicatorView *)deepSubview;
+                        NSLog(@"[GeminiTranslator] Stopping nested spinner animation");
+                        [spinner stopAnimating];
+                        spinner.hidden = YES;
+                    }
+                }
+            }
+            
+            // 2. Try to call methods that would complete the translation
+            NSArray *completionMethods = @[
+                @"translationDidComplete",
+                @"translationSucceeded",
+                @"setTranslationState:",
+                @"setLoading:",
+                @"completeWithTranslation:",
+                @"_updateTranslationViewWithTranslation:",
+                @"_finishTranslation",
+                @"finishWithTranslation:",
+                @"updateTranslationViewLayout"
+            ];
+            
+            for (NSString *methodName in completionMethods) {
+                SEL selector = NSSelectorFromString(methodName);
+                if ([currentView respondsToSelector:selector]) {
+                    NSLog(@"[GeminiTranslator] Calling %@ on translation view", methodName);
+                    #pragma clang diagnostic push
+                    #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                    
+                    if ([methodName hasSuffix:@":"]) {
+                        // For methods with parameters
+                        if ([methodName containsString:@"Loading"]) {
+                            // Set loading to NO
+                            [currentView performSelector:selector withObject:@NO];
+                        } else if ([methodName containsString:@"State"]) {
+                            // Try to set state to 2 (success)
+                            [currentView performSelector:selector withObject:@2];
+                            [currentView performSelector:selector withObject:@1];
+                        } else {
+                            // For other methods, try with nil
+                            [currentView performSelector:selector withObject:nil];
+                        }
+                    } else {
+                        // For methods without parameters
+                        [currentView performSelector:selector];
+                    }
+                    #pragma clang diagnostic pop
+                }
+            }
+            
+            // 3. Set the layout needs update
+            [currentView setNeedsLayout];
+            [currentView layoutIfNeeded];
+            
+            // Once found and updated, no need to continue
+            return;
+        }
+        
+        // Add all subviews to the queue
+        for (UIView *subview in currentView.subviews) {
+            [queue addObject:subview];
+        }
+    }
+}
+
+%new
 - (void)performDirectTextUpdateOnController:(id)controller withText:(NSString *)translatedText {
     if (!controller || !translatedText) return;
     
@@ -5274,66 +5379,174 @@ static NSMutableArray *activeTranslationContexts;
         
         NSString *className = NSStringFromClass([currentView class]);
         
-        // Looking for either the main text view or the translation view
-        if ([className isEqualToString:@"TTAStatusBodySelectableContentTextView"] || 
-            [className isEqualToString:@"T1StandardStatusTranslateView"]) {
+        // Only specifically look for the translation view, NOT the main content view
+        if ([className isEqualToString:@"T1StandardStatusTranslateView"]) {
             
-            NSLog(@"[GeminiTranslator] DIRECT UPDATE: Found relevant text view: %@", className);
+            NSLog(@"[GeminiTranslator] DIRECT UPDATE: Found translation view: %@", className);
             
-            // Found the main tweet text view - attempt multiple update strategies
-            if ([currentView isKindOfClass:[UITextView class]]) {
-                UITextView *textView = (UITextView *)currentView;
-                
-                // Strategy 1: Direct text replacement
-                NSLog(@"[GeminiTranslator] DIRECT UPDATE: Setting text directly");
-                
-                // Save the original attributes if we have attributed text
-                NSDictionary *originalAttributes = nil;
-                NSAttributedString *originalAttributedText = textView.attributedText;
-                if (originalAttributedText && originalAttributedText.length > 0) {
-                    originalAttributes = [originalAttributedText attributesAtIndex:0 effectiveRange:NULL];
+            // Found the translation view - try to stop the spinner and show translation
+            // First check if it has a target method to properly complete the translation
+            BOOL didUpdateTranslationState = NO;
+            
+            // Try to call known completion methods on the translate view
+            NSArray *completionMethods = @[
+                @"translationDidComplete:",
+                @"setTranslationState:",
+                @"_showTranslation:",
+                @"finishTranslation:",
+                @"showTranslation:",
+                @"displayTranslatedText:",
+                @"updateTranslationState:",
+                @"hideActivityIndicator",
+                @"translationFinished"
+            ];
+            
+            for (NSString *methodName in completionMethods) {
+                SEL selector = NSSelectorFromString(methodName);
+                if ([currentView respondsToSelector:selector]) {
+                    NSLog(@"[GeminiTranslator] DIRECT UPDATE: Calling %@ on translation view", methodName);
+                    #pragma clang diagnostic push
+                    #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                    if ([methodName hasSuffix:@":"]) {
+                        // For methods with parameters, try different parameter types
+                        if ([methodName containsString:@"translationState"] || 
+                            [methodName containsString:@"State"]) {
+                            // Assuming "success" state is 2 or 1 (common enum values)
+                            NSNumber *successState = @2;
+                            [currentView performSelector:selector withObject:successState];
+                            // Try again with state 1 if that's the convention
+                            successState = @1;
+                            [currentView performSelector:selector withObject:successState];
+                        } else {
+                            // For other methods try with YES or the translated text
+                            [currentView performSelector:selector withObject:@YES];
+                            [currentView performSelector:selector withObject:translatedText];
+                        }
+                    } else {
+                        [currentView performSelector:selector];
+                    }
+                    #pragma clang diagnostic pop
+                    didUpdateTranslationState = YES;
                 }
-                
-                // Update the text
-                textView.text = translatedText;
-                
-                // If we had attributes, recreate the attributed text with them
-                if (originalAttributes) {
-                    NSAttributedString *newAttributedText = [[NSAttributedString alloc] 
-                                                            initWithString:translatedText 
-                                                            attributes:originalAttributes];
-                    textView.attributedText = newAttributedText;
-                }
-                
-                // Strategy 2: Force updates on the text view
-                [textView setNeedsDisplay];
-                [textView layoutIfNeeded];
-                
-                // Strategy 3: Try to invoke known text update methods
-                NSArray *updateMethods = @[
-                    @"refreshTextViewIfNecessary", 
-                    @"updateWithText:", 
-                    @"updateText",
-                    @"updateDisplay",
-                    @"refresh",
-                    @"renderTranslation",
-                    @"reloadTextView",
-                    @"invalidateIntrinsicContentSize",
-                    @"sizeToFit"
-                ];
-                
-                for (NSString *methodName in updateMethods) {
-                    SEL selector = NSSelectorFromString(methodName);
-                    if ([textView respondsToSelector:selector]) {
-                        NSLog(@"[GeminiTranslator] DIRECT UPDATE: Calling %@ on text view", methodName);
-                        #pragma clang diagnostic push
-                        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-                        [textView performSelector:selector];
-                        #pragma clang diagnostic pop
+            }
+            
+            // Find text labels or views that might contain the translated text
+            for (UIView *subview in currentView.subviews) {
+                if ([subview isKindOfClass:[UILabel class]]) {
+                    UILabel *label = (UILabel *)subview;
+                    NSLog(@"[GeminiTranslator] DIRECT UPDATE: Updating label in translation view");
+                    
+                    // Save attributes
+                    NSDictionary *originalAttributes = nil;
+                    if (label.attributedText) {
+                        originalAttributes = [label.attributedText attributesAtIndex:0 effectiveRange:NULL];
+                    }
+                    
+                    // Set the text
+                    label.text = translatedText;
+                    
+                    // Restore attributes
+                    if (originalAttributes) {
+                        NSAttributedString *newAttributedText = [[NSAttributedString alloc] 
+                                                              initWithString:translatedText 
+                                                               attributes:originalAttributes];
+                        label.attributedText = newAttributedText;
+                    }
+                } else if ([subview isKindOfClass:[UITextView class]]) {
+                    UITextView *textView = (UITextView *)subview;
+                    NSLog(@"[GeminiTranslator] DIRECT UPDATE: Updating text view in translation view");
+                    
+                    // Save attributes
+                    NSDictionary *originalAttributes = nil;
+                    if (textView.attributedText) {
+                        originalAttributes = [textView.attributedText attributesAtIndex:0 effectiveRange:NULL];
+                    }
+                    
+                    // Set the text
+                    textView.text = translatedText;
+                    
+                    // Restore attributes
+                    if (originalAttributes) {
+                        NSAttributedString *newAttributedText = [[NSAttributedString alloc] 
+                                                              initWithString:translatedText 
+                                                               attributes:originalAttributes];
+                        textView.attributedText = newAttributedText;
+                    }
+                } else if ([NSStringFromClass([subview class]) containsString:@"Activity"] ||
+                           [NSStringFromClass([subview class]) containsString:@"Spinner"] ||
+                           [NSStringFromClass([subview class]) containsString:@"Indicator"]) {
+                    // Hide any spinner/activity indicator
+                    NSLog(@"[GeminiTranslator] DIRECT UPDATE: Hiding activity indicator");
+                    subview.hidden = YES;
+                    // Only call stopAnimating if the view responds to it
+                    if ([subview respondsToSelector:@selector(stopAnimating)]) {
+                        [subview performSelector:@selector(stopAnimating)];
                     }
                 }
                 
-                return; // Found and updated, no need to continue
+                // Recursively check this subview's subviews too
+                for (UIView *deeperSubview in subview.subviews) {
+                    if ([deeperSubview isKindOfClass:[UIActivityIndicatorView class]]) {
+                        UIActivityIndicatorView *spinner = (UIActivityIndicatorView *)deeperSubview;
+                        NSLog(@"[GeminiTranslator] DIRECT UPDATE: Stopping spinner animation");
+                        [spinner stopAnimating];
+                        spinner.hidden = YES;
+                    }
+                }
+            }
+            
+            // Force update the translation view
+            [currentView setNeedsLayout];
+            [currentView layoutIfNeeded];
+            
+            if (didUpdateTranslationState) {
+                return; // Successfully updated the translation view, no need to continue
+            }
+        }
+        // Now look specifically for any translation-related component that needs to be updated
+        if ([className containsString:@"Translate"] || 
+            [className containsString:@"Translation"]) {
+            
+            NSLog(@"[GeminiTranslator] DIRECT UPDATE: Found another translation-related view: %@", className);
+            
+            // Try to call methods that might show translation
+            NSArray *translationMethods = @[
+                @"showTranslation", 
+                @"displayTranslation",
+                @"setTranslatedText:",
+                @"showTranslatedText:",
+                @"finishTranslation",
+                @"updateTranslationContent"
+            ];
+            
+            for (NSString *methodName in translationMethods) {
+                SEL selector = NSSelectorFromString(methodName);
+                if ([currentView respondsToSelector:selector]) {
+                    NSLog(@"[GeminiTranslator] DIRECT UPDATE: Calling %@ on translation view", methodName);
+                    #pragma clang diagnostic push
+                    #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                    if ([methodName hasSuffix:@":"]) {
+                        [currentView performSelector:selector withObject:translatedText];
+                    } else {
+                        [currentView performSelector:selector];
+                    }
+                    #pragma clang diagnostic pop
+                }
+            }
+            
+            // If the current view has indicator or spinner subviews, stop them
+            for (UIView *subview in currentView.subviews) {
+                NSString *subviewClass = NSStringFromClass([subview class]);
+                if ([subviewClass containsString:@"Indicator"] || 
+                    [subviewClass containsString:@"Activity"] ||
+                    [subviewClass containsString:@"Spinner"]) {
+                    
+                    // Try to stop any animation - need to check if it can respond first
+                    if ([subview respondsToSelector:@selector(stopAnimating)]) {
+                        [subview performSelector:@selector(stopAnimating)];
+                    }
+                    subview.hidden = YES;
+                }
             }
         }
         
@@ -5939,9 +6152,12 @@ static NSMutableArray *activeTranslationContexts;
                                 NSLog(@"[GeminiTranslator] Forced layout update on controller view");
                             }
                             
-                            // DIRECT approach - try to find TTAStatusBodySelectableContentTextView which contains the tweet text
-                            // This is a targeted search for the specific view class that we know holds tweet content
-                            [self performDirectTextUpdateOnController:context.controller withText:[translatedViewModel performSelector:@selector(displayText)]];
+                                        // DIRECT approach - try to find specific translation-related views
+            // First update the main translation UI
+            [self performDirectTextUpdateOnController:context.controller withText:[translatedViewModel performSelector:@selector(displayText)]];
+            
+            // Then find and update the translation view specifically since we know that's where the issue is
+            [self findAndUpdateTranslateViewForController:context.controller];
                             
                             // Try to find the status cell using a queue-based approach instead of recursion
                             NSMutableArray *viewsToCheck = [NSMutableArray arrayWithObject:controllerView];
@@ -6384,6 +6600,12 @@ static NSMutableArray *activeTranslationContexts;
                                                                                     userInfo:notificationInfo];
                                 }
                                 
+                                // CRITICAL: Update Twitter's internal translation status
+                                // Try to call the internal Twitter method that toggles translation state
+                                if ([translatedViewModel respondsToSelector:@selector(setIsTranslated:)]) {
+                                    [translatedViewModel performSelector:@selector(setIsTranslated:) withObject:@YES];
+                                }
+                                
                                 // Now that we've sent all possible notifications, directly modify any visible translation views
                                 // This is a last-resort approach that manually updates the UI
                                 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
@@ -6405,7 +6627,8 @@ static NSMutableArray *activeTranslationContexts;
                                     
                                     if (keyWindow) {
                                         // Function to recursively find and update translation views
-                                        void (^findAndUpdateTranslationViews)(UIView *) = ^(UIView *view) {
+                                        // Use __block to allow recursive reference to the block from within itself
+                                        __block void (^findAndUpdateTranslationViews)(UIView *) = ^(UIView *view) {
                                             // Target specific Twitter translation views based on log inspection
                                             NSString *className = NSStringFromClass([view class]);
                                             if ([className isEqualToString:@"T1StandardStatusTranslateView"] ||
