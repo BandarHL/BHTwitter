@@ -5417,27 +5417,68 @@ static NSMutableArray *activeTranslationContexts;
                         
                         // Force immediate notification on main thread that translation is complete
                         dispatch_async(dispatch_get_main_queue(), ^{
-                            // We need to properly integrate with Twitter's translation system
+                            // Forget about trying to attach to current viewModel - use translatedViewModel directly
                             @try {
-                                // The key to making this work is letting Twitter handle the UI update
-                                // Do NOT try to bypass Twitter's mechanisms or create custom UI
+                                NSLog(@"[GeminiTranslator] Trying alternative UI refresh methods");
                                 
-                                // Force Twitter to use our translation object by attaching it directly
-                                if ([context.statusViewModel respondsToSelector:@selector(setValue:forKey:)]) {
-                                    [context.statusViewModel setValue:translationObject forKey:@"translation"];
-                                    NSLog(@"[GeminiTranslator] Set translation object via KVC");
+                                // We've seen that we can't directly modify the TFNTwitterStatus with translation
+                                // So instead, focus on methods that work with the translatedViewModel directly
+                                
+                                // Check if the controller has a displayViewModel: method
+                                SEL displayViewModelSelector = NSSelectorFromString(@"displayViewModel:");
+                                if ([context.controller respondsToSelector:displayViewModelSelector]) {
+                                    NSLog(@"[GeminiTranslator] Calling displayViewModel: with translated model");
+                                    [context.controller performSelector:displayViewModelSelector withObject:translatedViewModel];
                                 }
                                 
-                                // Find and call the normal display method - use Twitter's native UI updater
-                                SEL displaySelector = NSSelectorFromString(@"_t1_displayTranslation");
-                                if ([context.controller respondsToSelector:displaySelector]) {
-                                    NSLog(@"[GeminiTranslator] Calling _t1_displayTranslation");
-                                    [context.controller performSelector:displaySelector];
+                                // Try updating any status cells we can find
+                                UIView *containerView = [context.controller valueForKey:@"view"];
+                                if (containerView) {
+                                    // Look for status cells/views
+                                    NSMutableArray *statusViews = [NSMutableArray array];
+                                    // Queue-based approach to find status views
+                                    NSMutableArray *queue = [NSMutableArray arrayWithObject:containerView];
+                                    
+                                    while (queue.count > 0) {
+                                        UIView *view = queue.firstObject;
+                                        [queue removeObjectAtIndex:0];
+                                        
+                                        // Check if this is a status view
+                                        NSString *className = NSStringFromClass([view class]);
+                                        if ([className containsString:@"StatusView"] || 
+                                            [className containsString:@"TweetView"]) {
+                                            [statusViews addObject:view];
+                                        }
+                                        
+                                        // Add subviews to queue
+                                        for (UIView *subview in view.subviews) {
+                                            [queue addObject:subview];
+                                        }
+                                    }
+                                    
+                                    // Update all found status views
+                                    for (UIView *statusView in statusViews) {
+                                        NSLog(@"[GeminiTranslator] Found status view to update: %@", statusView);
+                                        
+                                        // Try updateViewModel: first
+                                        if ([statusView respondsToSelector:@selector(updateViewModel:)]) {
+                                            [statusView performSelector:@selector(updateViewModel:) withObject:translatedViewModel];
+                                            NSLog(@"[GeminiTranslator] Called updateViewModel:");
+                                        }
+                                        // Then try setViewModel: if available
+                                        else if ([statusView respondsToSelector:@selector(setViewModel:)]) {
+                                            [statusView performSelector:@selector(setViewModel:) withObject:translatedViewModel];
+                                            NSLog(@"[GeminiTranslator] Called setViewModel:");
+                                        }
+                                        
+                                        [statusView setNeedsLayout];
+                                        [statusView layoutIfNeeded];
+                                    }
                                 }
                                 
-                                // Try a different approach: find the tweet cell and reload it
+                                // Try reloading the controller as a last resort
                                 if ([context.controller respondsToSelector:@selector(reloadData)]) {
-                                    NSLog(@"[GeminiTranslator] Forcing UI refresh via reloadData");
+                                    NSLog(@"[GeminiTranslator] Reloading controller data");
                                     [context.controller performSelector:@selector(reloadData)];
                                 }
                             } @catch (NSException *e) {
@@ -5445,31 +5486,48 @@ static NSMutableArray *activeTranslationContexts;
                             }
                         });
                         
-                        // We want to leverage the original handler's UI integration, 
-                        // but with our translation object
-                        NSLog(@"[GeminiTranslator] Handing off to Twitter's native display system");
+                        // Use a completely different approach - directly push the translated view model
+                        // into Twitter's UI system
+                        NSLog(@"[GeminiTranslator] Using direct UI update approach");
                         
-                        // We need to pass our translated view model to Twitter's handler
-                        SEL nativeHandlerSel = NSSelectorFromString(@"_handleTranslatedStatusViewModel:controller:");
-                        SEL nativeHandlerSel2 = NSSelectorFromString(@"_t1_handleTranslatedStatusViewModel:controller:");
+                        // Tried direct KVC and it failed - Twitter doesn't allow us to set translation directly
+                        // Instead, we need to make our T1TranslatedStatusViewModel visible to the UI
                         
-                        // Try first method
-                        if ([strongSelf respondsToSelector:nativeHandlerSel]) {
-                            NSLog(@"[GeminiTranslator] Calling native handler _handleTranslatedStatusViewModel:controller:");
-                            [strongSelf performSelector:nativeHandlerSel withObject:translatedViewModel withObject:context.controller];
-                            return; // Skip original if we handled it here
+                        // 1. First attempt - use the T1StatusInlineActionsContainer to push our model
+                        UIResponder *responder = context.controller;
+                        while (responder && ![responder isKindOfClass:NSClassFromString(@"T1StatusInlineActionsContainer")] &&
+                               ![responder isKindOfClass:NSClassFromString(@"TTAStatusInlineActionsContainer")]) {
+                            responder = [responder nextResponder];
                         }
-                        // Try second method
-                        else if ([strongSelf respondsToSelector:nativeHandlerSel2]) {
-                            NSLog(@"[GeminiTranslator] Calling native handler _t1_handleTranslatedStatusViewModel:controller:");
-                            [strongSelf performSelector:nativeHandlerSel2 withObject:translatedViewModel withObject:context.controller];
-                            return; // Skip original if we handled it here
+                        
+                        if (responder) {
+                            NSLog(@"[GeminiTranslator] Found T1StatusInlineActionsContainer: %@", responder);
+                            
+                            // Try to set our translated model in the actions container
+                            if ([responder respondsToSelector:@selector(setStatusViewModel:)]) {
+                                NSLog(@"[GeminiTranslator] Setting translated view model on actions container");
+                                [responder performSelector:@selector(setStatusViewModel:) withObject:translatedViewModel];
+                            }
                         }
-                        // Fall back to original method as a last resort
-                        else {
-                            NSLog(@"[GeminiTranslator] Falling back to original handler method");
-                            %orig(context.statusViewModel, context.account, context.controller);
+                        
+                        // 2. Second attempt - hook into specific translation methods
+                        Class tweetDetailsClass = NSClassFromString(@"T1TweetDetailsViewController");
+                        if ([context.controller isKindOfClass:tweetDetailsClass]) {
+                            NSLog(@"[GeminiTranslator] Controller is T1TweetDetailsViewController, trying specific methods");
+                            
+                            SEL translationCompletedSel = NSSelectorFromString(@"_handleTranslationCompleted:");
+                            if ([context.controller respondsToSelector:translationCompletedSel]) {
+                                NSLog(@"[GeminiTranslator] Calling _handleTranslationCompleted:");
+                                [context.controller performSelector:translationCompletedSel withObject:translatedViewModel];
+                            }
                         }
+                        
+                        // 3. Finally fall back to the Twitter handler but with our translated view model
+                        NSLog(@"[GeminiTranslator] Falling back to Twitter handler with translated model");
+                        
+                        // This is a key change - we're calling the original with our *translated* view model
+                        // instead of the original status view model
+                        %orig(translatedViewModel, context.account, context.controller);
                     }
                 }
             } @catch (NSException *exception) {
