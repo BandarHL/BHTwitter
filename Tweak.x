@@ -4622,6 +4622,11 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 - (void)searchAndUpdateTwitterTextViewsIn:(UIView *)view;
 - (void)performDirectTextUpdateOnController:(id)controller withText:(NSString *)translatedText;
 - (void)findAndUpdateTranslateViewForController:(id)controller withViewModel:(id)translatedViewModel;
+- (void)findAndUpdateStatusViewsIn:(UIView *)view withViewModel:(id)viewModel originalViewModel:(id)originalViewModel statusID:(NSString *)statusID;
+- (void)stopAnimationsInView:(UIView *)view;
+- (void)searchAndUpdateTwitterTextViewsIn:(UIView *)view;
+- (void)performDirectTextUpdateOnController:(id)controller withText:(NSString *)translatedText;
+- (void)findAndUpdateTranslateViewForController:(id)controller withViewModel:(id)translatedViewModel;
 @end
 
 @interface T1TranslateButton : UIButton
@@ -5516,6 +5521,10 @@ static NSMutableArray *activeTranslationContexts;
         }
     }
 }
+
+
+
+
 
 %new
 - (void)performDirectTextUpdateOnController:(id)controller withText:(NSString *)translatedText {
@@ -6943,10 +6952,118 @@ static NSMutableArray *activeTranslationContexts;
                     
                     NSLog(@"[GeminiTranslator] Successfully displayed translation inline");
                     
+                    // Start a more comprehensive view update approach
+                    NSLog(@"[GeminiTranslator] Starting view update with non-recursive approach");
+                    
+                    // Log debug info about the controller
+                    NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Controller class: %@", NSStringFromClass([context.controller class]));
+                    
+                    // Check controller's view
+                    UIView *controllerView = [context.controller respondsToSelector:@selector(view)] ? 
+                                           [context.controller performSelector:@selector(view)] : nil;
+                    if (controllerView) {
+                        NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Controller view class: %@", NSStringFromClass([controllerView class]));
+                    }
+                    
+                    // Get more information about the translation
+                    if ([translatedViewModel respondsToSelector:@selector(translation)]) {
+                        id translation = [translatedViewModel performSelector:@selector(translation)];
+                        NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Translation object in view model: %@", translation);
+                    }
+                    
+                    // Display text
+                    if ([translatedViewModel respondsToSelector:@selector(displayText)]) {
+                        NSString *displayText = [translatedViewModel performSelector:@selector(displayText)];
+                        NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: Display text: %@", displayText);
+                    }
+                    
+                    // Force controller view to layout
+                    if (controllerView) {
+                        [controllerView setNeedsLayout];
+                        [controllerView layoutIfNeeded];
+                        NSLog(@"[GeminiTranslator] Forced layout update on controller view");
+                    }
+                    
+                    // Try direct text updating
+                    NSString *translatedText = [translatedViewModel respondsToSelector:@selector(displayText)] ? 
+                                              [translatedViewModel performSelector:@selector(displayText)] : nil;
+                    if (translatedText) {
+                        [self performDirectTextUpdateOnController:context.controller withText:translatedText];
+                    }
+                    
+                    // Use specific methods to find and update views
+                    // If we have statusID, use it to find relevant status views
+                    NSString *statusID = nil;
+                    if ([translatedViewModel respondsToSelector:@selector(statusIDString)]) {
+                        statusID = [translatedViewModel performSelector:@selector(statusIDString)];
+                    } else if ([context.statusViewModel respondsToSelector:@selector(statusIDString)]) {
+                        statusID = [context.statusViewModel performSelector:@selector(statusIDString)];
+                    }
+                    
+                    // Specifically focus on stopping spinner animations
+                    @try {
+                        // Recursively find and stop any animation spinners in the controller view
+                        if (controllerView) {
+                            __block void (^findAndStopAnimationsRecursively)(UIView *) = ^(UIView *view) {
+                                if (!view) return;
+                                
+                                // Directly stop any activity indicators
+                                if ([view isKindOfClass:[UIActivityIndicatorView class]]) {
+                                    [(UIActivityIndicatorView *)view stopAnimating];
+                                    view.hidden = YES;
+                                }
+                                
+                                // Look for class names that suggest spinner/activity indicator
+                                NSString *className = NSStringFromClass([view class]);
+                                if ([className containsString:@"Activity"] ||
+                                    [className containsString:@"Spinner"] ||
+                                    [className containsString:@"Indicator"] ||
+                                    [className containsString:@"Loading"]) {
+                                    
+                                    if ([view respondsToSelector:@selector(stopAnimating)]) {
+                                        #pragma clang diagnostic push
+                                        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                                        [view performSelector:@selector(stopAnimating)];
+                                        #pragma clang diagnostic pop
+                                    }
+                                    view.hidden = YES;
+                                }
+                                
+                                // Look specifically for translation views
+                                if ([className containsString:@"Translate"] || [className containsString:@"Translation"]) {
+                                    [view setNeedsLayout];
+                                    [view layoutIfNeeded];
+                                    
+                                    // Post translation update notification for this view
+                                    if (statusID) {
+                                        NSDictionary *userInfo = @{
+                                            @"statusID": statusID,
+                                            @"isTranslated": @YES
+                                        };
+                                        
+                                        [[NSNotificationCenter defaultCenter] postNotificationName:@"StatusTranslationUpdatedNotification" 
+                                                                                          object:nil 
+                                                                                        userInfo:userInfo];
+                                    }
+                                }
+                                
+                                // Process child views
+                                for (UIView *subview in view.subviews) {
+                                    findAndStopAnimationsRecursively(subview);
+                                }
+                            };
+                            
+                            // Use our recursive function
+                            findAndStopAnimationsRecursively(controllerView);
+                        }
+                    } @catch (NSException *e) {
+                        NSLog(@"[GeminiTranslator] Exception in spinner cleanup: %@", e);
+                    }
+                    
                     // Attempt to check if the translation is visible now
                     if ([translatedViewModel respondsToSelector:@selector(isTranslated)]) {
                         BOOL isTranslated = [translatedViewModel performSelector:@selector(isTranslated)];
-                        NSLog(@"[GeminiTranslator] DETAILED DEBUG: After handler, isTranslated: %@", isTranslated ? @"YES" : @"NO");
+                        NSLog(@"[GeminiTranslator] DETAILED VIEW DEBUG: After handler, isTranslated: %@", isTranslated ? @"YES" : @"NO");
                     }
                 }
             } @catch (NSException *exception) {
