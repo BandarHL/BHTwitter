@@ -4870,16 +4870,257 @@ static GeminiTranslator *_sharedInstance;
 // No longer need complex context management or tracking since we're using a simpler approach
 
 
-@interface _UINavigationBarContentView : UIView
-- (NSString *)findTweetTextInController:(UIViewController *)controller;
-- (void)findTextInView:(UIView *)view completion:(void(^)(NSString *text))completion;
-- (void)showTranslatePopup:(UIButton *)sender;
+@interface UIViewController (TFNTwitterStatus)
+- (id)bht_findAssociatedTweetStatus;
+- (NSString *)bht_extractTweetText;
 @end
 
+@interface _UINavigationBarContentView : UIView
+- (NSString *)findTweetTextInController:(UIViewController *)controller;
+- (void)showTranslatePopup:(UIButton *)sender;
+- (void(^)(UIView *))createTextFinderWithTextRef:(NSString * __strong *)longestTextRef lengthRef:(NSUInteger *)lengthRef;
+- (void)processView:(UIView *)view textRef:(NSString * __strong *)textRef lengthRef:(NSUInteger *)lengthRef;
+@end
+
+
+%hook UIViewController
+
+%new
+- (id)bht_findAssociatedTweetStatus {
+    // Try accessing common properties where tweet status might be stored
+    NSArray *propertyNames = @[@"status", @"tweet", @"tweetStatus", @"statusModel"];
+    
+    for (NSString *propertyName in propertyNames) {
+        if ([self respondsToSelector:NSSelectorFromString(propertyName)]) {
+            id potentialStatus = [self valueForKey:propertyName];
+            if (potentialStatus) {
+                if ([NSStringFromClass([potentialStatus class]) containsString:@"Status"] ||
+                    [NSStringFromClass([potentialStatus class]) containsString:@"Tweet"]) {
+                    return potentialStatus;
+                }
+            }
+            
+            // Check one level deeper for view models
+            if ([potentialStatus respondsToSelector:@selector(status)]) {
+                // Use valueForKey to avoid performSelector leak warning
+                id nestedStatus = [potentialStatus valueForKey:@"status"];
+                if (nestedStatus) {
+                    return nestedStatus;
+                }
+            }
+        }
+    }
+    
+    // Special case for timeline view controllers
+    if ([NSStringFromClass([self class]) containsString:@"TimelineViewController"]) {
+        // Try to get selected status or focused item
+        NSArray *selectors = @[@"selectedStatus", @"focusedStatus", @"visibleStatuses", @"currentVisibleItem"];
+        
+        for (NSString *selectorStr in selectors) {
+            SEL selector = NSSelectorFromString(selectorStr);
+            if ([self respondsToSelector:selector]) {
+                @try {
+                    // Use NSInvocation to avoid the performSelector leak warning
+                    NSMethodSignature *signature = [self methodSignatureForSelector:selector];
+                    NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+                    [invocation setSelector:selector];
+                    [invocation setTarget:self];
+                    [invocation invoke];
+                    
+                    id result = nil;
+                    [invocation getReturnValue:&result];
+                    
+                    // If we got an array (like visibleStatuses), take the first item
+                    if ([result isKindOfClass:[NSArray class]] && [(NSArray *)result count] > 0) {
+                        return [(NSArray *)result firstObject];
+                    } else if (result) {
+                        return result;
+                    }
+                } @catch (NSException *e) {
+                    NSLog(@"[BHTwitter] Exception in bht_findAssociatedTweetStatus: %@", e);
+                }
+            }
+        }
+    }
+    
+    return nil;
+}
+
+%new
+- (NSString *)bht_extractTweetText {
+    id tweetObject = [self bht_findAssociatedTweetStatus];
+    if (!tweetObject) {
+        return @"";
+    }
+    
+    // Try various text property names that might exist on the tweet object
+    NSArray *textPropertyNames = @[@"text", @"fullText", @"originalText", @"displayText"];
+    
+    for (NSString *propName in textPropertyNames) {
+        if ([tweetObject respondsToSelector:NSSelectorFromString(propName)]) {
+            @try {
+                id textValue = [tweetObject valueForKey:propName];
+                if ([textValue isKindOfClass:[NSString class]] && [(NSString *)textValue length] > 0) {
+                    return (NSString *)textValue;
+                }
+            } @catch (NSException *e) {
+                NSLog(@"[BHTwitter] Exception accessing %@ property: %@", propName, e);
+            }
+        }
+    }
+    
+    // If we didn't find a direct text property, check for text in attribute models
+    if ([tweetObject respondsToSelector:@selector(attributedString)]) {
+        // Use valueForKey to avoid performSelector leak warning
+        NSAttributedString *attrString = [tweetObject valueForKey:@"attributedString"];
+        if (attrString && attrString.string.length > 0) {
+            return attrString.string;
+        }
+    }
+    
+    // If still no text found, try common view model patterns
+    if ([tweetObject respondsToSelector:@selector(viewModel)]) {
+        // Use valueForKey to avoid performSelector leak warning
+        id viewModel = [tweetObject valueForKey:@"viewModel"];
+        for (NSString *propName in textPropertyNames) {
+            if ([viewModel respondsToSelector:NSSelectorFromString(propName)]) {
+                @try {
+                    id textValue = [viewModel valueForKey:propName];
+                    if ([textValue isKindOfClass:[NSString class]] && [(NSString *)textValue length] > 0) {
+                        return (NSString *)textValue;
+                    }
+                } @catch (NSException *e) {
+                    // Ignore property access errors
+                }
+            }
+        }
+    }
+    
+    return @"";
+}
+
+%end
 
 %hook _UINavigationBarContentView
 
 static char kTranslateButtonKey;
+
+%new
+- (void(^)(UIView *))createTextFinderWithTextRef:(NSString * __strong *)longestTextRef lengthRef:(NSUInteger *)lengthRef {
+    // Create strong copies of the pointers to avoid ARC issues
+    __block NSString * __strong *textRef = longestTextRef;
+    __block NSUInteger *lenRef = lengthRef;
+    
+    // This creates a block that avoids the retain cycle
+    __weak typeof(self) weakSelf = self;
+    
+    return ^(UIView *view) {
+        // Strong reference for this execution only
+        __strong typeof(self) strongSelf = weakSelf;
+        if (!strongSelf) return;
+        
+        // Check UILabel
+        if ([view isKindOfClass:[UILabel class]]) {
+            UILabel *label = (UILabel *)view;
+            if (label.text.length > *lenRef && label.text.length > 20) {
+                *textRef = [label.text copy]; // Make a strong copy
+                *lenRef = label.text.length;
+            }
+        } 
+        // Check UITextView
+        else if ([view isKindOfClass:[UITextView class]]) {
+            UITextView *textView = (UITextView *)view;
+            if (textView.text.length > *lenRef && textView.text.length > 20) {
+                *textRef = [textView.text copy]; // Make a strong copy
+                *lenRef = textView.text.length;
+            }
+        }
+        // Check if it's a Twitter text view
+        else if ([NSStringFromClass([view class]) containsString:@"AttributedTextView"]) {
+            if ([view respondsToSelector:@selector(text)]) {
+                // Use KVC to avoid performSelector leak warnings
+                NSString *text = [view valueForKey:@"text"];
+                if ([text isKindOfClass:[NSString class]] && text.length > *lenRef && text.length > 20) {
+                    *textRef = [text copy]; // Make a strong copy
+                    *lenRef = text.length;
+                }
+            }
+        }
+        
+        // Recursively search subviews without creating new blocks
+        for (UIView *subview in view.subviews) {
+            // Directly search subviews instead of creating new blocks
+            if ([subview isKindOfClass:[UILabel class]]) {
+                UILabel *label = (UILabel *)subview;
+                if (label.text.length > *lenRef && label.text.length > 20) {
+                    *textRef = [label.text copy];
+                    *lenRef = label.text.length;
+                }
+            } 
+            else if ([subview isKindOfClass:[UITextView class]]) {
+                UITextView *textView = (UITextView *)subview;
+                if (textView.text.length > *lenRef && textView.text.length > 20) {
+                    *textRef = [textView.text copy];
+                    *lenRef = textView.text.length;
+                }
+            }
+            else if ([NSStringFromClass([subview class]) containsString:@"AttributedTextView"]) {
+                if ([subview respondsToSelector:@selector(text)]) {
+                    NSString *text = [subview valueForKey:@"text"];
+                    if ([text isKindOfClass:[NSString class]] && text.length > *lenRef && text.length > 20) {
+                        *textRef = [text copy];
+                        *lenRef = text.length;
+                    }
+                }
+            }
+            
+            // Continue searching deeper if this view has subviews
+            if (subview.subviews.count > 0) {
+                // Find subviews of this subview
+                for (UIView *deeperView in subview.subviews) {
+                    [strongSelf processView:deeperView textRef:textRef lengthRef:lenRef];
+                }
+            }
+        }
+    };
+}
+
+%new
+- (void)processView:(UIView *)view textRef:(NSString * __strong *)textRef lengthRef:(NSUInteger *)lengthRef {
+    // Check UILabel
+    if ([view isKindOfClass:[UILabel class]]) {
+        UILabel *label = (UILabel *)view;
+        if (label.text.length > *lengthRef && label.text.length > 20) {
+            *textRef = [label.text copy];
+            *lengthRef = label.text.length;
+        }
+    } 
+    // Check UITextView
+    else if ([view isKindOfClass:[UITextView class]]) {
+        UITextView *textView = (UITextView *)view;
+        if (textView.text.length > *lengthRef && textView.text.length > 20) {
+            *textRef = [textView.text copy];
+            *lengthRef = textView.text.length;
+        }
+    }
+    // Check if it's a Twitter text view
+    else if ([NSStringFromClass([view class]) containsString:@"AttributedTextView"]) {
+        if ([view respondsToSelector:@selector(text)]) {
+            NSString *text = [view valueForKey:@"text"];
+            if ([text isKindOfClass:[NSString class]] && text.length > *lengthRef && text.length > 20) {
+                *textRef = [text copy];
+                *lengthRef = text.length;
+            }
+        }
+    }
+    
+    // Continue searching deeper if this view has subviews
+    if (view.subviews.count > 0) {
+        for (UIView *subview in view.subviews) {
+            [self processView:subview textRef:textRef lengthRef:lengthRef];
+        }
+    }
+}
 
 - (void)setTitle:(id)arg1 {
     %orig;
@@ -4916,81 +5157,160 @@ static char kTranslateButtonKey;
 
 %new
 - (void)showTranslatePopup:(UIButton *)sender {
-    // Find the current view controller
-    UIViewController *topController = nil;
-    UIWindow *keyWindow = nil;
+    // Find the correct view controller - start with nearest ancestor
+    UIViewController *targetController = nil;
+    UIResponder *responder = self;
     
-    // iOS 13 and later
-    NSSet *connectedScenes = UIApplication.sharedApplication.connectedScenes;
-    for (UIScene *scene in connectedScenes) {
-        if (scene.activationState == UISceneActivationStateForegroundActive && [scene isKindOfClass:[UIWindowScene class]]) {
-            UIWindowScene *windowScene = (UIWindowScene *)scene;
-            for (UIWindow *window in windowScene.windows) {
-                if (window.isKeyWindow) {
-                    keyWindow = window;
-                    break;
-                }
-            }
-            if (keyWindow) break;
+    // First try to get the nearest view controller in the responder chain
+    while (responder && ![responder isKindOfClass:[UIViewController class]]) {
+        responder = [responder nextResponder];
+    }
+    
+    if (responder && [responder isKindOfClass:[UIViewController class]]) {
+        targetController = (UIViewController *)responder;
+        
+        // If this is a navigation controller, use its top view controller
+        if ([targetController isKindOfClass:[UINavigationController class]]) {
+            targetController = [(UINavigationController *)targetController topViewController];
         }
     }
     
-    // Fallback for older iOS versions
-    if (!keyWindow) {
-        keyWindow = UIApplication.sharedApplication.keyWindow;
+    // If we couldn't find a controller through the responder chain, try the standard approach
+    if (!targetController) {
+        UIWindow *keyWindow = nil;
+        
+        // iOS 13+ approach
+        if (@available(iOS 13.0, *)) {
+            NSSet *connectedScenes = UIApplication.sharedApplication.connectedScenes;
+            for (UIScene *scene in connectedScenes) {
+                if (scene.activationState == UISceneActivationStateForegroundActive && 
+                    [scene isKindOfClass:[UIWindowScene class]]) {
+                    UIWindowScene *windowScene = (UIWindowScene *)scene;
+                    for (UIWindow *window in windowScene.windows) {
+                        if (window.isKeyWindow) {
+                            keyWindow = window;
+                            break;
+                        }
+                    }
+                    if (keyWindow) break;
+                }
+            }
+        } else {
+            // Pre-iOS 13 approach
+            keyWindow = UIApplication.sharedApplication.keyWindow;
+        }
+        
+        if (keyWindow) {
+            targetController = keyWindow.rootViewController;
+            while (targetController.presentedViewController) {
+                targetController = targetController.presentedViewController;
+            }
+        }
     }
     
-    topController = keyWindow.rootViewController;
-    while (topController.presentedViewController) {
-        topController = topController.presentedViewController;
+    if (!targetController) {
+        NSLog(@"[BHTwitter] Could not find a suitable view controller for translation");
+        return;
     }
     
-    // Try to find the tweet text from the current view
-    NSString *textToTranslate = [self findTweetTextInController:topController];
+    // Try to find the tweet text from the view controller hierarchy
+    NSString *textToTranslate = [self findTweetTextInController:targetController];
     
-    // If we couldn't find any text, use a placeholder
+    // If we couldn't find text in the immediate controller, try navigation stack
+    if ((!textToTranslate || textToTranslate.length == 0) && 
+        [targetController.navigationController respondsToSelector:@selector(viewControllers)]) {
+        
+        NSArray *viewControllers = targetController.navigationController.viewControllers;
+        for (UIViewController *vc in viewControllers) {
+            if (vc != targetController) { // Don't check the one we already tried
+                NSString *possibleText = [self findTweetTextInController:vc];
+                if (possibleText && possibleText.length > 0) {
+                    textToTranslate = possibleText;
+                    break;
+                }
+            }
+        }
+    }
+    
+    // If we still couldn't find any text, use a placeholder
     if (!textToTranslate || textToTranslate.length == 0) {
+        NSLog(@"[BHTwitter] Could not find tweet text to translate");
         textToTranslate = @"Could not find tweet text to translate.";
+    } else {
+        NSLog(@"[BHTwitter] Found tweet text to translate: %@", textToTranslate);
     }
     
     // Use GeminiTranslator to translate the text
-    [[GeminiTranslator sharedInstance] simplifiedTranslateAndDisplay:textToTranslate sourceLanguage:@"auto" targetLanguage:@"en" inViewController:topController];
+    [[GeminiTranslator sharedInstance] simplifiedTranslateAndDisplay:textToTranslate 
+                                                      sourceLanguage:@"auto" 
+                                                      targetLanguage:@"en" 
+                                                    inViewController:targetController];
 }
 
 %new
 - (NSString *)findTweetTextInController:(UIViewController *)controller {
-    // Try to find text in the current view hierarchy
-    __block NSString *foundText = nil;
-    
-    // First, try to find a text view or label with the tweet content
-    [self findTextInView:controller.view completion:^(NSString *text) {
-        foundText = text;
-    }];
-    
-    return foundText ?: @"";
-}
-
-%new
-- (void)findTextInView:(UIView *)view completion:(void(^)(NSString *text))completion {
-    // Recursively search for text in labels and text views
-    for (UIView *subview in view.subviews) {
-        if ([subview isKindOfClass:[UILabel class]]) {
-            UILabel *label = (UILabel *)subview;
-            if (label.text.length > 20) { // Likely the tweet content (longer text)
-                completion(label.text);
-                return;
-            }
-        } else if ([subview isKindOfClass:[UITextView class]]) {
-            UITextView *textView = (UITextView *)subview;
-            if (textView.text.length > 20) {
-                completion(textView.text);
-                return;
-            }
-        } else if (subview.subviews.count > 0) {
-            // Continue searching in subviews
-            [self findTextInView:subview completion:completion];
+    // Try to use the bht_extractTweetText method if available
+    if ([controller respondsToSelector:@selector(bht_extractTweetText)]) {
+        NSString *tweetText = [controller bht_extractTweetText];
+        if (tweetText.length > 0) {
+            NSLog(@"[BHTwitter] Found tweet text via bht_extractTweetText: %@", tweetText);
+            return tweetText;
         }
     }
+    
+    // If we can't get the text through our helper, try common patterns in view controllers
+    NSString *className = NSStringFromClass([controller class]);
+    if ([className containsString:@"TweetDetail"] || 
+        [className containsString:@"StatusView"] ||
+        [className containsString:@"T1TweetDetails"]) {
+        
+        // Try to access common properties that might contain text content
+        for (NSString *propertyName in @[@"status", @"tweet", @"viewModel", @"statusViewModel"]) {
+            if ([controller respondsToSelector:NSSelectorFromString(propertyName)]) {
+                id tweetObject = [controller valueForKey:propertyName];
+                
+                // Try common tweet text properties
+                for (NSString *textProp in @[@"text", @"fullText", @"originalText", @"displayText"]) {
+                    if ([tweetObject respondsToSelector:NSSelectorFromString(textProp)]) {
+                        NSString *text = [tweetObject valueForKey:textProp];
+                        if ([text isKindOfClass:[NSString class]] && text.length > 0) {
+                            NSLog(@"[BHTwitter] Found tweet text from property %@.%@: %@", propertyName, textProp, text);
+                            return text;
+                        }
+                    }
+                }
+                
+                // If it's a view model, it might have a status property
+                if ([tweetObject respondsToSelector:@selector(status)]) {
+                    id statusObject = [tweetObject performSelector:@selector(status)];
+                    for (NSString *textProp in @[@"text", @"fullText", @"originalText", @"displayText"]) {
+                        if ([statusObject respondsToSelector:NSSelectorFromString(textProp)]) {
+                            NSString *text = [statusObject valueForKey:textProp];
+                            if ([text isKindOfClass:[NSString class]] && text.length > 0) {
+                                NSLog(@"[BHTwitter] Found tweet text from nested status.%@: %@", textProp, text);
+                                return text;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Last resort: Try to find longer text in labels or text views in the view hierarchy
+    NSString *longestText = nil;
+    NSUInteger longestLength = 0;
+    
+    // Use a helper method to find the longest text
+    [self processView:controller.view textRef:&longestText lengthRef:&longestLength];
+    
+    if (longestText) {
+        NSLog(@"[BHTwitter] Found tweet text from view hierarchy: %@", longestText);
+        return longestText;
+    }
+    
+    NSLog(@"[BHTwitter] Could not find tweet text, using fallback");
+    return @"";
 }
 %end
 
