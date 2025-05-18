@@ -52,7 +52,7 @@
 "ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "いいね/リツイート/返信ボタンを同じ行に表示するのではなく、別の行に表示します。";
 
 "TWEET_TO_IMAGE_OPTION_TITLE" = "ツイートを画像として保存";
-"TWEET_TO_IMAGE_OPTION_DETAIL_TITLE" = "「共有」を長押しすると、ツイートを画像としてエクスポートできます。";
+"TWEET_TO_IMAGE_OPTION_DETAIL_TITLE" = "[共有] を長押しすると、ツイートを画像としてエクスポートできます。";
 
 "ENABLE_TWEET_LABELS_OPTION_TITLE" = "ツイートのソースラベルを表示 (ベータ版)";
 "ENABLE_TWEET_LABELS_OPTION_DETAIL_TITLE" = "ツイートがどのクライアントから作成されたかを表示します。 (@nyaathea)";
@@ -94,19 +94,19 @@
 "HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE" = "プロフィールから「おすすめアカウント」を非表示にします。";
 
 "DISABLE_MEDIA_TAB_OPTION_TITLE" = "メディアタブを一体化";
-"DISABLE_MEDIA_TAB_OPTION_DETAIL_TITLE" = "「動画」タブと「画像」タブを一体化して表示します。";
+"DISABLE_MEDIA_TAB_OPTION_DETAIL_TITLE" = "[動画] タブと [画像] タブを一体化して表示します。";
 
 "DISABLE_ARTICLES_OPTION_TITLE" = "記事タブを非表示";
-"DISABLE_ARTICLES_OPTION_DETAIL_TITLE" = "プロフィールから「記事」タブを非表示にします。";
+"DISABLE_ARTICLES_OPTION_DETAIL_TITLE" = "プロフィールから [記事] タブを非表示にします。";
 
 "DISABLE_HIGHLIGHTS_OPTION_TITLE" = "ハイライトタブを非表示";
-"DISABLE_HIGHLIGHTS_OPTION_DETAIL_TITLE" = "プロフィールから「ハイライト」タブを非表示にします。";
+"DISABLE_HIGHLIGHTS_OPTION_DETAIL_TITLE" = "プロフィールから [ハイライト] タブを非表示にします。";
 
 "HIDE_FOLLOW_BUTTON_TITLE" = "フォローボタンを非表示";
-"HIDE_FOLLOW_BUTTON_DETAIL_TITLE" = "会話ビューから「フォロー」ボタンを非表示にします。";
+"HIDE_FOLLOW_BUTTON_DETAIL_TITLE" = "会話ビューから [フォロー] ボタンを非表示にします。";
 
 "RESTORE_FOLLOW_BUTTON_TITLE" = "フォローボタンを復元";
-"RESTORE_FOLLOW_BUTTON_DETAIL_TITLE" = "「サブスクライブ」ボタンの代わりに通常の「フォロー」ボタンを復元します (「サブスクライブ」ボタンも非表示になります)。";
+"RESTORE_FOLLOW_BUTTON_DETAIL_TITLE" = "[サブスクライブ] ボタンの代わりに通常の [フォロー] ボタンを復元します ([サブスクライブ] ボタンも非表示になります)。";
 
 
 /*Search*/
@@ -153,7 +153,7 @@
 "DIRECT_SAVE_OPTION_DETAIL_TITLE" = "保存した動画を「写真」アプリに直接保存します。";
 
 "HIDE_PREMIUM_OFFER_OPTION" = "Twitter Blueプロンプトを非表示";
-"HIDE_PREMIUM_OFFER_OPTION_DETAIL_TITLE" = "「認証を受ける」および「アップグレード」ボタンを非表示にします。";
+"HIDE_PREMIUM_OFFER_OPTION_DETAIL_TITLE" = "[認証を受ける] および [アップグレード] ボタンを非表示にします。";
 
 "THEME_OPTION_TITLE" = "テーマを変更";
 "THEME_OPTION_DETAIL_TITLE" = "テーマを選んでください。あなただけが見ることができます。";
@@ -188,7 +188,7 @@
 "SHOW_SCOLL_INDICATOR_OPTION_TITLE" = "スクロールバーを常に表示";
 
 "FONT_OPTION_TITLE" = "カスタムフォント";
-"FONT_OPTION_DETAIL_TITLE" = "Twitterのカスタムフォントを選択します。";
+"FONT_OPTION_DETAIL_TITLE" = "Twitterで使用するカスタムフォントを選択してください。";
 
 "REQULAR_FONTS_PICKER_OPTION_TITLE" = "フォントを選択";
 
@@ -209,10 +209,10 @@
 "FLEX_OPTION_DETAIL_TITLE" = "FLEXを使用してTwitterをデバッグします。";
 
 "CLEAR_SOURCE_LABEL_CACHE_TITLE" = "ソースラベルキャッシュを削除";
-"CLEAR_SOURCE_LABEL_CACHE_DETAIL_TITLE" = "すべてのツイートのソースラベルの再取得を強制します。";
+"CLEAR_SOURCE_LABEL_CACHE_DETAIL_TITLE" = "すべてのツイートのソースラベルを強制的に再取得します。";
 "CLEAR_CACHE_BUTTON_TITLE" = "キャッシュを消去";
 "CACHE_CLEARED_TITLE" = "キャッシュが消去されました";
-"CACHE_CLEARED_MESSAGE" = "ソースラベルのキャッシュが削除されました。ラベルが正しく表示されていなかった場合、この方法が役立つかもしれません。";
+"CACHE_CLEARED_MESSAGE" = "ソースラベルのキャッシュを削除しました。ラベルが正しく表示されない場合に有効な可能性があります。";
 
 
 /*Developers*/
@@ -279,7 +279,7 @@ Custom fonts*/
 "TRUSTED_FRIENSS_OPTION_TITLE" = "Twitterサークル";
 
 "ALWAYS_FOLLOWING_PAGE_OPTION_TITLE" = "おすすめタブを非表示";
-"ALWAYS_FOLLOWING_PAGE_OPTION_DETAIL_TITLE" = "Twitterを起動した際に「フォロー中」タブを開きます。";
+"ALWAYS_FOLLOWING_PAGE_OPTION_DETAIL_TITLE" = "Twitterを起動した際に [フォロー中] タブを開きます。";
 
 "DN_MODULAR_SEARCH_OPTION_TITLE" = "より良いメッセージ検索機能";
 "DN_MODULAR_SEARCH_OPTION_DETAIL_TITLE" = "ダイレクトメッセージを高度なフィルターで検索します。";
@@ -295,12 +295,12 @@ Custom fonts*/
 "CLASSIC_TAB_BAR_SETTINGS_TITLE" = "タブアイコンを置換";
 "CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "以前のTwitterのように、現在選択されているタブにアクセントカラーを適用します。アプリの再起動が必要です。";
 "RESTART_REQUIRED_ALERT_TITLE" = "アプリの再起動が必要です";
-"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_ON" = "これを有効にするにはTwitterを再起動する必要があります。";
+"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_ON" = "この変更を反映するには、Twitterを再起動する必要があります。";
 "RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_OFF" = "デフォルトアイコンを無効にして元に戻すには、Twitterを再起動してください。";
 "CLASSIC_TAB_BAR_DISABLED_NOTIFICATION_NAME" = "BHTClassicTabBarSettingChangedNotification";
 
 /* Generic Restart Message for Classic Tab Bar */
-"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC" = "これを変更するにはTwitterを再起動してください。";
+"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC" = "これを変更するには、Twitterを再起動する必要があります。";
 
 /* Square Avatars */
-"RESTART_REQUIRED_ALERT_MESSAGE_SQUARE_AVATARS" = "アバターのスタイルを変更するにはアプリの再起動が必要です。";
+"RESTART_REQUIRED_ALERT_MESSAGE_SQUARE_AVATARS" = "アバターのスタイルを変更するには、アプリを再起動する必要があります。  ";
