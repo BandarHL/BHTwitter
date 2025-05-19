@@ -615,3 +615,123 @@ static UIViewController * _Nonnull topMostController() {
 @interface TFNBarButtonItemButtonV2 : UIView
 @property (nonatomic, strong) UIColor *tintColor;
 @end
+
+// ---- Added/Ensured from Tweak.x & freebird.x ----
+// Appended for consolidation on 2023-12-18
+
+// Forward Declarations (ensure these are present if full interface isn't below or already existing)
+@class T1ColorSettings;
+@class FLEXManager;
+// @class T1TabView; // Already in TWHeaders.h
+// @class T1ProfileHeaderView; // Already in TWHeaders.h
+// @class TFNNavigationBar; // Already in TWHeaders.h
+@class T1StandardStatusView;
+@class T1TweetDetailsFocalStatusView;
+// @class T1ConversationFocalStatusView; // Already in TWHeaders.h
+// @class T1StatusCell; // Already in TWHeaders.h
+@class BHDownloadInlineButton;
+// @class TFNTwitterURTTimelineStatusTopicBanner; // Likely a private Twitter class
+// @class _TtC10TwitterURT32URTTimelineEventSummaryViewModel; // Swift class
+// @class _TtC10TwitterURT25URTTimelineTrendViewModel; // Swift class
+// @class T1URTTimelineStatusItemViewModel; // Already in TWHeaders.h
+// @class _TtC10TwitterURT26URTTimelinePromptViewModel; // Swift class
+// @class T1PlayerMediaEntitySessionProducible; // Likely a private Twitter class
+// @class TFSTwitterEntityMediaVideoVariant; // Likely a private Twitter class
+@class FLEXAlert;
+// @class T1StatusBodyTextView; // Already in TWHeaders.h
+@class TTAStatusAuthorView;
+// @class TFNButton; // Already in TWHeaders.h
+// @class TUIFollowControl; // Already in TWHeaders.h
+@class T1SuperFollowControl;
+// @class TFNAvatarImageView; // Already in TWHeaders.h
+@class TFNCircularAvatarShadowLayer;
+@class _UINavigationBarContentView;
+
+// Defines
+#ifndef COOKIE_REFRESH_INTERVAL
+#define COOKIE_REFRESH_INTERVAL (7 * 24 * 60 * 60)
+#endif
+
+// Full Interfaces & Categories
+
+// T1ColorSettings (Private Methods, if this is the intent)
+// Assuming T1ColorSettings itself is a known Twitter class.
+@interface T1ColorSettings (BHTwitterPrivate)
++ (void)_t1_applyPrimaryColorOption;
++ (void)_t1_updateOverrideUserInterfaceStyle;
+@end
+
+// TweetSourceHelper
+@interface TweetSourceHelper : NSObject
++ (NSDictionary *)fetchCookies;
++ (void)cacheCookies:(NSDictionary *)cookies;
++ (NSDictionary *)loadCachedCookies;
++ (BOOL)shouldRefreshCookies;
++ (void)fetchSourceForTweetID:(NSString *)tweetID;
++ (void)timeoutFetchForTweetID:(NSTimer *)timer;
++ (void)retryUpdateForTweetID:(NSString *)tweetID;
++ (void)pollForPendingUpdates;
++ (void)handleAppForeground:(NSNotification *)notification;
++ (void)handleClearCacheNotification:(NSNotification *)notification;
++ (void)pruneSourceCachesIfNeeded;
++ (void)logDebugInfo:(NSString *)message;
++ (void)initializeCookiesWithRetry;
++ (void)retryFetchCookies;
+@end
+
+@interface TweetSourceHelper (Notifications)
++ (void)handleCookiesReadyNotification:(NSNotification *)notification;
+@end
+
+// T1ImmersiveFullScreenViewController (ensure main interface is robust in TWHeaders.h)
+// Property 'view' and methods like 'playerControlsView' if custom should be in its main interface.
+@interface T1ImmersiveFullScreenViewController (BHTwitter)
+- (BOOL)BHT_findAndPrepareTimestampLabelForVC:(T1ImmersiveFullScreenViewController *)activePlayerVC;
+@end
+
+// GeminiTranslator
+@interface GeminiTranslator : NSObject
++ (instancetype)sharedInstance;
+- (void)translateText:(NSString *)text fromLanguage:(NSString *)sourceLanguage toLanguage:(NSString *)targetLanguage completion:(void (^)(NSString *translatedText, NSError *error))completion;
+- (void)simplifiedTranslateAndDisplay:(NSString *)text fromViewController:(UIViewController *)viewController;
+@end
+
+// TFSTwitterTranslation
+@interface TFSTwitterTranslation : NSObject
+- (id)initWithTranslation:(NSString *)translation
+                 entities:(id)entities
+        translationSource:(NSString *)source
+  localizedSourceLanguage:(NSString *)localizedLang
+          sourceLanguage:(NSString *)sourceLang
+     destinationLanguage:(NSString *)destLang
+        translationState:(NSString *)state;
+- (NSString *)sourceLanguage;
+@end
+
+// _UINavigationBarContentView Category
+@interface _UINavigationBarContentView (BHTwitter)
+- (void)BHT_addTranslateButtonIfNeeded;
+- (TFNTwitterStatus *)BHT_findStatusObjectInController:(UIViewController *)controller;
+- (NSString *)BHT_extractTextFromStatusObjectInController:(UIViewController *)controller;
+- (void)BHT_translateCurrentTweetAction:(UIButton *)sender;
+@end
+
+// TTAStatusAuthorView (Minimal, actual methods are in hooks)
+@interface TTAStatusAuthorView : UIView
+- (id)grokAnalyzeButton; // As used in hook
+@end
+
+// Extern C Functions
+extern UIColor *BHTCurrentAccentColor(void);
+extern void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView));
+extern UIViewController *topMostController(void); // Definition assumed elsewhere (e.g. BHTManager or a utility file)
+extern void BHT_UpdateAllTabBarIcons(void);
+extern void BHT_applyThemeToWindow(UIWindow *window);
+extern void BHT_ensureThemingEngineSynchronized(BOOL forceSynchronize);
+extern void BHT_forceRefreshAllWindowAppearances(void);
+// extern BOOL isDeviceLanguageRTL(void); // If defined globally by you
+// extern UIImage *BH_imageFromView(UIView *view); // If defined globally by you
+// extern UIFont *BH_getDefaultFont(UIFont *origFont); // If defined globally by you
+// extern BOOL is_iPad(void); // If defined globally by you
+
+// ---- End of Appended Declarations ----
