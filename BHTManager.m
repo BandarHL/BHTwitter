@@ -244,6 +244,9 @@
 + (BOOL)stopHidingTabBar {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"no_tab_bar_hiding"];
 }
++ (BOOL)noTabBarHiding {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"BHTwitter_noTabBarHiding"]; // Or whatever the correct key is
+}
 + (BOOL)changeBackground {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"change_msg_background"];
 }

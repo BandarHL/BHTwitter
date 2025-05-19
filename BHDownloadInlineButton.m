@@ -149,11 +149,11 @@ static void _bh_callSuperIfPossible(__unsafe_unretained id self,
 BH_METRIC(extraWidth,                 40.0)
 BH_METRIC(extraWidthWithStyle,        40.0)
 BH_METRIC(trailingEdgeInset,          6.0)
-BH_METRIC(visibility,                 1)
-BH_METRIC(alternateInlineActionType,  6)
-BH_METRIC(touchInsetPriority,         2)
+BH_METRIC(visibility,                 (NSUInteger)1)
+BH_METRIC(alternateInlineActionType,  (NSUInteger)6)
+BH_METRIC(touchInsetPriority,         (NSUInteger)2)
 BH_METRIC(shouldShowCount,            NO)
-BH_METRIC(displayType,                0)
+BH_METRIC(displayType,                (NSUInteger)0)
 
 #undef BH_METRIC
 
