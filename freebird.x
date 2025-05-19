@@ -22,12 +22,8 @@ static NSMapTable<T1ImmersiveFullScreenViewController *, UILabel *> *playerToTim
 static BOOL BHT_isInThemeChangeOperation = NO; // Added declaration
 
 // Forward declaration for local static function
-static void BHT_applyThemeToWindow(UIWindow *window); // Added forward declaration
 
 // Forward declaration for T1ColorSettings for _t1_applyPrimaryColorOption
-@interface T1ColorSettings : NSObject
-+ (void)_t1_applyPrimaryColorOption;
-@end
 
 // MARK: Restore Source Labels - This is still pretty experimental and may break. This restores Tweet Source Labels by using an Legacy API. by: @nyaathea
 
@@ -46,23 +42,6 @@ static NSDate *lastCookieRefresh              = nil;
 #define COOKIE_REFRESH_INTERVAL (7 * 24 * 60 * 60)
 
 // Minimal interface to satisfy compiler for TweetSourceHelper class methods
-@interface TweetSourceHelper : NSObject
-+ (NSDictionary *)fetchCookies;
-+ (void)cacheCookies:(NSDictionary *)cookies;
-+ (NSDictionary *)loadCachedCookies;
-+ (BOOL)shouldRefreshCookies;
-+ (void)fetchSourceForTweetID:(NSString *)tweetID;
-+ (void)timeoutFetchForTweetID:(NSTimer *)timer;
-+ (void)retryUpdateForTweetID:(NSString *)tweetID;
-+ (void)pollForPendingUpdates;
-+ (void)handleAppForeground:(NSNotification *)notification;
-+ (void)handleClearCacheNotification:(NSNotification *)notification;
-+ (void)pruneSourceCachesIfNeeded;
-+ (void)logDebugInfo:(NSString *)message;
-+ (void)initializeCookiesWithRetry;
-+ (void)retryFetchCookies;
-@end
-
 @implementation TweetSourceHelper
 
 // Simple implementation for methods declared in TWHeaders.h
@@ -460,497 +439,7 @@ static NSDate *lastCookieRefresh              = nil;
 
 %end
 
-// Declare the category interface first
-@interface TweetSourceHelper (Notifications)
-+ (void)handleCookiesReadyNotification:(NSNotification *)notification;
-@end
-
-// Implementation for TweetSourceHelper's missing method
-@implementation TweetSourceHelper (Notifications)
-+ (void)handleCookiesReadyNotification:(NSNotification *)notification {
-    // Check for any tweets waiting for authentication
-    if (tweetSources) {
-        NSMutableArray *tweetsToRetry = [NSMutableArray array];
-        
-        // Find all tweets in "Fetching..." state or empty state
-        for (NSString *tweetID in tweetSources) {
-            NSString *source = tweetSources[tweetID];
-            if ([source isEqualToString:@"Fetching..."] || [source isEqualToString:@""]) {
-                [tweetsToRetry addObject:tweetID];
-            }
-        }
-        
-        if (tweetsToRetry.count == 0) {
-            // No tweets need updating
-            return;
-        }
-        
-        // Process all tweets that need source labels - performance optimized
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-            // Pre-fetch cookies once for all tweets (avoid repeated fetches)
-            NSDictionary *cookiesToUse = cookieCache;
-            if (!cookiesToUse || cookiesToUse.count == 0 || !cookiesToUse[@"ct0"] || !cookiesToUse[@"auth_token"]) {
-                cookiesToUse = [self fetchCookies];
-                if (cookiesToUse && cookiesToUse.count > 0 && cookiesToUse[@"ct0"] && cookiesToUse[@"auth_token"]) {
-                    [self cacheCookies:cookiesToUse];
-                }
-            }
-            
-            // Only proceed if we have valid cookies
-            if (cookiesToUse && cookiesToUse.count > 0 && cookiesToUse[@"ct0"] && cookiesToUse[@"auth_token"]) {
-                // Calculate optimal batch size based on number of tweets
-                NSUInteger totalTweets = tweetsToRetry.count;
-                NSUInteger batchSize = totalTweets < 10 ? totalTweets : (totalTweets < 30 ? 5 : 10);
-                
-                // Process in batches to balance performance and responsiveness
-                for (NSUInteger i = 0; i < tweetsToRetry.count; i += batchSize) {
-                    @autoreleasepool {
-                        NSUInteger end = MIN(i + batchSize, tweetsToRetry.count);
-                        NSArray *currentBatch = [tweetsToRetry subarrayWithRange:NSMakeRange(i, end - i)];
-                        
-                        // Process current batch immediately
-                        dispatch_async(dispatch_get_main_queue(), ^{
-                            for (NSString *tweetID in currentBatch) {
-                                // Only force fetch if it's still in Fetching state (it might have updated already)
-                                if ([tweetSources[tweetID] isEqualToString:@"Fetching..."] || 
-                                    [tweetSources[tweetID] isEqualToString:@""]) {
-                                    // Reset counters and clear pending flags
-                                    [fetchRetries setObject:@0 forKey:tweetID];
-                                    [updateRetries setObject:@0 forKey:tweetID];
-                                    [fetchPending setObject:@NO forKey:tweetID]; // Clear any stuck pending flags
-                                    
-                                    // Force a fresh fetch with the known-good cookies
-                                    [TweetSourceHelper fetchSourceForTweetID:tweetID];
-                                }
-                            }
-                        });
-                        
-                        // Small delay between batches but only if more batches exist
-                        if (i + batchSize < tweetsToRetry.count) {
-                            [NSThread sleepForTimeInterval:0.1]; // Minimal delay between batches
-                        }
-                    }
-                }
-            }
-        });
-    }
-}
-@end
-
-%hook T1ConversationFocalStatusView
-
-- (void)setViewModel:(id)viewModel {
-    %orig;
-    @try {
-        if (viewModel) {
-            id status = nil;
-            @try { status = [viewModel valueForKey:@"tweet"]; } @catch (__unused NSException *e) {}
-            if (status) {
-                NSInteger statusID = 0;
-                @try {
-                    statusID = [[status valueForKey:@"statusID"] integerValue];
-                    if (statusID > 0) {
-                        if (!tweetSources)   tweetSources   = [NSMutableDictionary dictionary];
-                        if (!viewToTweetID)  viewToTweetID  = [NSMutableDictionary dictionary];
-                        if (!viewInstances)  viewInstances  = [NSMutableDictionary dictionary];
-
-                        NSString *tweetIDStr = @(statusID).stringValue;
-                        viewToTweetID[@((uintptr_t)self)] = tweetIDStr;
-                        viewInstances[tweetIDStr] = [NSValue valueWithNonretainedObject:self];
-
-                        if (!tweetSources[tweetIDStr]) {
-                            tweetSources[tweetIDStr] = @"";
-                            [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
-                        } else if (tweetSources[tweetIDStr] && ![tweetSources[tweetIDStr] isEqualToString:@""] &&
-                                   (!updateCompleted[tweetIDStr] || ![updateCompleted[tweetIDStr] boolValue])) {
-                            [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetIDStr}];
-                        }
-                    }
-                } @catch (__unused NSException *e) {}
-
-                if (statusID <= 0) {
-                    @try {
-                        NSString *altID = [status valueForKey:@"rest_id"] ?: [status valueForKey:@"id_str"] ?: [status valueForKey:@"id"];
-                        if (altID) {
-                            if (!tweetSources)   tweetSources   = [NSMutableDictionary dictionary];
-                            if (!viewToTweetID)  viewToTweetID  = [NSMutableDictionary dictionary];
-                            if (!viewInstances)  viewInstances  = [NSMutableDictionary dictionary];
-
-                            viewToTweetID[@((uintptr_t)self)] = altID;
-                            viewInstances[altID]              = [NSValue valueWithNonretainedObject:self];
-
-                            if (!tweetSources[altID]) {
-                                tweetSources[altID] = @"";
-                                [TweetSourceHelper fetchSourceForTweetID:altID];
-                            } else if (tweetSources[altID] && ![tweetSources[altID] isEqualToString:@""] &&
-                                       (!updateCompleted[altID] || ![updateCompleted[altID] boolValue])) {
-                                [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": altID}];
-                            }
-                        }
-                    } @catch (__unused NSException *e) {}
-                }
-            }
-        }
-    } @catch (__unused NSException *e) {}
-}
-
-- (void)dealloc {
-    @try {
-        NSString *tweetID = viewToTweetID[@((uintptr_t)self)];
-        if (tweetID) {
-            [viewToTweetID removeObjectForKey:@((uintptr_t)self)];
-            if (viewInstances[tweetID]) {
-                NSValue *viewValue = viewInstances[tweetID];
-                UIView *storedView = [viewValue nonretainedObjectValue];
-                if (storedView == self) {
-                    [viewInstances removeObjectForKey:tweetID];
-                }
-            }
-        }
-    } @catch (__unused NSException *e) {}
-    %orig;
-}
-
-- (void)handleTweetSourceUpdated:(NSNotification *)notification {
-    @try {
-        NSDictionary *userInfo = notification.userInfo;
-        NSString *tweetID      = userInfo[@"tweetID"];
-        if (tweetID && tweetSources[tweetID] && ![tweetSources[tweetID] isEqualToString:@""]) {
-            NSValue *viewValue = viewInstances[tweetID];
-            UIView  *target    = viewValue ? [viewValue nonretainedObjectValue] : nil;
-            if (target) {
-                NSString *currentTweetID = viewToTweetID[@((uintptr_t)target)];
-                if (currentTweetID && [currentTweetID isEqualToString:tweetID]) {
-                    [self enumerateSubviewsRecursively:^(UIView *subview) {
-                        if ([subview isKindOfClass:%c(TFNAttributedTextView)]) {
-                            TFNAttributedTextView *textView = (TFNAttributedTextView *)subview;
-                            TFNAttributedTextModel *model = [textView valueForKey:@"_textModel"];
-                            if (model && model.attributedString.string) {
-                                NSString *text = model.attributedString.string;
-                                if ([text containsString:@"PM"] || [text containsString:@"AM"] ||
-                                    [text rangeOfString:@"\\d{1,2}[:.]\\d{1,2}" options:NSRegularExpressionSearch].location != NSNotFound) {
-                                    // Force a refresh of the text model
-                                    [textView setTextModel:nil];
-                                    [textView setTextModel:model];
-                                }
-                            }
-                        }
-                    }];
-                }
-            }
-        }
-    } @catch (__unused NSException *e) {}
-}
-
-%new
-- (void)enumerateSubviewsRecursively:(void (^)(UIView *))block {
-    block(self);
-    for (UIView *subview in self.subviews) {
-        if ([subview isKindOfClass:%c(UIView)]) {
-            [self enumerateSubviewsRecursively:block];
-        }
-    }
-}
-
-+ (void)load {
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        [[NSNotificationCenter defaultCenter] addObserver:self
-                                                 selector:@selector(handleTweetSourceUpdated:)
-                                                     name:@"TweetSourceUpdated"
-                                                   object:nil];
-        [TweetSourceHelper performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:3.0];
-        [[NSNotificationCenter defaultCenter] addObserver:[TweetSourceHelper class]
-                                                 selector:@selector(handleAppForeground:)
-                                                     name:@"UIApplicationDidBecomeActiveNotification"
-                                                   object:nil];
-    });
-}
-
-%end
-
-%hook TFNAttributedTextView
-- (void)setTextModel:(TFNAttributedTextModel *)model {
-    // --- BHTwitter style: Only run if toggle is ON ---
-    if (![BHTManager RestoreTweetLabels]) {
-        %orig;
-        return;
-    }
-    if (!model || !model.attributedString) {
-        %orig;
-        return;
-    }
-
-    NSString *currentText = model.attributedString.string;
-    BOOL isTimestamp = NO;
-
-    // Check if this is a timestamp format
-    if ([currentText containsString:@"PM"] || [currentText containsString:@"AM"]) {
-            isTimestamp = YES;
-    } else {
-        NSRegularExpression *timeRegex = [NSRegularExpression regularExpressionWithPattern:@"\\d{1,2}[:.]\\d{1,2}"
-                                                                                   options:0
-                                                                                     error:nil];
-        NSRange range = [timeRegex rangeOfFirstMatchInString:currentText options:0 range:NSMakeRange(0, currentText.length)];
-        if (range.location != NSNotFound) isTimestamp = YES;
-    }
-
-    // Handle source labels
-    if (isTimestamp) {
-        @try {
-            UIView *view = self;
-            id tweetViewModel = nil;
-            BOOL isDetailView = NO;
-
-            // Walk up the view hierarchy to find the tweet view model and check if we're in a detail view
-            while (view && (!tweetViewModel || !isDetailView)) {
-                if ([NSStringFromClass([view class]) containsString:@"TweetDetails"] ||
-                    [NSStringFromClass([view class]) containsString:@"ConversationFocal"]) {
-                    isDetailView = YES;
-                }
-
-                if ([view respondsToSelector:@selector(viewModel)]) {
-                    tweetViewModel = [view performSelector:@selector(viewModel)];
-                }
-                view = view.superview;
-            }
-
-            // Only proceed if we're in a detail view
-            if (!isDetailView) {
-                %orig;
-                return;
-            }
-
-            if ([tweetViewModel respondsToSelector:@selector(tweet)]) {
-                id tweet = [tweetViewModel performSelector:@selector(tweet)];
-                if (tweet) {
-                    NSInteger statusID = 0;
-                    @try {
-                        statusID = [[tweet valueForKey:@"statusID"] integerValue];
-                    } @catch (__unused NSException *e) {
-                        // Try alternative IDs if statusID fails
-                        NSString *altID = [tweet valueForKey:@"rest_id"] ?: [tweet valueForKey:@"id_str"] ?: [tweet valueForKey:@"id"];
-                        if (altID) {
-                            if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
-                            if (!tweetSources[altID]) {
-                                tweetSources[altID] = @"";
-                                [TweetSourceHelper fetchSourceForTweetID:altID];
-                            }
-
-                            if (tweetSources[altID] && ![tweetSources[altID] isEqualToString:@""]) {
-                                NSString *sourceText = tweetSources[altID];
-                                NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
-
-                                // Get existing attributes from the timestamp
-                                NSDictionary *existingAttributes = nil;
-                                if (newString.length > 0) {
-                                    existingAttributes = [newString attributesAtIndex:0 effectiveRange:NULL];
-                                }
-
-                                // Add separator and source text
-                                NSMutableAttributedString *appended = [[NSMutableAttributedString alloc] init];
-                                [appended appendAttributedString:[[NSAttributedString alloc] initWithString:@" · " attributes:existingAttributes]];
-
-                                // Use current accent color for source text
-                                NSMutableDictionary *sourceAttributes = [existingAttributes mutableCopy];
-                                [sourceAttributes setObject:BHTCurrentAccentColor() forKey:NSForegroundColorAttributeName];
-                                [appended appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttributes]];
-
-                                [newString appendAttributedString:appended];
-                                [model setValue:newString forKey:@"attributedString"];
-                            }
-                        }
-                    }
-
-                    if (statusID > 0) {
-                        NSString *tweetIDStr = @(statusID).stringValue;
-                        if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
-                        if (!tweetSources[tweetIDStr]) {
-                            tweetSources[tweetIDStr] = @"";
-                            [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
-                        }
-                        
-                        if (tweetSources[tweetIDStr] && ![tweetSources[tweetIDStr] isEqualToString:@""]) {
-                            NSString *sourceText = tweetSources[tweetIDStr];
-                            NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
-
-                            // Get existing attributes from the timestamp
-                            NSDictionary *existingAttributes = nil;
-                            if (newString.length > 0) {
-                                existingAttributes = [newString attributesAtIndex:0 effectiveRange:NULL];
-                            }
-
-                            // Add separator and source text
-                            NSMutableAttributedString *appended = [[NSMutableAttributedString alloc] init];
-                            [appended appendAttributedString:[[NSAttributedString alloc] initWithString:@" · " attributes:existingAttributes]];
-
-                            // Use current accent color for source text
-                            NSMutableDictionary *sourceAttributes = [existingAttributes mutableCopy];
-                            [sourceAttributes setObject:BHTCurrentAccentColor() forKey:NSForegroundColorAttributeName];
-                            [appended appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttributes]];
-
-                            [newString appendAttributedString:appended];
-                            [model setValue:newString forKey:@"attributedString"];
-                        }
-                    }
-                }
-            }
-        } @catch (__unused NSException *e) {}
-    }
- // Handle post/tweet text replacements
-
-    else if ([currentText containsString:@"your post"] || 
-             [currentText containsString:@"your Post"] ||
-             [currentText containsString:@"reposted"] ||
-             [currentText containsString:@"Reposted"]) {
-        @try {
-            UIView *view = self;
-            BOOL isNotificationView = NO;
-            
-            // Walk up the view hierarchy to find notification context
-            while (view && !isNotificationView) {
-                if ([NSStringFromClass([view class]) containsString:@"Notification"] ||
-                    [NSStringFromClass([view class]) containsString:@"T1NotificationsTimeline"]) {
-                    isNotificationView = YES;
-                }
-                view = view.superview;
-            }
-            
-            // Only proceed if we're in a notification view
-            if (isNotificationView) {
-                NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
-                
-                // Replace "your post" with "your Tweet"
-                NSRange postRange = [currentText rangeOfString:@"your post"];
-                if (postRange.location != NSNotFound) {
-                    NSDictionary *existingAttributes = [newString attributesAtIndex:postRange.location effectiveRange:NULL];
-                    [newString replaceCharactersInRange:postRange withString:@"your Tweet"];
-                    [newString setAttributes:existingAttributes range:NSMakeRange(postRange.location, [@"your Tweet" length])];
-                }
-                
-                // Also check for capitalized "Post"
-                postRange = [currentText rangeOfString:@"your Post"];
-                if (postRange.location != NSNotFound) {
-                    NSDictionary *existingAttributes = [newString attributesAtIndex:postRange.location effectiveRange:NULL];
-                    [newString replaceCharactersInRange:postRange withString:@"your Tweet"];
-                    [newString setAttributes:existingAttributes range:NSMakeRange(postRange.location, [@"your Tweet" length])];
-                }
-                
-                // Replace "reposted" with "Retweeted"
-                NSRange repostRange = [currentText rangeOfString:@"reposted"];
-                if (repostRange.location != NSNotFound) {
-                    NSDictionary *existingAttributes = [newString attributesAtIndex:repostRange.location effectiveRange:NULL];
-                    [newString replaceCharactersInRange:repostRange withString:@"Retweeted"];
-                    [newString setAttributes:existingAttributes range:NSMakeRange(repostRange.location, [@"Retweeted" length])];
-                }
-                
-                // Also check for capitalized "Reposted"
-                repostRange = [currentText rangeOfString:@"Reposted"];
-                if (repostRange.location != NSNotFound) {
-                    NSDictionary *existingAttributes = [newString attributesAtIndex:repostRange.location effectiveRange:NULL];
-                    [newString replaceCharactersInRange:repostRange withString:@"Retweeted"];
-                    [newString setAttributes:existingAttributes range:NSMakeRange(repostRange.location, [@"Retweeted" length])];
-                }
-                
-                // Update the model with our modified string
-                [model setValue:newString forKey:@"attributedString"];
-            }
-        } @catch (__unused NSException *e) {}
-    }
-    
-    %orig(model);
-}
-%end
-
-// --- Initialisation ---
-
-// MARK: Bird Icon Theming - Dirty hax for making the Nav Bird Icon themeable again.
-
-%hook UIImageView
-
-- (void)didMoveToWindow {
-    %orig;
-    if (!self.window) return;
-    
-    // Check if this is the Twitter bird logo by examining view hierarchy
-    UIView *view = self;
-    BOOL isNavBar = NO;
-    BOOL isCorrectSize = CGSizeEqualToSize(self.frame.size, CGSizeMake(29, 29));
-    
-    while (view && !isNavBar) {
-        if ([view isKindOfClass:%c(TFNNavigationBar)] || 
-            [NSStringFromClass([view class]) containsString:@"NavigationBar"]) {
-            isNavBar = YES;
-            break;
-        }
-        view = view.superview;
-    }
-    
-    if (isNavBar && isCorrectSize) {
-        self.image = [self.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-        self.tintColor = BHTCurrentAccentColor();
-    }
-}
-
-- (void)setImage:(UIImage *)image {
-    if (image && [self.superview isKindOfClass:%c(TFNNavigationBar)]) {
-        UIView *view = self;
-        BOOL isNavBar = NO;
-        BOOL isCorrectSize = CGSizeEqualToSize(self.frame.size, CGSizeMake(29, 29));
-        
-        while (view && !isNavBar) {
-            if ([view isKindOfClass:%c(TFNNavigationBar)] || 
-                [NSStringFromClass([view class]) containsString:@"NavigationBar"]) {
-                isNavBar = YES;
-                break;
-            }
-            view = view.superview;
-        }
-        
-        if (isNavBar && isCorrectSize) {
-            image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-            self.tintColor = BHTCurrentAccentColor();
-        }
-    }
-    %orig(image);
-}
-
-%end
-
-// MARK: Replace "your post" with "your tweet" in notifications
-%hook TFNAttributedTextModel
-- (NSAttributedString *)attributedString {
-    NSAttributedString *original = %orig;
-    if (!original) return original;
-    
-    NSString *originalString = original.string;
-    if ([originalString containsString:@"your post"]) {
-        // Check if we're in a notification context by looking at the view hierarchy
-        UIViewController *topVC = topMostController();
-        if ([NSStringFromClass([topVC class]) containsString:@"Notification"] ||
-            [NSStringFromClass([topVC class]) containsString:@"T1NotificationsTimeline"]) {
-            
-            NSMutableAttributedString *modified = [[NSMutableAttributedString alloc] initWithAttributedString:original];
-            NSRange range = [originalString rangeOfString:@"your post"];
-            if (range.location != NSNotFound) {
-                [modified replaceCharactersInRange:range withString:@"your tweet"];
-                // Preserve the original attributes
-                NSDictionary *attributes = [original attributesAtIndex:range.location effectiveRange:NULL];
-                [modified setAttributes:attributes range:NSMakeRange(range.location, [@"your tweet" length])];
-                return modified;
-            }
-        }
-    }
-    
-    return original;
-}
-%end
-
 // MARK: - Hide Grok Analyze Button (TTAStatusAuthorView)
-
-@interface TTAStatusAuthorView : UIView
-- (id)grokAnalyzeButton;
-@end
 
 %hook TTAStatusAuthorView
 
@@ -1993,7 +1482,7 @@ static char kPopSoundTimerKey;
 %end
 
 // Helper: Update all tab bar icons
-static void BHT_UpdateAllTabBarIcons(void) {
+void BHT_UpdateAllTabBarIcons(void) {
     // Iterate all windows and view controllers to find T1TabBarViewController
     for (UIWindow *window in UIApplication.sharedApplication.windows) {
         UIViewController *root = window.rootViewController;
@@ -2021,7 +1510,7 @@ static void BHT_UpdateAllTabBarIcons(void) {
     }
 }
 
-static void BHT_applyThemeToWindow(UIWindow *window) {
+void BHT_applyThemeToWindow(UIWindow *window) {
     if (!window) return;
 
     // 1. Update our custom themed elements first
@@ -2071,7 +1560,7 @@ static void BHT_applyThemeToWindow(UIWindow *window) {
 }
 
 // Helper to synchronize theme engine and ensure our theme is active
-static void BHT_ensureThemingEngineSynchronized(BOOL forceSynchronize) {
+void BHT_ensureThemingEngineSynchronized(BOOL forceSynchronize) {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     id selectedColorObj = [defaults objectForKey:@"bh_color_theme_selectedColor"];
     
@@ -2116,12 +1605,12 @@ static void BHT_ensureThemingEngineSynchronized(BOOL forceSynchronize) {
 }
 
 // Legacy method for backward compatibility, now just calls our new function
-static void BHT_ensureTheming(void) {
+void BHT_ensureTheming(void) {
     BHT_ensureThemingEngineSynchronized(YES);
 }
 
 // Comprehensive UI refresh - used when we need to force a UI update
-static void BHT_forceRefreshAllWindowAppearances(void) {
+void BHT_forceRefreshAllWindowAppearances(void) {
     // Update tab bar icons which are specifically customized by our tweak
     BHT_UpdateAllTabBarIcons(); 
     
@@ -2345,23 +1834,232 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 // MARK: - Gemini AI Translation Integration
 
 // Helper class to communicate with Gemini AI API
-@interface GeminiTranslator : NSObject
-+ (instancetype)sharedInstance;
-- (void)translateText:(NSString *)text fromLanguage:(NSString *)sourceLanguage toLanguage:(NSString *)targetLanguage completion:(void (^)(NSString *translatedText, NSError *error))completion;
-- (void)simplifiedTranslateAndDisplay:(NSString *)text fromViewController:(UIViewController *)viewController;
+@implementation GeminiTranslator
+
+static GeminiTranslator *_sharedInstance;
+
++ (instancetype)sharedInstance {
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        _sharedInstance = [[GeminiTranslator alloc] init];
+    });
+    return _sharedInstance;
+}
+
+- (void)translateText:(NSString *)text fromLanguage:(NSString *)sourceLanguage toLanguage:(NSString *)targetLanguage completion:(void (^)(NSString *translatedText, NSError *error))completion {
+    @try {
+        // Defensive check for empty text
+        if (!text || text.length == 0) {
+            if (completion) {
+                NSError *error = [NSError errorWithDomain:@"GeminiTranslator" code:400 userInfo:@{NSLocalizedDescriptionKey: @"Empty text to translate"}];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    completion(nil, error);
+                });
+            }
+            return;
+        }
+        
+        // Prepare API request parameters - with simplified prompt
+        NSString *apiKey = @"";
+        NSString *apiUrl = @"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+        
+        // Check if we have a valid API key
+        if (!apiKey || apiKey.length == 0 || [apiKey isEqualToString:@"YOUR_API_KEY"]) {
+            if (completion) {
+                NSError *error = [NSError errorWithDomain:@"GeminiTranslator" code:401 userInfo:@{NSLocalizedDescriptionKey: @"Invalid or missing API key"}];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    completion(nil, error);
+                });
+            }
+            return;
+        }
+        
+        // Construct the request URL with API key
+        NSString *fullUrlString = [NSString stringWithFormat:@"%@?key=%@", apiUrl, apiKey];
+        NSURL *url = [NSURL URLWithString:fullUrlString];
+        
+        // Create request
+        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
+        [request setHTTPMethod:@"POST"];
+        [request setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
+        
+        // Simplified prompt for translation only
+        NSString *prompt = [NSString stringWithFormat:@"Translate this text from %@ to %@: \"%@\" \n\nOnly return the translated text without any explanation or notes.", 
+                            [sourceLanguage isEqualToString:@"auto"] ? @"the original language" : sourceLanguage, 
+                            targetLanguage, 
+                            text];
+        
+        // Create JSON payload
+        NSDictionary *content = @{
+            @"parts": @[
+                @{@"text": prompt}
+            ]
+        };
+        
+        NSDictionary *payload = @{
+            @"contents": @[content],
+            @"generationConfig": @{
+                @"temperature": @0.2,
+                @"topP": @0.8,
+                @"topK": @40
+            }
+        };
+        
+        // Serialize to JSON
+        NSError *jsonError;
+        NSData *jsonData = [NSJSONSerialization dataWithJSONObject:payload options:0 error:&jsonError];
+        
+        if (jsonError) {
+            if (completion) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    completion(nil, jsonError);
+                });
+            }
+            return;
+        }
+        
+        [request setHTTPBody:jsonData];
+        
+        // Create and start task
+        NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+            if (error) {
+                if (completion) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        completion(nil, error);
+                    });
+                }
+                return;
+            }
+            
+            NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
+            if (httpResponse.statusCode != 200) {
+                NSString *errorMsg = [NSString stringWithFormat:@"API request failed with status code: %ld", (long)httpResponse.statusCode];
+                if (data) {
+                    // Try to parse error details from response
+                    NSDictionary *errorInfo = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+                    if (errorInfo[@"error"] && errorInfo[@"error"][@"message"]) {
+                        errorMsg = [NSString stringWithFormat:@"%@: %@", errorMsg, errorInfo[@"error"][@"message"]];
+                    }
+                }
+                
+                NSError *apiError = [NSError errorWithDomain:@"GeminiTranslator" code:httpResponse.statusCode userInfo:@{NSLocalizedDescriptionKey: errorMsg}];
+                if (completion) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        completion(nil, apiError);
+                    });
+                }
+                return;
+            }
+            
+            // Handle successful response
+            if (data) {
+                NSError *parseError;
+                NSDictionary *responseDict = [NSJSONSerialization JSONObjectWithData:data options:0 error:&parseError];
+                
+                if (parseError) {
+                    if (completion) {
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            completion(nil, parseError);
+                        });
+                    }
+                    return;
+                }
+                
+                // Extract the translation text from the response
+                NSString *translatedText = @"";
+                if (responseDict[@"candidates"] && [responseDict[@"candidates"] isKindOfClass:[NSArray class]]) {
+                    NSArray *candidates = responseDict[@"candidates"];
+                    if (candidates.count > 0 && candidates[0][@"content"] && candidates[0][@"content"][@"parts"]) {
+                        NSArray *parts = candidates[0][@"content"][@"parts"];
+                        if (parts.count > 0 && parts[0][@"text"]) {
+                            translatedText = parts[0][@"text"];
+                            // Clean up any lingering quotes from the API's response
+                            translatedText = [translatedText stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"\"' \n"]];
+                        }
+                    }
+                }
+                
+                if (translatedText.length > 0) {
+                    if (completion) {
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            completion(translatedText, nil);
+                        });
+                    }
+                } else {
+                    NSError *noTextError = [NSError errorWithDomain:@"GeminiTranslator" code:500 userInfo:@{NSLocalizedDescriptionKey: @"Could not parse translation from API response"}];
+                    if (completion) {
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            completion(nil, noTextError);
+                        });
+                    }
+                }
+            } else {
+                NSError *noDataError = [NSError errorWithDomain:@"GeminiTranslator" code:500 userInfo:@{NSLocalizedDescriptionKey: @"No data received from API"}];
+                if (completion) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        completion(nil, noDataError);
+                    });
+                }
+            }
+        }];
+        
+        [task resume];
+    } @catch (NSException *exception) {
+        NSError *error = [NSError errorWithDomain:@"GeminiTranslator" code:500 userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat:@"Translation failed with exception: %@", exception.reason]}];
+        if (completion) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                completion(nil, error);
+            });
+        }
+    }
+}
+
+- (void)simplifiedTranslateAndDisplay:(NSString *)text fromViewController:(UIViewController *)viewController {
+    if (!text || text.length == 0 || !viewController) {
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
+                                                                       message:@"No valid text to translate." 
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+        [viewController presentViewController:alert animated:YES completion:nil];
+        return;
+    }
+    
+    [self translateText:text 
+           fromLanguage:@"auto" 
+             toLanguage:@"en" 
+             completion:^(NSString *translatedText, NSError *error) {
+        if (error || !translatedText) {
+            UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
+                                                                           message:error ? error.localizedDescription : @"Failed to translate text." 
+                                                                    preferredStyle:UIAlertControllerStyleAlert];
+            [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+            [viewController presentViewController:alert animated:YES completion:nil];
+            return;
+        }
+        
+        // Show translation with Copy and Cancel options
+        UIAlertController *resultAlert = [UIAlertController alertControllerWithTitle:@"Translation" 
+                                                                             message:translatedText 
+                                                                      preferredStyle:UIAlertControllerStyleAlert];
+        
+        [resultAlert addAction:[UIAlertAction actionWithTitle:@"Copy" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            UIPasteboard.generalPasteboard.string = translatedText;
+        }]];
+        
+        [resultAlert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+        
+        [viewController presentViewController:resultAlert animated:YES completion:nil];
+    }];
+}
+
 @end
 
-// Required interface declarations to fix compiler errors
-@interface TFSTwitterTranslation : NSObject
-- (id)initWithTranslation:(NSString *)translation 
-                 entities:(id)entities 
-        translationSource:(NSString *)source 
-  localizedSourceLanguage:(NSString *)localizedLang 
-          sourceLanguage:(NSString *)sourceLang 
-     destinationLanguage:(NSString *)destLang 
-        translationState:(NSString *)state;
-- (NSString *)sourceLanguage;
-@end
+// --- Initialisation ---
+
+
+// Helper class to communicate with Gemini AI API was already declared in TWHeaders.h
+
+// Required interface declarations are already in TWHeaders.h
 
 // Do not redeclare T1StatusBodyTextView as it is already in TWHeaders.h
 // Just declare T1CoreStatusViewModel with its status property
@@ -2370,17 +2068,7 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 @end
 
 // The TFNTwitterStatus is already defined in TWHeaders.h
-
-// Define _UINavigationBarContentView first since it's forward declared
-@interface _UINavigationBarContentView : UIView
-@end
-
-@interface _UINavigationBarContentView (BHTwitter)
-- (void)BHT_addTranslateButtonIfNeeded;
-- (TFNTwitterStatus *)BHT_findStatusObjectInController:(UIViewController *)controller;
-- (NSString *)BHT_extractTextFromStatusObjectInController:(UIViewController *)controller;
-- (void)BHT_translateCurrentTweetAction:(UIButton *)sender;
-@end
+// Navigation bar and other method declarations are in TWHeaders.h
 
 %hook _UINavigationBarContentView
 
@@ -2855,228 +2543,4 @@ static void findTextView(UIView *view, UITextView **tweetTextView) {
 }
 
 
-
 %end
-
-@implementation GeminiTranslator
-
-static GeminiTranslator *_sharedInstance;
-
-+ (instancetype)sharedInstance {
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        _sharedInstance = [[GeminiTranslator alloc] init];
-    });
-    return _sharedInstance;
-}
-
-- (void)translateText:(NSString *)text fromLanguage:(NSString *)sourceLanguage toLanguage:(NSString *)targetLanguage completion:(void (^)(NSString *translatedText, NSError *error))completion {
-    @try {
-        // Defensive check for empty text
-        if (!text || text.length == 0) {
-            if (completion) {
-                NSError *error = [NSError errorWithDomain:@"GeminiTranslator" code:400 userInfo:@{NSLocalizedDescriptionKey: @"Empty text to translate"}];
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    completion(nil, error);
-                });
-            }
-            return;
-        }
-        
-        // Prepare API request parameters - with simplified prompt
-        NSString *apiKey = @"";
-        NSString *apiUrl = @"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
-        
-        // Check if we have a valid API key
-        if (!apiKey || apiKey.length == 0 || [apiKey isEqualToString:@"YOUR_API_KEY"]) {
-            if (completion) {
-                NSError *error = [NSError errorWithDomain:@"GeminiTranslator" code:401 userInfo:@{NSLocalizedDescriptionKey: @"Invalid or missing API key"}];
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    completion(nil, error);
-                });
-            }
-            return;
-        }
-        
-        // Construct the request URL with API key
-        NSString *fullUrlString = [NSString stringWithFormat:@"%@?key=%@", apiUrl, apiKey];
-        NSURL *url = [NSURL URLWithString:fullUrlString];
-        
-        // Create request
-        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
-        [request setHTTPMethod:@"POST"];
-        [request setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
-        
-        // Simplified prompt for translation only
-        NSString *prompt = [NSString stringWithFormat:@"Translate this text from %@ to %@: \"%@\" \n\nOnly return the translated text without any explanation or notes.", 
-                            [sourceLanguage isEqualToString:@"auto"] ? @"the original language" : sourceLanguage, 
-                            targetLanguage, 
-                            text];
-        
-        // Create JSON payload
-        NSDictionary *content = @{
-            @"parts": @[
-                @{@"text": prompt}
-            ]
-        };
-        
-        NSDictionary *payload = @{
-            @"contents": @[content],
-            @"generationConfig": @{
-                @"temperature": @0.2,
-                @"topP": @0.8,
-                @"topK": @40
-            }
-        };
-        
-        // Serialize to JSON
-        NSError *jsonError;
-        NSData *jsonData = [NSJSONSerialization dataWithJSONObject:payload options:0 error:&jsonError];
-        
-        if (jsonError) {
-            if (completion) {
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    completion(nil, jsonError);
-                });
-            }
-            return;
-        }
-        
-        [request setHTTPBody:jsonData];
-        
-        // Create and start task
-        NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
-            if (error) {
-                if (completion) {
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        completion(nil, error);
-                    });
-                }
-                return;
-            }
-            
-            NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
-            if (httpResponse.statusCode != 200) {
-                NSString *errorMsg = [NSString stringWithFormat:@"API request failed with status code: %ld", (long)httpResponse.statusCode];
-                if (data) {
-                    // Try to parse error details from response
-                    NSDictionary *errorInfo = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
-                    if (errorInfo[@"error"] && errorInfo[@"error"][@"message"]) {
-                        errorMsg = [NSString stringWithFormat:@"%@: %@", errorMsg, errorInfo[@"error"][@"message"]];
-                    }
-                }
-                
-                NSError *apiError = [NSError errorWithDomain:@"GeminiTranslator" code:httpResponse.statusCode userInfo:@{NSLocalizedDescriptionKey: errorMsg}];
-                if (completion) {
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        completion(nil, apiError);
-                    });
-                }
-                return;
-            }
-            
-            // Handle successful response
-            if (data) {
-                NSError *parseError;
-                NSDictionary *responseDict = [NSJSONSerialization JSONObjectWithData:data options:0 error:&parseError];
-                
-                if (parseError) {
-                    if (completion) {
-                        dispatch_async(dispatch_get_main_queue(), ^{
-                            completion(nil, parseError);
-                        });
-                    }
-                    return;
-                }
-                
-                // Extract the translation text from the response
-                NSString *translatedText = @"";
-                if (responseDict[@"candidates"] && [responseDict[@"candidates"] isKindOfClass:[NSArray class]]) {
-                    NSArray *candidates = responseDict[@"candidates"];
-                    if (candidates.count > 0 && candidates[0][@"content"] && candidates[0][@"content"][@"parts"]) {
-                        NSArray *parts = candidates[0][@"content"][@"parts"];
-                        if (parts.count > 0 && parts[0][@"text"]) {
-                            translatedText = parts[0][@"text"];
-                            // Clean up any lingering quotes from the API's response
-                            translatedText = [translatedText stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"\"' \n"]];
-                        }
-                    }
-                }
-                
-                if (translatedText.length > 0) {
-                    if (completion) {
-                        dispatch_async(dispatch_get_main_queue(), ^{
-                            completion(translatedText, nil);
-                        });
-                    }
-                } else {
-                    NSError *noTextError = [NSError errorWithDomain:@"GeminiTranslator" code:500 userInfo:@{NSLocalizedDescriptionKey: @"Could not parse translation from API response"}];
-                    if (completion) {
-                        dispatch_async(dispatch_get_main_queue(), ^{
-                            completion(nil, noTextError);
-                        });
-                    }
-                }
-            } else {
-                NSError *noDataError = [NSError errorWithDomain:@"GeminiTranslator" code:500 userInfo:@{NSLocalizedDescriptionKey: @"No data received from API"}];
-                if (completion) {
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        completion(nil, noDataError);
-                    });
-                }
-            }
-        }];
-        
-        [task resume];
-    } @catch (NSException *exception) {
-        NSError *error = [NSError errorWithDomain:@"GeminiTranslator" code:500 userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat:@"Translation failed with exception: %@", exception.reason]}];
-        if (completion) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                completion(nil, error);
-            });
-        }
-    }
-}
-
-- (void)simplifiedTranslateAndDisplay:(NSString *)text fromViewController:(UIViewController *)viewController {
-    if (!text || text.length == 0 || !viewController) {
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
-                                                                       message:@"No valid text to translate." 
-                                                                preferredStyle:UIAlertControllerStyleAlert];
-        [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-        [viewController presentViewController:alert animated:YES completion:nil];
-        return;
-    }
-    
-    [self translateText:text 
-           fromLanguage:@"auto" 
-             toLanguage:@"en" 
-             completion:^(NSString *translatedText, NSError *error) {
-        if (error || !translatedText) {
-            UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
-                                                                           message:error ? error.localizedDescription : @"Failed to translate text." 
-                                                                    preferredStyle:UIAlertControllerStyleAlert];
-            [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-            [viewController presentViewController:alert animated:YES completion:nil];
-            return;
-        }
-        
-        // Show translation with Copy and Cancel options
-        UIAlertController *resultAlert = [UIAlertController alertControllerWithTitle:@"Translation" 
-                                                                             message:translatedText 
-                                                                      preferredStyle:UIAlertControllerStyleAlert];
-        
-        [resultAlert addAction:[UIAlertAction actionWithTitle:@"Copy" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-            UIPasteboard.generalPasteboard.string = translatedText;
-        }]];
-        
-        [resultAlert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
-        
-        [viewController presentViewController:resultAlert animated:YES completion:nil];
-    }];
-}
-
-@end
-
-
-

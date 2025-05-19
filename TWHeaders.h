@@ -621,6 +621,8 @@ static UIViewController * _Nonnull topMostController() {
 
 // Forward Declarations (ensure these are present if full interface isn't below or already existing)
 @class T1ColorSettings;
+@class T1ImmersiveFullScreenViewController;
+@class _UINavigationBarContentView;
 @class FLEXManager;
 // @class T1TabView; // Already in TWHeaders.h
 // @class T1ProfileHeaderView; // Already in TWHeaders.h
@@ -645,23 +647,48 @@ static UIViewController * _Nonnull topMostController() {
 @class T1SuperFollowControl;
 // @class TFNAvatarImageView; // Already in TWHeaders.h
 @class TFNCircularAvatarShadowLayer;
-@class _UINavigationBarContentView;
 
 // Defines
-#ifndef COOKIE_REFRESH_INTERVAL
+#ifndef COOKIE_REFRESH_INTERVAL_DEF
+#define COOKIE_REFRESH_INTERVAL_DEF
 #define COOKIE_REFRESH_INTERVAL (7 * 24 * 60 * 60)
 #endif
 
 // Full Interfaces & Categories
 
-// T1ColorSettings (Private Methods, if this is the intent)
-// Assuming T1ColorSettings itself is a known Twitter class.
+// --- BASE INTERFACES (Minimal, before Categories) ---
+
+// T1ColorSettings (Minimal Base Interface)
+@interface T1ColorSettings : NSObject
+// Add any properties/methods used by BHTwitter or required for compilation if not already present above
++ (instancetype)sharedSettings; // Example, assuming it's used or was in your original Tweak.x
+@end
+
+// T1ImmersiveFullScreenViewController (Minimal Base Interface)
+@interface T1ImmersiveFullScreenViewController : UIViewController
+// Add any properties/methods used by BHTwitter or required for compilation
+@property (nonatomic, readonly, getter=isViewLoaded) BOOL viewLoaded; // from freebird.x
+@property (nonatomic, strong) UIView *view; // from freebird.x
+- (void)immersiveViewController:(id)immersiveViewController showHideNavigationButtons:(_Bool)showButtons; // from freebird.x
+- (void)playerViewController:(id)playerViewController playerStateDidChange:(NSInteger)state; // from freebird.x
+- (UIView *)playerControlsView; // from freebird.x
+@end
+
+// _UINavigationBarContentView (Minimal Base Interface)
+@interface _UINavigationBarContentView : UIView
+// Add any properties/methods used by BHTwitter or required for compilation
+- (void)setTitle:(id)arg1; // Used in freebird.x hook
+@end
+
+// --- CATEGORIES (Now after their base interfaces) ---
+
+// T1ColorSettings Category
 @interface T1ColorSettings (BHTwitterPrivate)
 + (void)_t1_applyPrimaryColorOption;
 + (void)_t1_updateOverrideUserInterfaceStyle;
 @end
 
-// TweetSourceHelper
+// TweetSourceHelper (Keep as is, assumed NSObject is sufficient base)
 @interface TweetSourceHelper : NSObject
 + (NSDictionary *)fetchCookies;
 + (void)cacheCookies:(NSDictionary *)cookies;
@@ -683,20 +710,19 @@ static UIViewController * _Nonnull topMostController() {
 + (void)handleCookiesReadyNotification:(NSNotification *)notification;
 @end
 
-// T1ImmersiveFullScreenViewController (ensure main interface is robust in TWHeaders.h)
-// Property 'view' and methods like 'playerControlsView' if custom should be in its main interface.
+// T1ImmersiveFullScreenViewController Category
 @interface T1ImmersiveFullScreenViewController (BHTwitter)
 - (BOOL)BHT_findAndPrepareTimestampLabelForVC:(T1ImmersiveFullScreenViewController *)activePlayerVC;
 @end
 
-// GeminiTranslator
+// GeminiTranslator (Keep as is)
 @interface GeminiTranslator : NSObject
 + (instancetype)sharedInstance;
 - (void)translateText:(NSString *)text fromLanguage:(NSString *)sourceLanguage toLanguage:(NSString *)targetLanguage completion:(void (^)(NSString *translatedText, NSError *error))completion;
 - (void)simplifiedTranslateAndDisplay:(NSString *)text fromViewController:(UIViewController *)viewController;
 @end
 
-// TFSTwitterTranslation
+// TFSTwitterTranslation (Keep as is)
 @interface TFSTwitterTranslation : NSObject
 - (id)initWithTranslation:(NSString *)translation
                  entities:(id)entities
@@ -716,7 +742,7 @@ static UIViewController * _Nonnull topMostController() {
 - (void)BHT_translateCurrentTweetAction:(UIButton *)sender;
 @end
 
-// TTAStatusAuthorView (Minimal, actual methods are in hooks)
+// TTAStatusAuthorView (Keep as is, assuming UIView is sufficient base)
 @interface TTAStatusAuthorView : UIView
 - (id)grokAnalyzeButton; // As used in hook
 @end

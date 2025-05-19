@@ -21,7 +21,7 @@ static BOOL BHT_isInThemeChangeOperation = NO;
 static NSMapTable<T1ImmersiveFullScreenViewController *, UILabel *> *playerToTimestampMap = nil;
 
 // Static helper function for recursive view traversal - DEFINED AT THE TOP
-static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
+void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
     if (!view || !block) return;
     block(view);
     for (UIView *subview in view.subviews) {
