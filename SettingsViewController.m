@@ -954,6 +954,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     NSString *currentEndpoint = [defaults stringForKey:@"BHT_customTranslateEndpoint"];
     NSString *currentApiKey = [defaults stringForKey:@"BHT_customTranslateAPIKey"];
+    NSString *currentModel = [defaults stringForKey:@"BHT_customTranslateModel"];
 
     [alert addTextFieldWithConfigurationHandler:^(UITextField * _Nonnull textField) {
         textField.placeholder = [[BHTBundle sharedBundle] localizedStringForKey:@"SETTINGS_TRANSLATE_ENDPOINT_PLACEHOLDER"];
@@ -966,12 +967,18 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         textField.text = currentApiKey;
         textField.secureTextEntry = YES; // Mask API key
     }];
+
+    [alert addTextFieldWithConfigurationHandler:^(UITextField * _Nonnull textField) {
+        textField.placeholder = [[BHTBundle sharedBundle] localizedStringForKey:@"SETTINGS_TRANSLATE_MODEL_PLACEHOLDER"];
+        textField.text = currentModel;
+    }];
     
     UIAlertAction *saveAction = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SETTINGS_SAVE_BUTTON_TITLE"]
                                                          style:UIAlertActionStyleDefault
                                                        handler:^(UIAlertAction * _Nonnull action) {
         NSString *newEndpoint = alert.textFields[0].text;
         NSString *newApiKey = alert.textFields[1].text;
+        NSString *newModel = alert.textFields[2].text;
         
         if (newEndpoint.length == 0) { // If endpoint is cleared, set to nil to signify using default
             [defaults removeObjectForKey:@"BHT_customTranslateEndpoint"];
@@ -984,6 +991,13 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         } else {
             [defaults setObject:newApiKey forKey:@"BHT_customTranslateAPIKey"];
         }
+
+        if (newModel.length == 0) {
+            [defaults removeObjectForKey:@"BHT_customTranslateModel"];
+        } else {
+            [defaults setObject:newModel forKey:@"BHT_customTranslateModel"];
+        }
+        
         [defaults synchronize];
     }];
     

@@ -4929,14 +4929,16 @@ static dispatch_once_t onceTokenGemini;
 
     NSString *customEndpoint = [BHTManager customTranslateEndpoint];
     NSString *apiKey = [BHTManager customTranslateAPIKey];
+    NSString *customModel = [BHTManager customTranslateModel]; // New: Get custom model
 
     NSString *endpointURLString;
     if (customEndpoint && customEndpoint.length > 0) {
         endpointURLString = customEndpoint;
         NSLog(@"[BHTwitter Translate] Using custom endpoint: %@", endpointURLString);
     } else {
-        endpointURLString = @"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
-        NSLog(@"[BHTwitter Translate] Using default Gemini endpoint.");
+        NSString *modelToUse = (customModel && customModel.length > 0) ? customModel : @"gemini-pro";
+        endpointURLString = [NSString stringWithFormat:@"https://generativelanguage.googleapis.com/v1beta/models/%@:generateContent", modelToUse];
+        NSLog(@"[BHTwitter Translate] Using default API structure with model '%@'. Endpoint: %@", modelToUse, endpointURLString);
     }
     
     if (!apiKey || apiKey.length == 0) {

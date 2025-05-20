@@ -328,6 +328,10 @@
     return [[NSUserDefaults standardUserDefaults] stringForKey:@"BHT_customTranslateAPIKey"];
 }
 
++ (NSString *)customTranslateModel {
+    return [[NSUserDefaults standardUserDefaults] stringForKey:@"BHT_customTranslateModel"];
+}
+
 + (void)clearSourceLabelCache {
     NSLog(@"BHTManager: Posting BHTClearSourceLabelCacheNotification");
     [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTClearSourceLabelCacheNotification" object:nil];

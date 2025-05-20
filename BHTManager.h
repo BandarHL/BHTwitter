@@ -79,6 +79,7 @@
 + (BOOL)enableTranslateButton;
 + (NSString *)customTranslateEndpoint;
 + (NSString *)customTranslateAPIKey;
++ (NSString *)customTranslateModel;
 
 + (void)clearSourceLabelCache;
 

@@ -317,4 +317,5 @@
 "SETTINGS_TRANSLATE_ENDPOINT_PROMPT_MESSAGE" = "Enter your API endpoint and key. Leave endpoint blank to use default Gemini.";
 "SETTINGS_TRANSLATE_ENDPOINT_PLACEHOLDER" = "API Endpoint URL (Optional)";
 "SETTINGS_TRANSLATE_APIKEY_PLACEHOLDER" = "API Key";
+"SETTINGS_TRANSLATE_MODEL_PLACEHOLDER" = "Model Name (e.g., gemini-1.5-flash)";
 "SETTINGS_SAVE_BUTTON_TITLE" = "Save";
