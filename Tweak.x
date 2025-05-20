@@ -4640,14 +4640,37 @@ static char kTranslateButtonKey;
 
 %new
 - (void)BHT_addTranslateButtonIfNeeded {
+    NSLog(@"[BHTwitter Translate] Attempting to add button in BHT_addTranslateButtonIfNeeded for view: %@", self);
     // More specific check to ensure we're only in tweet detail/conversation view
     UIViewController *parentVC = nil;
     UIResponder *responder = self;
     while (responder && ![responder isKindOfClass:[UIViewController class]]) {
         responder = [responder nextResponder];
     }
-    if (responder) {
+    if (responder && [responder isKindOfClass:[UIViewController class]]) { // Ensure responder is a VC
         parentVC = (UIViewController *)responder;
+        NSLog(@"[BHTwitter Translate] Found parentVC: %@", NSStringFromClass([parentVC class]));
+    } else {
+        NSLog(@"[BHTwitter Translate] Could not find parentVC for _UINavigationBarContentView: %@", self);
+        // Attempt to get VC from window if direct responder fails
+        UIWindow *keyWindow = self.window;
+        if (keyWindow && keyWindow.rootViewController) {
+            UIViewController *rootVC = keyWindow.rootViewController;
+            UIViewController *topVC = rootVC;
+            while (topVC.presentedViewController) {
+                topVC = topVC.presentedViewController;
+            }
+            if ([topVC isKindOfClass:[UINavigationController class]]) {
+                 parentVC = [(UINavigationController*)topVC topViewController];
+                 NSLog(@"[BHTwitter Translate] Fallback: Found parentVC from window->topVC (UINav): %@", NSStringFromClass([parentVC class]));
+            } else {
+                 parentVC = topVC;
+                 NSLog(@"[BHTwitter Translate] Fallback: Found parentVC from window->topVC: %@", NSStringFromClass([parentVC class]));
+            }
+        } else {
+            NSLog(@"[BHTwitter Translate] Fallback: Could not get parentVC from window either.");
+            return; // Can't proceed without a VC
+        }
     }
     
     // Check if this is a conversation/tweet view by examining both title and controller class
@@ -4655,77 +4678,97 @@ static char kTranslateButtonKey;
     UILabel *titleLabel = nil;
     
     // Check title
+    NSLog(@"[BHTwitter Translate] Subviews of %@: %@", self, self.subviews);
     for (UIView *subview in self.subviews) {
         if ([subview isKindOfClass:%c(UILabel)]) {
             UILabel *label = (UILabel *)subview;
+            NSLog(@"[BHTwitter Translate] Found UILabel with text: ' %@ '", label.text);
             if ([label.text isEqualToString:@"Post"] || [label.text isEqualToString:@"Tweet"]) {
                 titleLabel = label;
+                NSLog(@"[BHTwitter Translate] Matched titleLabel: %@", titleLabel.text);
                 break;
             }
         }
     }
     
+    if (!titleLabel) {
+        NSLog(@"[BHTwitter Translate] Did not find titleLabel with 'Post' or 'Tweet'.");
+    }
+    
     // Only proceed if we have a title AND we're in a conversation view controller
     if (titleLabel && parentVC) {
         NSString *vcClassName = NSStringFromClass([parentVC class]);
+        NSLog(@"[BHTwitter Translate] Checking vcClassName: %@", vcClassName);
         if ([vcClassName containsString:@"Conversation"] || 
             [vcClassName containsString:@"Tweet"] || 
             [vcClassName containsString:@"Status"] || 
             [vcClassName containsString:@"Detail"]) {
             isTweetView = YES;
-            NSLog(@"[BHTwitter Translate] Found legitimate tweet view: %@", vcClassName);
+            NSLog(@"[BHTwitter Translate] vcClassName matched. isTweetView = YES.");
+        } else {
+            NSLog(@"[BHTwitter Translate] vcClassName ('%@') did NOT match expected keywords.", vcClassName);
         }
+    } else {
+        if (!titleLabel) NSLog(@"[BHTwitter Translate] Condition failed: titleLabel is nil.");
+        if (!parentVC) NSLog(@"[BHTwitter Translate] Condition failed: parentVC is nil.");
     }
     
     // Only proceed if this is a valid tweet view
     if (isTweetView) {
+        NSLog(@"[BHTwitter Translate] isTweetView is YES. Proceeding to check/add button.");
         // Check if button already exists
         UIButton *existingButton = objc_getAssociatedObject(self, &kTranslateButtonKey);
+        if (existingButton) {
+            NSLog(@"[BHTwitter Translate] Translate button already exists: %@", existingButton);
+            // Ensure it's visible and properly placed if it exists
+            existingButton.hidden = NO;
+            [self bringSubviewToFront:existingButton]; 
+            return;
+        }
         
         // If button doesn't exist, create it
-        if (!existingButton) {
-            UIButton *translateButton = [UIButton buttonWithType:UIButtonTypeSystem];
-            if (@available(iOS 13.0, *)) {
-                // Use a proper translation SF symbol
-                [translateButton setImage:[UIImage systemImageNamed:@"text.bubble.fill"] forState:UIControlStateNormal];
-                
-                // Set proper tint color based on appearance
-                if (@available(iOS 12.0, *)) {
-                    if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
-                        translateButton.tintColor = [UIColor whiteColor];
-                    } else {
-                        translateButton.tintColor = [UIColor blackColor];
-                    }
-                    
-                    // Add trait collection observer for dark/light mode changes
-                    [translateButton addObserver:self forKeyPath:@"traitCollection" options:NSKeyValueObservingOptionNew context:NULL];
+        NSLog(@"[BHTwitter Translate] Creating new translate button.");
+        UIButton *translateButton = [UIButton buttonWithType:UIButtonTypeSystem];
+        if (@available(iOS 13.0, *)) {
+            // Use a proper translation SF symbol
+            [translateButton setImage:[UIImage systemImageNamed:@"text.bubble.fill"] forState:UIControlStateNormal];
+            
+            // Set proper tint color based on appearance
+            if (@available(iOS 12.0, *)) {
+                if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
+                    translateButton.tintColor = [UIColor whiteColor];
+                } else {
+                    translateButton.tintColor = [UIColor blackColor];
                 }
-            } else {
-                [translateButton setTitle:@"Translate" forState:UIControlStateNormal]; // Fallback for older iOS
+                
+                // Add trait collection observer for dark/light mode changes
+                [translateButton addObserver:self forKeyPath:@"traitCollection" options:NSKeyValueObservingOptionNew context:NULL];
             }
-            [translateButton addTarget:self action:@selector(BHT_translateCurrentTweetAction:) forControlEvents:UIControlEventTouchUpInside];
-            translateButton.tag = 12345; // Unique tag
-            
-            // Add button with higher z-index
-            [self insertSubview:translateButton aboveSubview:titleLabel];
-            translateButton.translatesAutoresizingMaskIntoConstraints = NO;
-            
-            // Store button reference in associated object
-            objc_setAssociatedObject(self, &kTranslateButtonKey, translateButton, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-            
-            // Place the button on the right with a moderate offset to avoid collisions
-            NSArray *constraints = @[
-                [translateButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
-                [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-55], // Move slightly more to the right
-                [translateButton.widthAnchor constraintEqualToConstant:44],
-                [translateButton.heightAnchor constraintEqualToConstant:44]
-            ];
-            
-            // Store constraints reference to prevent deallocation
-            objc_setAssociatedObject(translateButton, "translateButtonConstraints", constraints, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-            
-            [NSLayoutConstraint activateConstraints:constraints];
+        } else {
+            [translateButton setTitle:@"Translate" forState:UIControlStateNormal]; // Fallback for older iOS
         }
+        [translateButton addTarget:self action:@selector(BHT_translateCurrentTweetAction:) forControlEvents:UIControlEventTouchUpInside];
+        translateButton.tag = 12345; // Unique tag
+        
+        // Add button with higher z-index
+        [self insertSubview:translateButton aboveSubview:titleLabel];
+        translateButton.translatesAutoresizingMaskIntoConstraints = NO;
+        
+        // Store button reference in associated object
+        objc_setAssociatedObject(self, &kTranslateButtonKey, translateButton, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        
+        // Place the button on the right with a moderate offset to avoid collisions
+        NSArray *constraints = @[
+            [translateButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
+            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-55], // Move slightly more to the right
+            [translateButton.widthAnchor constraintEqualToConstant:44],
+            [translateButton.heightAnchor constraintEqualToConstant:44]
+        ];
+        
+        // Store constraints reference to prevent deallocation
+        objc_setAssociatedObject(translateButton, "translateButtonConstraints", constraints, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        
+        [NSLayoutConstraint activateConstraints:constraints];
     } else {
         // If this is not a tweet view but we have a button, remove it
         UIButton *existingButton = objc_getAssociatedObject(self, &kTranslateButtonKey);
