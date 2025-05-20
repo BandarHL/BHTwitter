@@ -4641,18 +4641,28 @@ static char kTranslateButtonKey;
 %new
 - (void)BHT_addTranslateButtonIfNeeded {
     NSLog(@"[BHTwitter Translate] Attempting to add button in BHT_addTranslateButtonIfNeeded for view: %@", self);
-    // More specific check to ensure we're only in tweet detail/conversation view
-    UIViewController *parentVC = nil;
+    UIViewController *parentVCFromResponder = nil;
     UIResponder *responder = self;
     while (responder && ![responder isKindOfClass:[UIViewController class]]) {
         responder = [responder nextResponder];
     }
-    if (responder && [responder isKindOfClass:[UIViewController class]]) { // Ensure responder is a VC
-        parentVC = (UIViewController *)responder;
-        NSLog(@"[BHTwitter Translate] Found parentVC: %@", NSStringFromClass([parentVC class]));
+    if (responder && [responder isKindOfClass:[UIViewController class]]) {
+        parentVCFromResponder = (UIViewController *)responder;
+    }
+
+    UIViewController *actualContentVC = nil;
+    if (parentVCFromResponder) {
+        NSLog(@"[BHTwitter Translate] Found parentVCFromResponder: %@", NSStringFromClass([parentVCFromResponder class]));
+        if ([parentVCFromResponder isKindOfClass:[UINavigationController class]]) {
+            actualContentVC = [(UINavigationController *)parentVCFromResponder topViewController];
+            NSLog(@"[BHTwitter Translate] parentVCFromResponder is a UINavigationController. ActualContentVC is topViewController: %@", NSStringFromClass([actualContentVC class]));
+        } else {
+            actualContentVC = parentVCFromResponder;
+            NSLog(@"[BHTwitter Translate] parentVCFromResponder is not a UINavigationController. ActualContentVC is parentVCFromResponder: %@", NSStringFromClass([actualContentVC class]));
+        }
     } else {
-        NSLog(@"[BHTwitter Translate] Could not find parentVC for _UINavigationBarContentView: %@", self);
-        // Attempt to get VC from window if direct responder fails
+        NSLog(@"[BHTwitter Translate] Could not find parentVCFromResponder for _UINavigationBarContentView: %@", self);
+        // Attempt to get VC from window if direct responder fails (existing fallback)
         UIWindow *keyWindow = self.window;
         if (keyWindow && keyWindow.rootViewController) {
             UIViewController *rootVC = keyWindow.rootViewController;
@@ -4661,14 +4671,14 @@ static char kTranslateButtonKey;
                 topVC = topVC.presentedViewController;
             }
             if ([topVC isKindOfClass:[UINavigationController class]]) {
-                 parentVC = [(UINavigationController*)topVC topViewController];
-                 NSLog(@"[BHTwitter Translate] Fallback: Found parentVC from window->topVC (UINav): %@", NSStringFromClass([parentVC class]));
+                 actualContentVC = [(UINavigationController*)topVC topViewController];
+                 NSLog(@"[BHTwitter Translate] Fallback: Found actualContentVC from window->topVC (UINav): %@", NSStringFromClass([actualContentVC class]));
             } else {
-                 parentVC = topVC;
-                 NSLog(@"[BHTwitter Translate] Fallback: Found parentVC from window->topVC: %@", NSStringFromClass([parentVC class]));
+                 actualContentVC = topVC;
+                 NSLog(@"[BHTwitter Translate] Fallback: Found actualContentVC from window->topVC: %@", NSStringFromClass([actualContentVC class]));
             }
         } else {
-            NSLog(@"[BHTwitter Translate] Fallback: Could not get parentVC from window either.");
+            NSLog(@"[BHTwitter Translate] Fallback: Could not get actualContentVC from window either.");
             return; // Can't proceed without a VC
         }
     }
@@ -4677,7 +4687,6 @@ static char kTranslateButtonKey;
     BOOL isTweetView = NO;
     UILabel *titleLabel = nil;
     
-    // Check title
     NSLog(@"[BHTwitter Translate] Subviews of %@: %@", self, self.subviews);
     for (UIView *subview in self.subviews) {
         if ([subview isKindOfClass:%c(UILabel)]) {
@@ -4695,22 +4704,21 @@ static char kTranslateButtonKey;
         NSLog(@"[BHTwitter Translate] Did not find titleLabel with 'Post' or 'Tweet'.");
     }
     
-    // Only proceed if we have a title AND we're in a conversation view controller
-    if (titleLabel && parentVC) {
-        NSString *vcClassName = NSStringFromClass([parentVC class]);
-        NSLog(@"[BHTwitter Translate] Checking vcClassName: %@", vcClassName);
+    if (titleLabel && actualContentVC) {
+        NSString *vcClassName = NSStringFromClass([actualContentVC class]);
+        NSLog(@"[BHTwitter Translate] Checking actualContentVC className: %@", vcClassName);
         if ([vcClassName containsString:@"Conversation"] || 
             [vcClassName containsString:@"Tweet"] || 
             [vcClassName containsString:@"Status"] || 
             [vcClassName containsString:@"Detail"]) {
             isTweetView = YES;
-            NSLog(@"[BHTwitter Translate] vcClassName matched. isTweetView = YES.");
+            NSLog(@"[BHTwitter Translate] actualContentVC className matched. isTweetView = YES.");
         } else {
-            NSLog(@"[BHTwitter Translate] vcClassName ('%@') did NOT match expected keywords.", vcClassName);
+            NSLog(@"[BHTwitter Translate] actualContentVC className ('%@') did NOT match expected keywords.", vcClassName);
         }
     } else {
-        if (!titleLabel) NSLog(@"[BHTwitter Translate] Condition failed: titleLabel is nil.");
-        if (!parentVC) NSLog(@"[BHTwitter Translate] Condition failed: parentVC is nil.");
+        if (!titleLabel) NSLog(@"[BHTwitter Translate] Condition failed for isTweetView: titleLabel is nil.");
+        if (!actualContentVC) NSLog(@"[BHTwitter Translate] Condition failed for isTweetView: actualContentVC is nil.");
     }
     
     // Only proceed if this is a valid tweet view
