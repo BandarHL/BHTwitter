@@ -4631,6 +4631,7 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 - (NSString *)BHT_extractTextFromStatusObjectInController:(UIViewController *)controller;
 - (void)BHT_translateCurrentTweetAction:(UIButton *)sender;
 - (void)BHT_animateAndTranslateAction:(UIButton *)sender; // Added for animation
+- (UIViewController *)BHT_getParentViewController; // Added this line
 @end
 
 %hook _UINavigationBarContentView
@@ -4954,15 +4955,15 @@ static dispatch_once_t onceTokenGemini;
     [request setHTTPMethod:@"POST"];
     [request setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
 
-    NSString *prompt = [NSString stringWithFormat:@"Translate the following text from %@ to %@: "%@"", sourceLanguage ?: @"auto", targetLanguage ?: @"English", text];
+    NSString *prompt = [NSString stringWithFormat:@"Translate the following text from %@ to %@: \"%@\"", sourceLanguage ?: @"auto", targetLanguage ?: @"English", text];
     NSDictionary *generationConfig = @{
         @"temperature": @0.7,
         @"topK": @1,
-        @"topP": @1,
+        @"topP": @1, // Adding this line back
         @"maxOutputTokens": @2048,
         @"stopSequences": @[]
     };
-    NSDictionary *safetySettings = @[
+    NSArray *safetySettings = @[
         @{@"category": @"HARM_CATEGORY_HARASSMENT", @"threshold": @"BLOCK_MEDIUM_AND_ABOVE"},
         @{@"category": @"HARM_CATEGORY_HATE_SPEECH", @"threshold": @"BLOCK_MEDIUM_AND_ABOVE"},
         @{@"category": @"HARM_CATEGORY_SEXUALLY_EXPLICIT", @"threshold": @"BLOCK_MEDIUM_AND_ABOVE"},
@@ -5090,9 +5091,7 @@ static dispatch_once_t onceTokenGemini;
 
     // Show a simple loading indicator
     UIAlertController *loadingAlert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TRANSLATING_ALERT_TITLE"]
-                                                                       message:@"
-
-" // Space for activity indicator
+                                                                       message:@" \n \n" // Space for activity indicator
                                                                 preferredStyle:UIAlertControllerStyleAlert];
     UIActivityIndicatorView *indicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleMedium];
     indicator.center = CGPointMake(loadingAlert.view.bounds.size.width / 2, loadingAlert.view.bounds.size.height / 2 - 20); // Adjust position
@@ -5125,6 +5124,6 @@ static dispatch_once_t onceTokenGemini;
     }];
 }
 
-
+@end
 
 
