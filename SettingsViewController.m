@@ -98,21 +98,16 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     if ([keyPath isEqualToString:@"bh_color_theme_selectedColor"] || [keyPath isEqualToString:@"T1ColorSettingsPrimaryColorOptionKey"]) {
         [self setupAppearance];
     } else if ([keyPath isEqualToString:@"BHT_enableTranslateButton"]) {
-        // Find the specifier for the configure button
-        PSSpecifier *configureButtonSpecifier = [self specifierForID:@"BHT_configureTranslateAPIButton"]; // Assuming this ID will be set
+        PSSpecifier *configureButtonSpecifier = [self specifierForID:@"BHT_configureTranslateAPIButton"];
         if (configureButtonSpecifier) {
-            UITableViewCell *cell = [self.table cellForRowAtIndexPath:[self indexPathForSpecifier:configureButtonSpecifier]];
-            if (cell) {
-                BOOL enabled = [[NSUserDefaults standardUserDefaults] boolForKey:@"BHT_enableTranslateButton"];
-                cell.userInteractionEnabled = enabled;
-                cell.textLabel.enabled = enabled;
-                cell.detailTextLabel.enabled = enabled;
-                // Optionally, change alpha or color to indicate disabled state
-                cell.textLabel.textColor = enabled ? [UIColor labelColor] : [UIColor grayColor]; 
+            NSIndexPath *indexPath = [self indexPathForSpecifier:configureButtonSpecifier];
+            if (indexPath) {
+                [self.table beginUpdates];
+                [self.table reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
+                [self.table endUpdates];
             }
         }
     }
-    // Removed tab_bar_theming observation and BHTTabBarThemingChanged notification
 }
 
 
@@ -220,17 +215,31 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     // Set cell background
     cell.backgroundColor = [UIColor systemBackgroundColor];
     
-    // Remove selection highlight if needed
+    // Default selection style
     cell.selectionStyle = UITableViewCellSelectionStyleDefault;
 
-    // Custom logic for the Configure API button state
     PSSpecifier *specifier = [self specifierAtIndexPath:indexPath];
     if ([[specifier propertyForKey:@"id"] isEqualToString:@"BHT_configureTranslateAPIButton"]) {
-        BOOL enabled = [[NSUserDefaults standardUserDefaults] boolForKey:@"BHT_enableTranslateButton"];
-        cell.userInteractionEnabled = enabled;
-        cell.textLabel.enabled = enabled;
-        cell.detailTextLabel.enabled = enabled;
-        cell.textLabel.textColor = enabled ? [UIColor labelColor] : [UIColor grayColor]; 
+        BOOL isTranslateEnabled = [[NSUserDefaults standardUserDefaults] boolForKey:@"BHT_enableTranslateButton"];
+        if (isTranslateEnabled) {
+            cell.userInteractionEnabled = YES;
+            cell.textLabel.enabled = YES;
+            cell.textLabel.textColor = [UIColor labelColor];
+            // Set the original title if it was changed
+            specifier.name = [[BHTBundle sharedBundle] localizedStringForKey:@"SETTINGS_TRANSLATE_CONFIGURE_BUTTON_TITLE"];
+            cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+            cell.selectionStyle = UITableViewCellSelectionStyleDefault;
+        } else {
+            cell.userInteractionEnabled = NO;
+            cell.textLabel.enabled = NO;
+            cell.textLabel.textColor = [UIColor grayColor];
+            // Optionally change the title to indicate it's disabled or why
+            // specifier.name = [[BHTBundle sharedBundle] localizedStringForKey:@"SETTINGS_TRANSLATE_CONFIGURE_BUTTON_DISABLED_TITLE"]; // Example for a different title
+            cell.accessoryType = UITableViewCellAccessoryNone;
+            cell.selectionStyle = UITableViewCellSelectionStyleNone;
+        }
+        // Make sure the cell updates its display with the potentially changed specifier name
+        cell.textLabel.text = specifier.name;
     }
 }
 
