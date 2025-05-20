@@ -346,6 +346,17 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 
         PSSpecifier *restoreTweetLabels = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ENABLE_TWEET_LABELS_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ENABLE_TWEET_LABELS_OPTION_DETAIL_TITLE"] key:@"restore_tweet_labels" defaultValue:false changeAction:nil];
         
+        PSSpecifier *enableTranslateButton = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SETTINGS_TRANSLATE_BUTTON_ENABLE_TITLE"]
+                                                                detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SETTINGS_TRANSLATE_BUTTON_ENABLE_DETAIL"]
+                                                                        key:@"BHT_enableTranslateButton"
+                                                               defaultValue:NO // Default to NO
+                                                               changeAction:nil]; // No specific action needed on change, KVO handles reload
+
+        PSSpecifier *configureTranslateAPIButton = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SETTINGS_TRANSLATE_CONFIGURE_BUTTON_TITLE"]
+                                                                    detailTitle:nil
+                                                                    dynamicRule:@"BHT_enableTranslateButton, ==, 1" // Only show if enabled
+                                                                         action:@selector(configureTranslateAPI)];
+
         PSSpecifier *alwaysOpenSafari = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ALWAYS_OPEN_SAFARI_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE"] key:@"openInBrowser" defaultValue:false changeAction:nil];
         
         PSSpecifier *stripTrackingParams = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"STRIP_URL_TRACKING_PARAMETERS_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE"] key:@"strip_tracking_params" defaultValue:false changeAction:nil];
@@ -431,20 +442,6 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         PSSpecifier *nyathea = [self newHBTwitterCellWithTitle:@"nyathea" twitterUsername:@"nyaathea" customAvatarURL:@"https://avatars.githubusercontent.com/u/108613931?v=4"];
         PSSpecifier *bandarHL = [self newHBTwitterCellWithTitle:@"BandarHelal" twitterUsername:@"BandarHL" customAvatarURL:@"https://unavatar.io/twitter/BandarHL"];
         
-        // New: Translate Button Settings Section
-        PSSpecifier *translateSettingsSection = [self newSectionWithTitle:@"Translate Settings" footer:nil];
-        
-        PSSpecifier *enableTranslateButton = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SETTINGS_TRANSLATE_BUTTON_ENABLE_TITLE"]
-                                                                detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SETTINGS_TRANSLATE_BUTTON_ENABLE_DETAIL"]
-                                                                        key:@"BHT_enableTranslateButton"
-                                                               defaultValue:NO // Default to NO
-                                                               changeAction:nil]; // No specific action needed on change, KVO handles reload
-
-        PSSpecifier *configureTranslateAPIButton = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SETTINGS_TRANSLATE_CONFIGURE_BUTTON_TITLE"]
-                                                                    detailTitle:nil
-                                                                    dynamicRule:@"BHT_enableTranslateButton, ==, 1" // Only show if enabled
-                                                                         action:@selector(configureTranslateAPI)];
-
         _specifiers = [NSMutableArray arrayWithArray:@[
             
             mainSection, // 0
@@ -460,6 +457,8 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             OldStyle,
             tweetToImage,
             restoreTweetLabels,
+            enableTranslateButton,
+            configureTranslateAPIButton,
             likeConfrim,
             tweetConfirm,
             hideViewCount,
@@ -523,11 +522,6 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             timi2506,
             nyathea,
             bandarHL,
-
-            // New: Add Translate Settings section and its items
-            translateSettingsSection,
-            enableTranslateButton,
-            configureTranslateAPIButton
         ]];
         
         [self collectDynamicSpecifiersFromArray:_specifiers];
