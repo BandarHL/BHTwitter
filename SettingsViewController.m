@@ -98,15 +98,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     if ([keyPath isEqualToString:@"bh_color_theme_selectedColor"] || [keyPath isEqualToString:@"T1ColorSettingsPrimaryColorOptionKey"]) {
         [self setupAppearance];
     } else if ([keyPath isEqualToString:@"BHT_enableTranslateButton"]) {
-        PSSpecifier *configureButtonSpecifier = [self specifierForID:@"BHT_configureTranslateAPIButton"];
-        if (configureButtonSpecifier) {
-            NSIndexPath *indexPath = [self indexPathForSpecifier:configureButtonSpecifier];
-            if (indexPath) {
-                [self.table beginUpdates];
-                [self.table reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
-                [self.table endUpdates];
-            }
-        }
+        [self reloadSpecifiers];
     }
 }
 
@@ -217,30 +209,6 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     
     // Default selection style
     cell.selectionStyle = UITableViewCellSelectionStyleDefault;
-
-    PSSpecifier *specifier = [self specifierAtIndexPath:indexPath];
-    if ([[specifier propertyForKey:@"id"] isEqualToString:@"BHT_configureTranslateAPIButton"]) {
-        BOOL isTranslateEnabled = [[NSUserDefaults standardUserDefaults] boolForKey:@"BHT_enableTranslateButton"];
-        if (isTranslateEnabled) {
-            cell.userInteractionEnabled = YES;
-            cell.textLabel.enabled = YES;
-            cell.textLabel.textColor = [UIColor labelColor];
-            // Set the original title if it was changed
-            specifier.name = [[BHTBundle sharedBundle] localizedStringForKey:@"SETTINGS_TRANSLATE_CONFIGURE_BUTTON_TITLE"];
-            cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
-            cell.selectionStyle = UITableViewCellSelectionStyleDefault;
-        } else {
-            cell.userInteractionEnabled = NO;
-            cell.textLabel.enabled = NO;
-            cell.textLabel.textColor = [UIColor grayColor];
-            // Optionally change the title to indicate it's disabled or why
-            // specifier.name = [[BHTBundle sharedBundle] localizedStringForKey:@"SETTINGS_TRANSLATE_CONFIGURE_BUTTON_DISABLED_TITLE"]; // Example for a different title
-            cell.accessoryType = UITableViewCellAccessoryNone;
-            cell.selectionStyle = UITableViewCellSelectionStyleNone;
-        }
-        // Make sure the cell updates its display with the potentially changed specifier name
-        cell.textLabel.text = specifier.name;
-    }
 }
 
 
@@ -385,9 +353,9 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 
         PSSpecifier *configureTranslateAPIButton = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SETTINGS_TRANSLATE_CONFIGURE_BUTTON_TITLE"]
                                                                     detailTitle:nil
-                                                                    dynamicRule:nil
+                                                                    dynamicRule:@"BHT_enableTranslateButton, ==, 1"
                                                                          action:@selector(configureTranslateAPI)];
-        [configureTranslateAPIButton setProperty:@"BHT_configureTranslateAPIButton" forKey:@"id"]; // Set an ID for the button
+        [configureTranslateAPIButton setProperty:@"BHT_configureTranslateAPIButton" forKey:@"id"];
 
         PSSpecifier *alwaysOpenSafari = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ALWAYS_OPEN_SAFARI_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE"] key:@"openInBrowser" defaultValue:false changeAction:nil];
         
