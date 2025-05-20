@@ -97,6 +97,8 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
     if ([keyPath isEqualToString:@"bh_color_theme_selectedColor"] || [keyPath isEqualToString:@"T1ColorSettingsPrimaryColorOptionKey"]) {
         [self setupAppearance];
+    } else if ([keyPath isEqualToString:@"BHT_enableTranslateButton"]) {
+        [self reloadSpecifiers]; // Reload specifiers when the toggle changes
     }
     // Removed tab_bar_theming observation and BHTTabBarThemingChanged notification
 }
@@ -106,9 +108,15 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 - (void)viewDidLoad {
     [super viewDidLoad];
 
+    self.hasDynamicSpecifiers = YES; // Indicate we have dynamic specifiers
+    self.dynamicSpecifiers = [NSMutableDictionary dictionary];
 
-    
-    
+    // Observe the enable translate button setting to refresh specifiers
+    [[NSUserDefaults standardUserDefaults] addObserver:self
+                                            forKeyPath:@"BHT_enableTranslateButton"
+                                               options:NSKeyValueObservingOptionNew
+                                               context:NULL];
+
     // Set the background color to match system background
     self.view.backgroundColor = [UIColor systemBackgroundColor];
     
@@ -931,6 +939,60 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
     [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"OK_BUTTON_TITLE"] 
                                               style:UIAlertActionStyleDefault 
                                             handler:nil]];
+    
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)configureTranslateAPI {
+    NSString *title = [[BHTBundle sharedBundle] localizedStringForKey:@"SETTINGS_TRANSLATE_ENDPOINT_PROMPT_TITLE"];
+    NSString *message = [[BHTBundle sharedBundle] localizedStringForKey:@"SETTINGS_TRANSLATE_ENDPOINT_PROMPT_MESSAGE"];
+    
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:title
+                                                                   message:message
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSString *currentEndpoint = [defaults stringForKey:@"BHT_customTranslateEndpoint"];
+    NSString *currentApiKey = [defaults stringForKey:@"BHT_customTranslateAPIKey"];
+
+    [alert addTextFieldWithConfigurationHandler:^(UITextField * _Nonnull textField) {
+        textField.placeholder = [[BHTBundle sharedBundle] localizedStringForKey:@"SETTINGS_TRANSLATE_ENDPOINT_PLACEHOLDER"];
+        textField.text = currentEndpoint;
+        textField.keyboardType = UIKeyboardTypeURL;
+    }];
+    
+    [alert addTextFieldWithConfigurationHandler:^(UITextField * _Nonnull textField) {
+        textField.placeholder = [[BHTBundle sharedBundle] localizedStringForKey:@"SETTINGS_TRANSLATE_APIKEY_PLACEHOLDER"];
+        textField.text = currentApiKey;
+        textField.secureTextEntry = YES; // Mask API key
+    }];
+    
+    UIAlertAction *saveAction = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SETTINGS_SAVE_BUTTON_TITLE"]
+                                                         style:UIAlertActionStyleDefault
+                                                       handler:^(UIAlertAction * _Nonnull action) {
+        NSString *newEndpoint = alert.textFields[0].text;
+        NSString *newApiKey = alert.textFields[1].text;
+        
+        if (newEndpoint.length == 0) { // If endpoint is cleared, set to nil to signify using default
+            [defaults removeObjectForKey:@"BHT_customTranslateEndpoint"];
+        } else {
+            [defaults setObject:newEndpoint forKey:@"BHT_customTranslateEndpoint"];
+        }
+        
+        if (newApiKey.length == 0) {
+            [defaults removeObjectForKey:@"BHT_customTranslateAPIKey"];
+        } else {
+            [defaults setObject:newApiKey forKey:@"BHT_customTranslateAPIKey"];
+        }
+        [defaults synchronize];
+    }];
+    
+    UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"]
+                                                            style:UIAlertActionStyleCancel
+                                                          handler:nil];
+    
+    [alert addAction:saveAction];
+    [alert addAction:cancelAction];
     
     [self presentViewController:alert animated:YES completion:nil];
 }

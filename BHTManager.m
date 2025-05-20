@@ -313,12 +313,25 @@
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"tab_bar_theming"];
 }
 
+// Translate Button Feature
++ (BOOL)enableTranslateButton {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"BHT_enableTranslateButton"]; // Default NO
+}
+
++ (NSString *)customTranslateEndpoint {
+    NSString *endpoint = [[NSUserDefaults standardUserDefaults] stringForKey:@"BHT_customTranslateEndpoint"];
+    // Provide a default or ensure it's a valid URL structure if needed, for now, just return what's saved or nil
+    return endpoint;
+}
+
++ (NSString *)customTranslateAPIKey {
+    return [[NSUserDefaults standardUserDefaults] stringForKey:@"BHT_customTranslateAPIKey"];
+}
+
 + (void)clearSourceLabelCache {
     NSLog(@"BHTManager: Posting BHTClearSourceLabelCacheNotification");
     [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTClearSourceLabelCacheNotification" object:nil];
 }
-
-
 
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount {
     SettingsViewController *pref = [[SettingsViewController alloc] initWithTwitterAccount:twAccount];
