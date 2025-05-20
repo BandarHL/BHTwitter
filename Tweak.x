@@ -4909,8 +4909,6 @@ static char kTranslateButtonConstraintsKey;
 }
 %end
 
-// MARK: Gemini AI Translation Integration (Implementation)
-// ... existing code ...
 
 // MARK: Gemini AI Translation Integration (Implementation)
 @implementation GeminiTranslator
@@ -5126,7 +5124,7 @@ static dispatch_once_t onceTokenGemini;
         }];
     }];
 }
-@end
 
-@end
+
+
 
