@@ -98,7 +98,19 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     if ([keyPath isEqualToString:@"bh_color_theme_selectedColor"] || [keyPath isEqualToString:@"T1ColorSettingsPrimaryColorOptionKey"]) {
         [self setupAppearance];
     } else if ([keyPath isEqualToString:@"BHT_enableTranslateButton"]) {
-        [self reloadSpecifiers]; // Reload specifiers when the toggle changes
+        // Find the specifier for the configure button
+        PSSpecifier *configureButtonSpecifier = [self specifierForID:@"BHT_configureTranslateAPIButton"]; // Assuming this ID will be set
+        if (configureButtonSpecifier) {
+            UITableViewCell *cell = [self.table cellForRowAtIndexPath:[self indexPathForSpecifier:configureButtonSpecifier]];
+            if (cell) {
+                BOOL enabled = [[NSUserDefaults standardUserDefaults] boolForKey:@"BHT_enableTranslateButton"];
+                cell.userInteractionEnabled = enabled;
+                cell.textLabel.enabled = enabled;
+                cell.detailTextLabel.enabled = enabled;
+                // Optionally, change alpha or color to indicate disabled state
+                cell.textLabel.textColor = enabled ? [UIColor labelColor] : [UIColor grayColor]; 
+            }
+        }
     }
     // Removed tab_bar_theming observation and BHTTabBarThemingChanged notification
 }
@@ -210,6 +222,16 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     
     // Remove selection highlight if needed
     cell.selectionStyle = UITableViewCellSelectionStyleDefault;
+
+    // Custom logic for the Configure API button state
+    PSSpecifier *specifier = [self specifierAtIndexPath:indexPath];
+    if ([[specifier propertyForKey:@"id"] isEqualToString:@"BHT_configureTranslateAPIButton"]) {
+        BOOL enabled = [[NSUserDefaults standardUserDefaults] boolForKey:@"BHT_enableTranslateButton"];
+        cell.userInteractionEnabled = enabled;
+        cell.textLabel.enabled = enabled;
+        cell.detailTextLabel.enabled = enabled;
+        cell.textLabel.textColor = enabled ? [UIColor labelColor] : [UIColor grayColor]; 
+    }
 }
 
 
@@ -354,8 +376,9 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 
         PSSpecifier *configureTranslateAPIButton = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SETTINGS_TRANSLATE_CONFIGURE_BUTTON_TITLE"]
                                                                     detailTitle:nil
-                                                                    dynamicRule:@"BHT_enableTranslateButton, ==, 1" // Only show if enabled
+                                                                    dynamicRule:nil
                                                                          action:@selector(configureTranslateAPI)];
+        [configureTranslateAPIButton setProperty:@"BHT_configureTranslateAPIButton" forKey:@"id"]; // Set an ID for the button
 
         PSSpecifier *alwaysOpenSafari = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ALWAYS_OPEN_SAFARI_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE"] key:@"openInBrowser" defaultValue:false changeAction:nil];
         
