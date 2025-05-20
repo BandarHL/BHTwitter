@@ -4410,8 +4410,8 @@ static void BHT_forceRefreshAllWindowAppearances(void) {
     }
 }
 
-// MARK: Theme TFNBarButtonItemButtonV2
-%hook TFNBarButtonItemButtonV2
+// MARK: Theme TFNBarButtonItemButtonV1
+%hook TFNBarButtonItemButtonV1
 - (void)didMoveToWindow {
     %orig;
     if (self.window) {
