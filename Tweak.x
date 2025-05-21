@@ -292,6 +292,77 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             [provider performSelector:@selector(setDelegate:) withObject:self];
         }
         
+        // Set the Twitter blue color for the animation
+        UIColor *twitterBlue = [UIColor colorWithRed:29.0/255.0 green:161.0/255.0 blue:242.0/255.0 alpha:1.0];
+        
+        // Get current window size
+        CGRect windowFrame = CGRectZero;
+        if (self.window) {
+            windowFrame = self.window.bounds;
+        } else {
+            windowFrame = [UIScreen mainScreen].bounds;
+        }
+        
+        // Create views if needed
+        UIView *blueBackgroundView = nil;
+        UIView *whiteBackgroundView = nil;
+        
+        // Set the blue background view
+        if ([provider respondsToSelector:@selector(blueBackgroundView)]) {
+            blueBackgroundView = [provider performSelector:@selector(blueBackgroundView)];
+            if (!blueBackgroundView && [provider respondsToSelector:@selector(setBlueBackgroundView:)]) {
+                blueBackgroundView = [[UIView alloc] initWithFrame:windowFrame];
+                [provider performSelector:@selector(setBlueBackgroundView:) withObject:blueBackgroundView];
+            }
+            
+            if (blueBackgroundView) {
+                blueBackgroundView.backgroundColor = twitterBlue;
+                blueBackgroundView.frame = windowFrame;
+            }
+        }
+        
+        // Set the white background view
+        if ([provider respondsToSelector:@selector(whiteBackgroundView)]) {
+            whiteBackgroundView = [provider performSelector:@selector(whiteBackgroundView)];
+            if (!whiteBackgroundView && [provider respondsToSelector:@selector(setWhiteBackgroundView:)]) {
+                whiteBackgroundView = [[UIView alloc] initWithFrame:windowFrame];
+                [provider performSelector:@selector(setWhiteBackgroundView:) withObject:whiteBackgroundView];
+            }
+            
+            if (whiteBackgroundView) {
+                whiteBackgroundView.backgroundColor = [UIColor whiteColor];
+                whiteBackgroundView.frame = windowFrame;
+            }
+        }
+        
+        // Set the logo origin and size to center of screen
+        if ([provider respondsToSelector:@selector(setLogoOrigin:)]) {
+            // Get center point
+            CGPoint centerPoint = CGPointMake(windowFrame.size.width / 2, windowFrame.size.height / 2);
+            // Adjust for logo size (which is usually offset from its origin)
+            CGPoint logoOrigin = CGPointMake(centerPoint.x - 25, centerPoint.y - 25);
+            
+            // Use NSValue to wrap the CGPoint for the selector
+            NSValue *originValue = [NSValue valueWithCGPoint:logoOrigin];
+            [provider performSelector:@selector(setLogoOrigin:) withObject:originValue];
+        }
+        
+        // Set appropriate logo size
+        if ([provider respondsToSelector:@selector(setLogoSize:)]) {
+            // Twitter logo is typically 50x50 points
+            CGSize logoSize = CGSizeMake(50, 50);
+            
+            // Use NSValue to wrap the CGSize for the selector
+            NSValue *sizeValue = [NSValue valueWithCGSize:logoSize];
+            [provider performSelector:@selector(setLogoSize:) withObject:sizeValue];
+        }
+        
+        // Force it to scale up logo during animation for a nice effect
+        if ([provider respondsToSelector:@selector(setShouldScaleUpLogoDuringAnimation:)]) {
+            NSNumber *shouldScale = [NSNumber numberWithBool:YES];
+            [provider performSelector:@selector(setShouldScaleUpLogoDuringAnimation:) withObject:shouldScale];
+        }
+        
         // Run the transition after a short delay to ensure the UI is ready
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             // Make sure the window is set as host view
