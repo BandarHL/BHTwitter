@@ -5476,22 +5476,33 @@ static GeminiTranslator *_sharedInstance;
     
     UIView *blueView = [self valueForKey:@"_blueBackgroundView"];
     if (blueView && CGRectGetWidth(blueView.frame) > 0 && CGRectGetHeight(blueView.frame) > 0) {
-        blueView.backgroundColor = BHTCurrentAccentColor();
+        // Set both view and layer background color to ensure it persists
+        UIColor *twitterBlue = BHTCurrentAccentColor();
+        blueView.backgroundColor = twitterBlue;
+        blueView.layer.backgroundColor = twitterBlue.CGColor;
         
-        // Force layout immediately
+        // Ensure color persists through animations
+        [CATransaction begin];
+        [CATransaction setDisableActions:YES];
+        blueView.layer.allowsGroupOpacity = NO;
+        blueView.layer.shouldRasterize = NO;
+        [CATransaction commit];
+        
+        // Force immediate layout
         [blueView setNeedsLayout];
         [blueView layoutIfNeeded];
     }
 }
 
 - (void)runLaunchTransition {
-    NSLog(@"[BHTwitter LaunchAnim Debug] Before runLaunchTransition");
+    // Ensure color is still set before animation starts
+    UIView *blueView = [self valueForKey:@"_blueBackgroundView"];
+    if (blueView) {
+        UIColor *twitterBlue = BHTCurrentAccentColor();
+        blueView.backgroundColor = twitterBlue;
+        blueView.layer.backgroundColor = twitterBlue.CGColor;
+    }
     %orig;
-    NSLog(@"[BHTwitter LaunchAnim Debug] After runLaunchTransition");
-    NSLog(@"[BHTwitter LaunchAnim Debug] Blue view: %@", [self valueForKey:@"_blueBackgroundView"]);
-    NSLog(@"[BHTwitter LaunchAnim Debug] White view: %@", [self valueForKey:@"_whiteBackgroundView"]);
-    NSLog(@"[BHTwitter LaunchAnim Debug] Host view: %@", [self valueForKey:@"_hostView"]);
-    NSLog(@"[BHTwitter LaunchAnim Debug] Mask: %@", [self valueForKey:@"_mask"]);
 }
 
 %end
