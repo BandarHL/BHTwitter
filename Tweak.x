@@ -292,46 +292,19 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             [provider performSelector:@selector(setDelegate:) withObject:self];
         }
         
-        // Set the host view immediately
-        if (self.window && [provider respondsToSelector:@selector(setHostView:)]) {
-            NSLog(@"[BHTwitter LaunchAnim] Setting window as host view");
-            [provider performSelector:@selector(setHostView:) withObject:self.window];
-        }
-        
-                 // Force create blue and white background views to ensure proper animation
-         UIView *blueView = [[UIView alloc] initWithFrame:self.window.bounds];
-         blueView.backgroundColor = [UIColor colorWithRed:29.0/255.0 green:161.0/255.0 blue:242.0/255.0 alpha:1.0];
-         NSLog(@"[BHTwitter LaunchAnim] Creating blue background with color: %@", blueView.backgroundColor);
-         
-         // Create a white background that might be needed for the animation
-         UIView *whiteView = [[UIView alloc] initWithFrame:self.window.bounds];
-         whiteView.backgroundColor = [UIColor whiteColor];
-         
-         // Set both views on the provider forcefully
-         if ([provider respondsToSelector:@selector(setBlueBackgroundView:)]) {
-             [provider performSelector:@selector(setBlueBackgroundView:) withObject:blueView];
-             NSLog(@"[BHTwitter LaunchAnim] Set blue background view");
-         }
-         
-         if ([provider respondsToSelector:@selector(setWhiteBackgroundView:)]) {
-             [provider performSelector:@selector(setWhiteBackgroundView:) withObject:whiteView];
-             NSLog(@"[BHTwitter LaunchAnim] Set white background view");
-         }
-        
         // Run the transition after a short delay to ensure the UI is ready
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            // Run initial setup methods if they exist
-            if ([provider respondsToSelector:@selector(_setInitialTransforms)]) {
-                NSLog(@"[BHTwitter LaunchAnim] Setting initial transforms");
-                [provider performSelector:@selector(_setInitialTransforms)];
+            // Make sure the window is set as host view
+            if (self.window && [provider respondsToSelector:@selector(setHostView:)]) {
+                NSLog(@"[BHTwitter LaunchAnim] Setting window as host view");
+                [provider performSelector:@selector(setHostView:) withObject:self.window];
             }
             
-            // Force the blue background color again right before transition
+            // Set the blue background color to match Twitter's theme
             if ([provider respondsToSelector:@selector(blueBackgroundView)]) {
                 UIView *blueView = [provider performSelector:@selector(blueBackgroundView)];
                 if (blueView) {
-                    blueView.backgroundColor = [UIColor colorWithRed:29.0/255.0 green:161.0/255.0 blue:242.0/255.0 alpha:1.0];
-                    NSLog(@"[BHTwitter LaunchAnim] Re-applied blue color right before transition");
+                    blueView.backgroundColor = BHTCurrentAccentColor();
                 }
             }
             
@@ -5445,7 +5418,7 @@ static GeminiTranslator *_sharedInstance;
 
 @end
 
-// No custom interface declarations needed
+// No custom interface declarations needed - we'll use selectors
 
 // MARK: Restore Launch Animation
 
