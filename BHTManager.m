@@ -310,7 +310,7 @@
 }
 
 + (BOOL)classicTabBarEnabled {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"classic_tab_bar_enabled"];
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"tab_bar_theming"];
 }
 
 + (void)clearSourceLabelCache {
