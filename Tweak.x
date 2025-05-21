@@ -294,23 +294,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         
         // Run the transition after a short delay to ensure the UI is ready
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            // Set up the background views first
-            UIColor *twitterBlue = BHTCurrentAccentColor();
-            
-            // Create and set up the blue background view
-            UIView *blueView = [[UIView alloc] initWithFrame:self.window.bounds];
-            blueView.backgroundColor = twitterBlue;
-            if ([provider respondsToSelector:@selector(setBlueBackgroundView:)]) {
-                [provider performSelector:@selector(setBlueBackgroundView:) withObject:blueView];
-            }
-            
-            // Create and set up the white background view
-            UIView *whiteView = [[UIView alloc] initWithFrame:self.window.bounds];
-            whiteView.backgroundColor = [UIColor whiteColor];
-            if ([provider respondsToSelector:@selector(setWhiteBackgroundView:)]) {
-                [provider performSelector:@selector(setWhiteBackgroundView:) withObject:whiteView];
-            }
-            
             // Make sure the window is set as host view
             if (self.window && [provider respondsToSelector:@selector(setHostView:)]) {
                 NSLog(@"[BHTwitter LaunchAnim] Setting window as host view");
@@ -5466,6 +5449,29 @@ static GeminiTranslator *_sharedInstance;
 %end
 
 // We'll implement the delegate methods in T1AppDelegate instead
+
+// MARK: Launch Animation Color Fix
+%hook T1AppLaunchTransition
+
+- (id)init {
+    id instance = %orig;
+    if (instance) {
+        UIView *blueView = [instance valueForKey:@"_blueBackgroundView"];
+        if (blueView) {
+            blueView.backgroundColor = BHTCurrentAccentColor();
+        }
+    }
+    return instance;
+}
+
+- (void)setBlueBackgroundView:(UIView *)view {
+    if (view) {
+        view.backgroundColor = BHTCurrentAccentColor();
+    }
+    %orig(view);
+}
+
+%end
 
 
 
