@@ -11,6 +11,14 @@
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
 
+
+@interface T1AppLaunchTransition : NSObject
+@property(retain, nonatomic) UIView *blueBackgroundView;
+@property(retain, nonatomic) UIView *whiteBackgroundView;
+@property(retain, nonatomic) UIView *hostView;
+- (void)runLaunchTransition;
+@end
+
 // Forward declare T1ColorSettings and its private method to satisfy the compiler
 @interface T1ColorSettings : NSObject
 + (void)_t1_applyPrimaryColorOption;
@@ -5469,6 +5477,45 @@ static GeminiTranslator *_sharedInstance;
         view.backgroundColor = BHTCurrentAccentColor();
     }
     %orig(view);
+}
+
+%end
+
+// MARK: Launch Animation Color Fix
+%hook T1AppLaunchTransition
+
+- (void)_setInitialTransforms {
+    %orig;
+    
+    UIView *hostView = self.hostView;
+    if (!hostView) return;
+    
+    CGRect bounds = hostView.bounds;
+    
+    // Create and set up the blue background view
+    UIView *blueView = [[UIView alloc] initWithFrame:bounds];
+    blueView.backgroundColor = BHTCurrentAccentColor();
+    [hostView insertSubview:blueView atIndex:0];
+    self.blueBackgroundView = blueView;
+    
+    // Create and set up the white background view
+    UIView *whiteView = [[UIView alloc] initWithFrame:bounds];
+    whiteView.backgroundColor = [UIColor whiteColor];
+    [hostView insertSubview:whiteView aboveSubview:blueView];
+    self.whiteBackgroundView = whiteView;
+}
+
+%end
+
+// MARK: Launch Animation Color Fix
+%hook T1AppLaunchTransition
+
+- (void)runLaunchTransition {
+    UIView *hostView = ((UIView * (*)(id, SEL))objc_msgSend)(self, NSSelectorFromString(@"hostView"));
+    if (hostView) {
+        hostView.backgroundColor = BHTCurrentAccentColor();
+    }
+    %orig;
 }
 
 %end
