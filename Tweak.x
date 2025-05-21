@@ -5516,5 +5516,22 @@ static GeminiTranslator *_sharedInstance;
 
 %end
 
+%hook T1AppLaunchTransition
+
+- (void)setHostView:(UIView *)hostView {
+    %orig;
+    
+    // Get the blue view
+    UIView *blueView = [self valueForKey:@"_blueBackgroundView"];
+    
+    // If it's the zero-sized one, fix its frame and color
+    if (blueView && CGRectGetWidth(blueView.frame) == 0) {
+        blueView.frame = hostView.bounds;
+        blueView.backgroundColor = BHTCurrentAccentColor();
+    }
+}
+
+%end
+
 
 
