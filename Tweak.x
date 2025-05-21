@@ -298,20 +298,24 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             [provider performSelector:@selector(setHostView:) withObject:self.window];
         }
         
-                 // Set up the blue background view (Twitter blue color)
-         if ([provider respondsToSelector:@selector(blueBackgroundView)]) {
-             UIView *blueView = [provider performSelector:@selector(blueBackgroundView)];
-             if (!blueView) {
-                 blueView = [[UIView alloc] init];
-                 // Twitter's blue color
-                 blueView.backgroundColor = [UIColor colorWithRed:29.0/255.0 green:161.0/255.0 blue:242.0/255.0 alpha:1.0];
-                 if ([provider respondsToSelector:@selector(setBlueBackgroundView:)]) {
-                     [provider performSelector:@selector(setBlueBackgroundView:) withObject:blueView];
-                 }
-             } else {
-                 // Ensure existing blue background view has correct color
-                 blueView.backgroundColor = [UIColor colorWithRed:29.0/255.0 green:161.0/255.0 blue:242.0/255.0 alpha:1.0];
-             }
+                 // Force create blue and white background views to ensure proper animation
+         UIView *blueView = [[UIView alloc] initWithFrame:self.window.bounds];
+         blueView.backgroundColor = [UIColor colorWithRed:29.0/255.0 green:161.0/255.0 blue:242.0/255.0 alpha:1.0];
+         NSLog(@"[BHTwitter LaunchAnim] Creating blue background with color: %@", blueView.backgroundColor);
+         
+         // Create a white background that might be needed for the animation
+         UIView *whiteView = [[UIView alloc] initWithFrame:self.window.bounds];
+         whiteView.backgroundColor = [UIColor whiteColor];
+         
+         // Set both views on the provider forcefully
+         if ([provider respondsToSelector:@selector(setBlueBackgroundView:)]) {
+             [provider performSelector:@selector(setBlueBackgroundView:) withObject:blueView];
+             NSLog(@"[BHTwitter LaunchAnim] Set blue background view");
+         }
+         
+         if ([provider respondsToSelector:@selector(setWhiteBackgroundView:)]) {
+             [provider performSelector:@selector(setWhiteBackgroundView:) withObject:whiteView];
+             NSLog(@"[BHTwitter LaunchAnim] Set white background view");
          }
         
         // Run the transition after a short delay to ensure the UI is ready
@@ -320,6 +324,15 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             if ([provider respondsToSelector:@selector(_setInitialTransforms)]) {
                 NSLog(@"[BHTwitter LaunchAnim] Setting initial transforms");
                 [provider performSelector:@selector(_setInitialTransforms)];
+            }
+            
+            // Force the blue background color again right before transition
+            if ([provider respondsToSelector:@selector(blueBackgroundView)]) {
+                UIView *blueView = [provider performSelector:@selector(blueBackgroundView)];
+                if (blueView) {
+                    blueView.backgroundColor = [UIColor colorWithRed:29.0/255.0 green:161.0/255.0 blue:242.0/255.0 alpha:1.0];
+                    NSLog(@"[BHTwitter LaunchAnim] Re-applied blue color right before transition");
+                }
             }
             
             // Run the transition using performSelector
