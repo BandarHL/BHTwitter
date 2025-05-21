@@ -276,7 +276,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 %hook T1AppDelegate
 - (_Bool)application:(UIApplication *)application didFinishLaunchingWithOptions:(id)arg2 {
-    %orig;
+    _Bool orig = %orig;
     
     // Set up and run the launch animation directly
     NSLog(@"[BHTwitter LaunchAnim] Setting up launch animation after app launch");
@@ -341,7 +341,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         });
     }
     
-    return true;
+    return orig;
 }
 
 - (void)applicationDidBecomeActive:(id)arg1 {
