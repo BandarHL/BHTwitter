@@ -5472,13 +5472,16 @@ static GeminiTranslator *_sharedInstance;
 }
 
 - (void)_setInitialTransforms {
-    NSLog(@"[BHTwitter LaunchAnim Debug] Before _setInitialTransforms");
     %orig;
-    NSLog(@"[BHTwitter LaunchAnim Debug] After _setInitialTransforms");
-    NSLog(@"[BHTwitter LaunchAnim Debug] Blue view: %@", [self valueForKey:@"_blueBackgroundView"]);
-    NSLog(@"[BHTwitter LaunchAnim Debug] White view: %@", [self valueForKey:@"_whiteBackgroundView"]);
-    NSLog(@"[BHTwitter LaunchAnim Debug] Host view: %@", [self valueForKey:@"_hostView"]);
-    NSLog(@"[BHTwitter LaunchAnim Debug] Mask: %@", [self valueForKey:@"_mask"]);
+    
+    UIView *blueView = [self valueForKey:@"_blueBackgroundView"];
+    if (blueView && CGRectGetWidth(blueView.frame) > 0 && CGRectGetHeight(blueView.frame) > 0) {
+        blueView.backgroundColor = BHTCurrentAccentColor();
+        
+        // Force layout immediately
+        [blueView setNeedsLayout];
+        [blueView layoutIfNeeded];
+    }
 }
 
 - (void)runLaunchTransition {
