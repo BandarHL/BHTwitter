@@ -11,6 +11,12 @@
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
 
+@interface TFNWindowRootViewController : UIViewController
+@end
+
+@interface T1HostViewController : TFNWindowRootViewController
+- (void)_t1_updateBackgroundColor;
+@end
 
 @interface T1AppLaunchTransition : NSObject
 @property(retain, nonatomic) UIView *blueBackgroundView;
@@ -5529,6 +5535,20 @@ static GeminiTranslator *_sharedInstance;
         blueView.frame = hostView.bounds;
         blueView.backgroundColor = BHTCurrentAccentColor();
     }
+}
+
+%end
+
+%hook T1HostViewController
+
+- (void)_t1_updateBackgroundColor {
+    %orig;
+    self.view.backgroundColor = BHTCurrentAccentColor();
+}
+
+- (void)viewDidLoad {
+    %orig;
+    self.view.backgroundColor = BHTCurrentAccentColor();
 }
 
 %end
