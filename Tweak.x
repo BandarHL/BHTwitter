@@ -294,18 +294,27 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         
         // Run the transition after a short delay to ensure the UI is ready
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            // Set up the background views first
+            UIColor *twitterBlue = BHTCurrentAccentColor();
+            
+            // Create and set up the blue background view
+            UIView *blueView = [[UIView alloc] initWithFrame:self.window.bounds];
+            blueView.backgroundColor = twitterBlue;
+            if ([provider respondsToSelector:@selector(setBlueBackgroundView:)]) {
+                [provider performSelector:@selector(setBlueBackgroundView:) withObject:blueView];
+            }
+            
+            // Create and set up the white background view
+            UIView *whiteView = [[UIView alloc] initWithFrame:self.window.bounds];
+            whiteView.backgroundColor = [UIColor whiteColor];
+            if ([provider respondsToSelector:@selector(setWhiteBackgroundView:)]) {
+                [provider performSelector:@selector(setWhiteBackgroundView:) withObject:whiteView];
+            }
+            
             // Make sure the window is set as host view
             if (self.window && [provider respondsToSelector:@selector(setHostView:)]) {
                 NSLog(@"[BHTwitter LaunchAnim] Setting window as host view");
                 [provider performSelector:@selector(setHostView:) withObject:self.window];
-            }
-            
-            // Set the blue background color to match Twitter's theme
-            if ([provider respondsToSelector:@selector(blueBackgroundView)]) {
-                UIView *blueView = [provider performSelector:@selector(blueBackgroundView)];
-                if (blueView) {
-                    blueView.backgroundColor = BHTCurrentAccentColor();
-                }
             }
             
             // Run the transition using performSelector
