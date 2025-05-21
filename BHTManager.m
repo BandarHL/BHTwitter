@@ -245,7 +245,7 @@
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"no_tab_bar_hiding"];
 }
 + (BOOL)noTabBarHiding {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"BHTwitter_noTabBarHiding"]; // Or whatever the correct key is
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"no_tab_bar_hiding"];
 }
 + (BOOL)changeBackground {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"change_msg_background"];
@@ -310,32 +310,15 @@
 }
 
 + (BOOL)classicTabBarEnabled {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"tab_bar_theming"];
-}
-
-// Translate Button Feature
-+ (BOOL)enableTranslateButton {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"BHT_enableTranslateButton"]; // Default NO
-}
-
-+ (NSString *)customTranslateEndpoint {
-    NSString *endpoint = [[NSUserDefaults standardUserDefaults] stringForKey:@"BHT_customTranslateEndpoint"];
-    // Provide a default or ensure it's a valid URL structure if needed, for now, just return what's saved or nil
-    return endpoint;
-}
-
-+ (NSString *)customTranslateAPIKey {
-    return [[NSUserDefaults standardUserDefaults] stringForKey:@"BHT_customTranslateAPIKey"];
-}
-
-+ (NSString *)customTranslateModel {
-    return [[NSUserDefaults standardUserDefaults] stringForKey:@"BHT_customTranslateModel"];
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"classic_tab_bar_enabled"];
 }
 
 + (void)clearSourceLabelCache {
     NSLog(@"BHTManager: Posting BHTClearSourceLabelCacheNotification");
     [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTClearSourceLabelCacheNotification" object:nil];
 }
+
+
 
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount {
     SettingsViewController *pref = [[SettingsViewController alloc] initWithTwitterAccount:twAccount];

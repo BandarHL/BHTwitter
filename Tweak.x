@@ -4630,502 +4630,764 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 - (TFNTwitterStatus *)BHT_findStatusObjectInController:(UIViewController *)controller;
 - (NSString *)BHT_extractTextFromStatusObjectInController:(UIViewController *)controller;
 - (void)BHT_translateCurrentTweetAction:(UIButton *)sender;
-- (void)BHT_animateAndTranslateAction:(UIButton *)sender; // Added for animation
-- (UIViewController *)BHT_getParentViewController; // Added this line
 @end
 
 %hook _UINavigationBarContentView
 
 static char kTranslateButtonKey;
-static char kTranslateButtonConstraintsKey;
 
-// Method to find the relevant UIViewController
+// Removed createTextFinderWithTextRef and processView as they are not used by this feature.
+
 %new
-- (UIViewController *)BHT_getParentViewController {
+- (void)BHT_addTranslateButtonIfNeeded {
+    NSLog(@"[BHTwitter Translate] Attempting to add button in BHT_addTranslateButtonIfNeeded for view: %@", self);
+    UIViewController *parentVCFromResponder = nil;
     UIResponder *responder = self;
     while (responder && ![responder isKindOfClass:[UIViewController class]]) {
         responder = [responder nextResponder];
     }
-    return (UIViewController *)responder;
-}
-
-// Helper to find the TFNTwitterStatus object
-%new 
-- (TFNTwitterStatus *)BHT_findStatusObjectInController:(UIViewController *)controller {
-    if (!controller) return nil;
-
-    TFNTwitterStatus *status = nil;
-    // Common property names for view models
-    for (NSString *vmKey in @[@"viewModel", @"statusViewModel", @"item"]) {
-        if ([controller respondsToSelector:NSSelectorFromString(vmKey)]) {
-            id viewModel = [controller valueForKey:vmKey];
-            if ([viewModel respondsToSelector:@selector(tweet)]) {
-                status = [viewModel valueForKey:@"tweet"];
-                if (status) break;
-            }
-            if ([viewModel respondsToSelector:@selector(status)]) {
-                status = [viewModel valueForKey:@"status"];
-                if (status) break;
-            }
-             // For T1URTTimelineStatusItemViewModel a bit deeper
-            if ([viewModel respondsToSelector:@selector(tweetViewModel)]) {
-                id tweetVM = [viewModel valueForKey:@"tweetViewModel"];
-                if ([tweetVM respondsToSelector:@selector(tweet)]) {
-                    status = [tweetVM valueForKey:@"tweet"];
-                    if (status) break;
-                }
-            }
-        }
+    if (responder && [responder isKindOfClass:[UIViewController class]]) {
+        parentVCFromResponder = (UIViewController *)responder;
     }
 
-    // Fallback: if the controller itself is a TFNTwitterStatus (less common for VCs but possible for some objects)
-    if (!status && [controller isKindOfClass:%c(TFNTwitterStatus)]) {
-        status = (TFNTwitterStatus *)controller;
-    }
-    
-    // Fallback for T1TweetDetailsViewController which has a `status` property directly
-    if(!status && [controller respondsToSelector:@selector(status)]) {
-        id potentialStatus = [controller valueForKey:@"status"];
-        if ([potentialStatus isKindOfClass:%c(TFNTwitterStatus)]) {
-            status = (TFNTwitterStatus*)potentialStatus;
-        }
-    }
-    // Add specific check for T1ConversationTimelineViewController's structure
-    if (!status && [NSStringFromClass([controller class]) isEqualToString:@"T1ConversationTimelineViewController"]) {
-        if ([controller respondsToSelector:@selector(focalStatusViewModel)]) {
-            id focalVM = [controller valueForKey:@"focalStatusViewModel"];
-            if ([focalVM respondsToSelector:@selector(tweet)]) {
-                status = [focalVM valueForKey:@"tweet"];
-            }
-        }
-    }
-    return status;
-}
-
-// Helper to extract text from the status object
-%new 
-- (NSString *)BHT_extractTextFromStatusObjectInController:(UIViewController *)controller {
-    TFNTwitterStatus *status = [self BHT_findStatusObjectInController:controller];
-    if (status && [status respondsToSelector:@selector(text)]) {
-        return [status valueForKey:@"text"];
-    }
-    return nil;
-}
-
-%new
-- (void)BHT_translateCurrentTweetAction:(UIButton *)sender {
-    NSLog(@"[BHTwitter Translate] Translate button tapped.");
-    UIViewController *parentVC = [self BHT_getParentViewController];
-    UIViewController *actualContentVC = parentVC;
-
-    if ([parentVC isKindOfClass:[UINavigationController class]]) {
-        actualContentVC = [(UINavigationController *)parentVC topViewController];
-    }
-    
-    if (actualContentVC) {
-        NSString *textToTranslate = [self BHT_extractTextFromStatusObjectInController:actualContentVC];
-        if (textToTranslate && textToTranslate.length > 0) {
-            NSLog(@"[BHTwitter Translate] Text to translate: %@", textToTranslate);
-            [[GeminiTranslator sharedInstance] simplifiedTranslateAndDisplay:textToTranslate fromViewController:actualContentVC];
+    UIViewController *actualContentVC = nil;
+    if (parentVCFromResponder) {
+        NSLog(@"[BHTwitter Translate] Found parentVCFromResponder: %@", NSStringFromClass([parentVCFromResponder class]));
+        if ([parentVCFromResponder isKindOfClass:[UINavigationController class]]) {
+            actualContentVC = [(UINavigationController *)parentVCFromResponder topViewController];
+            NSLog(@"[BHTwitter Translate] parentVCFromResponder is a UINavigationController. ActualContentVC is topViewController: %@", NSStringFromClass([actualContentVC class]));
         } else {
-            NSLog(@"[BHTwitter Translate] Could not extract text to translate from VC: %@", actualContentVC);
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
-                                                                       message:@"Could not find tweet text to translate." 
-                                                                preferredStyle:UIAlertControllerStyleAlert];
-        [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-            [actualContentVC presentViewController:alert animated:YES completion:nil];
+            actualContentVC = parentVCFromResponder;
+            NSLog(@"[BHTwitter Translate] parentVCFromResponder is not a UINavigationController. ActualContentVC is parentVCFromResponder: %@", NSStringFromClass([actualContentVC class]));
         }
     } else {
-        NSLog(@"[BHTwitter Translate] Could not find a view controller to present translation from.");
-    }
-}
-
-%new
-- (void)BHT_animateAndTranslateAction:(UIButton *)sender {
-    [UIView animateWithDuration:0.1 animations:^{
-        sender.transform = CGAffineTransformMakeScale(0.9, 0.9);
-    } completion:^(BOOL finished) {
-        [UIView animateWithDuration:0.1 animations:^{
-            sender.transform = CGAffineTransformIdentity;
-        } completion:^(BOOL finished_inner) {
-            if ([self respondsToSelector:@selector(BHT_translateCurrentTweetAction:)]) {
-                [self BHT_translateCurrentTweetAction:sender];
+        NSLog(@"[BHTwitter Translate] Could not find parentVCFromResponder for _UINavigationBarContentView: %@", self);
+        // Attempt to get VC from window if direct responder fails (existing fallback)
+        UIWindow *keyWindow = self.window;
+        if (keyWindow && keyWindow.rootViewController) {
+            UIViewController *rootVC = keyWindow.rootViewController;
+            UIViewController *topVC = rootVC;
+            while (topVC.presentedViewController) {
+                topVC = topVC.presentedViewController;
             }
-        }];
-    }];
-}
-
-%new
-- (void)BHT_addTranslateButtonIfNeeded {
-    if (![BHTManager enableTranslateButton]) {
-        UIButton *existingButton = objc_getAssociatedObject(self, &kTranslateButtonKey);
-        if (existingButton) {
-            NSLog(@"[BHTwitter Translate] Feature disabled, removing existing button: %@", existingButton);
-            [existingButton removeFromSuperview];
-            objc_setAssociatedObject(self, &kTranslateButtonKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-            objc_setAssociatedObject(self, &kTranslateButtonConstraintsKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            if ([topVC isKindOfClass:[UINavigationController class]]) {
+                 actualContentVC = [(UINavigationController*)topVC topViewController];
+                 NSLog(@"[BHTwitter Translate] Fallback: Found actualContentVC from window->topVC (UINav): %@", NSStringFromClass([actualContentVC class]));
+            } else {
+                 actualContentVC = topVC;
+                 NSLog(@"[BHTwitter Translate] Fallback: Found actualContentVC from window->topVC: %@", NSStringFromClass([actualContentVC class]));
+            }
+        } else {
+            NSLog(@"[BHTwitter Translate] Fallback: Could not get actualContentVC from window either.");
+            return; // Can't proceed without a VC
         }
-        return;
-    }
-
-    UIViewController *parentVCFromResponder = [self BHT_getParentViewController];
-    UIViewController *actualContentVC = parentVCFromResponder;
-
-    if (parentVCFromResponder && [parentVCFromResponder isKindOfClass:[UINavigationController class]]) {
-        actualContentVC = [(UINavigationController *)parentVCFromResponder topViewController];
     }
     
-    if (!actualContentVC) {
-         NSLog(@"[BHTwitter Translate] Could not determine actualContentVC.");
-        return;
-    }
-    
-    NSString *vcClassName = NSStringFromClass([actualContentVC class]);
-    BOOL isTweetView = ([vcClassName containsString:@"TweetDetail"] ||
-                        [vcClassName containsString:@"StatusView"] ||
-                        [vcClassName containsString:@"Conversation"] ||
-                        [vcClassName isEqualToString:@"TFNTwitterStatus"]);
-
+    // Check if this is a conversation/tweet view by examining both title and controller class
+    BOOL isTweetView = NO;
     UILabel *titleLabel = nil;
+    
+    NSLog(@"[BHTwitter Translate] Subviews of %@: %@", self, self.subviews);
     for (UIView *subview in self.subviews) {
-        if ([subview isKindOfClass:[UILabel class]]) {
+        if ([subview isKindOfClass:%c(UILabel)]) {
             UILabel *label = (UILabel *)subview;
-            NSString *labelText = [label.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-            // Use a general key for "Post" or rely on the English "Post" as Twitter uses it internally.
-            if ([labelText.lowercaseString isEqualToString:@"post"] || [labelText isEqualToString:[[BHTBundle sharedBundle] localizedStringForKey:@"TWITTER_BLUE_POST_TITLE"]]) {
+            NSLog(@"[BHTwitter Translate] Found UILabel with text: ' %@ '", label.text);
+            if ([label.text isEqualToString:@"Post"] || [label.text isEqualToString:@"Tweet"]) {
                 titleLabel = label;
+                NSLog(@"[BHTwitter Translate] Matched titleLabel: %@", titleLabel.text);
                 break;
             }
         }
     }
     
-    if (titleLabel) {
-        isTweetView = YES; 
-    } else {
-        if ([vcClassName containsString:@"Timeline"] && ![vcClassName containsString:@"ConversationTimeline"]) {
-            isTweetView = NO;
+    if (!titleLabel) {
+        NSLog(@"[BHTwitter Translate] Did not find titleLabel with 'Post' or 'Tweet'.");
+    }
+    
+    if (titleLabel && actualContentVC) {
+        NSString *vcClassName = NSStringFromClass([actualContentVC class]);
+        NSLog(@"[BHTwitter Translate] Checking actualContentVC className: %@", vcClassName);
+        if ([vcClassName containsString:@"Conversation"] || 
+            [vcClassName containsString:@"Tweet"] || 
+            [vcClassName containsString:@"Status"] || 
+            [vcClassName containsString:@"Detail"]) {
+            isTweetView = YES;
+            NSLog(@"[BHTwitter Translate] actualContentVC className matched. isTweetView = YES.");
+        } else {
+            NSLog(@"[BHTwitter Translate] actualContentVC className ('%@') did NOT match expected keywords.", vcClassName);
         }
-        if ([vcClassName containsString:@"Compose"]) {
-            isTweetView = NO;
+    } else {
+        if (!titleLabel) NSLog(@"[BHTwitter Translate] Condition failed for isTweetView: titleLabel is nil.");
+        if (!actualContentVC) NSLog(@"[BHTwitter Translate] Condition failed for isTweetView: actualContentVC is nil.");
+    }
+    
+    // Only proceed if this is a valid tweet view
+    if (isTweetView) {
+        NSLog(@"[BHTwitter Translate] isTweetView is YES. Proceeding to check/add button.");
+        // Check if button already exists
+        UIButton *existingButton = objc_getAssociatedObject(self, &kTranslateButtonKey);
+        if (existingButton) {
+            NSLog(@"[BHTwitter Translate] Translate button already exists: %@", existingButton);
+            // Ensure it's visible and properly placed if it exists
+            existingButton.hidden = NO;
+            [self bringSubviewToFront:existingButton]; 
+            return;
+        }
+        
+        // If button doesn't exist, create it
+        NSLog(@"[BHTwitter Translate] Creating new translate button.");
+        UIButton *translateButton = [UIButton buttonWithType:UIButtonTypeSystem];
+        if (@available(iOS 13.0, *)) {
+            // Use a proper translation SF symbol
+            [translateButton setImage:[UIImage systemImageNamed:@"text.bubble.fill"] forState:UIControlStateNormal];
+            
+            // Set proper tint color based on appearance
+            if (@available(iOS 12.0, *)) {
+                if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
+                    translateButton.tintColor = [UIColor whiteColor];
+                } else {
+                    translateButton.tintColor = [UIColor blackColor];
+                }
+                
+                // Add trait collection observer for dark/light mode changes
+                [translateButton addObserver:self forKeyPath:@"traitCollection" options:NSKeyValueObservingOptionNew context:NULL];
+            }
+        } else {
+            [translateButton setTitle:@"Translate" forState:UIControlStateNormal]; // Fallback for older iOS
+        }
+        [translateButton addTarget:self action:@selector(BHT_translateCurrentTweetAction:) forControlEvents:UIControlEventTouchUpInside];
+        translateButton.tag = 12345; // Unique tag
+        
+        // Add button with higher z-index
+        [self insertSubview:translateButton aboveSubview:titleLabel];
+        translateButton.translatesAutoresizingMaskIntoConstraints = NO;
+        
+        // Store button reference in associated object
+        objc_setAssociatedObject(self, &kTranslateButtonKey, translateButton, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        
+        // Place the button on the right with a moderate offset to avoid collisions
+        NSArray *constraints = @[
+            [translateButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
+            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-55], // Move slightly more to the right
+            [translateButton.widthAnchor constraintEqualToConstant:44],
+            [translateButton.heightAnchor constraintEqualToConstant:44]
+        ];
+        
+        // Store constraints reference to prevent deallocation
+        objc_setAssociatedObject(translateButton, "translateButtonConstraints", constraints, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        
+        [NSLayoutConstraint activateConstraints:constraints];
+    } else {
+        // If this is not a tweet view but we have a button, remove it
+        UIButton *existingButton = objc_getAssociatedObject(self, &kTranslateButtonKey);
+        if (existingButton) {
+            [existingButton removeFromSuperview];
+            objc_setAssociatedObject(self, &kTranslateButtonKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
+    }
+}
+
+- (void)setTitle:(id)arg1 {
+    %orig;
+    
+    // Use a dispatch_after to ensure we add the button after layout is complete
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self BHT_addTranslateButtonIfNeeded];
+    });
+}
+
+// Also hook didMoveToWindow to improve persistence
+- (void)didMoveToWindow {
+    %orig;
+    
+    if (self.window) {
+        // Use a short delay to ensure view is fully set up
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [self BHT_addTranslateButtonIfNeeded];
+        });
+    }
+}
+
+// Handle dark/light mode changes
+%new
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
+    if ([keyPath isEqualToString:@"traitCollection"] && [object isKindOfClass:[UIButton class]]) {
+        UIButton *button = (UIButton *)object;
+        if (@available(iOS 12.0, *)) {
+            if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
+                button.tintColor = [UIColor whiteColor];
+            } else {
+                button.tintColor = [UIColor blackColor];
+            }
+        }
+    }
+}
+
+// Handle deallocation to clean up KVO
+%new
+- (void)dealloc {
+    UIButton *translateButton = objc_getAssociatedObject(self, &kTranslateButtonKey);
+    if (translateButton) {
+        @try {
+            [translateButton removeObserver:self forKeyPath:@"traitCollection"];
+        } @catch (NSException *exception) {
+            // Observer might not have been added
+        }
+    }
+    // No %orig here because this is a new method, not an override
+}
+
+%new - (void)BHT_translateCurrentTweetAction:(UIButton *)sender {
+    UIViewController *targetController = nil;
+    UIResponder *responder = self;
+    
+    while (responder && ![responder isKindOfClass:[UIViewController class]]) {
+        responder = [responder nextResponder];
+    }
+    if (responder && [responder isKindOfClass:[UIViewController class]]) {
+        targetController = (UIViewController *)responder;
+        if ([targetController isKindOfClass:[UINavigationController class]]) {
+            targetController = [(UINavigationController *)targetController topViewController];
+        }
+    } else {
+        UIWindow *keyWindow = nil;
+        if (@available(iOS 13.0, *)) {
+            NSSet *connectedScenes = UIApplication.sharedApplication.connectedScenes;
+            for (UIScene *scene in connectedScenes) {
+                if (scene.activationState == UISceneActivationStateForegroundActive && [scene isKindOfClass:[UIWindowScene class]]) {
+                    UIWindowScene *windowScene = (UIWindowScene *)scene;
+                    for (UIWindow *window in windowScene.windows) {
+                        if (window.isKeyWindow) {
+                            keyWindow = window;
+                            break;
+                        }
+                    }
+                    if (keyWindow) break;
+                }
+            }
+        } else {
+            keyWindow = UIApplication.sharedApplication.keyWindow;
+        }
+        if (keyWindow) {
+            targetController = keyWindow.rootViewController;
+            while (targetController.presentedViewController) {
+                targetController = targetController.presentedViewController;
+            }
+        }
+    }
+
+    if (!targetController) {
+        NSLog(@"[BHTwitter Translate] Error: Could not find a suitable view controller to get tweet context.");
+        return;
+    }
+
+    NSString *textToTranslate = [self BHT_extractTextFromStatusObjectInController:targetController];
+
+    if (!textToTranslate || textToTranslate.length == 0) {
+        NSLog(@"[BHTwitter Translate] No tweet text found for VC: %@. Displaying fallback message.", NSStringFromClass([targetController class]));
+        
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
+                                                                       message:@"Could not find tweet text to translate." 
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+        [targetController presentViewController:alert animated:YES completion:nil];
+    } else {
+        NSLog(@"[BHTwitter Translate] Text to translate: '%@' (from VC: %@)", textToTranslate, NSStringFromClass([targetController class]));
+        
+        // Call the GeminiTranslator with the extracted text
+        [[GeminiTranslator sharedInstance] translateText:textToTranslate 
+                                           fromLanguage:@"auto" 
+                                             toLanguage:@"en" 
+                                             completion:^(NSString *translatedText, NSError *error) {
+            if (error || !translatedText) {
+                UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
+                                                                               message:error ? error.localizedDescription : @"Failed to translate text." 
+                                                                        preferredStyle:UIAlertControllerStyleAlert];
+                [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+                [targetController presentViewController:alert animated:YES completion:nil];
+                return;
+            }
+            
+            // Show translation with Copy and Cancel options
+            UIAlertController *resultAlert = [UIAlertController alertControllerWithTitle:@"Translation" 
+                                                                                 message:translatedText 
+                                                                          preferredStyle:UIAlertControllerStyleAlert];
+            
+            [resultAlert addAction:[UIAlertAction actionWithTitle:@"Copy" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+                UIPasteboard.generalPasteboard.string = translatedText;
+            }]];
+            
+            [resultAlert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+            
+            [targetController presentViewController:resultAlert animated:YES completion:nil];
+        }];
+    }
+}
+
+%new - (TFNTwitterStatus *)BHT_findStatusObjectInController:(UIViewController *)controller {
+    if (!controller || !controller.isViewLoaded) {
+        return nil;
+    }
+    
+    // First, if the controller is T1ConversationContainerViewController, we need to find its T1URTViewController child
+    if ([NSStringFromClass([controller class]) isEqualToString:@"T1ConversationContainerViewController"]) {
+        NSLog(@"[BHTwitter Translate] Found container controller, searching for T1URTViewController...");
+        for (UIViewController *childVC in controller.childViewControllers) {
+            if ([NSStringFromClass([childVC class]) isEqualToString:@"T1URTViewController"]) {
+                NSLog(@"[BHTwitter Translate] Found T1URTViewController, switching target");
+                controller = childVC;
+                break;
+            }
         }
     }
     
-    NSLog(@"[BHTwitter Translate] Final check - VC: %@, Title: '%@', isTweetView: %d", vcClassName, titleLabel.text, isTweetView);
-
-    if (isTweetView) {
-        UIButton *existingButton = objc_getAssociatedObject(self, &kTranslateButtonKey);
-        if (existingButton && existingButton.superview == self) {
-            existingButton.hidden = NO;
-            [self bringSubviewToFront:existingButton];
-            return;
-        }
-
-        UIButton *translateButton = [UIButton buttonWithType:UIButtonTypeSystem];
-        if (@available(iOS 13.0, *)) {
-            UIImageSymbolConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:18 weight:UIImageSymbolWeightMedium];
-            UIImage *translateImage = [UIImage systemImageNamed:@"bubble.left.and.bubble.right.fill" withConfiguration:config];
-            [translateButton setImage:translateImage forState:UIControlStateNormal];
-        } else {
-            [translateButton setTitle:@"Tr" forState:UIControlStateNormal];
-        }
-        translateButton.tintColor = BHTCurrentAccentColor();
-        [translateButton addTarget:self action:@selector(BHT_animateAndTranslateAction:) forControlEvents:UIControlEventTouchUpInside];
-        translateButton.translatesAutoresizingMaskIntoConstraints = NO;
+    // Try to directly access the status from the view controller
+    if ([controller respondsToSelector:@selector(viewModel)]) {
+        id viewModel = [controller valueForKey:@"viewModel"];
         
-        objc_setAssociatedObject(self, &kTranslateButtonKey, translateButton, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        [self addSubview:translateButton];
+        // If it's a T1URTViewController, we need to handle it specially
+        if ([NSStringFromClass([controller class]) isEqualToString:@"T1URTViewController"]) {
+            NSLog(@"[BHTwitter Translate] Extracting from T1URTViewController.viewModel");
+            @try {
+                // Inspect the view model or try to access specific properties
+                if ([viewModel respondsToSelector:@selector(statusViewModel)]) {
+                    id statusViewModel = [viewModel valueForKey:@"statusViewModel"];
+                    if (statusViewModel && [statusViewModel respondsToSelector:@selector(status)]) {
+                        id status = [statusViewModel valueForKey:@"status"];
+                        if (status && [status isKindOfClass:%c(TFNTwitterStatus)]) {
+                            NSLog(@"[BHTwitter Translate] Found TFNTwitterStatus from T1URTViewController.viewModel.statusViewModel.status");
+                            return status;
+                        }
+                    }
+                }
+                
+                // Try another common pattern
+                if ([viewModel respondsToSelector:@selector(item)]) {
+                    id item = [viewModel valueForKey:@"item"];
+                    if ([item respondsToSelector:@selector(status)]) {
+                        id status = [item valueForKey:@"status"];
+                        if (status && [status isKindOfClass:%c(TFNTwitterStatus)]) {
+                            NSLog(@"[BHTwitter Translate] Found TFNTwitterStatus from T1URTViewController.viewModel.item.status");
+                            return status;
+                        }
+                    }
+                }
+            } @catch (NSException *e) {
+                NSLog(@"[BHTwitter Translate] Exception accessing T1URTViewController viewModel: %@", e);
+            }
+        }
         
-        UIView *rightmostExistingItem = nil;
-        CGFloat maxTrailingX = 0;
-
-        for (UIView *subview in self.subviews) {
-            if (subview == translateButton) continue;
-            if (!subview.hidden && subview.alpha > 0 && ([subview isKindOfClass:[UIButton class]] || [NSStringFromClass([subview class]) containsString:@"Button"])) {
-                 CGFloat subviewTrailingX = CGRectGetMaxX(subview.frame);
-                 if (subviewTrailingX > maxTrailingX && subviewTrailingX < self.bounds.size.width - 20) {
-                    maxTrailingX = subviewTrailingX;
-                    rightmostExistingItem = subview;
+        // Generic approach - check if viewModel has status directly
+        if ([viewModel respondsToSelector:@selector(status)]) {
+            id status = [viewModel valueForKey:@"status"];
+            if (status && [status isKindOfClass:%c(TFNTwitterStatus)]) {
+                NSLog(@"[BHTwitter Translate] Found TFNTwitterStatus from controller.viewModel.status");
+                return status;
+            }
+        }
+    }
+    
+    // Fallback to looking for T1StatusBodyTextView for other controllers
+    T1StatusBodyTextView *bodyTextView = nil;
+    NSMutableArray *viewsToCheck = [NSMutableArray arrayWithObject:controller.view];
+    
+    while (viewsToCheck.count > 0) {
+        UIView *currentView = viewsToCheck[0];
+        [viewsToCheck removeObjectAtIndex:0];
+        
+        if ([currentView isKindOfClass:%c(T1StatusBodyTextView)]) {
+            bodyTextView = (T1StatusBodyTextView *)currentView;
+            break;
+        }
+        
+        [viewsToCheck addObjectsFromArray:currentView.subviews];
+    }
+    
+    // Extract status from bodyTextView
+    if (bodyTextView) {
+        @try {
+            id viewModel = [bodyTextView valueForKey:@"viewModel"];
+            if (viewModel && [viewModel respondsToSelector:@selector(status)]) {
+                id status = [viewModel valueForKey:@"status"];
+                if (status && [status isKindOfClass:%c(TFNTwitterStatus)]) {
+                    NSLog(@"[BHTwitter Translate] Found TFNTwitterStatus from T1StatusBodyTextView");
+                    return status;
                 }
             }
+        } @catch (NSException *e) {
+            NSLog(@"[BHTwitter Translate] Exception: %@", e);
         }
+    }
+    
+    NSLog(@"[BHTwitter Translate] Failed to find TFNTwitterStatus in controller: %@", NSStringFromClass([controller class]));
+    return nil;
+}
 
-        NSArray *existingConstraints = objc_getAssociatedObject(self, &kTranslateButtonConstraintsKey);
-        if (existingConstraints) {
-            [NSLayoutConstraint deactivateConstraints:existingConstraints];
-        }
-
-        NSMutableArray *constraints = [NSMutableArray array];
-        [constraints addObject:[translateButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor]];
-        [constraints addObject:[translateButton.widthAnchor constraintEqualToConstant:40]];
-        [constraints addObject:[translateButton.heightAnchor constraintEqualToConstant:40]];
-
-        if (rightmostExistingItem) {
-            NSLog(@"[BHTwitter Translate] Anchoring to right of: %@", NSStringFromClass([rightmostExistingItem class]));
-            [constraints addObject:[translateButton.leadingAnchor constraintEqualToAnchor:rightmostExistingItem.trailingAnchor constant:8]];
-        } else {
-            NSLog(@"[BHTwitter Translate] No rightmost item found, anchoring to trailing edge.");
-            if (titleLabel && titleLabel.superview == self) { // Prefer anchoring to title if no buttons
-                 [constraints addObject:[translateButton.leadingAnchor constraintGreaterThanOrEqualToAnchor:titleLabel.trailingAnchor constant:8]];
-                 [constraints addObject:[translateButton.trailingAnchor constraintLessThanOrEqualToAnchor:self.trailingAnchor constant:-12]]; // Ensure some padding
-            } else { // Absolute fallback
-                [constraints addObject:[translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16]];
-            }
-        }
-        [NSLayoutConstraint activateConstraints:constraints];
-        objc_setAssociatedObject(self, &kTranslateButtonConstraintsKey, constraints, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-
-    } else {
-        UIButton *existingButton = objc_getAssociatedObject(self, &kTranslateButtonKey);
-        if (existingButton) {
-            [existingButton removeFromSuperview];
-            objc_setAssociatedObject(self, &kTranslateButtonKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-            NSArray *oldConstraints = objc_getAssociatedObject(self, &kTranslateButtonConstraintsKey);
-            if (oldConstraints) {
-                [NSLayoutConstraint deactivateConstraints:oldConstraints];
-                objc_setAssociatedObject(self, &kTranslateButtonConstraintsKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-            }
+// Helper function for finding the text view
+static void findTextView(UIView *view, UITextView **tweetTextView) {
+    // Check for TTAStatusBodySelectableContextTextView or any UITextView in T1URTViewController
+    if ([NSStringFromClass([view class]) isEqualToString:@"TTAStatusBodySelectableContextTextView"] ||
+        [view isKindOfClass:[UITextView class]]) {
+        *tweetTextView = (UITextView *)view;
+        NSLog(@"[BHTwitter Translate] Found text view: %@", NSStringFromClass([view class]));
+        return;
+    }
+    
+    // Recurse into subviews
+    for (UIView *subview in view.subviews) {
+        if (!*tweetTextView) {
+            findTextView(subview, tweetTextView);
         }
     }
 }
 
-
-- (void)didMoveToWindow {
-    %orig;
-    if (self.window) {
-                        dispatch_async(dispatch_get_main_queue(), ^{
-             [self BHT_addTranslateButtonIfNeeded];
-        });
-                } else {
-        UIButton *existingButton = objc_getAssociatedObject(self, &kTranslateButtonKey);
-        if (existingButton) {
-            [existingButton removeFromSuperview];
-            objc_setAssociatedObject(self, &kTranslateButtonKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-            NSArray *oldConstraints = objc_getAssociatedObject(self, &kTranslateButtonConstraintsKey);
-            if (oldConstraints) {
-                [NSLayoutConstraint deactivateConstraints:oldConstraints];
-                objc_setAssociatedObject(self, &kTranslateButtonConstraintsKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+%new - (NSString *)BHT_extractTextFromStatusObjectInController:(UIViewController *)controller {
+    // Don't limit to specific view controllers - search everywhere
+    NSLog(@"[BHTwitter Translate] Searching for tweet text in %@", NSStringFromClass([controller class]));
+    
+    // First, try to find the T1URTViewController
+    UIViewController *urtViewController = nil;
+    
+    // Check if the current controller is a T1URTViewController
+    if ([NSStringFromClass([controller class]) isEqualToString:@"T1URTViewController"]) {
+        urtViewController = controller;
+        NSLog(@"[BHTwitter Translate] Found T1URTViewController directly");
+    }
+    
+    // If not found, look through the view hierarchy for a T1URTViewController
+    if (!urtViewController) {
+        UIViewController *currentVC = controller;
+        
+        // First check child view controllers
+        NSArray *childVCs = [currentVC childViewControllers];
+        for (UIViewController *childVC in childVCs) {
+            if ([NSStringFromClass([childVC class]) isEqualToString:@"T1URTViewController"]) {
+                urtViewController = childVC;
+                NSLog(@"[BHTwitter Translate] Found T1URTViewController in children");
+                break;
+            }
+        }
+        
+        // Then check parent view controllers if not found
+        if (!urtViewController) {
+            while (currentVC.parentViewController) {
+                currentVC = currentVC.parentViewController;
+                
+                if ([NSStringFromClass([currentVC class]) isEqualToString:@"T1URTViewController"]) {
+                    urtViewController = currentVC;
+                    NSLog(@"[BHTwitter Translate] Found T1URTViewController in parent hierarchy");
+                    break;
+                }
+                
+                // Also check siblings
+                for (UIViewController *childVC in [currentVC childViewControllers]) {
+                    if ([NSStringFromClass([childVC class]) isEqualToString:@"T1URTViewController"]) {
+                        urtViewController = childVC;
+                        NSLog(@"[BHTwitter Translate] Found T1URTViewController in sibling");
+                        break;
+                    }
+                }
+                
+                if (urtViewController) break;
             }
         }
     }
+    
+    // If we found T1URTViewController, extract text from it
+    if (urtViewController && urtViewController.isViewLoaded) {
+        NSLog(@"[BHTwitter Translate] Found T1URTViewController, searching for text");
+        UITextView *tweetTextView = nil;
+        findTextView(urtViewController.view, &tweetTextView);
+        
+        if (tweetTextView) {
+            NSString *tweetText = tweetTextView.text;
+            if (tweetText && tweetText.length > 0) {
+                NSLog(@"[BHTwitter Translate] Got tweet text from T1URTViewController: %@", tweetText);
+                return tweetText;
+            }
+        }
+    }
+    
+    // Fallback: Get the root view controller to search the entire hierarchy
+    UIViewController *rootVC = controller;
+    while (rootVC.parentViewController) {
+        rootVC = rootVC.parentViewController;
+    }
+    
+    // Find text view in the entire view hierarchy
+    UITextView *tweetTextView = nil;
+    
+    // Start search from root view controller's view
+    if (rootVC.isViewLoaded) {
+        findTextView(rootVC.view, &tweetTextView);
+    }
+    
+    if (tweetTextView) {
+        // Get the text directly from the UITextView
+        NSString *tweetText = tweetTextView.text;
+        if (tweetText && tweetText.length > 0) {
+            NSLog(@"[BHTwitter Translate] Got tweet text directly: %@", tweetText);
+            return tweetText;
+        }
+    }
+    
+    // As a backup, search child view controllers explicitly
+    if (!tweetTextView && [rootVC respondsToSelector:@selector(childViewControllers)]) {
+        for (UIViewController *childVC in rootVC.childViewControllers) {
+            NSLog(@"[BHTwitter Translate] Searching child VC: %@", NSStringFromClass([childVC class]));
+            if (childVC.isViewLoaded) {
+                findTextView(childVC.view, &tweetTextView);
+                if (tweetTextView) break;
+            }
+        }
+    }
+    
+    if (tweetTextView) {
+        // Get the text directly from the UITextView
+        NSString *tweetText = tweetTextView.text;
+        if (tweetText && tweetText.length > 0) {
+            NSLog(@"[BHTwitter Translate] Got tweet text directly from child VC: %@", tweetText);
+            return tweetText;
+        }
+    }
+    
+    NSLog(@"[BHTwitter Translate] Could not find any text in T1URTViewController or elsewhere");
+    return nil;
 }
+
+
+
 %end
 
-
-// MARK: Gemini AI Translation Integration (Implementation)
 @implementation GeminiTranslator
 
-static GeminiTranslator *_sharedInstance = nil;
-static dispatch_once_t onceTokenGemini;
+static GeminiTranslator *_sharedInstance;
 
 + (instancetype)sharedInstance {
-    dispatch_once(&onceTokenGemini, ^{
-        _sharedInstance = [[self alloc] init];
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        _sharedInstance = [[GeminiTranslator alloc] init];
     });
     return _sharedInstance;
 }
 
 - (void)translateText:(NSString *)text fromLanguage:(NSString *)sourceLanguage toLanguage:(NSString *)targetLanguage completion:(void (^)(NSString *translatedText, NSError *error))completion {
-    NSLog(@"[BHTwitter Translate] Attempting to translate: %@", text);
-
-    NSString *customEndpoint = [BHTManager customTranslateEndpoint];
-    NSString *apiKey = [BHTManager customTranslateAPIKey];
-    NSString *customModel = [BHTManager customTranslateModel]; // New: Get custom model
-
-    NSString *endpointURLString;
-    if (customEndpoint && customEndpoint.length > 0) {
-        endpointURLString = customEndpoint;
-        NSLog(@"[BHTwitter Translate] Using custom endpoint: %@", endpointURLString);
-    } else {
-        NSString *modelToUse = (customModel && customModel.length > 0) ? customModel : @"gemini-pro";
-        endpointURLString = [NSString stringWithFormat:@"https://generativelanguage.googleapis.com/v1beta/models/%@:generateContent", modelToUse];
-        NSLog(@"[BHTwitter Translate] Using default API structure with model '%@'. Endpoint: %@", modelToUse, endpointURLString);
-    }
-    
-    if (!apiKey || apiKey.length == 0) {
-        NSLog(@"[BHTwitter Translate] Error: API Key is missing.");
-        NSError *error = [NSError errorWithDomain:@"GeminiTranslatorError"
-                                             code:1001
-                                         userInfo:@{NSLocalizedDescriptionKey:@"API Key is not set. Please configure it in BHTwitter settings."}];
-        if (completion) {
-            completion(nil, error);
-        }
-        return;
-    }
-
-    NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"%@?key=%@", endpointURLString, apiKey]];
-    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
-    [request setHTTPMethod:@"POST"];
-    [request setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
-
-    NSString *prompt = [NSString stringWithFormat:@"Translate the following text from %@ to %@: \"%@\"", sourceLanguage ?: @"auto", targetLanguage ?: @"English", text];
-    NSDictionary *generationConfig = @{
-        @"temperature": @0.7,
-        @"topK": @1,
-        @"topP": @1, // Adding this line back
-        @"maxOutputTokens": @2048,
-        @"stopSequences": @[]
-    };
-    NSArray *safetySettings = @[
-        @{@"category": @"HARM_CATEGORY_HARASSMENT", @"threshold": @"BLOCK_MEDIUM_AND_ABOVE"},
-        @{@"category": @"HARM_CATEGORY_HATE_SPEECH", @"threshold": @"BLOCK_MEDIUM_AND_ABOVE"},
-        @{@"category": @"HARM_CATEGORY_SEXUALLY_EXPLICIT", @"threshold": @"BLOCK_MEDIUM_AND_ABOVE"},
-        @{@"category": @"HARM_CATEGORY_DANGEROUS_CONTENT", @"threshold": @"BLOCK_MEDIUM_AND_ABOVE"}
-    ];
-    NSDictionary *params = @{
-        @"contents": @[@{@"parts": @[@{@"text": prompt}]}],
-        @"generationConfig": generationConfig,
-        @"safetySettings": safetySettings
-    };
-
-    NSError *jsonError;
-    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:params options:0 error:&jsonError];
-
-    if (jsonError) {
-        NSLog(@"[BHTwitter Translate] JSON serialization error: %@", jsonError.localizedDescription);
-        if (completion) {
-            completion(nil, jsonError);
-        }
-        return;
-    }
-    [request setHTTPBody:jsonData];
-
-    NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            if (error) {
-                NSLog(@"[BHTwitter Translate] Network error: %@", error.localizedDescription);
-                if (completion) {
+    @try {
+        // Defensive check for empty text
+        if (!text || text.length == 0) {
+            if (completion) {
+                NSError *error = [NSError errorWithDomain:@"GeminiTranslator" code:400 userInfo:@{NSLocalizedDescriptionKey: @"Empty text to translate"}];
+                dispatch_async(dispatch_get_main_queue(), ^{
                     completion(nil, error);
-                }
-                return;
+                });
             }
-
-            NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
-            NSLog(@"[BHTwitter Translate] API Response Status Code: %ld", (long)httpResponse.statusCode);
-            
-            if (!data) {
-                 NSLog(@"[BHTwitter Translate] API Error: No data received.");
-                 NSError *noDataError = [NSError errorWithDomain:@"GeminiTranslatorError" code:1003 userInfo:@{NSLocalizedDescriptionKey:@"No data received from API."}];
-                 if (completion) completion(nil, noDataError);
-                 return;
+            return;
+        }
+        
+        // Prepare API request parameters - with simplified prompt
+        NSString *apiKey = @"AIzaSyB-bQ6f2dEzlN_mMOljHazxbJEH1BsS6cQ";
+        NSString *apiUrl = @"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+        
+        // Check if we have a valid API key
+        if (!apiKey || apiKey.length == 0 || [apiKey isEqualToString:@"YOUR_API_KEY"]) {
+            if (completion) {
+                NSError *error = [NSError errorWithDomain:@"GeminiTranslator" code:401 userInfo:@{NSLocalizedDescriptionKey: @"Invalid or missing API key"}];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    completion(nil, error);
+                });
             }
-
-            NSError *parseError;
-            NSDictionary *jsonResponse = [NSJSONSerialization JSONObjectWithData:data options:0 error:&parseError];
-
-            if (parseError) {
-                NSLog(@"[BHTwitter Translate] JSON parsing error: %@", parseError.localizedDescription);
-                NSString *rawDataString = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-                NSLog(@"[BHTwitter Translate] Raw API Response: %@", rawDataString);
+            return;
+        }
+        
+        // Construct the request URL with API key
+        NSString *fullUrlString = [NSString stringWithFormat:@"%@?key=%@", apiUrl, apiKey];
+        NSURL *url = [NSURL URLWithString:fullUrlString];
+        
+        // Create request
+        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
+        [request setHTTPMethod:@"POST"];
+        [request setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
+        
+        // Simplified prompt for translation only
+        NSString *prompt = [NSString stringWithFormat:@"Translate this text from %@ to %@: \"%@\" \n\nOnly return the translated text without any explanation or notes.", 
+                            [sourceLanguage isEqualToString:@"auto"] ? @"the original language" : sourceLanguage, 
+                            targetLanguage, 
+                            text];
+        
+        // Create JSON payload
+        NSDictionary *content = @{
+            @"parts": @[
+                @{@"text": prompt}
+            ]
+        };
+        
+        NSDictionary *payload = @{
+            @"contents": @[content],
+            @"generationConfig": @{
+                @"temperature": @0.2,
+                @"topP": @0.8,
+                @"topK": @40
+            }
+        };
+        
+        // Serialize to JSON
+        NSError *jsonError;
+        NSData *jsonData = [NSJSONSerialization dataWithJSONObject:payload options:0 error:&jsonError];
+        
+        if (jsonError) {
+            if (completion) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    completion(nil, jsonError);
+                });
+            }
+            return;
+        }
+        
+        [request setHTTPBody:jsonData];
+        
+        // Create and start task
+        NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+            if (error) {
                 if (completion) {
-                    completion(nil, parseError);
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        completion(nil, error);
+                    });
                 }
                 return;
             }
             
-            NSLog(@"[BHTwitter Translate] Full API Response: %@", jsonResponse);
-
-            NSString *translatedText = nil;
-            NSArray *candidates = jsonResponse[@"candidates"];
-            if (candidates && [candidates count] > 0) {
-                NSDictionary *firstCandidate = candidates[0];
-                NSDictionary *content = firstCandidate[@"content"];
-                NSArray *parts = content[@"parts"];
-                if (parts && [parts count] > 0) {
-                    NSDictionary *firstPart = parts[0];
-                    translatedText = firstPart[@"text"];
+            NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
+            if (httpResponse.statusCode != 200) {
+                NSString *errorMsg = [NSString stringWithFormat:@"API request failed with status code: %ld", (long)httpResponse.statusCode];
+                if (data) {
+                    // Try to parse error details from response
+                    NSDictionary *errorInfo = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+                    if (errorInfo[@"error"] && errorInfo[@"error"][@"message"]) {
+                        errorMsg = [NSString stringWithFormat:@"%@: %@", errorMsg, errorInfo[@"error"][@"message"]];
+                    }
                 }
+                
+                NSError *apiError = [NSError errorWithDomain:@"GeminiTranslator" code:httpResponse.statusCode userInfo:@{NSLocalizedDescriptionKey: errorMsg}];
+                if (completion) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        completion(nil, apiError);
+                    });
+                }
+                return;
             }
             
-            // Check for safety ratings / blocked prompt
-            if (!translatedText && candidates && [candidates count] > 0) {
-                NSDictionary *firstCandidate = candidates[0];
-                NSString *finishReason = firstCandidate[@"finishReason"];
-                if ([finishReason isEqualToString:@"SAFETY"]) {
-                    NSLog(@"[BHTwitter Translate] Translation blocked due to safety settings.");
-                     NSError *safetyError = [NSError errorWithDomain:@"GeminiTranslatorError" 
-                                                                code:1002 
-                                                            userInfo:@{NSLocalizedDescriptionKey:@"Translation blocked by safety filters. The content may be harmful."}];
-                    if (completion) completion(nil, safetyError);
+            // Handle successful response
+            if (data) {
+                NSError *parseError;
+                NSDictionary *responseDict = [NSJSONSerialization JSONObjectWithData:data options:0 error:&parseError];
+                
+                if (parseError) {
+                    if (completion) {
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            completion(nil, parseError);
+                        });
+                    }
                     return;
                 }
-            }
-            
-            // Check for API errors reported in the response body
-            if (!translatedText && jsonResponse[@"error"]) {
-                NSDictionary *apiErrorDict = jsonResponse[@"error"];
-                NSString *errorMessage = apiErrorDict[@"message"] ?: @"Unknown API error";
-                NSInteger errorCode = [apiErrorDict[@"code"] integerValue] ?: 1004;
-                 NSLog(@"[BHTwitter Translate] API Error in response: %@", errorMessage);
-                NSError *apiError = [NSError errorWithDomain:@"GeminiTranslatorAPIError" code:errorCode userInfo:@{NSLocalizedDescriptionKey: errorMessage}];
-                if (completion) completion(nil, apiError);
-                return;
-            }
-
-
-            if (translatedText) {
-                NSLog(@"[BHTwitter Translate] Translated text: %@", translatedText);
-                if (completion) {
-                    completion(translatedText, nil);
+                
+                // Extract the translation text from the response
+                NSString *translatedText = @"";
+                if (responseDict[@"candidates"] && [responseDict[@"candidates"] isKindOfClass:[NSArray class]]) {
+                    NSArray *candidates = responseDict[@"candidates"];
+                    if (candidates.count > 0 && candidates[0][@"content"] && candidates[0][@"content"][@"parts"]) {
+                        NSArray *parts = candidates[0][@"content"][@"parts"];
+                        if (parts.count > 0 && parts[0][@"text"]) {
+                            translatedText = parts[0][@"text"];
+                            // Clean up any lingering quotes from the API's response
+                            translatedText = [translatedText stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"\"' \n"]];
+                        }
+                    }
+                }
+                
+                if (translatedText.length > 0) {
+                    if (completion) {
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            completion(translatedText, nil);
+                        });
+                    }
+                } else {
+                    NSError *noTextError = [NSError errorWithDomain:@"GeminiTranslator" code:500 userInfo:@{NSLocalizedDescriptionKey: @"Could not parse translation from API response"}];
+                    if (completion) {
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            completion(nil, noTextError);
+                        });
+                    }
                 }
             } else {
-                NSLog(@"[BHTwitter Translate] Could not extract translated text from response.");
-                 NSError *noTextError = [NSError errorWithDomain:@"GeminiTranslatorError" code:1005 userInfo:@{NSLocalizedDescriptionKey:@"Could not extract translated text from API response."}];
+                NSError *noDataError = [NSError errorWithDomain:@"GeminiTranslator" code:500 userInfo:@{NSLocalizedDescriptionKey: @"No data received from API"}];
                 if (completion) {
-                    completion(nil, noTextError);
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        completion(nil, noDataError);
+                    });
                 }
             }
-        });
-    }];
-    [task resume];
+        }];
+        
+        [task resume];
+    } @catch (NSException *exception) {
+        NSError *error = [NSError errorWithDomain:@"GeminiTranslator" code:500 userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat:@"Translation failed with exception: %@", exception.reason]}];
+        if (completion) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                completion(nil, error);
+            });
+        }
+    }
 }
 
 - (void)simplifiedTranslateAndDisplay:(NSString *)text fromViewController:(UIViewController *)viewController {
     if (!text || text.length == 0 || !viewController) {
-        NSLog(@"[BHTwitter Translate] Invalid input for simplifiedTranslateAndDisplay.");
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
+                                                                       message:@"No valid text to translate." 
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+        [viewController presentViewController:alert animated:YES completion:nil];
         return;
     }
-
-    NSString *targetLanguage = [[NSLocale preferredLanguages] firstObject] ?: @"en";
-    if ([targetLanguage containsString:@"-"]) { // e.g., en-US -> en
-        targetLanguage = [[targetLanguage componentsSeparatedByString:@"-"] firstObject];
-    }
-     NSLog(@"[BHTwitter Translate] Target language detected: %@", targetLanguage);
-
-    // Show a simple loading indicator
-    UIAlertController *loadingAlert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TRANSLATING_ALERT_TITLE"]
-                                                                       message:@" \n \n" // Space for activity indicator
-                                                                preferredStyle:UIAlertControllerStyleAlert];
-    UIActivityIndicatorView *indicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleMedium];
-    indicator.center = CGPointMake(loadingAlert.view.bounds.size.width / 2, loadingAlert.view.bounds.size.height / 2 - 20); // Adjust position
-    indicator.autoresizingMask = UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleTopMargin;
-    [loadingAlert.view addSubview:indicator];
-    [indicator startAnimating];
     
-    [viewController presentViewController:loadingAlert animated:YES completion:nil];
-
-    [self translateText:text fromLanguage:nil toLanguage:targetLanguage completion:^(NSString *translatedText, NSError *error) {
-        [loadingAlert dismissViewControllerAnimated:YES completion:^{
-            if (error) {
-                NSString *errorMessage = error.localizedDescription ?: @"An unknown error occurred.";
-                UIAlertController *errorAlert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TRANSLATION_ERROR_ALERT_TITLE"]
-                                                                                   message:errorMessage
-                                                                            preferredStyle:UIAlertControllerStyleAlert];
-                [errorAlert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"OK_BUTTON_TITLE"] style:UIAlertActionStyleDefault handler:nil]];
-                [viewController presentViewController:errorAlert animated:YES completion:nil];
-            } else if (translatedText) {
-                UIAlertController *resultAlert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TRANSLATION_RESULT_ALERT_TITLE"]
-                                                                                 message:translatedText
-                                                                          preferredStyle:UIAlertControllerStyleAlert];
-                [resultAlert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"OK_BUTTON_TITLE"] style:UIAlertActionStyleDefault handler:nil]];
-                 [resultAlert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_BUTTON_TITLE"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-                    [[UIPasteboard generalPasteboard] setString:translatedText];
-                }]];
-                [viewController presentViewController:resultAlert animated:YES completion:nil];
-            }
-        }];
+    [self translateText:text 
+           fromLanguage:@"auto" 
+             toLanguage:@"en" 
+             completion:^(NSString *translatedText, NSError *error) {
+        if (error || !translatedText) {
+            UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
+                                                                           message:error ? error.localizedDescription : @"Failed to translate text." 
+                                                                    preferredStyle:UIAlertControllerStyleAlert];
+            [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+            [viewController presentViewController:alert animated:YES completion:nil];
+            return;
+        }
+        
+        // Show translation with Copy and Cancel options
+        UIAlertController *resultAlert = [UIAlertController alertControllerWithTitle:@"Translation" 
+                                                                             message:translatedText 
+                                                                      preferredStyle:UIAlertControllerStyleAlert];
+        
+        [resultAlert addAction:[UIAlertAction actionWithTitle:@"Copy" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            UIPasteboard.generalPasteboard.string = translatedText;
+        }]];
+        
+        [resultAlert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+        
+        [viewController presentViewController:resultAlert animated:YES completion:nil];
     }];
 }
 
 @end
+
+// MARK: Restore Launch Animation
+%hook T1AppDelegate
++ (id)launchTransitionProvider {
+    id originalProvider = %orig;
+    NSLog(@"[BHTwitter LaunchAnim] Original launchTransitionProvider: %@", originalProvider);
+    // TODO: Add logic to return a T1AppLaunchTransition instance if needed
+    return originalProvider;
+}
+%end
+
 
 
