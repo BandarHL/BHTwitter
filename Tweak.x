@@ -5463,58 +5463,40 @@ static GeminiTranslator *_sharedInstance;
 
 - (id)init {
     id instance = %orig;
-    if (instance) {
-        UIView *blueView = [instance valueForKey:@"_blueBackgroundView"];
-        if (blueView) {
-            blueView.backgroundColor = BHTCurrentAccentColor();
-        }
-    }
+    NSLog(@"[BHTwitter LaunchAnim Debug] Init called, instance: %@", instance);
+    NSLog(@"[BHTwitter LaunchAnim Debug] Blue view: %@", [instance valueForKey:@"_blueBackgroundView"]);
+    NSLog(@"[BHTwitter LaunchAnim Debug] White view: %@", [instance valueForKey:@"_whiteBackgroundView"]);
+    NSLog(@"[BHTwitter LaunchAnim Debug] Host view: %@", [instance valueForKey:@"_hostView"]);
+    NSLog(@"[BHTwitter LaunchAnim Debug] Mask: %@", [instance valueForKey:@"_mask"]);
     return instance;
 }
 
-- (void)setBlueBackgroundView:(UIView *)view {
-    if (view) {
-        view.backgroundColor = BHTCurrentAccentColor();
-    }
-    %orig(view);
-}
-
-%end
-
-// MARK: Launch Animation Color Fix
-%hook T1AppLaunchTransition
-
 - (void)_setInitialTransforms {
+    NSLog(@"[BHTwitter LaunchAnim Debug] Before _setInitialTransforms");
     %orig;
-    
-    UIView *hostView = self.hostView;
-    if (!hostView) return;
-    
-    CGRect bounds = hostView.bounds;
-    
-    // Create and set up the blue background view
-    UIView *blueView = [[UIView alloc] initWithFrame:bounds];
-    blueView.backgroundColor = BHTCurrentAccentColor();
-    [hostView insertSubview:blueView atIndex:0];
-    self.blueBackgroundView = blueView;
-    
-    // Create and set up the white background view
-    UIView *whiteView = [[UIView alloc] initWithFrame:bounds];
-    whiteView.backgroundColor = [UIColor whiteColor];
-    [hostView insertSubview:whiteView aboveSubview:blueView];
-    self.whiteBackgroundView = whiteView;
+    NSLog(@"[BHTwitter LaunchAnim Debug] After _setInitialTransforms");
+    NSLog(@"[BHTwitter LaunchAnim Debug] Blue view: %@", [self valueForKey:@"_blueBackgroundView"]);
+    NSLog(@"[BHTwitter LaunchAnim Debug] White view: %@", [self valueForKey:@"_whiteBackgroundView"]);
+    NSLog(@"[BHTwitter LaunchAnim Debug] Host view: %@", [self valueForKey:@"_hostView"]);
+    NSLog(@"[BHTwitter LaunchAnim Debug] Mask: %@", [self valueForKey:@"_mask"]);
 }
-
-%end
-
-// MARK: Launch Animation Color Fix
-%hook T1AppLaunchTransition
 
 - (void)runLaunchTransition {
-    UIView *hostView = ((UIView * (*)(id, SEL))objc_msgSend)(self, NSSelectorFromString(@"hostView"));
-    if (hostView) {
-        hostView.backgroundColor = BHTCurrentAccentColor();
-    }
+    NSLog(@"[BHTwitter LaunchAnim Debug] Before runLaunchTransition");
+    %orig;
+    NSLog(@"[BHTwitter LaunchAnim Debug] After runLaunchTransition");
+    NSLog(@"[BHTwitter LaunchAnim Debug] Blue view: %@", [self valueForKey:@"_blueBackgroundView"]);
+    NSLog(@"[BHTwitter LaunchAnim Debug] White view: %@", [self valueForKey:@"_whiteBackgroundView"]);
+    NSLog(@"[BHTwitter LaunchAnim Debug] Host view: %@", [self valueForKey:@"_hostView"]);
+    NSLog(@"[BHTwitter LaunchAnim Debug] Mask: %@", [self valueForKey:@"_mask"]);
+}
+
+%end
+
+%hook UIWindow
+
+- (void)makeKeyAndVisible {
+    self.backgroundColor = BHTCurrentAccentColor();
     %orig;
 }
 
