@@ -318,7 +318,25 @@
     [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTClearSourceLabelCacheNotification" object:nil];
 }
 
+// Translate functionality
++ (BOOL)enableTranslate {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"enable_translate"];
+}
 
++ (NSString *)translateEndpoint {
+    NSString *endpoint = [[NSUserDefaults standardUserDefaults] stringForKey:@"translate_endpoint"];
+    return endpoint ?: @"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+}
+
++ (NSString *)translateAPIKey {
+    NSString *apiKey = [[NSUserDefaults standardUserDefaults] stringForKey:@"translate_api_key"];
+    return apiKey ?: @"AIzaSyB-bQ6f2dEzlN_mMOljHazxbJEH1BsS6cQ";
+}
+
++ (NSString *)translateModel {
+    NSString *model = [[NSUserDefaults standardUserDefaults] stringForKey:@"translate_model"];
+    return model ?: @"gemini-1.5-flash";
+}
 
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount {
     SettingsViewController *pref = [[SettingsViewController alloc] initWithTwitterAccount:twAccount];

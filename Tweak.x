@@ -4698,6 +4698,17 @@ static char kTranslateButtonKey;
 
 %new
 - (void)BHT_addTranslateButtonIfNeeded {
+    // Check if translate feature is enabled
+    if (![BHTManager enableTranslate]) {
+        // Remove existing button if feature is disabled
+        UIButton *existingButton = objc_getAssociatedObject(self, &kTranslateButtonKey);
+        if (existingButton) {
+            [existingButton removeFromSuperview];
+            objc_setAssociatedObject(self, &kTranslateButtonKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
+        return;
+    }
+    
     NSLog(@"[BHTwitter Translate] Attempting to add button in BHT_addTranslateButtonIfNeeded for view: %@", self);
     UIViewController *parentVCFromResponder = nil;
     UIResponder *responder = self;
@@ -5242,9 +5253,10 @@ static GeminiTranslator *_sharedInstance;
             return;
         }
         
-        // Prepare API request parameters - with simplified prompt
-        NSString *apiKey = @"AIzaSyB-bQ6f2dEzlN_mMOljHazxbJEH1BsS6cQ";
-        NSString *apiUrl = @"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+        // Get configurable API settings from BHTManager
+        NSString *apiKey = [BHTManager translateAPIKey];
+        NSString *apiUrl = [BHTManager translateEndpoint];
+        NSString *model = [BHTManager translateModel];
         
         // Check if we have a valid API key
         if (!apiKey || apiKey.length == 0 || [apiKey isEqualToString:@"YOUR_API_KEY"]) {

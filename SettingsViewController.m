@@ -344,6 +344,20 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 
         PSSpecifier *urlHost = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE"] detailTitle:[[NSUserDefaults standardUserDefaults] objectForKey:@"tweet_url_host"] dynamicRule:@"strip_tracking_params, ==, 0" action:@selector(showURLHostSelectionViewController:)];
 
+        PSSpecifier *enableTranslate = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ENABLE_TRANSLATE_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"ENABLE_TRANSLATE_OPTION_DETAIL_TITLE"] key:@"enable_translate" defaultValue:false changeAction:nil];
+
+        PSSpecifier *translateEndpoint = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TRANSLATE_ENDPOINT_OPTION_TITLE"] detailTitle:[[NSUserDefaults standardUserDefaults] objectForKey:@"translate_endpoint"] ?: @"Default Gemini API" dynamicRule:@"enable_translate, ==, 0" action:@selector(showTranslateEndpointInput:)];
+
+        NSString *apiKeyDetail = [[NSUserDefaults standardUserDefaults] objectForKey:@"translate_api_key"];
+        if (apiKeyDetail && apiKeyDetail.length > 0) {
+            apiKeyDetail = @"••••••••••••••••";
+        } else {
+            apiKeyDetail = @"Not Set";
+        }
+        PSSpecifier *translateAPIKey = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TRANSLATE_API_KEY_OPTION_TITLE"] detailTitle:apiKeyDetail dynamicRule:@"enable_translate, ==, 0" action:@selector(showTranslateAPIKeyInput:)];
+
+        PSSpecifier *translateModel = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TRANSLATE_MODEL_OPTION_TITLE"] detailTitle:[[NSUserDefaults standardUserDefaults] objectForKey:@"translate_model"] ?: @"gemini-1.5-flash" dynamicRule:@"enable_translate, ==, 0" action:@selector(showTranslateModelInput:)];
+
         // Twitter bule section
         PSSpecifier *undoTweet = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"UNDO_TWEET_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"UNDO_TWEET_OPTION_DETAIL_TITLE"] key:@"undo_tweet" defaultValue:false changeAction:nil];
         
@@ -411,7 +425,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         PSSpecifier *clearSourceLabelCache = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CLEAR_SOURCE_LABEL_CACHE_TITLE"]
                                                        detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CLEAR_SOURCE_LABEL_CACHE_DETAIL_TITLE"]
                                                        dynamicRule:nil
-                                                            action:@selector(showClearSourceCacheConfirmation:)];
+                                                            action:@selector(clearSourceLabelCacheAction:)];
         
         // legal section
         PSSpecifier *acknowledgements = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"LEGAL_BUTTON_TITLE"] detailTitle:nil dynamicRule:nil action:@selector(showAcknowledgements:)];
@@ -433,6 +447,10 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             alwaysOpenSafari,
             stripTrackingParams,
             urlHost,
+            enableTranslate,
+            translateEndpoint,
+            translateAPIKey,
+            translateModel,
             
             tweetsSection, // 1
             OldStyle,
@@ -806,19 +824,97 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
     }
 }
 
-- (void)showClearSourceCacheConfirmation:(PSSpecifier *)specifier {
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CLEAR_SOURCE_LABEL_CACHE_TITLE"]
-                                                                   message:[[BHTBundle sharedBundle] localizedStringForKey:@"CLEAR_SOURCE_LABEL_CACHE_DETAIL_TITLE"]
+- (void)clearSourceLabelCacheAction:(PSSpecifier *)specifier {
+    [BHTManager clearSourceLabelCache];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CACHE_CLEARED_TITLE"] 
+                                                                   message:[[BHTBundle sharedBundle] localizedStringForKey:@"CACHE_CLEARED_MESSAGE"] 
                                                             preferredStyle:UIAlertControllerStyleAlert];
     
-    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CLEAR_CACHE_BUTTON_TITLE"] style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
-        [BHTManager clearSourceLabelCache];
-        
-        UIAlertController *doneAlert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CACHE_CLEARED_TITLE"]
-                                                                       message:[[BHTBundle sharedBundle] localizedStringForKey:@"CACHE_CLEARED_MESSAGE"]
-                                                                preferredStyle:UIAlertControllerStyleAlert];
-        [doneAlert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"OK_BUTTON_TITLE"] style:UIAlertActionStyleDefault handler:nil]];
-        [self presentViewController:doneAlert animated:YES completion:nil];
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"OK_BUTTON_TITLE"] 
+                                              style:UIAlertActionStyleDefault 
+                                            handler:nil]];
+    
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+// Translate configuration input methods
+- (void)showTranslateEndpointInput:(PSSpecifier *)specifier {
+    NSString *currentValue = [[NSUserDefaults standardUserDefaults] stringForKey:@"translate_endpoint"];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TRANSLATE_ENDPOINT_OPTION_TITLE"]
+                                                                   message:@"Enter the API endpoint URL for translation"
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    
+    [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
+        textField.placeholder = @"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+        textField.text = currentValue;
+        textField.keyboardType = UIKeyboardTypeURL;
+    }];
+    
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"OK_BUTTON_TITLE"] style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        NSString *inputText = alert.textFields.firstObject.text;
+        if (inputText.length > 0) {
+            [[NSUserDefaults standardUserDefaults] setObject:inputText forKey:@"translate_endpoint"];
+            [specifier setProperty:inputText forKey:@"subtitle"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"translate_endpoint"];
+            [specifier setProperty:@"Default Gemini API" forKey:@"subtitle"];
+        }
+        [self reloadSpecifiers];
+    }]];
+    
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"] style:UIAlertActionStyleCancel handler:nil]];
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)showTranslateAPIKeyInput:(PSSpecifier *)specifier {
+    NSString *currentValue = [[NSUserDefaults standardUserDefaults] stringForKey:@"translate_api_key"];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TRANSLATE_API_KEY_OPTION_TITLE"]
+                                                                   message:@"Enter your API key for the translation service"
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    
+    [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
+        textField.placeholder = @"API Key";
+        textField.text = currentValue;
+        textField.secureTextEntry = YES;
+    }];
+    
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"OK_BUTTON_TITLE"] style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        NSString *inputText = alert.textFields.firstObject.text;
+        if (inputText.length > 0) {
+            [[NSUserDefaults standardUserDefaults] setObject:inputText forKey:@"translate_api_key"];
+            [specifier setProperty:@"••••••••••••••••" forKey:@"subtitle"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"translate_api_key"];
+            [specifier setProperty:@"Not Set" forKey:@"subtitle"];
+        }
+        [self reloadSpecifiers];
+    }]];
+    
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"] style:UIAlertActionStyleCancel handler:nil]];
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)showTranslateModelInput:(PSSpecifier *)specifier {
+    NSString *currentValue = [[NSUserDefaults standardUserDefaults] stringForKey:@"translate_model"];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TRANSLATE_MODEL_OPTION_TITLE"]
+                                                                   message:@"Enter the model name to use for translation"
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    
+    [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
+        textField.placeholder = @"gemini-1.5-flash";
+        textField.text = currentValue;
+    }];
+    
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"OK_BUTTON_TITLE"] style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        NSString *inputText = alert.textFields.firstObject.text;
+        if (inputText.length > 0) {
+            [[NSUserDefaults standardUserDefaults] setObject:inputText forKey:@"translate_model"];
+            [specifier setProperty:inputText forKey:@"subtitle"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"translate_model"];
+            [specifier setProperty:@"gemini-1.5-flash" forKey:@"subtitle"];
+        }
+        [self reloadSpecifiers];
     }]];
     
     [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"] style:UIAlertActionStyleCancel handler:nil]];
@@ -888,7 +984,6 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 - (void)squareAvatarsAction:(UISwitch *)sender {
     BOOL enabled = sender.isOn;
     NSString *key = @"square_avatars";
-    PSSpecifier *specifier = [self specifierForID:key];
     BOOL previousValue = !enabled; // The value before the switch was flipped
 
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_TITLE"]
@@ -921,19 +1016,6 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
     return nil;
 }
 
-// Source Label Cache Clearing
-- (void)clearSourceLabelCacheAction:(PSSpecifier *)specifier {
-    [BHTManager clearSourceLabelCache];
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CACHE_CLEARED_TITLE"] 
-                                                                   message:[[BHTBundle sharedBundle] localizedStringForKey:@"CACHE_CLEARED_MESSAGE"] 
-                                                            preferredStyle:UIAlertControllerStyleAlert];
-    
-    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"OK_BUTTON_TITLE"] 
-                                              style:UIAlertActionStyleDefault 
-                                            handler:nil]];
-    
-    [self presentViewController:alert animated:YES completion:nil];
-}
 @end
 
 @implementation BHButtonTableViewCell
@@ -943,8 +1025,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         NSString *subTitle = [specifier.properties[@"subtitle"] copy];
         BOOL isBig = specifier.properties[@"big"] ? ((NSNumber *)specifier.properties[@"big"]).boolValue : NO;
         
-        // Get the default font size and make it bold
-        UIFont *defaultFont = self.textLabel.font;
+        // Set the font to semibold
         self.textLabel.font = TwitterChirpFont(TwitterFontStyleSemibold); // 14pt semibold
         
         // Keep subtitle style exactly as before
@@ -964,8 +1045,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         NSString *subTitle = [specifier.properties[@"subtitle"] copy];
         BOOL isBig = specifier.properties[@"big"] ? ((NSNumber *)specifier.properties[@"big"]).boolValue : NO;
         
-        // Get the default font size and make it bold
-        UIFont *defaultFont = self.textLabel.font;
+        // Set the font to semibold
         self.textLabel.font = TwitterChirpFont(TwitterFontStyleSemibold); // 14pt semibold
 
         // Keep subtitle style exactly as before

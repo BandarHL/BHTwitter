@@ -77,6 +77,13 @@
 "SQUARE_AVATARS_TITLE" = "Square Avatars";
 "SQUARE_AVATARS_DETAIL_TITLE" = "Requires app restart.";
 
+"ENABLE_TRANSLATE_OPTION_TITLE" = "Enable Tweet Translation";
+"ENABLE_TRANSLATE_OPTION_DETAIL_TITLE" = "Add a translate button to tweets with configurable AI service.";
+
+"TRANSLATE_ENDPOINT_OPTION_TITLE" = "Translation API Endpoint";
+"TRANSLATE_API_KEY_OPTION_TITLE" = "Translation API Key";
+"TRANSLATE_MODEL_OPTION_TITLE" = "Translation Model";
+
 
 /*Profiles*/
 "PROFILES_SECTION_HEADER_TITLE" = "Profiles";
