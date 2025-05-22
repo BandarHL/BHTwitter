@@ -18,10 +18,15 @@
 - (void)_t1_updateBackgroundColor;
 @end
 
+@protocol T1AppLaunchTransitionDelegate <NSObject>
+- (void)appLaunchTransitionDidFinish:(id)transition;
+@end
+
 @interface T1AppLaunchTransition : NSObject
 @property(retain, nonatomic) UIView *blueBackgroundView;
 @property(retain, nonatomic) UIView *whiteBackgroundView;
 @property(retain, nonatomic) UIView *hostView;
+@property(weak, nonatomic) id<T1AppLaunchTransitionDelegate> delegate;
 - (void)runLaunchTransition;
 @end
 
@@ -5471,7 +5476,7 @@ static GeminiTranslator *_sharedInstance;
     id instance = %orig;
     
     UIView *blueView = [[UIView alloc] init];
-    blueView.backgroundColor = BHTCurrentAccentColor();
+    blueView.backgroundColor = [UIColor colorWithRed:29.0/255.0 green:161.0/255.0 blue:242.0/255.0 alpha:1.0]; // Twitter Blue
     ((T1AppLaunchTransition *)instance).blueBackgroundView = blueView;
     
     UIView *whiteView = [[UIView alloc] init];
@@ -5479,6 +5484,19 @@ static GeminiTranslator *_sharedInstance;
     ((T1AppLaunchTransition *)instance).whiteBackgroundView = whiteView;
     
     return instance;
+}
+
+- (void)runLaunchTransition {
+    self.whiteBackgroundView.alpha = 0;
+    self.blueBackgroundView.alpha = 1;
+    
+    [UIView animateWithDuration:0.6 animations:^{
+        self.whiteBackgroundView.alpha = 1;
+    } completion:^(BOOL finished) {
+        if ([self.delegate respondsToSelector:@selector(appLaunchTransitionDidFinish:)]) {
+            [self.delegate appLaunchTransitionDidFinish:self];
+        }
+    }];
 }
 
 %end
@@ -5502,11 +5520,13 @@ static GeminiTranslator *_sharedInstance;
     self.blueBackgroundView.backgroundColor = BHTCurrentAccentColor();
     self.blueBackgroundView.alpha = 1.0;
     self.blueBackgroundView.hidden = NO;
+    [hostView addSubview:self.blueBackgroundView];
     
     self.whiteBackgroundView.frame = hostView.bounds;
     self.whiteBackgroundView.backgroundColor = [UIColor whiteColor];
     self.whiteBackgroundView.alpha = 1.0;
     self.whiteBackgroundView.hidden = NO;
+    [hostView addSubview:self.whiteBackgroundView];
 }
 
 %end
