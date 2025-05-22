@@ -5460,94 +5460,71 @@ static GeminiTranslator *_sharedInstance;
 @end
 
 %hook T1AppLaunchTransition
+
 - (void)runLaunchTransition {
-    NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] runLaunchTransition called.");
+    NSLog(@"[BHTwitter LaunchAnim] LAST RESORT: Trying to force red background for visibility testing");
     
-    // Set the blue background color
-    UIView *blueBG = self.blueBackgroundView;
+    // Force ALL backgrounds to be bright red
     UIView *hostView = self.hostView;
+    UIWindow *keyWindow = nil;
     
-    NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] BlueBG: %@, superview: %@", blueBG, blueBG.superview);
-    NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] HostView: %@", hostView);
-    
-    if (blueBG && blueBG.superview) {
-        // BlueBG has a superview, just set its color
-        UIColor *twitterBlue = [UIColor colorWithRed:29/255.0 green:161/255.0 blue:242/255.0 alpha:1.0];
-        NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] Setting existing BlueBG color to Twitter Blue");
-        blueBG.backgroundColor = twitterBlue;
-    } else if (hostView) {
-        // BlueBG is nil or has no superview, create our own view and insert it
-        NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] Creating new blue background view");
-        
-        // Create a new blue background view that covers the host view
-        UIView *newBlueBG = [[UIView alloc] initWithFrame:hostView.bounds];
-        UIColor *twitterBlue = [UIColor colorWithRed:29/255.0 green:161/255.0 blue:242/255.0 alpha:1.0];
-        newBlueBG.backgroundColor = twitterBlue;
-        newBlueBG.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-        
-        // Insert it at the bottom of the host view
-        [hostView insertSubview:newBlueBG atIndex:0];
-        
-        // Save it for later access
-        self.blueBackgroundView = newBlueBG;
+    // Get ALL windows
+    if (@available(iOS 13.0, *)) {
+        for (UIWindowScene *scene in [UIApplication sharedApplication].connectedScenes) {
+            if (scene.activationState == UISceneActivationStateForegroundActive) {
+                for (UIWindow *window in scene.windows) {
+                    // Make EVERY window red to see if it helps
+                    window.backgroundColor = [UIColor redColor];
+                    keyWindow = window;
+                }
+            }
+        }
     } else {
-        NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] Cannot set background - no host view");
-    }
-    
-    %orig;
-}
-
-- (void)_setInitialTransforms {
-    %orig;
-    
-    // Check the state of the blue background view
-    UIView *blueBG = self.blueBackgroundView;
-    UIView *hostView = self.hostView;
-    
-    NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] After _setInitialTransforms:");
-    NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] BlueBG: %@, frame: %@, superview: %@", 
-           blueBG, NSStringFromCGRect(blueBG.frame), blueBG.superview);
-    NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] HostView: %@, frame: %@", 
-           hostView, NSStringFromCGRect(hostView.frame));
-    
-    // Ensure blue background is properly colored
-    if (blueBG && blueBG.superview) {
-        UIColor *twitterBlue = [UIColor colorWithRed:29/255.0 green:161/255.0 blue:242/255.0 alpha:1.0];
-        blueBG.backgroundColor = twitterBlue;
-    }
-}
-
-// Hook the setter for hostView to add our blue background if needed
-- (void)setHostView:(UIView *)hostView {
-    %orig;
-    
-    if (hostView) {
-        NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] Host view set: %@", hostView);
-        
-        // Create and add a blue background if needed
-        UIView *blueBG = self.blueBackgroundView;
-        if (!blueBG || !blueBG.superview) {
-            NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] Adding new blue background to host view");
-            UIView *newBlueBG = [[UIView alloc] initWithFrame:hostView.bounds];
-            UIColor *twitterBlue = [UIColor colorWithRed:29/255.0 green:161/255.0 blue:242/255.0 alpha:1.0];
-            newBlueBG.backgroundColor = twitterBlue;
-            newBlueBG.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-            
-            // Insert at the bottom
-            [hostView insertSubview:newBlueBG atIndex:0];
-            
-            // Store it
-            self.blueBackgroundView = newBlueBG;
+        for (UIWindow *window in [UIApplication sharedApplication].windows) {
+            // Make EVERY window red to see if it helps
+            window.backgroundColor = [UIColor redColor];
+            if (window.isKeyWindow) {
+                keyWindow = window;
+            }
         }
     }
+    
+    // Set the host view background if it exists
+    if (hostView) {
+        hostView.backgroundColor = [UIColor redColor];
+        NSLog(@"[BHTwitter LaunchAnim] Set hostView background to RED: %@", hostView);
+    }
+    
+    // Last resort - add our own red view to the key window
+    if (keyWindow) {
+        UIView *redView = [[UIView alloc] initWithFrame:keyWindow.bounds];
+        redView.backgroundColor = [UIColor redColor];
+        redView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        [keyWindow insertSubview:redView atIndex:0];
+        NSLog(@"[BHTwitter LaunchAnim] Added RED view to key window: %@", keyWindow);
+    }
+    
+    // Let Twitter run its animation logic
+    %orig;
+    
+    // Set the colors again after Twitter's code runs
+    if (self.blueBackgroundView) {
+        self.blueBackgroundView.backgroundColor = [UIColor redColor];
+        NSLog(@"[BHTwitter LaunchAnim] Set blueBackgroundView to RED after Twitter code");
+    }
+    
+    if (self.whiteBackgroundView) {
+        self.whiteBackgroundView.backgroundColor = [UIColor redColor];
+        NSLog(@"[BHTwitter LaunchAnim] Set whiteBackgroundView to RED after Twitter code");
+    }
 }
 
-// Add initialization hook to see when views are created
-- (id)init {
-    id instance = %orig;
-    NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] init called, instance: %@", instance);
-    return instance;
+// Method that gets called when animation is finished
+- (void)appLaunchTransitionDidFinish {
+    NSLog(@"[BHTwitter LaunchAnim] Animation finished callback");
+    %orig;
 }
+
 %end
 
 // MARK: Show Scroll Bar
