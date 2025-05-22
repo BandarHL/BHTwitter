@@ -5399,74 +5399,16 @@ static GeminiTranslator *_sharedInstance;
 %hook T1AppDelegate
 + (id)launchTransitionProvider {
     id originalProvider = %orig;
-    NSLog(@"[BHTwitter LaunchAnim] Original launchTransitionProvider: %@", originalProvider);
     
     // Only create a new provider if the original is null (newer Twitter versions)
     if (!originalProvider) {
-        NSLog(@"[BHTwitter LaunchAnim] Creating custom launch transition provider");
         Class T1AppLaunchTransitionClass = NSClassFromString(@"T1AppLaunchTransition");
         if (T1AppLaunchTransitionClass) {
             id provider = [[T1AppLaunchTransitionClass alloc] init];
             return provider;
-        } else {
-            NSLog(@"[BHTwitter LaunchAnim] Failed to find T1AppLaunchTransition class");
         }
     }
-    
-    // On the older version, just return the original provider
     return originalProvider;
 }
 
-// Implement delegate methods using performSelector response
-%new
-- (void)appLaunchTransitionDidFinish:(id)transition {
-    NSLog(@"[BHTwitter LaunchAnim] Launch transition finished");
-    // We don't need to do anything special here, just log that it completed
-}
-
-%new
-- (void)appLaunchTransition:(id)transition logoWillBeVisibleForDuration:(double)duration {
-    NSLog(@"[BHTwitter LaunchAnim] Logo will be visible for %f seconds", duration);
-    // This is an optional delegate method
-}
 %end
-
-// Hook the T1AppLaunchTransition class to ensure our blueBackgroundView has the right color
-%hook T1AppLaunchTransition
-
-- (instancetype)init {
-    id instance = %orig;
-    if (instance) {
-        NSLog(@"[BHTwitter LaunchAnim] T1AppLaunchTransition initialized");
-    }
-    return instance;
-}
-
-- (void)setBlueBackgroundView:(UIView *)view {
-    // Set the blue background to use BHTwitter's theme color
-    if (view) {
-        // Use our theme color instead of default Twitter blue
-        UIColor *themeColor = BHTCurrentAccentColor();
-        view.backgroundColor = themeColor;
-        NSLog(@"[BHTwitter LaunchAnim] Set theme background color: %@", themeColor);
-    }
-    %orig;
-}
-
-- (void)runLaunchTransition {
-    NSLog(@"[BHTwitter LaunchAnim] Running launch transition");
-    %orig;
-}
-
-- (void)setDelegate:(id)delegate {
-    NSLog(@"[BHTwitter LaunchAnim] Setting delegate: %@", delegate);
-    %orig;
-}
-
-- (void)setHostView:(UIView *)hostView {
-    NSLog(@"[BHTwitter LaunchAnim] Setting host view: %@", hostView);
-    %orig;
-}
-
-%end
-
