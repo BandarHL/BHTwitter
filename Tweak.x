@@ -5469,68 +5469,9 @@ static GeminiTranslator *_sharedInstance;
 
 - (id)init {
     id instance = %orig;
-    UIView *blueView = [instance valueForKey:@"_blueBackgroundView"];
-    UIView *whiteView = [instance valueForKey:@"_whiteBackgroundView"];
-    
-    if (blueView) {
-        UIColor *twitterBlue = BHTCurrentAccentColor();
-        blueView.backgroundColor = twitterBlue;
-        blueView.layer.backgroundColor = twitterBlue.CGColor;
-    }
-    
-    if (whiteView) {
-        whiteView.backgroundColor = [UIColor whiteColor];
-        whiteView.layer.backgroundColor = [UIColor whiteColor].CGColor;
-    }
-    
+    NSLog(@"[BHTwitter LaunchAnim Debug] blueBackgroundView: %@", [instance valueForKey:@"_blueBackgroundView"]);
+    NSLog(@"[BHTwitter LaunchAnim Debug] whiteBackgroundView: %@", [instance valueForKey:@"_whiteBackgroundView"]);
     return instance;
-}
-
-- (void)_setInitialTransforms {
-    %orig;
-    
-    UIView *blueView = [self valueForKey:@"_blueBackgroundView"];
-    UIView *whiteView = [self valueForKey:@"_whiteBackgroundView"];
-    
-    if (blueView) {
-        UIColor *twitterBlue = BHTCurrentAccentColor();
-        blueView.backgroundColor = twitterBlue;
-        blueView.layer.backgroundColor = twitterBlue.CGColor;
-        blueView.alpha = 1.0;
-        blueView.hidden = NO;
-    }
-    
-    if (whiteView) {
-        whiteView.backgroundColor = [UIColor whiteColor];
-        whiteView.layer.backgroundColor = [UIColor whiteColor].CGColor;
-        whiteView.alpha = 1.0;
-        whiteView.hidden = NO;
-    }
-}
-
-- (void)runLaunchTransition {
-    UIView *blueView = [self valueForKey:@"_blueBackgroundView"];
-    UIView *whiteView = [self valueForKey:@"_whiteBackgroundView"];
-    UIView *hostView = [self valueForKey:@"_hostView"];
-    
-    if (blueView) {
-        UIColor *twitterBlue = BHTCurrentAccentColor();
-        blueView.backgroundColor = twitterBlue;
-        blueView.layer.backgroundColor = twitterBlue.CGColor;
-        blueView.frame = hostView.bounds;
-        blueView.alpha = 1.0;
-        blueView.hidden = NO;
-    }
-    
-    if (whiteView) {
-        whiteView.backgroundColor = [UIColor whiteColor];
-        whiteView.layer.backgroundColor = [UIColor whiteColor].CGColor;
-        whiteView.frame = hostView.bounds;
-        whiteView.alpha = 1.0;
-        whiteView.hidden = NO;
-    }
-    
-    %orig;
 }
 
 %end
