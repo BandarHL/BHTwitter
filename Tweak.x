@@ -5469,11 +5469,20 @@ static GeminiTranslator *_sharedInstance;
 
 - (id)init {
     id instance = %orig;
-    NSLog(@"[BHTwitter LaunchAnim Debug] Init called, instance: %@", instance);
-    NSLog(@"[BHTwitter LaunchAnim Debug] Blue view: %@", [instance valueForKey:@"_blueBackgroundView"]);
-    NSLog(@"[BHTwitter LaunchAnim Debug] White view: %@", [instance valueForKey:@"_whiteBackgroundView"]);
-    NSLog(@"[BHTwitter LaunchAnim Debug] Host view: %@", [instance valueForKey:@"_hostView"]);
-    NSLog(@"[BHTwitter LaunchAnim Debug] Mask: %@", [instance valueForKey:@"_mask"]);
+    UIView *blueView = [instance valueForKey:@"_blueBackgroundView"];
+    UIView *whiteView = [instance valueForKey:@"_whiteBackgroundView"];
+    
+    if (blueView) {
+        UIColor *twitterBlue = BHTCurrentAccentColor();
+        blueView.backgroundColor = twitterBlue;
+        blueView.layer.backgroundColor = twitterBlue.CGColor;
+    }
+    
+    if (whiteView) {
+        whiteView.backgroundColor = [UIColor whiteColor];
+        whiteView.layer.backgroundColor = [UIColor whiteColor].CGColor;
+    }
+    
     return instance;
 }
 
@@ -5481,33 +5490,46 @@ static GeminiTranslator *_sharedInstance;
     %orig;
     
     UIView *blueView = [self valueForKey:@"_blueBackgroundView"];
-    if (blueView && CGRectGetWidth(blueView.frame) > 0 && CGRectGetHeight(blueView.frame) > 0) {
-        // Set both view and layer background color to ensure it persists
-        UIColor *twitterBlue = BHTCurrentAccentColor();
-        blueView.backgroundColor = twitterBlue;
-        blueView.layer.backgroundColor = twitterBlue.CGColor;
-        
-        // Ensure color persists through animations
-        [CATransaction begin];
-        [CATransaction setDisableActions:YES];
-        blueView.layer.allowsGroupOpacity = NO;
-        blueView.layer.shouldRasterize = NO;
-        [CATransaction commit];
-        
-        // Force immediate layout
-        [blueView setNeedsLayout];
-        [blueView layoutIfNeeded];
-    }
-}
-
-- (void)runLaunchTransition {
-    // Ensure color is still set before animation starts
-    UIView *blueView = [self valueForKey:@"_blueBackgroundView"];
+    UIView *whiteView = [self valueForKey:@"_whiteBackgroundView"];
+    
     if (blueView) {
         UIColor *twitterBlue = BHTCurrentAccentColor();
         blueView.backgroundColor = twitterBlue;
         blueView.layer.backgroundColor = twitterBlue.CGColor;
+        blueView.alpha = 1.0;
+        blueView.hidden = NO;
     }
+    
+    if (whiteView) {
+        whiteView.backgroundColor = [UIColor whiteColor];
+        whiteView.layer.backgroundColor = [UIColor whiteColor].CGColor;
+        whiteView.alpha = 1.0;
+        whiteView.hidden = NO;
+    }
+}
+
+- (void)runLaunchTransition {
+    UIView *blueView = [self valueForKey:@"_blueBackgroundView"];
+    UIView *whiteView = [self valueForKey:@"_whiteBackgroundView"];
+    UIView *hostView = [self valueForKey:@"_hostView"];
+    
+    if (blueView) {
+        UIColor *twitterBlue = BHTCurrentAccentColor();
+        blueView.backgroundColor = twitterBlue;
+        blueView.layer.backgroundColor = twitterBlue.CGColor;
+        blueView.frame = hostView.bounds;
+        blueView.alpha = 1.0;
+        blueView.hidden = NO;
+    }
+    
+    if (whiteView) {
+        whiteView.backgroundColor = [UIColor whiteColor];
+        whiteView.layer.backgroundColor = [UIColor whiteColor].CGColor;
+        whiteView.frame = hostView.bounds;
+        whiteView.alpha = 1.0;
+        whiteView.hidden = NO;
+    }
+    
     %orig;
 }
 
@@ -5527,13 +5549,26 @@ static GeminiTranslator *_sharedInstance;
 - (void)setHostView:(UIView *)hostView {
     %orig;
     
-    // Get the blue view
+    // Get both views
     UIView *blueView = [self valueForKey:@"_blueBackgroundView"];
+    UIView *whiteView = [self valueForKey:@"_whiteBackgroundView"];
     
-    // If it's the zero-sized one, fix its frame and color
-    if (blueView && CGRectGetWidth(blueView.frame) == 0) {
+    // Set up both views
+    if (blueView) {
         blueView.frame = hostView.bounds;
-        blueView.backgroundColor = BHTCurrentAccentColor();
+        UIColor *twitterBlue = BHTCurrentAccentColor();
+        blueView.backgroundColor = twitterBlue;
+        blueView.layer.backgroundColor = twitterBlue.CGColor;
+        blueView.alpha = 1.0;
+        blueView.hidden = NO;
+    }
+    
+    if (whiteView) {
+        whiteView.frame = hostView.bounds;
+        whiteView.backgroundColor = [UIColor whiteColor];
+        whiteView.layer.backgroundColor = [UIColor whiteColor].CGColor;
+        whiteView.alpha = 1.0;
+        whiteView.hidden = NO;
     }
 }
 
