@@ -14,7 +14,7 @@
 "CANCEL_BUTTON_TITLE" = "Cancel";
 
 /* Restart Now Button */
-"RESTART_NOW_BUTTON_TITLE" = "Restart Now";
+"RESTART_NOW_BUTTON_TITLE" = "Restart";
 
 
 /*Main menu start*/
@@ -48,8 +48,8 @@
 /*Tweets*/
 "TWEETS_SECTION_HEADER_TITLE" = "Tweets";
 
-"ORIG_TWEET_STYLE_OPTION_TITLE" = "Disable the compact Tweet style";
-"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "Show likes, retweets, and replies on a separate line instead of inline with their buttons.";
+"ORIG_TWEET_STYLE_OPTION_TITLE" = "Disable compact style";
+"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "Show likes, retweets, and replies on a separate line instead of inline on tweet detail view.";
 
 "TWEET_TO_IMAGE_OPTION_TITLE" = "Save Tweet as image";
 "TWEET_TO_IMAGE_OPTION_DETAIL_TITLE" = "Long-press share to export Tweets as images.";
@@ -71,18 +71,18 @@
 
 "DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE" = "No sensitive content warnings";
 
-"HIDE_GROK_ANALYZE_BUTTON_TITLE" = "Hide Grok Analyze Button";
+"HIDE_GROK_ANALYZE_BUTTON_TITLE" = "Hide Grok analyze buttons";
 "HIDE_GROK_ANALYZE_BUTTON_DETAIL_TITLE" = "Hides the Grok Analyze button in tweets.";
 
-"SQUARE_AVATARS_TITLE" = "Square Avatars";
+"SQUARE_AVATARS_TITLE" = "Square avatars";
 "SQUARE_AVATARS_DETAIL_TITLE" = "Requires app restart.";
 
-"ENABLE_TRANSLATE_OPTION_TITLE" = "Enable Tweet Translation";
-"ENABLE_TRANSLATE_OPTION_DETAIL_TITLE" = "Add a translate button to tweets with configurable AI service.";
+"ENABLE_TRANSLATE_OPTION_TITLE" = "Enable translate button";
+"ENABLE_TRANSLATE_OPTION_DETAIL_TITLE" = "Add a new translate button to tweets that you can configure with an AI.";
 
-"TRANSLATE_ENDPOINT_OPTION_TITLE" = "Translation API Endpoint";
-"TRANSLATE_API_KEY_OPTION_TITLE" = "Translation API Key";
-"TRANSLATE_MODEL_OPTION_TITLE" = "Translation Model";
+"TRANSLATE_ENDPOINT_OPTION_TITLE" = "API Endpoint";
+"TRANSLATE_API_KEY_OPTION_TITLE" = "API Key";
+"TRANSLATE_MODEL_OPTION_TITLE" = "Model";
 
 
 /*Profiles*/
@@ -136,11 +136,8 @@
 
 "FORCE_TWEET_FULL_FRAME_TITLE" = "Large images";
 
-"RESTORE_VIDEO_TIMESTAMP_TITLE" = "Restore Video Timestamp";
-"RESTORE_VIDEO_TIMESTAMP_DETAIL_TITLE" = "Shows video timestamp that may be hidden in some views.";
-
-"RESTORE_PULL_TO_REFRESH_SOUNDS_TITLE" = "Restore Pull-to-Refresh Sounds";
-"RESTORE_PULL_TO_REFRESH_SOUNDS_DETAIL_TITLE" = "Brings back the sounds when pulling down to refresh";
+"RESTORE_VIDEO_TIMESTAMP_TITLE" = "Video Timestamp";
+"RESTORE_VIDEO_TIMESTAMP_DETAIL_TITLE" = "Shows video timestamp on immersive player.";
 
 
 /*Twitter Blue*/
@@ -184,13 +181,13 @@
 "HIDE_SPACE_OPTION_TITLE" = "Hide the Spaces bar";
 
 "STOP_HIDING_TAB_BAR_TITLE" = "Keep the tab bar visible";
-"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "Don't hide the tab bar when you scroll (can cause issues).";
+"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "Don't fade the tab bar when you scroll.";
 
 "DM_AVATARS_TITLE" = "DM Avatars";
 "DM_AVATARS_DETAIL_TITLE" = "Only show avatars for the last message in a group from the same sender.";
 
 "CLASSIC_TAB_BAR_SETTINGS_TITLE" = "Classic Tab Icons";
-"CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "Applies accent color to the current selected tab like old Twitter. Restart required.";
+"CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "Applies accent color to the current selected tab. Restart required.";
 
 "DISABLE_RTL_OPTION_TITLE" = "Use left-to-right layout";
 "DISABLE_RTL_OPTION_DETAIL_TITLE" = "Force a LTR layout, even for RTL languages.";
@@ -218,11 +215,11 @@
 "FLEX_OPTION_TITLE" = "FLEX debug mode";
 "FLEX_OPTION_DETAIL_TITLE" = "Use FLEX to debug Twitter.";
 
-"CLEAR_SOURCE_LABEL_CACHE_TITLE" = "Clear Source Label Cache";
-"CLEAR_SOURCE_LABEL_CACHE_DETAIL_TITLE" = "Forces refetching of all tweet source labels.";
-"CLEAR_CACHE_BUTTON_TITLE" = "Clear Cache";
+"CLEAR_SOURCE_LABEL_CACHE_TITLE" = "Clear Source Label Cookies";
+"CLEAR_SOURCE_LABEL_CACHE_DETAIL_TITLE" = "Forces refetching of all source label cookies.";
+"CLEAR_CACHE_BUTTON_TITLE" = "Clear";
 "CACHE_CLEARED_TITLE" = "Cache Cleared";
-"CACHE_CLEARED_MESSAGE" = "Source label cache has been cleared. This may help if labels were not showing correctly.";
+"CACHE_CLEARED_MESSAGE" = "Source label cookies has been cleared. This may help if labels were not showing correctly.";
 
 
 /*Developers*/
@@ -302,8 +299,6 @@
 
 
 /* Classic Tab Bar */
-"CLASSIC_TAB_BAR_SETTINGS_TITLE" = "Classic Tab Icons";
-"CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "Applies accent color to the current selected tab like old Twitter. Restart required.";
 "RESTART_REQUIRED_ALERT_TITLE" = "Restart Required";
 "RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_ON" = "You will need to restart Twitter for this to take effect.";
 "RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_OFF" = "To disable and restore default icons, please restart Twitter.";
