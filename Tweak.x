@@ -278,38 +278,33 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (_Bool)application:(UIApplication *)application didFinishLaunchingWithOptions:(id)arg2 {
     _Bool orig = %orig;
     
-    // Skip manually running the animation for now
-    /* 
-    // Set up and run the launch animation directly
-    NSLog(@"[BHTwitter LaunchAnim] Setting up launch animation after app launch");
-    
-    // Create a new T1AppLaunchTransition instance
-    Class T1AppLaunchTransitionClass = NSClassFromString(@"T1AppLaunchTransition");
-    if (T1AppLaunchTransitionClass) {
-        // Create a new instance using id type
-        id provider = [[T1AppLaunchTransitionClass alloc] init];
+    // Check if we need to manually run the launch animation
+    // This is only needed for newer Twitter versions (10.0+) 
+    // where the original launchTransitionProvider returns null
+    id originalProvider = [self.class launchTransitionProvider];
+    if ([originalProvider isKindOfClass:NSClassFromString(@"T1AppLaunchTransition")]) {
+        NSLog(@"[BHTwitter LaunchAnim] Setting up launch animation after app launch");
         
-        // Set self as the delegate using performSelector
-        if ([provider respondsToSelector:@selector(setDelegate:)]) {
-            [provider performSelector:@selector(setDelegate:) withObject:self];
+        // Set self as the delegate
+        if ([originalProvider respondsToSelector:@selector(setDelegate:)]) {
+            [originalProvider performSelector:@selector(setDelegate:) withObject:self];
         }
         
         // Run the transition after a short delay to ensure the UI is ready
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             // Make sure the window is set as host view
-            if (self.window && [provider respondsToSelector:@selector(setHostView:)]) {
+            if (self.window && [originalProvider respondsToSelector:@selector(setHostView:)]) {
                 NSLog(@"[BHTwitter LaunchAnim] Setting window as host view");
-                [provider performSelector:@selector(setHostView:) withObject:self.window];
+                [originalProvider performSelector:@selector(setHostView:) withObject:self.window];
             }
             
-            // Run the transition using performSelector
-            if ([provider respondsToSelector:@selector(runLaunchTransition)]) {
+            // Run the transition
+            if ([originalProvider respondsToSelector:@selector(runLaunchTransition)]) {
                 NSLog(@"[BHTwitter LaunchAnim] Running launch transition");
-                [provider performSelector:@selector(runLaunchTransition)];
+                [originalProvider performSelector:@selector(runLaunchTransition)];
             }
         });
     }
-    */
     
     if (![[NSUserDefaults standardUserDefaults] objectForKey:@"FirstRun_4.3"]) {
         [[NSUserDefaults standardUserDefaults] setValue:@"1strun" forKey:@"FirstRun_4.3"];
@@ -5417,13 +5412,32 @@ static GeminiTranslator *_sharedInstance;
 
 // MARK: Restore Launch Animation
 
+// Add interface for T1AppLaunchTransition
+@interface T1AppLaunchTransition : NSObject
+@property(retain, nonatomic) UIView *hostView;
+@property(retain, nonatomic) UIView *blueBackgroundView;
+@property(retain, nonatomic) UIView *whiteBackgroundView;
+- (void)runLaunchTransition;
+@end
+
 %hook T1AppDelegate
 + (id)launchTransitionProvider {
     id originalProvider = %orig;
     NSLog(@"[BHTwitter LaunchAnim] Original launchTransitionProvider: %@", originalProvider);
     
+    // Only create a new provider if the original is null (newer Twitter versions)
+    if (!originalProvider) {
+        NSLog(@"[BHTwitter LaunchAnim] Creating custom launch transition provider");
+        Class T1AppLaunchTransitionClass = NSClassFromString(@"T1AppLaunchTransition");
+        if (T1AppLaunchTransitionClass) {
+            id provider = [[T1AppLaunchTransitionClass alloc] init];
+            return provider;
+        } else {
+            NSLog(@"[BHTwitter LaunchAnim] Failed to find T1AppLaunchTransition class");
+        }
+    }
+    
     // On the older version, just return the original provider
-    // and don't try to hook it at all
     return originalProvider;
 }
 
@@ -5439,5 +5453,19 @@ static GeminiTranslator *_sharedInstance;
     NSLog(@"[BHTwitter LaunchAnim] Logo will be visible for %f seconds", duration);
     // This is an optional delegate method
 }
+%end
+
+// Hook the T1AppLaunchTransition class to ensure our blueBackgroundView has the right color
+%hook T1AppLaunchTransition
+
+- (void)setBlueBackgroundView:(UIView *)view {
+    // Ensure the blue background has the proper Twitter blue color before setting it
+    if (view) {
+        UIColor *twitterBlue = [UIColor colorWithRed:29/255.0 green:161/255.0 blue:242/255.0 alpha:1.0];
+        view.backgroundColor = twitterBlue;
+    }
+    %orig;
+}
+
 %end
 
