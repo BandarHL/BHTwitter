@@ -5443,12 +5443,12 @@ static GeminiTranslator *_sharedInstance;
 }
 
 - (void)setBlueBackgroundView:(UIView *)view {
-    // Ensure the blue background has the proper Twitter blue color before setting it
+    // Set the blue background to use BHTwitter's theme color
     if (view) {
-        // Use Twitter blue color - this is crucial for the animation to work properly
-        UIColor *twitterBlue = [UIColor colorWithRed:29/255.0 green:161/255.0 blue:242/255.0 alpha:1.0];
-        view.backgroundColor = twitterBlue;
-        NSLog(@"[BHTwitter LaunchAnim] Set blue background color");
+        // Use our theme color instead of default Twitter blue
+        UIColor *themeColor = BHTCurrentAccentColor();
+        view.backgroundColor = themeColor;
+        NSLog(@"[BHTwitter LaunchAnim] Set theme background color: %@", themeColor);
     }
     %orig;
 }
