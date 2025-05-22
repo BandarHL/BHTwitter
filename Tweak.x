@@ -278,6 +278,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (_Bool)application:(UIApplication *)application didFinishLaunchingWithOptions:(id)arg2 {
     _Bool orig = %orig;
     
+    // Skip manually running the animation for now
+    /* 
     // Set up and run the launch animation directly
     NSLog(@"[BHTwitter LaunchAnim] Setting up launch animation after app launch");
     
@@ -307,6 +309,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             }
         });
     }
+    */
     
     if (![[NSUserDefaults standardUserDefaults] objectForKey:@"FirstRun_4.3"]) {
         [[NSUserDefaults standardUserDefaults] setValue:@"1strun" forKey:@"FirstRun_4.3"];
