@@ -5472,11 +5472,11 @@ static GeminiTranslator *_sharedInstance;
     
     UIView *blueView = [[UIView alloc] init];
     blueView.backgroundColor = BHTCurrentAccentColor();
-    [instance setValue:blueView forKey:@"_blueBackgroundView"];
+    ((T1AppLaunchTransition *)instance).blueBackgroundView = blueView;
     
     UIView *whiteView = [[UIView alloc] init];
     whiteView.backgroundColor = [UIColor whiteColor];
-    [instance setValue:whiteView forKey:@"_whiteBackgroundView"];
+    ((T1AppLaunchTransition *)instance).whiteBackgroundView = whiteView;
     
     return instance;
 }
@@ -5497,27 +5497,16 @@ static GeminiTranslator *_sharedInstance;
 - (void)setHostView:(UIView *)hostView {
     %orig;
     
-    // Get both views
-    UIView *blueView = [self valueForKey:@"_blueBackgroundView"];
-    UIView *whiteView = [self valueForKey:@"_whiteBackgroundView"];
-    
     // Set up both views
-    if (blueView) {
-        blueView.frame = hostView.bounds;
-        UIColor *twitterBlue = BHTCurrentAccentColor();
-        blueView.backgroundColor = twitterBlue;
-        blueView.layer.backgroundColor = twitterBlue.CGColor;
-        blueView.alpha = 1.0;
-        blueView.hidden = NO;
-    }
+    self.blueBackgroundView.frame = hostView.bounds;
+    self.blueBackgroundView.backgroundColor = BHTCurrentAccentColor();
+    self.blueBackgroundView.alpha = 1.0;
+    self.blueBackgroundView.hidden = NO;
     
-    if (whiteView) {
-        whiteView.frame = hostView.bounds;
-        whiteView.backgroundColor = [UIColor whiteColor];
-        whiteView.layer.backgroundColor = [UIColor whiteColor].CGColor;
-        whiteView.alpha = 1.0;
-        whiteView.hidden = NO;
-    }
+    self.whiteBackgroundView.frame = hostView.bounds;
+    self.whiteBackgroundView.backgroundColor = [UIColor whiteColor];
+    self.whiteBackgroundView.alpha = 1.0;
+    self.whiteBackgroundView.hidden = NO;
 }
 
 %end
