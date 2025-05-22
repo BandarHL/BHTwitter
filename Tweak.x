@@ -5462,55 +5462,19 @@ static GeminiTranslator *_sharedInstance;
 %hook T1AppLaunchTransition
 - (void)runLaunchTransition {
     NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] runLaunchTransition called.");
-
-    UIView *hostView = self.hostView;
+    
+    // Only modify the color of the blue background view
     UIView *blueBG = self.blueBackgroundView;
-    UIView *whiteBG = self.whiteBackgroundView;
-
-    NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] HostView: %@ (Frame: %@, BGColor: %@)", hostView, NSStringFromCGRect(hostView.frame), hostView.backgroundColor);
-    NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] BlueBG: %@ (Frame: %@, BGColor: %@, Hidden: %d, Alpha: %.2f)", blueBG, NSStringFromCGRect(blueBG.frame), blueBG.backgroundColor, blueBG.hidden, blueBG.alpha);
-    NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] WhiteBG: %@ (Frame: %@, BGColor: %@, Hidden: %d, Alpha: %.2f)", whiteBG, NSStringFromCGRect(whiteBG.frame), whiteBG.backgroundColor, whiteBG.hidden, whiteBG.alpha);
-
-    // Ensure hostView has a clear background if it's not nil, so it doesn't obscure subviews
-    if (hostView && hostView.backgroundColor != [UIColor clearColor]) {
-        NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] Setting hostView background to clear.");
-        hostView.backgroundColor = [UIColor clearColor];
-    }
-
-    // Attempt to force the blue background
-    if (hostView) {
-        if (!blueBG) {
-            NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] BlueBG is nil. Creating new one.");
-            blueBG = [[UIView alloc] initWithFrame:hostView.bounds];
-            self.blueBackgroundView = blueBG;
-            [hostView insertSubview:blueBG atIndex:0]; // Insert at the bottom
-        }
-        
+    if (blueBG) {
+        // Set the color to Twitter blue
         UIColor *twitterBlue = [UIColor colorWithRed:29/255.0 green:161/255.0 blue:242/255.0 alpha:1.0];
-        NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] Setting BlueBG color to Twitter Blue and ensuring it's visible.");
+        NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] Setting BlueBG color to Twitter Blue.");
         blueBG.backgroundColor = twitterBlue;
-        blueBG.frame = hostView.bounds; // Ensure it covers the host view
-        blueBG.hidden = NO;
-        blueBG.alpha = 1.0;
-        [hostView sendSubviewToBack:blueBG]; // Make sure it's behind other elements like the logo
-
-        // If whiteBG exists and might be problematic, hide it or make it clear
-        if (whiteBG) {
-            NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] WhiteBG exists. Hiding it.");
-            whiteBG.hidden = YES;
-            // Or, if hiding isn't enough:
-            // whiteBG.backgroundColor = [UIColor clearColor];
-            // whiteBG.alpha = 0.0;
-        }
     } else {
-        NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] HostView is nil, cannot modify background views.");
+        NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] BlueBG is nil, cannot set color.");
     }
-
+    
     %orig;
-
-    // Log state again after %orig to see if Twitter's code changed anything
-    NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] AFTER %%orig - BlueBG: Hidden: %d, Alpha: %.2f, BGColor: %@", self.blueBackgroundView.hidden, self.blueBackgroundView.alpha, self.blueBackgroundView.backgroundColor);
-    NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] AFTER %%orig - WhiteBG: Hidden: %d, Alpha: %.2f, BGColor: %@", self.whiteBackgroundView.hidden, self.whiteBackgroundView.alpha, self.whiteBackgroundView.backgroundColor);
 }
 %end
 
