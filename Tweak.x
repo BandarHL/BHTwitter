@@ -5476,6 +5476,32 @@ static GeminiTranslator *_sharedInstance;
     
     %orig;
 }
+
+- (void)_setInitialTransforms {
+    %orig;
+    
+    // Try setting the color again after transforms are set
+    UIView *blueBG = self.blueBackgroundView;
+    if (blueBG) {
+        // Use a slightly brighter blue to make sure it's visible
+        UIColor *brightTwitterBlue = [UIColor colorWithRed:29/255.0 green:161/255.0 blue:242/255.0 alpha:1.0];
+        NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] Setting BlueBG color again in _setInitialTransforms");
+        blueBG.backgroundColor = brightTwitterBlue;
+        
+        // Log the view hierarchy to see what might be covering it
+        NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] BlueBG superview: %@, siblings: %lu", 
+              blueBG.superview, (unsigned long)blueBG.superview.subviews.count);
+    } else {
+        NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] BlueBG still nil in _setInitialTransforms");
+    }
+}
+
+// Add initialization hook to see when views are created
+- (id)init {
+    id instance = %orig;
+    NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] init called, instance: %@", instance);
+    return instance;
+}
 %end
 
 // MARK: Show Scroll Bar
