@@ -5508,15 +5508,30 @@ static GeminiTranslator *_sharedInstance;
 - (void)setHostView:(UIView *)hostView {
     NSLog(@"[BHTwitter LaunchAnim Debug] setHostView called with view: %@", hostView);
     NSLog(@"[BHTwitter LaunchAnim Debug] blueBackgroundView before setHostView: %@", self.blueBackgroundView);
-    %orig;
     
-    // After setting host view, ensure blueBackgroundView has correct frame
-    if (hostView && self.blueBackgroundView) {
-        self.blueBackgroundView.frame = hostView.bounds;
-        self.blueBackgroundView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    // Store current blueBackgroundView before orig call potentially recreates it
+    UIView *existingBlueView = self.blueBackgroundView;
+    
+    // If we have an existing blue view, remove it from its current superview
+    // so it doesn't get deallocated when the host view changes
+    if (existingBlueView) {
+        [existingBlueView removeFromSuperview];
     }
     
-    NSLog(@"[BHTwitter LaunchAnim Debug] blueBackgroundView after setHostView: %@", self.blueBackgroundView);
+    %orig;
+    
+    // If we had an existing blue view, reuse it instead of creating a new one
+    if (existingBlueView) {
+        existingBlueView.frame = hostView.bounds;
+        existingBlueView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        [hostView insertSubview:existingBlueView atIndex:0];
+        self.blueBackgroundView = existingBlueView;
+    }
+    
+    // Ensure the blue view is at the back
+    if (self.blueBackgroundView && self.blueBackgroundView.superview) {
+        [self.blueBackgroundView.superview sendSubviewToBack:self.blueBackgroundView];
+    }
 }
 
 %end
