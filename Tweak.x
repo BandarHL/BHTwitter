@@ -5469,8 +5469,15 @@ static GeminiTranslator *_sharedInstance;
 
 - (id)init {
     id instance = %orig;
-    NSLog(@"[BHTwitter LaunchAnim Debug] blueBackgroundView: %@", [instance valueForKey:@"_blueBackgroundView"]);
-    NSLog(@"[BHTwitter LaunchAnim Debug] whiteBackgroundView: %@", [instance valueForKey:@"_whiteBackgroundView"]);
+    
+    UIView *blueView = [[UIView alloc] init];
+    blueView.backgroundColor = BHTCurrentAccentColor();
+    [instance setValue:blueView forKey:@"_blueBackgroundView"];
+    
+    UIView *whiteView = [[UIView alloc] init];
+    whiteView.backgroundColor = [UIColor whiteColor];
+    [instance setValue:whiteView forKey:@"_whiteBackgroundView"];
+    
     return instance;
 }
 
