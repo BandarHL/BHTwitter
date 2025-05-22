@@ -5472,29 +5472,42 @@ static GeminiTranslator *_sharedInstance;
 // MARK: Launch Animation Color Fix
 %hook T1AppLaunchTransition
 
+- (id)init {
+    id instance = %orig;
+    NSLog(@"[BHTwitter LaunchAnim Debug] init called");
+    NSLog(@"[BHTwitter LaunchAnim Debug] blueBackgroundView after init: %@", [instance valueForKey:@"_blueBackgroundView"]);
+    return instance;
+}
+
 - (void)setBlueBackgroundView:(UIView *)view {
     NSLog(@"[BHTwitter LaunchAnim Debug] setBlueBackgroundView called with view: %@", view);
     NSLog(@"[BHTwitter LaunchAnim Debug] Current backgroundColor: %@", view.backgroundColor);
-    NSLog(@"[BHTwitter LaunchAnim Debug] Stack trace: %@", [NSThread callStackSymbols]);
     if (view) {
         view.backgroundColor = [UIColor colorWithRed:29.0/255.0 green:161.0/255.0 blue:242.0/255.0 alpha:1.0]; // Twitter Blue
         NSLog(@"[BHTwitter LaunchAnim Debug] Set backgroundColor to Twitter Blue");
     }
     %orig(view);
-    NSLog(@"[BHTwitter LaunchAnim Debug] After orig call - backgroundColor: %@", view.backgroundColor);
 }
 
-- (void)setBackgroundColor:(UIColor *)color {
-    NSLog(@"[BHTwitter LaunchAnim Debug] setBackgroundColor called with color: %@", color);
-    NSLog(@"[BHTwitter LaunchAnim Debug] Stack trace: %@", [NSThread callStackSymbols]);
+- (UIView *)blueBackgroundView {
+    UIView *view = %orig;
+    NSLog(@"[BHTwitter LaunchAnim Debug] blueBackgroundView getter called, returning: %@", view);
+    NSLog(@"[BHTwitter LaunchAnim Debug] blueBackgroundView color: %@", view.backgroundColor);
+    return view;
+}
+
+- (void)runLaunchTransition {
+    NSLog(@"[BHTwitter LaunchAnim Debug] runLaunchTransition called");
+    NSLog(@"[BHTwitter LaunchAnim Debug] blueBackgroundView before transition: %@", self.blueBackgroundView);
+    NSLog(@"[BHTwitter LaunchAnim Debug] blueBackgroundView color before transition: %@", self.blueBackgroundView.backgroundColor);
     %orig;
 }
 
-- (void)layoutSubviews {
+- (void)setHostView:(UIView *)hostView {
+    NSLog(@"[BHTwitter LaunchAnim Debug] setHostView called with view: %@", hostView);
+    NSLog(@"[BHTwitter LaunchAnim Debug] blueBackgroundView before setHostView: %@", self.blueBackgroundView);
     %orig;
-    NSLog(@"[BHTwitter LaunchAnim Debug] layoutSubviews called");
-    NSLog(@"[BHTwitter LaunchAnim Debug] blueBackgroundView: %@", self.blueBackgroundView);
-    NSLog(@"[BHTwitter LaunchAnim Debug] blueBackgroundView color: %@", self.blueBackgroundView.backgroundColor);
+    NSLog(@"[BHTwitter LaunchAnim Debug] blueBackgroundView after setHostView: %@", self.blueBackgroundView);
 }
 
 %end
