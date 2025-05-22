@@ -5457,123 +5457,134 @@ static GeminiTranslator *_sharedInstance;
 @property(retain, nonatomic) UIView *whiteBackgroundView;
 - (void)runLaunchTransition;
 - (void)_setInitialTransforms; // We might need this later
-- (void)appLaunchTransitionDidFinish;
 @end
-
-// Add a category interface for UIWindow to declare our custom methods
-@interface UIWindow (BHTLaunchHelper)
-- (void)bht_examineSubviewsForBlackBackgrounds;
-- (void)bht_recursivelyScanForBlackBackgrounds:(UIView *)view level:(int)level;
-@end
-
-// MARK: Restore Launch Animation
-
-%hook UIWindow
-
-// When a window is created or becomes key, examine it for black background views
-- (void)makeKeyAndVisible {
-    %orig;
-    NSLog(@"[BHTwitter LaunchAnim] UIWindow makeKeyAndVisible: %@", self);
-    
-    // If this is the launch window, force blue background
-    self.backgroundColor = [UIColor colorWithRed:29/255.0 green:161/255.0 blue:242/255.0 alpha:1.0];
-    
-    // Scan all subviews to find black backgrounds
-    [self performSelector:@selector(bht_examineSubviewsForBlackBackgrounds) withObject:nil afterDelay:0.1];
-    [self performSelector:@selector(bht_examineSubviewsForBlackBackgrounds) withObject:nil afterDelay:0.5];
-    [self performSelector:@selector(bht_examineSubviewsForBlackBackgrounds) withObject:nil afterDelay:1.0];
-}
-
-%new
-- (void)bht_examineSubviewsForBlackBackgrounds {
-    NSLog(@"[BHTwitter LaunchAnim] Examining window for black backgrounds");
-    [self bht_recursivelyScanForBlackBackgrounds:self level:0];
-}
-
-%new
-- (void)bht_recursivelyScanForBlackBackgrounds:(UIView *)view level:(int)level {
-    // Check if this view has a black background
-    if (view.backgroundColor && CGColorGetAlpha(view.backgroundColor.CGColor) > 0) {
-        const CGFloat *components = CGColorGetComponents(view.backgroundColor.CGColor);
-        if (CGColorGetNumberOfComponents(view.backgroundColor.CGColor) >= 3 &&
-            components[0] < 0.1 && components[1] < 0.1 && components[2] < 0.1) {
-            // Found a black background view!
-            NSLog(@"[BHTwitter LaunchAnim] Found black background view at level %d: %@ (Frame: %@, Alpha: %.2f)", 
-                  level, view, NSStringFromCGRect(view.frame), view.alpha);
-            
-            // Change to Twitter blue
-            view.backgroundColor = [UIColor colorWithRed:29/255.0 green:161/255.0 blue:242/255.0 alpha:1.0];
-            NSLog(@"[BHTwitter LaunchAnim] Changed to Twitter blue");
-        }
-    }
-    
-    // Recursively scan subviews
-    for (UIView *subview in view.subviews) {
-        [self bht_recursivelyScanForBlackBackgrounds:subview level:level+1];
-    }
-}
-
-%end
-
-// Also hook _UILaunchImageView which is often used for launch screens
-%hook _UILaunchImageView
-
-- (void)setBackgroundColor:(UIColor *)color {
-    // Force Twitter blue background
-    if (color && CGColorGetAlpha(color.CGColor) > 0) {
-        const CGFloat *components = CGColorGetComponents(color.CGColor);
-        if (CGColorGetNumberOfComponents(color.CGColor) >= 3 &&
-            components[0] < 0.1 && components[1] < 0.1 && components[2] < 0.1) {
-            NSLog(@"[BHTwitter LaunchAnim] Intercepted black background on _UILaunchImageView");
-            color = [UIColor colorWithRed:29/255.0 green:161/255.0 blue:242/255.0 alpha:1.0];
-        }
-    }
-    %orig(color);
-}
-
-%end
-
-// Also hook any black mask views that might be used
-%hook CALayer
-
-- (void)setBackgroundColor:(CGColorRef)backgroundColor {
-    // Check if the background color is black
-    if (backgroundColor && CGColorGetAlpha(backgroundColor) > 0) {
-        size_t numComponents = CGColorGetNumberOfComponents(backgroundColor);
-        const CGFloat *components = CGColorGetComponents(backgroundColor);
-        
-        BOOL isBlack = NO;
-        if (numComponents >= 3) {
-            // RGB or RGBA color
-            isBlack = (components[0] < 0.1 && components[1] < 0.1 && components[2] < 0.1);
-        } else if (numComponents == 2) {
-            // Grayscale color
-            isBlack = (components[0] < 0.1);
-        }
-        
-        if (isBlack) {
-            NSLog(@"[BHTwitter LaunchAnim] Intercepted black CALayer: %@", self);
-            
-            // Create a blue color
-            UIColor *twitterBlue = [UIColor colorWithRed:29/255.0 green:161/255.0 blue:242/255.0 alpha:CGColorGetAlpha(backgroundColor)];
-            backgroundColor = twitterBlue.CGColor;
-        }
-    }
-    
-    %orig(backgroundColor);
-}
-
-%end
 
 %hook T1AppLaunchTransition
 
-// Method that gets called when animation is finished
-- (void)appLaunchTransitionDidFinish {
-    NSLog(@"[BHTwitter LaunchAnim] Animation finished callback");
+// Log initialization and all the values
+- (id)init {
+    id instance = %orig;
+    NSLog(@"[BHTLaunchLog] T1AppLaunchTransition init: %@", instance);
+    return instance;
+}
+
+// Log properties being set
+- (void)setHostView:(UIView *)hostView {
+    NSLog(@"[BHTLaunchLog] setHostView: %@ (frame: %@, backgroundColor: %@)", 
+          hostView, NSStringFromCGRect(hostView.frame), hostView.backgroundColor);
+    %orig;
+}
+
+- (void)setBlueBackgroundView:(UIView *)view {
+    NSLog(@"[BHTLaunchLog] setBlueBackgroundView: %@ (frame: %@, backgroundColor: %@, hidden: %d, alpha: %.2f)", 
+          view, NSStringFromCGRect(view.frame), view.backgroundColor, view.hidden, view.alpha);
+    %orig;
+}
+
+- (void)setWhiteBackgroundView:(UIView *)view {
+    NSLog(@"[BHTLaunchLog] setWhiteBackgroundView: %@ (frame: %@, backgroundColor: %@, hidden: %d, alpha: %.2f)", 
+          view, NSStringFromCGRect(view.frame), view.backgroundColor, view.hidden, view.alpha);
+    %orig;
+}
+
+- (void)setMask:(id)mask {
+    NSLog(@"[BHTLaunchLog] setMask: %@", mask);
+    %orig;
+}
+
+- (void)setDelegate:(id)delegate {
+    NSLog(@"[BHTLaunchLog] setDelegate: %@", delegate);
+    %orig;
+}
+
+// Log property getters
+- (UIView *)hostView {
+    UIView *view = %orig;
+    NSLog(@"[BHTLaunchLog] Getting hostView: %@", view);
+    return view;
+}
+
+- (UIView *)blueBackgroundView {
+    UIView *view = %orig;
+    NSLog(@"[BHTLaunchLog] Getting blueBackgroundView: %@", view);
+    return view;
+}
+
+- (UIView *)whiteBackgroundView {
+    UIView *view = %orig;
+    NSLog(@"[BHTLaunchLog] Getting whiteBackgroundView: %@", view);
+    return view;
+}
+
+// Log important methods
+- (void)runLaunchTransition {
+    NSLog(@"[BHTLaunchLog] runLaunchTransition START ---------------------");
+    NSLog(@"[BHTLaunchLog] hostView: %@", self.hostView);
+    NSLog(@"[BHTLaunchLog] blueBackgroundView: %@", self.blueBackgroundView);
+    NSLog(@"[BHTLaunchLog] whiteBackgroundView: %@", self.whiteBackgroundView);
+    
+    // If we have a blue background view, log its details and view hierarchy 
+    UIView *blueBG = self.blueBackgroundView;
+    if (blueBG) {
+        NSLog(@"[BHTLaunchLog] Blue background details:");
+        NSLog(@"[BHTLaunchLog] - frame: %@", NSStringFromCGRect(blueBG.frame));
+        NSLog(@"[BHTLaunchLog] - backgroundColor: %@", blueBG.backgroundColor);
+        NSLog(@"[BHTLaunchLog] - hidden: %d", blueBG.hidden);
+        NSLog(@"[BHTLaunchLog] - alpha: %.2f", blueBG.alpha);
+        NSLog(@"[BHTLaunchLog] - autoresizingMask: %lu", (unsigned long)blueBG.autoresizingMask);
+        NSLog(@"[BHTLaunchLog] - superview: %@", blueBG.superview);
+        
+        if (blueBG.superview) {
+            NSLog(@"[BHTLaunchLog] - index in superview: %lu", (unsigned long)[blueBG.superview.subviews indexOfObject:blueBG]);
+            NSLog(@"[BHTLaunchLog] - total siblings: %lu", (unsigned long)blueBG.superview.subviews.count);
+        }
+    }
+    
+    %orig;
+    NSLog(@"[BHTLaunchLog] runLaunchTransition END -----------------------");
+}
+
+- (void)_setInitialTransforms {
+    NSLog(@"[BHTLaunchLog] _setInitialTransforms START -------------------");
+    %orig;
+    
+    // Log state after initial transforms are set
+    NSLog(@"[BHTLaunchLog] After _setInitialTransforms:");
+    NSLog(@"[BHTLaunchLog] - blueBackgroundView: %@", self.blueBackgroundView);
+    if (self.blueBackgroundView) {
+        NSLog(@"[BHTLaunchLog] - blue frame: %@", NSStringFromCGRect(self.blueBackgroundView.frame));
+        NSLog(@"[BHTLaunchLog] - blue transform: %@", NSStringFromCGAffineTransform(self.blueBackgroundView.transform));
+        NSLog(@"[BHTLaunchLog] - blue backgroundColor: %@", self.blueBackgroundView.backgroundColor);
+    }
+    
+    NSLog(@"[BHTLaunchLog] - whiteBackgroundView: %@", self.whiteBackgroundView);
+    if (self.whiteBackgroundView) {
+        NSLog(@"[BHTLaunchLog] - white frame: %@", NSStringFromCGRect(self.whiteBackgroundView.frame));
+        NSLog(@"[BHTLaunchLog] - white transform: %@", NSStringFromCGAffineTransform(self.whiteBackgroundView.transform));
+        NSLog(@"[BHTLaunchLog] - white backgroundColor: %@", self.whiteBackgroundView.backgroundColor);
+    }
+    
+    NSLog(@"[BHTLaunchLog] _setInitialTransforms END ---------------------");
+}
+
+- (void)_reset {
+    NSLog(@"[BHTLaunchLog] _reset called");
+    %orig;
+}
+
+// Log custom transform method
+- (struct CGAffineTransform)_transformFromTransform:(struct CGAffineTransform)transform {
+    NSLog(@"[BHTLaunchLog] _transformFromTransform input: %@", NSStringFromCGAffineTransform(transform));
+    CGAffineTransform result = %orig;
+    NSLog(@"[BHTLaunchLog] _transformFromTransform output: %@", NSStringFromCGAffineTransform(result));
+    return result;
+}
+
+// Log deallocation
+- (void)dealloc {
+    NSLog(@"[BHTLaunchLog] dealloc called");
     %orig;
 }
 
 %end
-
-
 
