@@ -4,262 +4,303 @@
 */
 
 "BHTWITTER_SETTINGS_TITLE" = "NeoFreeBird";
-"BHTWITTER_SETTINGS_DETAIL" = "Twitter をカスタマイズ：広告非表示、Blue 機能有効化など。";
-"SETTINGS_HEADER_TITLE" = "この設定で Twitter を自分好みにカスタマイズ";
+"BHTWITTER_SETTINGS_DETAIL" = "Twitterを微調整します。広告を非表示にしたり、Twitter Blueの機能を有効にするなど。";
+"SETTINGS_HEADER_TITLE" = "これらの設定でTwitterエクスペリエンスをカスタマイズしましょう";
 
-"CONFIRM_ALERT_MESSAGE" = "本当に実行してもいいですか？";
+"CONFIRM_ALERT_MESSAGE" = "続行しますか？";
 "YES_BUTTON_TITLE" = "はい";
 "NO_BUTTON_TITLE" = "いいえ";
 "OK_BUTTON_TITLE" = "OK";
 "CANCEL_BUTTON_TITLE" = "キャンセル";
 
+/* Restart Now Button */
+"RESTART_NOW_BUTTON_TITLE" = "今すぐアプリを再起動";
+
 
 /*Main menu start*/
-
 /*General*/
+
 "MAIN_SECTION_HEADER_TITLE" = "一般";
 
 "VOICE_OPTION_TITLE" = "音声ツイート";
-"VOICE_OPTION_DETAIL_TITLE" = "音声ツイートのオン／オフ（iOS限定）。";
+"VOICE_OPTION_DETAIL_TITLE" = "音声ツイートをオンまたはオフにします (iOS のみ)。";
 
 "UPLOAD_CUSTOM_VOICE_OPTION_TITLE" = "音声ツイート";
-"UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE" = "音声ツイートのオン／オフ（iOS限定）。";
+"UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE" = "音声ツイートをオンまたはオフにします (iOS のみ)。";
 
 "HIDE_TOPICS_OPTION_TITLE" = "トピックツイートを非表示";
-"HIDE_TOPICS_OPTION_DETAIL_TITLE" = "おすすめトピックに関連するツイートを非表示にします。";
+"HIDE_TOPICS_OPTION_DETAIL_TITLE" = "「おすすめトピック」に関連付けられたツイートを非表示にします。";
 
-"HIDE_TOPICS_TO_FOLLOW_OPTION" = "「フォローするトピック」を非表示";
-"HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "おすすめトピックを非表示にします。";
+"HIDE_TOPICS_TO_FOLLOW_OPTION" = "「トピックをフォロー」を非表示";
+"HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "「おすすめトピック」を非表示にします。";
 
-"PADLOCK_OPTION_TITLE" = "Twitter をロック";
-"PADLOCK_OPTION_DETAIL_TITLE" = "Face ID またはパスコードでロックを解除します。";
+"PADLOCK_OPTION_TITLE" = "Twitterをロック";
+"PADLOCK_OPTION_DETAIL_TITLE" = "Face IDまたはパスコード認証を有効化";
 
-"ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "外部ブラウザを使う";
-"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "リンクを Safari や既定のブラウザで開く。";
+"ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "外部ブラウザを使用";
+"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "Safariまたはデフォルトのブラウザでリンクを開きます。";
 
-"STRIP_URL_TRACKING_PARAMETERS_TITLE" = "リンクをカスタマイズ";
-"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE" = "URL の追跡情報を削除し、カスタムリンクを設定。";
-"SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE" = "カスタム URL を選択";
+"STRIP_URL_TRACKING_PARAMETERS_TITLE" = "リンクのカスタマイズ";
+"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE" = "リンクのカスタムURLを選択し、トラッキングを削除します。";
+"SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE" = "カスタムURLを選択";
 
 
 /*Tweets*/
 "TWEETS_SECTION_HEADER_TITLE" = "ツイート";
 
-"ORIG_TWEET_STYLE_OPTION_TITLE" = "コンパクト表示を無効にする";
-"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "いいね・リツイート・返信を別行に表示。";
+"ORIG_TWEET_STYLE_OPTION_TITLE" = "コンパクトなツイートスタイルを無効化";
+"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "いいね/リツイート/返信ボタンを同じ行に表示するのではなく、別の行に表示します。";
 
-"TWEET_TO_IMAGE_OPTION_TITLE" = "ツイートを画像で保存";
-"TWEET_TO_IMAGE_OPTION_DETAIL_TITLE" = "長押しで画像として保存。";
+"TWEET_TO_IMAGE_OPTION_TITLE" = "ツイートを画像として保存";
+"TWEET_TO_IMAGE_OPTION_DETAIL_TITLE" = "[共有] を長押しすると、ツイートを画像としてエクスポートできます。";
 
-"ENABLE_TWEET_LABELS_OPTION_TITLE" = "ツイートの出所を表示（ベータ）";
-"ENABLE_TWEET_LABELS_OPTION_DETAIL_TITLE" = "どのアプリから投稿されたか表示します（by @nyaathea）。";
+"ENABLE_TWEET_LABELS_OPTION_TITLE" = "ツイートのソースラベルを表示 (ベータ版)";
+"ENABLE_TWEET_LABELS_OPTION_DETAIL_TITLE" = "ツイートがどのクライアントから作成されたかを表示します。 (@nyaathea)";
 
-"LIKE_CONFIRM_OPTION_TITLE" = "いいね確認";
-"LIKE_CONFIRM_OPTION_DETAIL_TITLE" = "いいねする前に確認ダイアログを表示。";
+"LIKE_CONFIRM_OPTION_TITLE" = "いいねを確認";
+"LIKE_CONFIRM_OPTION_DETAIL_TITLE" = "ツイートに「いいね」する前に確認ダイアログを表示します。";
 
-"TWEET_CONFIRM_OPTION_TITLE" = "投稿確認";
-"TWEET_CONFIRM_OPTION_DETAIL_TITLE" = "ツイート前に確認を求めます。";
+"TWEET_CONFIRM_OPTION_TITLE" = "ツイートの確認";
+"TWEET_CONFIRM_OPTION_DETAIL_TITLE" = "ツイートする前に確認ダイアログを表示します。";
 
 "HIDE_VIEW_COUNT_OPTION_TITLE" = "表示回数を非表示";
-"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE" = "ツイート下の表示回数を非表示にします。";
+"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE" = "ツイートの下にある表示回数を非表示にします。";
 
 "HIDE_MARKBOOK_BUTTON_OPTION_TITLE" = "ブックマークを非表示";
-"HIDE_MARKBOOK_BUTTON_OPTION_DETAIL_TITLE" = "ツイートからブックマークボタンを削除します。";
+"HIDE_MARKBOOK_BUTTON_OPTION_DETAIL_TITLE" = "ツイートからブックマークボタンを非表示にします。";
 
-"DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE" = "センシティブ警告を表示しない";
+"DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE" = "センシティブ警告を非表示";
+
+"HIDE_GROK_ANALYZE_BUTTON_TITLE" = "Grokボタンを非表示";
+"HIDE_GROK_ANALYZE_BUTTON_DETAIL_TITLE" = "ツイート内にあるGrokボタンを非表示にします。";
+
+"SQUARE_AVATARS_TITLE" = "正方形のアバター";
+"SQUARE_AVATARS_DETAIL_TITLE" = "アプリの再起動が必要です。";
 
 
 /*Profiles*/
 "PROFILES_SECTION_HEADER_TITLE" = "プロフィール";
 
-"FOLLOW_CONFIRM_OPTION_TITLE" = "フォロー確認";
-"FOLLOW_CONFIRM_OPTION_DETAIL_TITLE" = "フォロー前に確認を表示します。";
+"FOLLOW_CONFIRM_OPTION_TITLE" = "フォローの確認";
+"FOLLOW_CONFIRM_OPTION_DETAIL_TITLE" = "誰かをフォローする際に確認ダイアログを表示します。";
 
-"COPY_PROFILE_INFO_OPTION_TITLE" = "プロフィール情報をコピー";
-"COPY_PROFILE_INFO_OPTION_DETAIL_TITLE" = "ユーザー名、自己紹介などをタップでコピー。";
+"COPY_PROFILE_INFO_OPTION_TITLE" = "プロフィールの詳細をコピー";
+"COPY_PROFILE_INFO_OPTION_DETAIL_TITLE" = "ユーザー名、プロフィールなどをワンタップでコピーできるようにします。";
 
-"BIO_TRANSALTE_OPTION_TITLE" = "自己紹介を翻訳";
-"BIO_TRANSALTE_OPTION_DETAIL_TITLE" = "自分の言語でバイオを表示。";
+"BIO_TRANSALTE_OPTION_TITLE" = "プロフィールを翻訳";
+"BIO_TRANSALTE_OPTION_DETAIL_TITLE" = "プロフィールを翻訳できるようにします。";
 
-"HIDE_WHO_FOLLOW_OPTION" = "「おすすめユーザー」を非表示";
-"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE" = "プロフィールからおすすめのフォロー候補を削除。";
+"HIDE_WHO_FOLLOW_OPTION" = "「おすすめアカウント」を非表示";
+"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE" = "プロフィールから「おすすめアカウント」を非表示にします。";
 
-"DISABLE_MEDIA_TAB_OPTION_TITLE" = "メディアタブを統合";
-"DISABLE_MEDIA_TAB_OPTION_DETAIL_TITLE" = "写真と動画をひとつのタブにまとめます。";
+"DISABLE_MEDIA_TAB_OPTION_TITLE" = "メディアタブを一体化";
+"DISABLE_MEDIA_TAB_OPTION_DETAIL_TITLE" = "[動画] タブと [画像] タブを一体化して表示します。";
 
 "DISABLE_ARTICLES_OPTION_TITLE" = "記事タブを非表示";
-"DISABLE_ARTICLES_OPTION_DETAIL_TITLE" = "プロフィールの「記事」タブを非表示。";
+"DISABLE_ARTICLES_OPTION_DETAIL_TITLE" = "プロフィールから [記事] タブを非表示にします。";
 
-"DISABLE_HIGHLIGHTS_OPTION_TITLE" = "ハイライトを非表示";
-"DISABLE_HIGHLIGHTS_OPTION_DETAIL_TITLE" = "プロフィールの「ハイライト」タブを非表示にします。";
+"DISABLE_HIGHLIGHTS_OPTION_TITLE" = "ハイライトタブを非表示";
+"DISABLE_HIGHLIGHTS_OPTION_DETAIL_TITLE" = "プロフィールから [ハイライト] タブを非表示にします。";
+
+"HIDE_FOLLOW_BUTTON_TITLE" = "フォローボタンを非表示";
+"HIDE_FOLLOW_BUTTON_DETAIL_TITLE" = "会話ビューから [フォロー] ボタンを非表示にします。";
+
+"RESTORE_FOLLOW_BUTTON_TITLE" = "フォローボタンを復元";
+"RESTORE_FOLLOW_BUTTON_DETAIL_TITLE" = "[サブスクライブ] ボタンの代わりに通常の [フォロー] ボタンを復元します ([サブスクライブ] ボタンも非表示になります)。";
 
 
 /*Search*/
 "SEARCH_SECTION_HEADER_TITLE" = "検索";
 
-"NO_HISTORY_OPTION_TITLE" = "検索履歴を保存しない";
-"NO_HISTORY_OPTION_DETAIL_TITLE" = "検索履歴を記録しないようにします。";
+"NO_HISTORY_OPTION_TITLE" = "検索履歴を残さない";
+"NO_HISTORY_OPTION_DETAIL_TITLE" = "Twitterは検索結果を保存しなくなります。";
 
 "HIDE_TREND_VIDEOS_OPTION_TITLE" = "トレンド動画を非表示";
-"HIDE_TREND_VIDEOS_OPTION_DETAIL_TITLE" = "検索タブからトレンド動画を削除。";
+"HIDE_TREND_VIDEOS_OPTION_DETAIL_TITLE" = "検索メニューからトレンド動画を非表示にします。";
 
 
 /*Photos & Videos*/
-"PHOTOS_VIDEOS_SECTION_HEADER_TITLE" = "写真と動画";
+"PHOTOS_VIDEOS_SECTION_HEADER_TITLE" = "画像と動画";
 
 "AUTO_HIGHEST_LOAD_OPTION_TITLE" = "高画質メディア";
-"AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE" = "最高品質でメディアを表示＆アップロード。";
+"AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE" = "メディアを最高画質でアップロード/表示します。";
 
-"DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "動画キャプションを無効に";
+"DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "字幕を非表示";
 
-"FORCE_TWEET_FULL_FRAME_TITLE" = "画像を大きく表示";
+"FORCE_TWEET_FULL_FRAME_TITLE" = "大きな画像";
 
-"DISABLE_IMMERSIVE_PLAYER_TITLE" = "没入型プレイヤーを無効に";
+"RESTORE_VIDEO_TIMESTAMP_TITLE" = "動画のタイムスタンプを復元";
+"RESTORE_VIDEO_TIMESTAMP_DETAIL_TITLE" = "一部のビューでは非表示になっている可能性のある動画のタイムスタンプを復活させます。";
 
 
 /*Twitter Blue*/
 "TWITTER_BLUE_SECTION_HEADER_TITLE" = "Twitter Blue";
-"TWITTER_BLUE_SECTION_FOOTER_TITLE" = "Twitter を再起動して変更を適用。";
+"TWITTER_BLUE_SECTION_FOOTER_TITLE" = "変更を適用させるにはアプリを再起動する必要があります。";
 
 "HIDE_ADS_OPTION_TITLE" = "広告を非表示";
-"HIDE_ADS_OPTION_DETAIL_TITLE" = "すべての広告を削除。";
+"HIDE_ADS_OPTION_DETAIL_TITLE" = "すべての広告を非表示にします。";
 
-"UNDO_TWEET_OPTION_TITLE" = "ツイート取消";
-"UNDO_TWEET_OPTION_DETAIL_TITLE" = "送信前に少し待機時間を設定し、キャンセル可能に。";
+"UNDO_TWEET_OPTION_TITLE" = "ツイートの取り消し";
+"UNDO_TWEET_OPTION_DETAIL_TITLE" = "ツイートを送信する前に少し遅延を追加して、ツイートの送信をキャンセルできるようにします。";
 
 "READER_MODE_OPTION_TITLE" = "リーダーモード";
-"READER_MODE_OPTION_DETAIL_TITLE" = "長いスレッドを読みやすく。";
+"READER_MODE_OPTION_DETAIL_TITLE" = "長いスレッドをより簡潔に読みやすくします。";
 
-"DOWNLOAD_VIDEOS_OPTION_TITLE" = "メディアを保存";
-"DOWNLOAD_VIDEOS_OPTION_DETAIL_TITLE" = "ツイートから直接動画やGIFを保存。";
+"DOWNLOAD_VIDEOS_OPTION_TITLE" = "メディアをダウンロード";
+"DOWNLOAD_VIDEOS_OPTION_DETAIL_TITLE" = "ツイートから動画やGIFを直接保存します。";
 
-"DIRECT_SAVE_OPTION_TITLE" = "写真アプリに保存";
-"DIRECT_SAVE_OPTION_DETAIL_TITLE" = "保存した動画は自動的に写真アプリへ。";
+"DIRECT_SAVE_OPTION_TITLE" = "写真に保存";
+"DIRECT_SAVE_OPTION_DETAIL_TITLE" = "保存した動画を「写真」アプリに直接保存します。";
 
-"HIDE_PREMIUM_OFFER_OPTION" = "Blue案内を非表示";
-"HIDE_PREMIUM_OFFER_OPTION_DETAIL_TITLE" = "「認証」や「アップグレード」ボタンを隠す。";
+"HIDE_PREMIUM_OFFER_OPTION" = "Twitter Blueプロンプトを非表示";
+"HIDE_PREMIUM_OFFER_OPTION_DETAIL_TITLE" = "[認証を受ける] および [アップグレード] ボタンを非表示にします。";
 
-"THEME_OPTION_TITLE" = "テーマ変更";
-"THEME_OPTION_DETAIL_TITLE" = "好きなテーマを選択（自分にだけ表示）。";
+"THEME_OPTION_TITLE" = "テーマを変更";
+"THEME_OPTION_DETAIL_TITLE" = "テーマを選んでください。あなただけが見ることができます。";
 
-"APP_ICON_TITLE" = "アプリアイコン変更";
-"APP_ICON_DETAIL_TITLE" = "別のアプリアイコンを選べます。";
+"APP_ICON_TITLE" = "アプリアイコンを変更";
+"APP_ICON_DETAIL_TITLE" = "別のアプリアイコンを選択してください。";
 
 "CUSTOM_TAB_BAR_OPTION_TITLE" = "タブバーを編集";
 
 
 /*Layout*/
 "LAYOUT_CUS_SECTION_HEADER_TITLE" = "レイアウト";
-"LAYOUT_CUS_SECTION_FOOTER_TITLE" = "Twitter を再起動して適用してください。";
+"LAYOUT_CUS_SECTION_FOOTER_TITLE" = "変更を適用させるにはアプリを再起動する必要があります。";
 
-"CUSTOM_DIRECT_BACKGROUND_VIEW_TITLE" = "DM 背景をカスタマイズ";
-"CUSTOM_DIRECT_BACKGROUND_VIEW_DETAIL_TITLE" = "DM用の背景画像を選択。";
+"CUSTOM_DIRECT_BACKGROUND_VIEW_TITLE" = "ダイレクトメッセージの背景を設定";
+"CUSTOM_DIRECT_BACKGROUND_VIEW_DETAIL_TITLE" = "ダイレクトメッセージの背景を選択します。";
 
-"HIDE_SPACE_OPTION_TITLE" = "Spaces バーを非表示";
+"HIDE_SPACE_OPTION_TITLE" = "スペースバーを非表示";
 
 "STOP_HIDING_TAB_BAR_TITLE" = "タブバーを常に表示";
-"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "スクロール時にタブバーを隠さない。";
+"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "スクロールするときにタブバーを非表示にしません (問題が発生する可能性があります)。";
 
-"DISABLE_RTL_OPTION_TITLE" = "左から右の表示を強制";
-"DISABLE_RTL_OPTION_DETAIL_TITLE" = "RTL言語でも強制的にLTR表示。";
+"DM_AVATARS_TITLE" = "DMのアバター";
+"DM_AVATARS_DETAIL_TITLE" = "同じ送信者からのグループ内の最後のメッセージにのみアバターを表示します。";
+
+"CLASSIC_TAB_BAR_SETTINGS_TITLE" = "タブアイコンを置換";
+"CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "以前のTwitterのように、現在選択されているタブにアクセントカラーを適用します。アプリの再起動が必要です。";
+
+"DISABLE_RTL_OPTION_TITLE" = "左から右へのレイアウトを使用";
+"DISABLE_RTL_OPTION_DETAIL_TITLE" = "RTL言語の場合でもLTRレイアウトを強制します。";
 
 "SHOW_SCOLL_INDICATOR_OPTION_TITLE" = "スクロールバーを常に表示";
 
 "FONT_OPTION_TITLE" = "カスタムフォント";
-"FONT_OPTION_DETAIL_TITLE" = "Twitter のフォントを変更。";
+"FONT_OPTION_DETAIL_TITLE" = "Twitterで使用するカスタムフォントを選択してください。";
 
-"REQULAR_FONTS_PICKER_OPTION_TITLE" = "フォントを選ぶ";
+"REQULAR_FONTS_PICKER_OPTION_TITLE" = "フォントを選択";
 
-"BOLD_FONTS_PICKER_OPTION_TITLE" = "太字フォントを選ぶ";
+"BOLD_FONTS_PICKER_OPTION_TITLE" = "太字のフォントを選択";
 
 
 /*Legal*/
-"LEGAL_SECTION_HEADER_TITLE" = "法律関連";
+"LEGAL_SECTION_HEADER_TITLE" = "法的";
 
-"LEGAL_BUTTON_TITLE" = "法的通知";
-"ACKNOWLEDGEMENTS_SETTINGS_NAVIGATION_TITLE" = "法的通知";
+"LEGAL_BUTTON_TITLE" = "法的情報";
+"ACKNOWLEDGEMENTS_SETTINGS_NAVIGATION_TITLE" = "法的情報";
 
 
 /*Debug*/
 "DEBUG_SECTION_HEADER_TITLE" = "デバッグ";
 
-"FLEX_OPTION_TITLE" = "FLEX デバッグモード";
-"FLEX_OPTION_DETAIL_TITLE" = "FLEX で Twitter をデバッグ。";
+"FLEX_OPTION_TITLE" = "FLEXデバッグモード";
+"FLEX_OPTION_DETAIL_TITLE" = "FLEXを使用してTwitterをデバッグします。";
+
+"CLEAR_SOURCE_LABEL_CACHE_TITLE" = "ソースラベルキャッシュを削除";
+"CLEAR_SOURCE_LABEL_CACHE_DETAIL_TITLE" = "すべてのツイートのソースラベルを強制的に再取得します。";
+"CLEAR_CACHE_BUTTON_TITLE" = "キャッシュを消去";
+"CACHE_CLEARED_TITLE" = "キャッシュが消去されました";
+"CACHE_CLEARED_MESSAGE" = "ソースラベルのキャッシュを削除しました。ラベルが正しく表示されない場合に有効な可能性があります。";
 
 
 /*Developers*/
 "DEVELOPER_SECTION_HEADER_TITLE" = "開発者";
 
 
-/*Custom fonts*/
+/*Main menu end*
+
+
+Custom fonts*/
 "CUSTOM_FONTS_NAVIGATION_BUTTON_TITLE" = "カスタムフォント";
 "CUSTOM_FONTS_NAVIGATION_TITLE" = "フォントを選択";
 "CUSTOM_FONTS_MENU_TITLE" = "\nフォントを選択";
-"CUSTOM_FONTS_TUT_ALERT_MESSAGE" = "カスタムフォントはまだありません。App Store の iFont アプリで追加してください。";
+"CUSTOM_FONTS_TUT_ALERT_MESSAGE" = "カスタムフォントはまだありません。App StoreからiFontアプリをダウンロードしてインストールしてください。";
 
-
-/*Download*/
+/*Dwonload*/
 "DOWNLOAD_MENU_TITLE" = "\n動画の画質を選択";
-"PROGRESS_DOWNLOADING_STATUS_TITLE" = "ダウンロード中...";
-"FETCHING_PROGRESS_TITLE" = "少々お待ちください...";
-"FFMPEG_DOWNLOAD_OPTION_TITLE" = "FFmpeg でダウンロード";
-
+"PROGRESS_DOWNLOADING_STATUS_TITLE" = "ダウンロードしています…";
+"FETCHING_PROGRESS_TITLE" = "少々お待ちください…";
+"FFMPEG_DOWNLOAD_OPTION_TITLE" = "FFmpegを使用してダウンロード";
 
 /*App icon*/
-"APP_ICON_NAV_TITLE" = "アイコンを変更";
-"APP_ICON_HEADER_TITLE" = "Twitter の新しいアイコンやテーマを選びましょう。";
-
+"APP_ICON_NAV_TITLE" = "アプリアイコンを変更";
+"APP_ICON_HEADER_TITLE" = "Twitterの新しいアイコンまたはテーマを選択します。";
 
 /*Copy profile info*/
-"COPY_PROFILE_INFO_MENU_OPTION_1" = "自己紹介をコピー";
+"COPY_PROFILE_INFO_MENU_OPTION_1" = "プロフィールをコピー";
 "COPY_PROFILE_INFO_MENU_OPTION_2" = "ユーザー名をコピー";
-"COPY_PROFILE_INFO_MENU_OPTION_3" = "フルユーザー名をコピー";
-"COPY_PROFILE_INFO_MENU_OPTION_4" = "自己紹介リンクをコピー";
-"COPY_PROFILE_INFO_MENU_OPTION_5" = "場所をコピー";
-
+"COPY_PROFILE_INFO_MENU_OPTION_3" = "名前をコピー";
+"COPY_PROFILE_INFO_MENU_OPTION_4" = "プロフィールリンクをコピー";
+"COPY_PROFILE_INFO_MENU_OPTION_5" = "位置情報をコピー";
 
 /*Theme*/
 "THEME_SETTINGS_NAVIGATION_TITLE" = "テーマを変更";
 "THEME_OPTION_1" = "青";
-"THEME_OPTION_2" = "黄";
+"THEME_OPTION_2" = "黄色";
 "THEME_OPTION_3" = "赤";
 "THEME_OPTION_4" = "紫";
 "THEME_OPTION_5" = "オレンジ";
 "THEME_OPTION_6" = "緑";
 
-
 /*Tab bar*/
 "CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE" = "タブバーを編集";
-"CUSTOM_TAB_BAR_REST_MESSAGE" = "本当にタブバーをリセットしますか？";
-"CUSTOM_TAB_BAR_SECTION_1_TITLE" = "表示中";
-"CUSTOM_TAB_BAR_SECTION_2_TITLE" = "非表示中";
+"CUSTOM_TAB_BAR_REST_MESSAGE" = "タブバーをリセットしてもよろしいですか？";
+"CUSTOM_TAB_BAR_SECTION_1_TITLE" = "有効";
+"CUSTOM_TAB_BAR_SECTION_2_TITLE" = "無効";
 "CUSTOM_TAB_BAR_OPTION_1" = "ホーム";
-"CUSTOM_TAB_BAR_OPTION_2" = "探索";
-"CUSTOM_TAB_BAR_OPTION_3" = "Spaces";
+"CUSTOM_TAB_BAR_OPTION_2" = "話題を検索";
+"CUSTOM_TAB_BAR_OPTION_3" = "スペース";
 "CUSTOM_TAB_BAR_OPTION_4" = "コミュニティ";
 "CUSTOM_TAB_BAR_OPTION_5" = "通知";
-"CUSTOM_TAB_BAR_OPTION_6" = "メッセージ";
+"CUSTOM_TAB_BAR_OPTION_6" = "ダイレクトメッセージ";
 "CUSTOM_TAB_BAR_OPTION_7" = "Grok";
 "CUSTOM_TAB_BAR_OPTION_8" = "動画";
 
-
 /*Message customization*/
-"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_1" = "画像を使う";
-"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_2" = "色を使う";
+"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_1" = "画像を使用";
+"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_2" = "色を使用";
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_3" = "デフォルトに戻す";
 
 
+
 /*Deprecated*/
-"TRUSTED_FRIENSS_OPTION_TITLE" = "Twitter サークル";
+"TRUSTED_FRIENSS_OPTION_TITLE" = "Twitterサークル";
 
-"ALWAYS_FOLLOWING_PAGE_OPTION_TITLE" = "「おすすめ」タブを無効に";
-"ALWAYS_FOLLOWING_PAGE_OPTION_DETAIL_TITLE" = "起動時に「フォロー中」タブを開くようにします。";
+"ALWAYS_FOLLOWING_PAGE_OPTION_TITLE" = "おすすめタブを非表示";
+"ALWAYS_FOLLOWING_PAGE_OPTION_DETAIL_TITLE" = "Twitterを起動した際に [フォロー中] タブを開きます。";
 
-"DN_MODULAR_SEARCH_OPTION_TITLE" = "DM検索を強化";
-"DN_MODULAR_SEARCH_OPTION_DETAIL_TITLE" = "DM内をフィルター付きで検索可能に。";
+"DN_MODULAR_SEARCH_OPTION_TITLE" = "より良いメッセージ検索機能";
+"DN_MODULAR_SEARCH_OPTION_DETAIL_TITLE" = "ダイレクトメッセージを高度なフィルターで検索します。";
 
 "ADVANCED_SEARCH_TITLE" = "高度な検索";
-"ADVANCED_SEARCH_DETAIL_TITLE" = "さらに多くの検索フィルターを有効化。";
+"ADVANCED_SEARCH_DETAIL_TITLE" = "さらに多くの検索フィルターのロックを解除します。";
 
-"VIDEO_ZOOM_OPTION_TITLE" = "動画ズーム";
-"VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "ダブルタップでズームイン・アウト。";
+"VIDEO_ZOOM_OPTION_TITLE" = "動画を拡大";
+"VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "ダブルタップしてズームイン/ズームアウトできるようにします。";
+
+
+/* Classic Tab Bar */
+"CLASSIC_TAB_BAR_SETTINGS_TITLE" = "タブアイコンを置換";
+"CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "以前のTwitterのように、現在選択されているタブにアクセントカラーを適用します。アプリの再起動が必要です。";
+"RESTART_REQUIRED_ALERT_TITLE" = "アプリの再起動が必要です";
+"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_ON" = "この変更を反映するには、Twitterを再起動する必要があります。";
+"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_OFF" = "デフォルトアイコンを無効にして元に戻すには、Twitterを再起動してください。";
+"CLASSIC_TAB_BAR_DISABLED_NOTIFICATION_NAME" = "BHTClassicTabBarSettingChangedNotification";
+
+/* Generic Restart Message for Classic Tab Bar */
+"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC" = "これを変更するには、Twitterを再起動する必要があります。";
+
+/* Square Avatars */
+"RESTART_REQUIRED_ALERT_MESSAGE_SQUARE_AVATARS" = "アバターのスタイルを変更するには、アプリを再起動する必要があります。  ";
