@@ -5457,67 +5457,115 @@ static GeminiTranslator *_sharedInstance;
 @property(retain, nonatomic) UIView *whiteBackgroundView;
 - (void)runLaunchTransition;
 - (void)_setInitialTransforms; // We might need this later
+- (void)appLaunchTransitionDidFinish;
 @end
 
-%hook T1AppLaunchTransition
+// Add a category interface for UIWindow to declare our custom methods
+@interface UIWindow (BHTLaunchHelper)
+- (void)bht_examineSubviewsForBlackBackgrounds;
+- (void)bht_recursivelyScanForBlackBackgrounds:(UIView *)view level:(int)level;
+@end
 
-- (void)runLaunchTransition {
-    NSLog(@"[BHTwitter LaunchAnim] LAST RESORT: Trying to force red background for visibility testing");
-    
-    // Force ALL backgrounds to be bright red
-    UIView *hostView = self.hostView;
-    UIWindow *keyWindow = nil;
-    
-    // Get ALL windows
-    if (@available(iOS 13.0, *)) {
-        for (UIWindowScene *scene in [UIApplication sharedApplication].connectedScenes) {
-            if (scene.activationState == UISceneActivationStateForegroundActive) {
-                for (UIWindow *window in scene.windows) {
-                    // Make EVERY window red to see if it helps
-                    window.backgroundColor = [UIColor redColor];
-                    keyWindow = window;
-                }
-            }
-        }
-    } else {
-        for (UIWindow *window in [UIApplication sharedApplication].windows) {
-            // Make EVERY window red to see if it helps
-            window.backgroundColor = [UIColor redColor];
-            if (window.isKeyWindow) {
-                keyWindow = window;
-            }
-        }
-    }
-    
-    // Set the host view background if it exists
-    if (hostView) {
-        hostView.backgroundColor = [UIColor redColor];
-        NSLog(@"[BHTwitter LaunchAnim] Set hostView background to RED: %@", hostView);
-    }
-    
-    // Last resort - add our own red view to the key window
-    if (keyWindow) {
-        UIView *redView = [[UIView alloc] initWithFrame:keyWindow.bounds];
-        redView.backgroundColor = [UIColor redColor];
-        redView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-        [keyWindow insertSubview:redView atIndex:0];
-        NSLog(@"[BHTwitter LaunchAnim] Added RED view to key window: %@", keyWindow);
-    }
-    
-    // Let Twitter run its animation logic
+// MARK: Restore Launch Animation
+
+%hook UIWindow
+
+// When a window is created or becomes key, examine it for black background views
+- (void)makeKeyAndVisible {
     %orig;
+    NSLog(@"[BHTwitter LaunchAnim] UIWindow makeKeyAndVisible: %@", self);
     
-    // Set the colors again after Twitter's code runs
-    if (self.blueBackgroundView) {
-        self.blueBackgroundView.backgroundColor = [UIColor redColor];
-        NSLog(@"[BHTwitter LaunchAnim] Set blueBackgroundView to RED after Twitter code");
+    // If this is the launch window, force blue background
+    self.backgroundColor = [UIColor colorWithRed:29/255.0 green:161/255.0 blue:242/255.0 alpha:1.0];
+    
+    // Scan all subviews to find black backgrounds
+    [self performSelector:@selector(bht_examineSubviewsForBlackBackgrounds) withObject:nil afterDelay:0.1];
+    [self performSelector:@selector(bht_examineSubviewsForBlackBackgrounds) withObject:nil afterDelay:0.5];
+    [self performSelector:@selector(bht_examineSubviewsForBlackBackgrounds) withObject:nil afterDelay:1.0];
+}
+
+%new
+- (void)bht_examineSubviewsForBlackBackgrounds {
+    NSLog(@"[BHTwitter LaunchAnim] Examining window for black backgrounds");
+    [self bht_recursivelyScanForBlackBackgrounds:self level:0];
+}
+
+%new
+- (void)bht_recursivelyScanForBlackBackgrounds:(UIView *)view level:(int)level {
+    // Check if this view has a black background
+    if (view.backgroundColor && CGColorGetAlpha(view.backgroundColor.CGColor) > 0) {
+        const CGFloat *components = CGColorGetComponents(view.backgroundColor.CGColor);
+        if (CGColorGetNumberOfComponents(view.backgroundColor.CGColor) >= 3 &&
+            components[0] < 0.1 && components[1] < 0.1 && components[2] < 0.1) {
+            // Found a black background view!
+            NSLog(@"[BHTwitter LaunchAnim] Found black background view at level %d: %@ (Frame: %@, Alpha: %.2f)", 
+                  level, view, NSStringFromCGRect(view.frame), view.alpha);
+            
+            // Change to Twitter blue
+            view.backgroundColor = [UIColor colorWithRed:29/255.0 green:161/255.0 blue:242/255.0 alpha:1.0];
+            NSLog(@"[BHTwitter LaunchAnim] Changed to Twitter blue");
+        }
     }
     
-    if (self.whiteBackgroundView) {
-        self.whiteBackgroundView.backgroundColor = [UIColor redColor];
-        NSLog(@"[BHTwitter LaunchAnim] Set whiteBackgroundView to RED after Twitter code");
+    // Recursively scan subviews
+    for (UIView *subview in view.subviews) {
+        [self bht_recursivelyScanForBlackBackgrounds:subview level:level+1];
     }
 }
+
+%end
+
+// Also hook _UILaunchImageView which is often used for launch screens
+%hook _UILaunchImageView
+
+- (void)setBackgroundColor:(UIColor *)color {
+    // Force Twitter blue background
+    if (color && CGColorGetAlpha(color.CGColor) > 0) {
+        const CGFloat *components = CGColorGetComponents(color.CGColor);
+        if (CGColorGetNumberOfComponents(color.CGColor) >= 3 &&
+            components[0] < 0.1 && components[1] < 0.1 && components[2] < 0.1) {
+            NSLog(@"[BHTwitter LaunchAnim] Intercepted black background on _UILaunchImageView");
+            color = [UIColor colorWithRed:29/255.0 green:161/255.0 blue:242/255.0 alpha:1.0];
+        }
+    }
+    %orig(color);
+}
+
+%end
+
+// Also hook any black mask views that might be used
+%hook CALayer
+
+- (void)setBackgroundColor:(CGColorRef)backgroundColor {
+    // Check if the background color is black
+    if (backgroundColor && CGColorGetAlpha(backgroundColor) > 0) {
+        size_t numComponents = CGColorGetNumberOfComponents(backgroundColor);
+        const CGFloat *components = CGColorGetComponents(backgroundColor);
+        
+        BOOL isBlack = NO;
+        if (numComponents >= 3) {
+            // RGB or RGBA color
+            isBlack = (components[0] < 0.1 && components[1] < 0.1 && components[2] < 0.1);
+        } else if (numComponents == 2) {
+            // Grayscale color
+            isBlack = (components[0] < 0.1);
+        }
+        
+        if (isBlack) {
+            NSLog(@"[BHTwitter LaunchAnim] Intercepted black CALayer: %@", self);
+            
+            // Create a blue color
+            UIColor *twitterBlue = [UIColor colorWithRed:29/255.0 green:161/255.0 blue:242/255.0 alpha:CGColorGetAlpha(backgroundColor)];
+            backgroundColor = twitterBlue.CGColor;
+        }
+    }
+    
+    %orig(backgroundColor);
+}
+
+%end
+
+%hook T1AppLaunchTransition
 
 // Method that gets called when animation is finished
 - (void)appLaunchTransitionDidFinish {
@@ -5526,9 +5574,6 @@ static GeminiTranslator *_sharedInstance;
 }
 
 %end
-
-// MARK: Show Scroll Bar
-// ... existing code ...
 
 
 
