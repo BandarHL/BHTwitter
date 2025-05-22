@@ -5419,18 +5419,8 @@ static GeminiTranslator *_sharedInstance;
     id originalProvider = %orig;
     NSLog(@"[BHTwitter LaunchAnim] Original launchTransitionProvider: %@", originalProvider);
     
-    // Since the original provider is null, we need to create our own
-    if (!originalProvider) {
-        NSLog(@"[BHTwitter LaunchAnim] Creating custom launch transition provider");
-        Class T1AppLaunchTransitionClass = NSClassFromString(@"T1AppLaunchTransition");
-        if (T1AppLaunchTransitionClass) {
-            id provider = [[T1AppLaunchTransitionClass alloc] init];
-            return provider;
-        } else {
-            NSLog(@"[BHTwitter LaunchAnim] Failed to find T1AppLaunchTransition class");
-        }
-    }
-    
+    // On the older version, just return the original provider
+    // and don't try to hook it at all
     return originalProvider;
 }
 
@@ -5446,52 +5436,5 @@ static GeminiTranslator *_sharedInstance;
     NSLog(@"[BHTwitter LaunchAnim] Logo will be visible for %f seconds", duration);
     // This is an optional delegate method
 }
-%end
-
-// We'll implement the delegate methods in T1AppDelegate instead
-
-// Add minimal interface for T1AppLaunchTransition for hooking
-@interface T1AppLaunchTransition : NSObject
-@property(retain, nonatomic) UIView *hostView;
-@property(retain, nonatomic) UIView *blueBackgroundView;
-@property(retain, nonatomic) UIView *whiteBackgroundView;
-- (void)runLaunchTransition;
-- (void)_setInitialTransforms; // We might need this later
-@end
-
-%hook T1AppLaunchTransition
-
-// Super simple logging hook - just log the important stuff without changing anything
-- (id)init {
-    id instance = %orig;
-    // Use NSLog directly with a unique tag
-    NSLog(@"### [BHTObserver] T1AppLaunchTransition init: %@", instance);
-    return instance;
-}
-
-// Only hook the main method
-- (void)runLaunchTransition {
-    // Log before running the transition
-    NSLog(@"### [BHTObserver] runLaunchTransition START");
-    
-    // Log blue background view details
-    UIView *blueBG = self.blueBackgroundView;
-    if (blueBG) {
-        NSLog(@"### [BHTObserver] Blue background exists");
-        NSLog(@"### [BHTObserver] - Frame: %@", NSStringFromCGRect(blueBG.frame));
-        NSLog(@"### [BHTObserver] - Color: %@", blueBG.backgroundColor);
-        NSLog(@"### [BHTObserver] - Hidden: %d", blueBG.hidden);
-        NSLog(@"### [BHTObserver] - Alpha: %.2f", blueBG.alpha);
-    } else {
-        NSLog(@"### [BHTObserver] Blue background is NIL");
-    }
-    
-    // Just run the original implementation
-    %orig;
-    
-    // Log after running the transition
-    NSLog(@"### [BHTObserver] runLaunchTransition END");
-}
-
 %end
 
