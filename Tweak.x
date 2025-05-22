@@ -5472,9 +5472,11 @@ static GeminiTranslator *_sharedInstance;
 // MARK: Launch Animation Color Fix
 %hook T1AppLaunchTransition
 
-- (void)setHostView:(UIView *)hostView {
-    %orig;
-    self.blueBackgroundView.backgroundColor = [UIColor colorWithRed:29.0/255.0 green:161.0/255.0 blue:242.0/255.0 alpha:1.0]; // Twitter Blue
+- (void)setBlueBackgroundView:(UIView *)view {
+    if (view) {
+        view.backgroundColor = [UIColor colorWithRed:29.0/255.0 green:161.0/255.0 blue:242.0/255.0 alpha:1.0]; // Twitter Blue
+    }
+    %orig(view);
 }
 
 %end
