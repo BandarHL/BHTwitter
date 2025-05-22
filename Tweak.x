@@ -5509,6 +5509,13 @@ static GeminiTranslator *_sharedInstance;
     NSLog(@"[BHTwitter LaunchAnim Debug] setHostView called with view: %@", hostView);
     NSLog(@"[BHTwitter LaunchAnim Debug] blueBackgroundView before setHostView: %@", self.blueBackgroundView);
     %orig;
+    
+    // After setting host view, ensure blueBackgroundView has correct frame
+    if (hostView && self.blueBackgroundView) {
+        self.blueBackgroundView.frame = hostView.bounds;
+        self.blueBackgroundView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    }
+    
     NSLog(@"[BHTwitter LaunchAnim Debug] blueBackgroundView after setHostView: %@", self.blueBackgroundView);
 }
 
