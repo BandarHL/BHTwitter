@@ -11,25 +11,6 @@
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
 
-@interface TFNWindowRootViewController : UIViewController
-@end
-
-@interface T1HostViewController : TFNWindowRootViewController
-- (void)_t1_updateBackgroundColor;
-@end
-
-@protocol T1AppLaunchTransitionDelegate <NSObject>
-- (void)appLaunchTransitionDidFinish:(id)transition;
-@end
-
-@interface T1AppLaunchTransition : NSObject
-@property(retain, nonatomic) UIView *blueBackgroundView;
-@property(retain, nonatomic) UIView *whiteBackgroundView;
-@property(retain, nonatomic) UIView *hostView;
-@property(weak, nonatomic) id<T1AppLaunchTransitionDelegate> delegate;
-- (void)runLaunchTransition;
-@end
-
 // Forward declare T1ColorSettings and its private method to satisfy the compiler
 @interface T1ColorSettings : NSObject
 + (void)_t1_applyPrimaryColorOption;
@@ -5469,94 +5450,72 @@ static GeminiTranslator *_sharedInstance;
 
 // We'll implement the delegate methods in T1AppDelegate instead
 
-// MARK: Launch Animation Color Fix
+// Add minimal interface for T1AppLaunchTransition for hooking
+@interface T1AppLaunchTransition : NSObject
+@property(retain, nonatomic) UIView *hostView;
+@property(retain, nonatomic) UIView *blueBackgroundView;
+@property(retain, nonatomic) UIView *whiteBackgroundView;
+- (void)runLaunchTransition;
+- (void)_setInitialTransforms; // We might need this later
+@end
+
 %hook T1AppLaunchTransition
-
-- (id)init {
-    id instance = %orig;
-    NSLog(@"[BHTwitter LaunchAnim Debug] init called");
-    NSLog(@"[BHTwitter LaunchAnim Debug] blueBackgroundView after init: %@", [instance valueForKey:@"_blueBackgroundView"]);
-    return instance;
-}
-
-- (void)setBlueBackgroundView:(UIView *)view {
-    NSLog(@"[BHTwitter LaunchAnim Debug] setBlueBackgroundView called with view: %@", view);
-    if (view) {
-        view.backgroundColor = [UIColor colorWithRed:29.0/255.0 green:161.0/255.0 blue:242.0/255.0 alpha:1.0]; // Twitter Blue
-        if (CGRectIsEmpty(view.frame) && self.hostView) {
-            view.frame = self.hostView.bounds;
-        }
-        NSLog(@"[BHTwitter LaunchAnim Debug] Set backgroundColor to Twitter Blue and frame to: %@", NSStringFromCGRect(view.frame));
-    }
-    %orig(view);
-}
-
-- (UIView *)blueBackgroundView {
-    UIView *view = %orig;
-    NSLog(@"[BHTwitter LaunchAnim Debug] blueBackgroundView getter called, returning: %@", view);
-    NSLog(@"[BHTwitter LaunchAnim Debug] blueBackgroundView color: %@", view.backgroundColor);
-    return view;
-}
-
 - (void)runLaunchTransition {
-    NSLog(@"[BHTwitter LaunchAnim Debug] runLaunchTransition called");
-    NSLog(@"[BHTwitter LaunchAnim Debug] blueBackgroundView before transition: %@", self.blueBackgroundView);
-    NSLog(@"[BHTwitter LaunchAnim Debug] blueBackgroundView color before transition: %@", self.blueBackgroundView.backgroundColor);
-    %orig;
-}
+    NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] runLaunchTransition called.");
 
-- (void)setHostView:(UIView *)hostView {
-    NSLog(@"[BHTwitter LaunchAnim Debug] setHostView called with view: %@", hostView);
-    NSLog(@"[BHTwitter LaunchAnim Debug] blueBackgroundView before setHostView: %@", self.blueBackgroundView);
-    
-    // Store current blueBackgroundView before orig call potentially recreates it
-    UIView *existingBlueView = self.blueBackgroundView;
-    
-    // If we have an existing blue view, remove it from its current superview
-    // so it doesn't get deallocated when the host view changes
-    if (existingBlueView) {
-        [existingBlueView removeFromSuperview];
+    UIView *hostView = self.hostView;
+    UIView *blueBG = self.blueBackgroundView;
+    UIView *whiteBG = self.whiteBackgroundView;
+
+    NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] HostView: %@ (Frame: %@, BGColor: %@)", hostView, NSStringFromCGRect(hostView.frame), hostView.backgroundColor);
+    NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] BlueBG: %@ (Frame: %@, BGColor: %@, Hidden: %d, Alpha: %.2f)", blueBG, NSStringFromCGRect(blueBG.frame), blueBG.backgroundColor, blueBG.hidden, blueBG.alpha);
+    NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] WhiteBG: %@ (Frame: %@, BGColor: %@, Hidden: %d, Alpha: %.2f)", whiteBG, NSStringFromCGRect(whiteBG.frame), whiteBG.backgroundColor, whiteBG.hidden, whiteBG.alpha);
+
+    // Ensure hostView has a clear background if it's not nil, so it doesn't obscure subviews
+    if (hostView && hostView.backgroundColor != [UIColor clearColor]) {
+        NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] Setting hostView background to clear.");
+        hostView.backgroundColor = [UIColor clearColor];
     }
-    
-    %orig;
-    
-    // If we had an existing blue view, reuse it instead of creating a new one
-    if (existingBlueView) {
-        existingBlueView.frame = hostView.bounds;
-        existingBlueView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-        [hostView insertSubview:existingBlueView atIndex:0];
-        self.blueBackgroundView = existingBlueView;
+
+    // Attempt to force the blue background
+    if (hostView) {
+        if (!blueBG) {
+            NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] BlueBG is nil. Creating new one.");
+            blueBG = [[UIView alloc] initWithFrame:hostView.bounds];
+            self.blueBackgroundView = blueBG;
+            [hostView insertSubview:blueBG atIndex:0]; // Insert at the bottom
+        }
+        
+        UIColor *twitterBlue = [UIColor colorWithRed:29/255.0 green:161/255.0 blue:242/255.0 alpha:1.0];
+        NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] Setting BlueBG color to Twitter Blue and ensuring it's visible.");
+        blueBG.backgroundColor = twitterBlue;
+        blueBG.frame = hostView.bounds; // Ensure it covers the host view
+        blueBG.hidden = NO;
+        blueBG.alpha = 1.0;
+        [hostView sendSubviewToBack:blueBG]; // Make sure it's behind other elements like the logo
+
+        // If whiteBG exists and might be problematic, hide it or make it clear
+        if (whiteBG) {
+            NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] WhiteBG exists. Hiding it.");
+            whiteBG.hidden = YES;
+            // Or, if hiding isn't enough:
+            // whiteBG.backgroundColor = [UIColor clearColor];
+            // whiteBG.alpha = 0.0;
+        }
+    } else {
+        NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] HostView is nil, cannot modify background views.");
     }
-    
-    // Ensure the blue view is at the back
-    if (self.blueBackgroundView && self.blueBackgroundView.superview) {
-        [self.blueBackgroundView.superview sendSubviewToBack:self.blueBackgroundView];
-    }
-}
 
-%end
-%hook UIWindow
-
-- (void)makeKeyAndVisible {
-    self.backgroundColor = BHTCurrentAccentColor();
     %orig;
-}
 
+    // Log state again after %orig to see if Twitter's code changed anything
+    NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] AFTER %%orig - BlueBG: Hidden: %d, Alpha: %.2f, BGColor: %@", self.blueBackgroundView.hidden, self.blueBackgroundView.alpha, self.blueBackgroundView.backgroundColor);
+    NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] AFTER %%orig - WhiteBG: Hidden: %d, Alpha: %.2f, BGColor: %@", self.whiteBackgroundView.hidden, self.whiteBackgroundView.alpha, self.whiteBackgroundView.backgroundColor);
+}
 %end
 
-%hook T1HostViewController
-
-- (void)_t1_updateBackgroundColor {
-    %orig;
-    self.view.backgroundColor = BHTCurrentAccentColor();
-}
-
-- (void)viewDidLoad {
-    %orig;
-    self.view.backgroundColor = BHTCurrentAccentColor();
-}
-
-%end
+// MARK: Show Scroll Bar
+// ... existing code ...
 
 
 
