@@ -5490,11 +5490,19 @@ static GeminiTranslator *_sharedInstance;
     self.whiteBackgroundView.alpha = 0;
     self.blueBackgroundView.alpha = 1;
     
+    // Keep a weak reference to self to avoid retain cycles
+    __weak typeof(self) weakSelf = self;
+    
     [UIView animateWithDuration:0.6 animations:^{
-        self.whiteBackgroundView.alpha = 1;
+        weakSelf.whiteBackgroundView.alpha = 1;
     } completion:^(BOOL finished) {
-        if ([self.delegate respondsToSelector:@selector(appLaunchTransitionDidFinish:)]) {
-            [self.delegate appLaunchTransitionDidFinish:self];
+        // Get strong reference inside block
+        __strong typeof(self) strongSelf = weakSelf;
+        if (!strongSelf) return;
+        
+        id delegate = strongSelf.delegate;
+        if ([delegate respondsToSelector:@selector(appLaunchTransitionDidFinish:)]) {
+            [delegate appLaunchTransitionDidFinish:strongSelf];
         }
     }];
 }
