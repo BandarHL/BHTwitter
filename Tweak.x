@@ -5463,15 +5463,35 @@ static GeminiTranslator *_sharedInstance;
 - (void)runLaunchTransition {
     NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] runLaunchTransition called.");
     
-    // Only modify the color of the blue background view
+    // Set the blue background color
     UIView *blueBG = self.blueBackgroundView;
-    if (blueBG) {
-        // Set the color to Twitter blue
+    UIView *hostView = self.hostView;
+    
+    NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] BlueBG: %@, superview: %@", blueBG, blueBG.superview);
+    NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] HostView: %@", hostView);
+    
+    if (blueBG && blueBG.superview) {
+        // BlueBG has a superview, just set its color
         UIColor *twitterBlue = [UIColor colorWithRed:29/255.0 green:161/255.0 blue:242/255.0 alpha:1.0];
-        NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] Setting BlueBG color to Twitter Blue.");
+        NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] Setting existing BlueBG color to Twitter Blue");
         blueBG.backgroundColor = twitterBlue;
+    } else if (hostView) {
+        // BlueBG is nil or has no superview, create our own view and insert it
+        NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] Creating new blue background view");
+        
+        // Create a new blue background view that covers the host view
+        UIView *newBlueBG = [[UIView alloc] initWithFrame:hostView.bounds];
+        UIColor *twitterBlue = [UIColor colorWithRed:29/255.0 green:161/255.0 blue:242/255.0 alpha:1.0];
+        newBlueBG.backgroundColor = twitterBlue;
+        newBlueBG.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        
+        // Insert it at the bottom of the host view
+        [hostView insertSubview:newBlueBG atIndex:0];
+        
+        // Save it for later access
+        self.blueBackgroundView = newBlueBG;
     } else {
-        NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] BlueBG is nil, cannot set color.");
+        NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] Cannot set background - no host view");
     }
     
     %orig;
@@ -5480,19 +5500,45 @@ static GeminiTranslator *_sharedInstance;
 - (void)_setInitialTransforms {
     %orig;
     
-    // Try setting the color again after transforms are set
+    // Check the state of the blue background view
     UIView *blueBG = self.blueBackgroundView;
-    if (blueBG) {
-        // Use a slightly brighter blue to make sure it's visible
-        UIColor *brightTwitterBlue = [UIColor colorWithRed:29/255.0 green:161/255.0 blue:242/255.0 alpha:1.0];
-        NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] Setting BlueBG color again in _setInitialTransforms");
-        blueBG.backgroundColor = brightTwitterBlue;
+    UIView *hostView = self.hostView;
+    
+    NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] After _setInitialTransforms:");
+    NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] BlueBG: %@, frame: %@, superview: %@", 
+           blueBG, NSStringFromCGRect(blueBG.frame), blueBG.superview);
+    NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] HostView: %@, frame: %@", 
+           hostView, NSStringFromCGRect(hostView.frame));
+    
+    // Ensure blue background is properly colored
+    if (blueBG && blueBG.superview) {
+        UIColor *twitterBlue = [UIColor colorWithRed:29/255.0 green:161/255.0 blue:242/255.0 alpha:1.0];
+        blueBG.backgroundColor = twitterBlue;
+    }
+}
+
+// Hook the setter for hostView to add our blue background if needed
+- (void)setHostView:(UIView *)hostView {
+    %orig;
+    
+    if (hostView) {
+        NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] Host view set: %@", hostView);
         
-        // Log the view hierarchy to see what might be covering it
-        NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] BlueBG superview: %@, siblings: %lu", 
-              blueBG.superview, (unsigned long)blueBG.superview.subviews.count);
-    } else {
-        NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] BlueBG still nil in _setInitialTransforms");
+        // Create and add a blue background if needed
+        UIView *blueBG = self.blueBackgroundView;
+        if (!blueBG || !blueBG.superview) {
+            NSLog(@"[BHTwitter LaunchAnim T1AppLaunchTransition] Adding new blue background to host view");
+            UIView *newBlueBG = [[UIView alloc] initWithFrame:hostView.bounds];
+            UIColor *twitterBlue = [UIColor colorWithRed:29/255.0 green:161/255.0 blue:242/255.0 alpha:1.0];
+            newBlueBG.backgroundColor = twitterBlue;
+            newBlueBG.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+            
+            // Insert at the bottom
+            [hostView insertSubview:newBlueBG atIndex:0];
+            
+            // Store it
+            self.blueBackgroundView = newBlueBG;
+        }
     }
 }
 
