@@ -5461,129 +5461,36 @@ static GeminiTranslator *_sharedInstance;
 
 %hook T1AppLaunchTransition
 
-// Log initialization and all the values
+// Super simple logging hook - just log the important stuff without changing anything
 - (id)init {
     id instance = %orig;
-    NSLog(@"[BHTLaunchLog] T1AppLaunchTransition init: %@", instance);
+    // Use NSLog directly with a unique tag
+    NSLog(@"### [BHTObserver] T1AppLaunchTransition init: %@", instance);
     return instance;
 }
 
-// Log properties being set
-- (void)setHostView:(UIView *)hostView {
-    NSLog(@"[BHTLaunchLog] setHostView: %@ (frame: %@, backgroundColor: %@)", 
-          hostView, NSStringFromCGRect(hostView.frame), hostView.backgroundColor);
-    %orig;
-}
-
-- (void)setBlueBackgroundView:(UIView *)view {
-    NSLog(@"[BHTLaunchLog] setBlueBackgroundView: %@ (frame: %@, backgroundColor: %@, hidden: %d, alpha: %.2f)", 
-          view, NSStringFromCGRect(view.frame), view.backgroundColor, view.hidden, view.alpha);
-    %orig;
-}
-
-- (void)setWhiteBackgroundView:(UIView *)view {
-    NSLog(@"[BHTLaunchLog] setWhiteBackgroundView: %@ (frame: %@, backgroundColor: %@, hidden: %d, alpha: %.2f)", 
-          view, NSStringFromCGRect(view.frame), view.backgroundColor, view.hidden, view.alpha);
-    %orig;
-}
-
-- (void)setMask:(id)mask {
-    NSLog(@"[BHTLaunchLog] setMask: %@", mask);
-    %orig;
-}
-
-- (void)setDelegate:(id)delegate {
-    NSLog(@"[BHTLaunchLog] setDelegate: %@", delegate);
-    %orig;
-}
-
-// Log property getters
-- (UIView *)hostView {
-    UIView *view = %orig;
-    NSLog(@"[BHTLaunchLog] Getting hostView: %@", view);
-    return view;
-}
-
-- (UIView *)blueBackgroundView {
-    UIView *view = %orig;
-    NSLog(@"[BHTLaunchLog] Getting blueBackgroundView: %@", view);
-    return view;
-}
-
-- (UIView *)whiteBackgroundView {
-    UIView *view = %orig;
-    NSLog(@"[BHTLaunchLog] Getting whiteBackgroundView: %@", view);
-    return view;
-}
-
-// Log important methods
+// Only hook the main method
 - (void)runLaunchTransition {
-    NSLog(@"[BHTLaunchLog] runLaunchTransition START ---------------------");
-    NSLog(@"[BHTLaunchLog] hostView: %@", self.hostView);
-    NSLog(@"[BHTLaunchLog] blueBackgroundView: %@", self.blueBackgroundView);
-    NSLog(@"[BHTLaunchLog] whiteBackgroundView: %@", self.whiteBackgroundView);
+    // Log before running the transition
+    NSLog(@"### [BHTObserver] runLaunchTransition START");
     
-    // If we have a blue background view, log its details and view hierarchy 
+    // Log blue background view details
     UIView *blueBG = self.blueBackgroundView;
     if (blueBG) {
-        NSLog(@"[BHTLaunchLog] Blue background details:");
-        NSLog(@"[BHTLaunchLog] - frame: %@", NSStringFromCGRect(blueBG.frame));
-        NSLog(@"[BHTLaunchLog] - backgroundColor: %@", blueBG.backgroundColor);
-        NSLog(@"[BHTLaunchLog] - hidden: %d", blueBG.hidden);
-        NSLog(@"[BHTLaunchLog] - alpha: %.2f", blueBG.alpha);
-        NSLog(@"[BHTLaunchLog] - autoresizingMask: %lu", (unsigned long)blueBG.autoresizingMask);
-        NSLog(@"[BHTLaunchLog] - superview: %@", blueBG.superview);
-        
-        if (blueBG.superview) {
-            NSLog(@"[BHTLaunchLog] - index in superview: %lu", (unsigned long)[blueBG.superview.subviews indexOfObject:blueBG]);
-            NSLog(@"[BHTLaunchLog] - total siblings: %lu", (unsigned long)blueBG.superview.subviews.count);
-        }
+        NSLog(@"### [BHTObserver] Blue background exists");
+        NSLog(@"### [BHTObserver] - Frame: %@", NSStringFromCGRect(blueBG.frame));
+        NSLog(@"### [BHTObserver] - Color: %@", blueBG.backgroundColor);
+        NSLog(@"### [BHTObserver] - Hidden: %d", blueBG.hidden);
+        NSLog(@"### [BHTObserver] - Alpha: %.2f", blueBG.alpha);
+    } else {
+        NSLog(@"### [BHTObserver] Blue background is NIL");
     }
     
-    %orig;
-    NSLog(@"[BHTLaunchLog] runLaunchTransition END -----------------------");
-}
-
-- (void)_setInitialTransforms {
-    NSLog(@"[BHTLaunchLog] _setInitialTransforms START -------------------");
+    // Just run the original implementation
     %orig;
     
-    // Log state after initial transforms are set
-    NSLog(@"[BHTLaunchLog] After _setInitialTransforms:");
-    NSLog(@"[BHTLaunchLog] - blueBackgroundView: %@", self.blueBackgroundView);
-    if (self.blueBackgroundView) {
-        NSLog(@"[BHTLaunchLog] - blue frame: %@", NSStringFromCGRect(self.blueBackgroundView.frame));
-        NSLog(@"[BHTLaunchLog] - blue transform: %@", NSStringFromCGAffineTransform(self.blueBackgroundView.transform));
-        NSLog(@"[BHTLaunchLog] - blue backgroundColor: %@", self.blueBackgroundView.backgroundColor);
-    }
-    
-    NSLog(@"[BHTLaunchLog] - whiteBackgroundView: %@", self.whiteBackgroundView);
-    if (self.whiteBackgroundView) {
-        NSLog(@"[BHTLaunchLog] - white frame: %@", NSStringFromCGRect(self.whiteBackgroundView.frame));
-        NSLog(@"[BHTLaunchLog] - white transform: %@", NSStringFromCGAffineTransform(self.whiteBackgroundView.transform));
-        NSLog(@"[BHTLaunchLog] - white backgroundColor: %@", self.whiteBackgroundView.backgroundColor);
-    }
-    
-    NSLog(@"[BHTLaunchLog] _setInitialTransforms END ---------------------");
-}
-
-- (void)_reset {
-    NSLog(@"[BHTLaunchLog] _reset called");
-    %orig;
-}
-
-// Log custom transform method
-- (struct CGAffineTransform)_transformFromTransform:(struct CGAffineTransform)transform {
-    NSLog(@"[BHTLaunchLog] _transformFromTransform input: %@", NSStringFromCGAffineTransform(transform));
-    CGAffineTransform result = %orig;
-    NSLog(@"[BHTLaunchLog] _transformFromTransform output: %@", NSStringFromCGAffineTransform(result));
-    return result;
-}
-
-// Log deallocation
-- (void)dealloc {
-    NSLog(@"[BHTLaunchLog] dealloc called");
-    %orig;
+    // Log after running the transition
+    NSLog(@"### [BHTObserver] runLaunchTransition END");
 }
 
 %end
