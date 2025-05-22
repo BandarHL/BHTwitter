@@ -5481,10 +5481,12 @@ static GeminiTranslator *_sharedInstance;
 
 - (void)setBlueBackgroundView:(UIView *)view {
     NSLog(@"[BHTwitter LaunchAnim Debug] setBlueBackgroundView called with view: %@", view);
-    NSLog(@"[BHTwitter LaunchAnim Debug] Current backgroundColor: %@", view.backgroundColor);
     if (view) {
         view.backgroundColor = [UIColor colorWithRed:29.0/255.0 green:161.0/255.0 blue:242.0/255.0 alpha:1.0]; // Twitter Blue
-        NSLog(@"[BHTwitter LaunchAnim Debug] Set backgroundColor to Twitter Blue");
+        if (CGRectIsEmpty(view.frame) && self.hostView) {
+            view.frame = self.hostView.bounds;
+        }
+        NSLog(@"[BHTwitter LaunchAnim Debug] Set backgroundColor to Twitter Blue and frame to: %@", NSStringFromCGRect(view.frame));
     }
     %orig(view);
 }
