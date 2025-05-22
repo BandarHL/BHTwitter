@@ -5472,69 +5472,17 @@ static GeminiTranslator *_sharedInstance;
 // MARK: Launch Animation Color Fix
 %hook T1AppLaunchTransition
 
-- (id)init {
-    id instance = %orig;
-    
-    UIView *blueView = [[UIView alloc] init];
-    blueView.backgroundColor = [UIColor colorWithRed:29.0/255.0 green:161.0/255.0 blue:242.0/255.0 alpha:1.0]; // Twitter Blue
-    ((T1AppLaunchTransition *)instance).blueBackgroundView = blueView;
-    
-    UIView *whiteView = [[UIView alloc] init];
-    whiteView.backgroundColor = [UIColor whiteColor];
-    ((T1AppLaunchTransition *)instance).whiteBackgroundView = whiteView;
-    
-    return instance;
-}
-
-- (void)runLaunchTransition {
-    self.whiteBackgroundView.alpha = 0;
-    self.blueBackgroundView.alpha = 1;
-    
-    // Keep a weak reference to self to avoid retain cycles
-    __weak typeof(self) weakSelf = self;
-    
-    [UIView animateWithDuration:0.6 animations:^{
-        weakSelf.whiteBackgroundView.alpha = 1;
-    } completion:^(BOOL finished) {
-        // Get strong reference inside block
-        __strong typeof(self) strongSelf = weakSelf;
-        if (!strongSelf) return;
-        
-        id delegate = strongSelf.delegate;
-        if ([delegate respondsToSelector:@selector(appLaunchTransitionDidFinish:)]) {
-            [delegate appLaunchTransitionDidFinish:strongSelf];
-        }
-    }];
+- (void)setHostView:(UIView *)hostView {
+    %orig;
+    self.blueBackgroundView.backgroundColor = [UIColor colorWithRed:29.0/255.0 green:161.0/255.0 blue:242.0/255.0 alpha:1.0]; // Twitter Blue
 }
 
 %end
-
 %hook UIWindow
 
 - (void)makeKeyAndVisible {
     self.backgroundColor = BHTCurrentAccentColor();
     %orig;
-}
-
-%end
-
-%hook T1AppLaunchTransition
-
-- (void)setHostView:(UIView *)hostView {
-    %orig;
-    
-    // Set up both views
-    self.blueBackgroundView.frame = hostView.bounds;
-    self.blueBackgroundView.backgroundColor = BHTCurrentAccentColor();
-    self.blueBackgroundView.alpha = 1.0;
-    self.blueBackgroundView.hidden = NO;
-    [hostView addSubview:self.blueBackgroundView];
-    
-    self.whiteBackgroundView.frame = hostView.bounds;
-    self.whiteBackgroundView.backgroundColor = [UIColor whiteColor];
-    self.whiteBackgroundView.alpha = 1.0;
-    self.whiteBackgroundView.hidden = NO;
-    [hostView addSubview:self.whiteBackgroundView];
 }
 
 %end
