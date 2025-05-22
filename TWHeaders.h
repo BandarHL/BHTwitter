@@ -34,6 +34,7 @@ static NSString *_lastCopiedURL;
 
 @interface T1AppDelegate : UIResponder <UIApplicationDelegate>
 @property(retain, nonatomic) UIWindow *window;
++ (id)launchTransitionProvider;
 @end
 
 
@@ -612,6 +613,6 @@ static UIViewController * _Nonnull topMostController() {
 @property(nonatomic, readonly) id viewModel;
 @end
 
-@interface TFNBarButtonItemButtonV2 : UIView
+@interface TFNBarButtonItemButtonV1 : UIView
 @property (nonatomic, strong) UIColor *tintColor;
 @end

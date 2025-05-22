@@ -75,6 +75,12 @@
 // Prevent Tab Bar Fade
 + (BOOL)preventTabBarFade;
 
+// Translate functionality
++ (BOOL)enableTranslate;
++ (NSString *)translateEndpoint;
++ (NSString *)translateAPIKey;
++ (NSString *)translateModel;
+
 + (void)clearSourceLabelCache;
 
 @end

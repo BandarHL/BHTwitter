@@ -77,6 +77,13 @@
 "SQUARE_AVATARS_TITLE" = "Square Avatars";
 "SQUARE_AVATARS_DETAIL_TITLE" = "Requires app restart.";
 
+"ENABLE_TRANSLATE_OPTION_TITLE" = "Enable Tweet Translation";
+"ENABLE_TRANSLATE_OPTION_DETAIL_TITLE" = "Add a translate button to tweets with configurable AI service.";
+
+"TRANSLATE_ENDPOINT_OPTION_TITLE" = "Translation API Endpoint";
+"TRANSLATE_API_KEY_OPTION_TITLE" = "Translation API Key";
+"TRANSLATE_MODEL_OPTION_TITLE" = "Translation Model";
+
 
 /*Profiles*/
 "PROFILES_SECTION_HEADER_TITLE" = "Profiles";
@@ -131,6 +138,9 @@
 
 "RESTORE_VIDEO_TIMESTAMP_TITLE" = "Restore Video Timestamp";
 "RESTORE_VIDEO_TIMESTAMP_DETAIL_TITLE" = "Shows video timestamp that may be hidden in some views.";
+
+"RESTORE_PULL_TO_REFRESH_SOUNDS_TITLE" = "Restore Pull-to-Refresh Sounds";
+"RESTORE_PULL_TO_REFRESH_SOUNDS_DETAIL_TITLE" = "Brings back the sounds when pulling down to refresh";
 
 
 /*Twitter Blue*/
