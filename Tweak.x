@@ -64,13 +64,29 @@ static BOOL BHT_isInThemeChangeOperation = NO;
 // Map to store timestamp labels for each player instance
 static NSMapTable<T1ImmersiveFullScreenViewController *, UILabel *> *playerToTimestampMap = nil;
 
-// Static helper function for recursive view traversal - DEFINED AT THE TOP
+// Performance optimization: Cache for label searches to avoid repeated expensive traversals
+static NSMapTable<T1ImmersiveFullScreenViewController *, NSNumber *> *labelSearchCache = nil;
+static NSTimeInterval lastCacheInvalidation = 0;
+static const NSTimeInterval CACHE_INVALIDATION_INTERVAL = 10.0; // 10 seconds
+
+// Static helper function for recursive view traversal - OPTIMIZED VERSION
 static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
     if (!view || !block) return;
+    
+    // Performance optimization: Skip hidden views and their subviews
+    if (view.hidden || view.alpha <= 0.01) return;
+    
     block(view);
+    
+    // Performance optimization: Limit recursion depth to prevent excessive traversal
+    static NSInteger recursionDepth = 0;
+    if (recursionDepth > 15) return; // Reasonable depth limit
+    
+    recursionDepth++;
     for (UIView *subview in view.subviews) {
         BH_EnumerateSubviewsRecursively(subview, block);
     }
+    recursionDepth--;
 }
 
 // Add this before the hooks, after the imports
@@ -3458,45 +3474,83 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 // Helper method to find, style, and map the timestamp label for a given VC instance
 %new - (BOOL)BHT_findAndPrepareTimestampLabelForVC:(T1ImmersiveFullScreenViewController *)activePlayerVC {
-    // ... (implementation as before)
     if (!playerToTimestampMap || !activePlayerVC || !activePlayerVC.isViewLoaded) {
-        NSLog(@"[BHTwitter Timestamp] BHT_findAndPrepareTimestampLabelForVC: Pre-condition failed (map: %@, vc: %@, viewLoaded: %d)", playerToTimestampMap, activePlayerVC, activePlayerVC.isViewLoaded);
         return NO;
+    }
+    
+    // Performance optimization: Check cache first to avoid repeated expensive searches
+    NSTimeInterval currentTime = [[NSDate date] timeIntervalSince1970];
+    if (currentTime - lastCacheInvalidation > CACHE_INVALIDATION_INTERVAL) {
+        if (labelSearchCache) {
+            [labelSearchCache removeAllObjects];
+        }
+        lastCacheInvalidation = currentTime;
+    }
+    
+    // Initialize cache if needed
+    if (!labelSearchCache) {
+        labelSearchCache = [NSMapTable weakToStrongObjectsMapTable];
     }
 
     UILabel *timestampLabel = [playerToTimestampMap objectForKey:activePlayerVC];
 
+    // Performance optimization: Only do fresh find if really necessary
     BOOL needsFreshFind = (!timestampLabel || !timestampLabel.superview || ![timestampLabel.superview isDescendantOfView:activePlayerVC.view]);
     if (timestampLabel && timestampLabel.superview && 
         (![timestampLabel.text containsString:@":"] || ![timestampLabel.text containsString:@"/"])) {
         needsFreshFind = YES;
-        NSLog(@"[BHTwitter Timestamp] VC %@: Label %@ found with non-timestamp text: \"%@\". Forcing re-find.", activePlayerVC, timestampLabel, timestampLabel.text);
         [playerToTimestampMap removeObjectForKey:activePlayerVC];
         timestampLabel = nil;
     }
     
     if (needsFreshFind) {
-        NSLog(@"[BHTwitter Timestamp] VC %@: Needs fresh find for label.", activePlayerVC);
+        // Performance optimization: Check if we recently failed to find a label for this VC
+        NSNumber *lastSearchResult = [labelSearchCache objectForKey:activePlayerVC];
+        if (lastSearchResult && ![lastSearchResult boolValue]) {
+            return NO;
+        }
         __block UILabel *foundCandidate = nil;
         UIView *searchView = activePlayerVC.view;
+        
+        // Performance optimization: Limit search scope to likely container views
+        __block NSInteger searchCount = 0;
+        const NSInteger MAX_SEARCH_COUNT = 100; // Prevent excessive searching
 
         BH_EnumerateSubviewsRecursively(searchView, ^(UIView *currentView) {
-            if (foundCandidate) return;
+            if (foundCandidate || ++searchCount > MAX_SEARCH_COUNT) return;
+            
+            // Performance optimization: Skip views that are unlikely to contain timestamp labels
+            NSString *currentViewClass = NSStringFromClass([currentView class]);
+            if ([currentViewClass containsString:@"Button"] || 
+                [currentViewClass containsString:@"Image"] ||
+                [currentViewClass containsString:@"Scroll"]) {
+                return;
+            }
+            
             if ([currentView isKindOfClass:[UILabel class]]) {
                 UILabel *label = (UILabel *)currentView;
+                
+                // Performance optimization: Quick text validation before hierarchy check
+                if (!label.text || label.text.length < 3 || 
+                    ![label.text containsString:@":"] || ![label.text containsString:@"/"]) {
+                    return;
+                }
+                
                 UIView *v = label.superview;
                 BOOL inImmersiveCardViewContext = NO;
-                while(v && v != searchView.window && v != searchView) {
+                NSInteger hierarchyDepth = 0;
+                
+                while(v && v != searchView.window && v != searchView && hierarchyDepth < 10) {
                     NSString *className = NSStringFromClass([v class]);
                     if ([className isEqualToString:@"T1TwitterSwift.ImmersiveCardView"] || [className hasSuffix:@".ImmersiveCardView"]) {
                         inImmersiveCardViewContext = YES;
-                break;
-            }
+                        break;
+                    }
                     v = v.superview;
+                    hierarchyDepth++;
                 }
 
-                if (inImmersiveCardViewContext && label.text && [label.text containsString:@":"] && [label.text containsString:@"/"]) {
-                    NSLog(@"[BHTwitter Timestamp] VC %@: Candidate label found: Text='%@', Superview=%@", activePlayerVC, label.text, NSStringFromClass(label.superview.class));
+                if (inImmersiveCardViewContext) {
                     foundCandidate = label;
                 }
             }
@@ -3510,10 +3564,11 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             
             // Now store it in our map
             [playerToTimestampMap setObject:timestampLabel forKey:activePlayerVC];
-            NSLog(@"[BHTwitter Timestamp] VC %@: Associated label %@ in map.", activePlayerVC, timestampLabel);
+            [labelSearchCache setObject:@YES forKey:activePlayerVC];
         } else {
+            // Performance optimization: Cache negative results to avoid repeated searches
+            [labelSearchCache setObject:@NO forKey:activePlayerVC];
             if ([playerToTimestampMap objectForKey:activePlayerVC]) {
-                 NSLog(@"[BHTwitter Timestamp] VC %@: No label found, removing existing map entry.", activePlayerVC);
                 [playerToTimestampMap removeObjectForKey:activePlayerVC];
             }
             return NO;
@@ -3521,7 +3576,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     }
 
     if (timestampLabel && ![objc_getAssociatedObject(timestampLabel, "BHT_StyledTimestamp") boolValue]) {
-        NSLog(@"[BHTwitter Timestamp] VC %@: Styling label %@.", activePlayerVC, timestampLabel);
         timestampLabel.font = [UIFont systemFontOfSize:14.0];
         timestampLabel.textColor = [UIColor whiteColor];
         timestampLabel.textAlignment = NSTextAlignmentCenter;
@@ -3563,7 +3617,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     %orig(passedImmersiveViewController, originalShowButtons);
     
     T1ImmersiveFullScreenViewController *activePlayerVC = self;
-    NSLog(@"[BHTwitter Timestamp] VC %@: showHideNavigationButtons: %d (original: %d)", activePlayerVC, showButtons, originalShowButtons);
 
     // The rest of the method remains unchanged
     if (![BHTManager restoreVideoTimestamp]) {
@@ -3571,7 +3624,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             UILabel *labelToManage = [playerToTimestampMap objectForKey:activePlayerVC];
             if (labelToManage) {
                 labelToManage.hidden = YES;
-                NSLog(@"[BHTwitter Timestamp] VC %@: Hiding label (feature disabled).", activePlayerVC);
+
             }
         }
         return;
@@ -3589,7 +3642,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         [invocation invoke];
         [invocation getReturnValue:&labelReady];
     } else {
-        NSLog(@"[BHTwitter Timestamp] VC %@: ERROR - Does not respond to selector BHT_findAndPrepareTimestampLabelForVC:", activePlayerVC);
+
     }
 
     if (labelReady) {
@@ -3597,7 +3650,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         if (timestampLabel) { 
             // Let the timestamp follow the controls visibility, but ensure it matches
             BOOL isVisible = showButtons;
-            NSLog(@"[BHTwitter Timestamp] VC %@: Controls visibility changed to %d", activePlayerVC, isVisible);
+
             
             // Only adjust if there's a mismatch
             if (isVisible && timestampLabel.hidden) {
