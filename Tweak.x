@@ -5380,7 +5380,15 @@ static GeminiTranslator *_sharedInstance;
 %end
 
 // MARK: Fix followers/following tab inconsistency
+static NSMapTable *followersTabFixMap = nil;
+
 %hook T1ProfileSegmentedFollowingViewController
++ (void)load {
+    if (!followersTabFixMap) {
+        followersTabFixMap = [NSMapTable weakToStrongObjectsMapTable];
+    }
+}
+
 - (id)initWithTab:(long long)tab userDataSource:(id)userDataSource account:(id)account showFollowersYouKnow:(_Bool)showFollowersYouKnow shouldShowPeopleButton:(_Bool)shouldShowPeopleButton showPrimaryTabOnly:(_Bool)showPrimaryTabOnly shouldHideCreatorSubscriptions:(_Bool)shouldHideCreatorSubscriptions {
     NSLog(@"[BHTwitter] T1ProfileSegmentedFollowingViewController initWithTab: %lld", tab);
     NSLog(@"[BHTwitter] userDataSource: %@", userDataSource);
@@ -5401,17 +5409,10 @@ static GeminiTranslator *_sharedInstance;
     id result = %orig(tab, userDataSource, account, showFollowersYouKnow, shouldShowPeopleButton, showPrimaryTabOnly, shouldHideCreatorSubscriptions);
     NSLog(@"[BHTwitter] T1ProfileSegmentedFollowingViewController init result: %@", result);
     
-    // If we changed the tab from 0 to 3, we need to select the followers tab (index 0 in the 2-tab layout)
-    if (isFixingFollowersTab) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            if ([result respondsToSelector:@selector(contentViewController)]) {
-                id contentViewController = [result contentViewController];
-                if ([contentViewController respondsToSelector:@selector(setSelectedSegmentIndex:)]) {
-                    NSLog(@"[BHTwitter] Setting selected segment index to 0 for followers");
-                    [contentViewController setSelectedSegmentIndex:0];
-                }
-            }
-        });
+    // Store the flag that this instance should show followers when tab 3 is requested
+    if (isFixingFollowersTab && result) {
+        [followersTabFixMap setObject:@YES forKey:result];
+        NSLog(@"[BHTwitter] Marked this instance as followers-mode for tab 3");
     }
     
     return result;
@@ -5438,6 +5439,36 @@ static GeminiTranslator *_sharedInstance;
 - (id)segmentedViewController:(id)segmentedViewController titleAtIndex:(long long)index {
     id result = %orig;
     NSLog(@"[BHTwitter] titleAtIndex: %lld = %@", index, result);
+    return result;
+}
+
+- (long long)segmentIndexForTab:(long long)tab {
+    long long result = %orig;
+    NSLog(@"[BHTwitter] segmentIndexForTab: %lld = %lld", tab, result);
+    
+    // Check if this data source belongs to a view controller that's in followers-mode
+    // We need to find the view controller that owns this data source
+    // This is a bit tricky since we don't have a direct reference
+    // Let's check if we're in 2-tab mode and this is tab 3
+    if (tab == 3 && result == 1) {
+        long long numEntries = [self numberOfEntriesForSegmentedViewController:nil];
+        if (numEntries == 2) {
+            // Check all stored view controllers to see if any are in followers-mode
+            for (id viewController in followersTabFixMap) {
+                if ([followersTabFixMap objectForKey:viewController]) {
+                    // Get the data source from the view controller to see if it matches
+                    if ([viewController respondsToSelector:@selector(retainedDataSource)]) {
+                        id dataSource = [viewController retainedDataSource];
+                        if (dataSource == self) {
+                            NSLog(@"[BHTwitter] Found followers-mode view controller, overriding segmentIndexForTab:3 to return 0");
+                            return 0;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
     return result;
 }
 %end
