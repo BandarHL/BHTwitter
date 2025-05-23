@@ -3809,6 +3809,7 @@ static void PlayRefreshSound(int soundType) {
 // Track state with instance-specific variables using associated objects
 static char kRefreshingKey;
 static char kPlayedPullSoundKey;
+static char kActualRefreshInProgressKey;
 
 // Always enable sound effects
 + (_Bool)_areSoundEffectsEnabled {
@@ -3821,6 +3822,10 @@ static char kPlayedPullSoundKey;
     NSNumber *wasRefreshing = objc_getAssociatedObject(self, &kRefreshingKey);
     BOOL wasRefreshingBool = wasRefreshing ? [wasRefreshing boolValue] : NO;
     
+    // Check if this is an actual refresh operation
+    NSNumber *actualRefresh = objc_getAssociatedObject(self, &kActualRefreshInProgressKey);
+    BOOL isActualRefresh = actualRefresh ? [actualRefresh boolValue] : NO;
+    
     // Set new state
     objc_setAssociatedObject(self, &kRefreshingKey, @(loading), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     
@@ -3831,26 +3836,30 @@ static char kPlayedPullSoundKey;
             // Call the original completion
             completion();
             
-            // Play pop sound if we're finishing a refresh
-            if (wasRefreshingBool && !loading) {
+            // Only play pop sound if we're finishing an actual refresh operation
+            if (wasRefreshingBool && !loading && isActualRefresh) {
                 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
                     PlayRefreshSound(1);
                 });
+                // Clear the actual refresh flag
+                objc_setAssociatedObject(self, &kActualRefreshInProgressKey, @NO, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
             }
         };
-    } else if (wasRefreshingBool && !loading) {
-        // No original completion but we still want to play the sound
+    } else if (wasRefreshingBool && !loading && isActualRefresh) {
+        // No original completion but we still want to play the sound for actual refresh
         wrappedCompletion = ^{
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
                 PlayRefreshSound(1);
             });
+            // Clear the actual refresh flag
+            objc_setAssociatedObject(self, &kActualRefreshInProgressKey, @NO, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         };
     }
     
     %orig(loading, wrappedCompletion);
     
     // Going from not loading to loading (start of refresh)
-    if (!wasRefreshingBool && loading) {
+    if (!wasRefreshingBool && loading && isActualRefresh) {
         NSNumber *didPlayPull = objc_getAssociatedObject(self, &kPlayedPullSoundKey);
         if (!didPlayPull || ![didPlayPull boolValue]) {
             // This is for auto-refresh cases where _setStatus isn't called
@@ -3868,13 +3877,17 @@ static char kPlayedPullSoundKey;
     NSNumber *wasRefreshing = objc_getAssociatedObject(self, &kRefreshingKey);
     BOOL wasRefreshingBool = wasRefreshing ? [wasRefreshing boolValue] : NO;
     
+    // Check if this is an actual refresh operation
+    NSNumber *actualRefresh = objc_getAssociatedObject(self, &kActualRefreshInProgressKey);
+    BOOL isActualRefresh = actualRefresh ? [actualRefresh boolValue] : NO;
+    
     // Set new state
     objc_setAssociatedObject(self, &kRefreshingKey, @(loading), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     
     %orig;
     
     // Going from not loading to loading (start of refresh)
-    if (!wasRefreshingBool && loading) {
+    if (!wasRefreshingBool && loading && isActualRefresh) {
         NSNumber *didPlayPull = objc_getAssociatedObject(self, &kPlayedPullSoundKey);
         if (!didPlayPull || ![didPlayPull boolValue]) {
             // This is for auto-refresh cases where _setStatus isn't called
@@ -3884,26 +3897,13 @@ static char kPlayedPullSoundKey;
         // Reset status for next refresh
         objc_setAssociatedObject(self, &kPlayedPullSoundKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
-    // Going from loading to not loading (end of refresh) - play pop sound
-    else if (wasRefreshingBool && !loading) {
+    // Going from loading to not loading (end of refresh) - only play pop sound for actual refresh
+    else if (wasRefreshingBool && !loading && isActualRefresh) {
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
             PlayRefreshSound(1);
         });
-    }
-}
-
-// Additional hook for when refresh animation completes and content inset resets
-- (void)scrollViewContentInsetDidReset:(id)scrollView {
-    %orig;
-    
-    // This is called when the refresh animation completes and scroll view returns to normal
-    // Check if we just finished refreshing
-    NSNumber *wasRefreshing = objc_getAssociatedObject(self, &kRefreshingKey);
-    if (wasRefreshing && ![wasRefreshing boolValue]) {
-        // We recently finished refreshing, this is a good time to play the pop sound
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            PlayRefreshSound(1);
-        });
+        // Clear the actual refresh flag
+        objc_setAssociatedObject(self, &kActualRefreshInProgressKey, @NO, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
 }
 
@@ -3912,14 +3912,18 @@ static char kPlayedPullSoundKey;
     %orig;
     
     if (status == 1 && fromScrolling) {
-        // Status changed to "triggered" via pull - play the pull sound
+        // Status changed to "triggered" via pull - this indicates an actual refresh
+        objc_setAssociatedObject(self, &kActualRefreshInProgressKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         PlayRefreshSound(0);
         objc_setAssociatedObject(self, &kPlayedPullSoundKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
 }
 
-// Handle initial load refresh when app launches
+// Detect programmatic refresh start
 - (void)startPullToRefreshAnimationInScrollView:(id)scrollView {
+    // Mark this as an actual refresh operation
+    objc_setAssociatedObject(self, &kActualRefreshInProgressKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    
     %orig;
     
     static dispatch_once_t onceToken;
