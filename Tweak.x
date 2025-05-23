@@ -5389,8 +5389,31 @@ static GeminiTranslator *_sharedInstance;
     NSLog(@"[BHTwitter] showPrimaryTabOnly: %d", showPrimaryTabOnly);
     NSLog(@"[BHTwitter] shouldHideCreatorSubscriptions: %d", shouldHideCreatorSubscriptions);
     
-    id result = %orig;
+    // Track if we're fixing the followers tab
+    BOOL isFixingFollowersTab = (tab == 0);
+    
+    // Fix: If tab is 0 (followers with verified tab), change to tab 3 (following layout) to avoid verified tab
+    if (tab == 0) {
+        NSLog(@"[BHTwitter] Changing tab from 0 to 3 to avoid verified followers tab");
+        tab = 3;
+    }
+    
+    id result = %orig(tab, userDataSource, account, showFollowersYouKnow, shouldShowPeopleButton, showPrimaryTabOnly, shouldHideCreatorSubscriptions);
     NSLog(@"[BHTwitter] T1ProfileSegmentedFollowingViewController init result: %@", result);
+    
+    // If we changed the tab from 0 to 3, we need to select the followers tab (index 0 in the 2-tab layout)
+    if (isFixingFollowersTab) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if ([result respondsToSelector:@selector(contentViewController)]) {
+                id contentViewController = [result contentViewController];
+                if ([contentViewController respondsToSelector:@selector(setSelectedSegmentIndex:)]) {
+                    NSLog(@"[BHTwitter] Setting selected segment index to 0 for followers");
+                    [contentViewController setSelectedSegmentIndex:0];
+                }
+            }
+        });
+    }
+    
     return result;
 }
 
@@ -5415,60 +5438,6 @@ static GeminiTranslator *_sharedInstance;
 - (id)segmentedViewController:(id)segmentedViewController titleAtIndex:(long long)index {
     id result = %orig;
     NSLog(@"[BHTwitter] titleAtIndex: %lld = %@", index, result);
-    return result;
-}
-
-- (id)segmentedViewController:(id)segmentedViewController viewControllerAtIndex:(long long)index {
-    id result = %orig;
-    NSLog(@"[BHTwitter] viewControllerAtIndex: %lld = %@ (class: %@)", index, result, [result class]);
-    return result;
-}
-
-- (long long)tabForSegmentIndex:(long long)segmentIndex {
-    long long result = %orig;
-    NSLog(@"[BHTwitter] tabForSegmentIndex: %lld = %lld", segmentIndex, result);
-    return result;
-}
-
-- (long long)segmentIndexForTab:(long long)tab {
-    long long result = %orig;
-    NSLog(@"[BHTwitter] segmentIndexForTab: %lld = %lld", tab, result);
-    return result;
-}
-
-- (long long)_t1_segmentTabForIndex:(long long)index {
-    long long result = %orig;
-    NSLog(@"[BHTwitter] _t1_segmentTabForIndex: %lld = %lld", index, result);
-    return result;
-}
-
-- (id)followersViewController {
-    id result = %orig;
-    NSLog(@"[BHTwitter] followersViewController: %@ (class: %@)", result, [result class]);
-    return result;
-}
-
-- (id)verifiedFollowersViewController {
-    id result = %orig;
-    NSLog(@"[BHTwitter] verifiedFollowersViewController: %@ (class: %@)", result, [result class]);
-    return result;
-}
-
-- (id)followingViewController {
-    id result = %orig;
-    NSLog(@"[BHTwitter] followingViewController: %@ (class: %@)", result, [result class]);
-    return result;
-}
-
-- (id)superFollowersViewController {
-    id result = %orig;
-    NSLog(@"[BHTwitter] superFollowersViewController: %@ (class: %@)", result, [result class]);
-    return result;
-}
-
-- (id)subscriptionsViewController {
-    id result = %orig;
-    NSLog(@"[BHTwitter] subscriptionsViewController: %@ (class: %@)", result, [result class]);
     return result;
 }
 %end
