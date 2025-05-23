@@ -5453,24 +5453,21 @@ static NSMapTable *followersTabFixMap = nil;
 %end
 
 %hook TFNScrollingSegmentedViewController
-- (void)setSelectedIndex:(NSUInteger)selectedIndex {
+- (void)viewDidAppear:(BOOL)animated {
+    %orig;
+    
     // Check if this segmented controller belongs to a followers-mode view controller
     UIViewController *parent = self.parentViewController;
     while (parent) {
         if ([parent isKindOfClass:NSClassFromString(@"T1ProfileSegmentedFollowingViewController")]) {
             T1ProfileSegmentedFollowingViewController *followingVC = (T1ProfileSegmentedFollowingViewController *)parent;
             if ([followersTabFixMap objectForKey:followingVC.retainedDataSource]) {
-                if (selectedIndex != 0) {
-                    NSLog(@"[BHTwitter] Blocking setSelectedIndex:%lu, forcing to 0 (followers mode)", (unsigned long)selectedIndex);
-                    %orig(0);
-                    return;
-                }
+                NSLog(@"[BHTwitter] TFNScrollingSegmentedViewController viewDidAppear - forcing selectedIndex to 0");
+                self.selectedIndex = 0;
             }
             break;
         }
         parent = parent.parentViewController;
     }
-    
-    %orig;
 }
 %end
