@@ -959,51 +959,29 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 
 - (void)setFrame:(CGRect)frame {
-    // Move the actions view up, but only if not in detail or immersive view
-    UIView *superview = self.superview;
-    BOOL isInDetailView = NO;
-    BOOL isInImmersiveView = NO;
+    // Check current view controller
+    UIViewController *currentVC = [self _viewControllerForAncestor];
     
-    // Log all superview classes for debugging
-    NSMutableArray *hierarchy = [NSMutableArray array];
-    UIView *debugView = self.superview;
-    while (debugView) {
-        [hierarchy addObject:NSStringFromClass([debugView class])];
-        debugView = debugView.superview;
+    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+        // In immersive view - use original frame
+        %orig(frame);
+        return;
     }
-    NSLog(@"[BHTwitter] View hierarchy: %@", [hierarchy componentsJoinedByString:@" -> "]);
     
+    // Check for detail view in superview hierarchy
+    UIView *superview = self.superview;
     while (superview) {
-        NSString *className = NSStringFromClass([superview class]);
-        
-        // Check for detail view
         if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            isInDetailView = YES;
-            NSLog(@"[BHTwitter] Found detail view: %@", className);
-            break;
+            // In detail view - use original frame
+            %orig(frame);
+            return;
         }
-        
-        // Check for immersive view - both controller and view classes
-        if ([superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")] ||
-            [className containsString:@"Immersive"]) {
-            isInImmersiveView = YES;
-            NSLog(@"[BHTwitter] Found immersive view: %@", className);
-            break;
-        }
-        
         superview = superview.superview;
     }
     
-    if (isInImmersiveView) {
-        NSLog(@"[BHTwitter] In immersive view - using original frame: %@", NSStringFromCGRect(frame));
-    } else if (isInDetailView) {
-        NSLog(@"[BHTwitter] In detail view - using original frame: %@", NSStringFromCGRect(frame));
-    } else {
-        frame.origin.y -= 6.0; // Only push up in regular timeline
-        NSLog(@"[BHTwitter] In timeline - adjusting frame: %@", NSStringFromCGRect(frame));
-    }
-    
+    // Regular timeline - adjust frame
+    frame.origin.y -= 6.0;
     %orig(frame);
 }
 %end
@@ -5361,30 +5339,36 @@ static GeminiTranslator *_sharedInstance;
 // Hook individual button classes to make them bigger
 %hook TTAStatusInlineReplyButton
 - (CGFloat)extraWidth {
-    // Check if we're inside tweet detail view or immersive view
+    // Check current view controller
+    UIViewController *currentVC = [((UIView *)self) _viewControllerForAncestor];
+    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+        return %orig;
+    }
+    
+    // Check for detail view
     UIView *superview = ((UIView *)self).superview;
     while (superview) {
-        NSString *className = NSStringFromClass([superview class]);
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")] ||
-            [className containsString:@"Immersive"]) {
-            return %orig; // Return original size in detail/immersive view
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            return %orig;
         }
         superview = superview.superview;
     }
     return 48.0;
 }
 - (NSUInteger)buttonSize {
-    // Check if we're inside tweet detail view or immersive view
+    // Check current view controller
+    UIViewController *currentVC = [((UIView *)self) _viewControllerForAncestor];
+    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+        return %orig;
+    }
+    
+    // Check for detail view
     UIView *superview = ((UIView *)self).superview;
     while (superview) {
-        NSString *className = NSStringFromClass([superview class]);
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")] ||
-            [className containsString:@"Immersive"]) {
-            return %orig; // Return original size in detail/immersive view
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            return %orig;
         }
         superview = superview.superview;
     }
@@ -5394,30 +5378,36 @@ static GeminiTranslator *_sharedInstance;
 
 %hook TTAStatusInlineRetweetButton
 - (CGFloat)extraWidth {
-    // Check if we're inside tweet detail view or immersive view
+    // Check current view controller
+    UIViewController *currentVC = [((UIView *)self) _viewControllerForAncestor];
+    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+        return %orig;
+    }
+    
+    // Check for detail view
     UIView *superview = ((UIView *)self).superview;
     while (superview) {
-        NSString *className = NSStringFromClass([superview class]);
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")] ||
-            [className containsString:@"Immersive"]) {
-            return %orig; // Return original size in detail/immersive view
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            return %orig;
         }
         superview = superview.superview;
     }
     return 48.0;
 }
 - (NSUInteger)buttonSize {
-    // Check if we're inside tweet detail view or immersive view
+    // Check current view controller
+    UIViewController *currentVC = [((UIView *)self) _viewControllerForAncestor];
+    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+        return %orig;
+    }
+    
+    // Check for detail view
     UIView *superview = ((UIView *)self).superview;
     while (superview) {
-        NSString *className = NSStringFromClass([superview class]);
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")] ||
-            [className containsString:@"Immersive"]) {
-            return %orig; // Return original size in detail/immersive view
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            return %orig;
         }
         superview = superview.superview;
     }
@@ -5427,30 +5417,36 @@ static GeminiTranslator *_sharedInstance;
 
 %hook TTAStatusInlineFavoriteButton
 - (CGFloat)extraWidth {
-    // Check if we're inside tweet detail view or immersive view
+    // Check current view controller
+    UIViewController *currentVC = [((UIView *)self) _viewControllerForAncestor];
+    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+        return %orig;
+    }
+    
+    // Check for detail view
     UIView *superview = ((UIView *)self).superview;
     while (superview) {
-        NSString *className = NSStringFromClass([superview class]);
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")] ||
-            [className containsString:@"Immersive"]) {
-            return %orig; // Return original size in detail/immersive view
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            return %orig;
         }
         superview = superview.superview;
     }
     return 48.0;
 }
 - (NSUInteger)buttonSize {
-    // Check if we're inside tweet detail view or immersive view
+    // Check current view controller
+    UIViewController *currentVC = [((UIView *)self) _viewControllerForAncestor];
+    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+        return %orig;
+    }
+    
+    // Check for detail view
     UIView *superview = ((UIView *)self).superview;
     while (superview) {
-        NSString *className = NSStringFromClass([superview class]);
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")] ||
-            [className containsString:@"Immersive"]) {
-            return %orig; // Return original size in detail/immersive view
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            return %orig;
         }
         superview = superview.superview;
     }
@@ -5460,30 +5456,36 @@ static GeminiTranslator *_sharedInstance;
 
 %hook TTAStatusInlineBookmarkButton
 - (CGFloat)extraWidth {
-    // Check if we're inside tweet detail view or immersive view
+    // Check current view controller
+    UIViewController *currentVC = [((UIView *)self) _viewControllerForAncestor];
+    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+        return %orig;
+    }
+    
+    // Check for detail view
     UIView *superview = ((UIView *)self).superview;
     while (superview) {
-        NSString *className = NSStringFromClass([superview class]);
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")] ||
-            [className containsString:@"Immersive"]) {
-            return %orig; // Return original size in detail/immersive view
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            return %orig;
         }
         superview = superview.superview;
     }
     return 48.0;
 }
 - (NSUInteger)buttonSize {
-    // Check if we're inside tweet detail view or immersive view
+    // Check current view controller
+    UIViewController *currentVC = [((UIView *)self) _viewControllerForAncestor];
+    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+        return %orig;
+    }
+    
+    // Check for detail view
     UIView *superview = ((UIView *)self).superview;
     while (superview) {
-        NSString *className = NSStringFromClass([superview class]);
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")] ||
-            [className containsString:@"Immersive"]) {
-            return %orig; // Return original size in detail/immersive view
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            return %orig;
         }
         superview = superview.superview;
     }
@@ -5493,30 +5495,36 @@ static GeminiTranslator *_sharedInstance;
 
 %hook TTAStatusInlineShareButton
 - (CGFloat)extraWidth {
-    // Check if we're inside tweet detail view or immersive view
+    // Check current view controller
+    UIViewController *currentVC = [((UIView *)self) _viewControllerForAncestor];
+    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+        return %orig;
+    }
+    
+    // Check for detail view
     UIView *superview = ((UIView *)self).superview;
     while (superview) {
-        NSString *className = NSStringFromClass([superview class]);
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")] ||
-            [className containsString:@"Immersive"]) {
-            return %orig; // Return original size in detail/immersive view
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            return %orig;
         }
         superview = superview.superview;
     }
     return 48.0;
 }
 - (NSUInteger)buttonSize {
-    // Check if we're inside tweet detail view or immersive view
+    // Check current view controller
+    UIViewController *currentVC = [((UIView *)self) _viewControllerForAncestor];
+    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+        return %orig;
+    }
+    
+    // Check for detail view
     UIView *superview = ((UIView *)self).superview;
     while (superview) {
-        NSString *className = NSStringFromClass([superview class]);
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")] ||
-            [className containsString:@"Immersive"]) {
-            return %orig; // Return original size in detail/immersive view
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            return %orig;
         }
         superview = superview.superview;
     }
@@ -5526,30 +5534,36 @@ static GeminiTranslator *_sharedInstance;
 
 %hook TTAStatusInlineAnalyticsButton
 - (CGFloat)extraWidth {
-    // Check if we're inside tweet detail view or immersive view
+    // Check current view controller
+    UIViewController *currentVC = [((UIView *)self) _viewControllerForAncestor];
+    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+        return %orig;
+    }
+    
+    // Check for detail view
     UIView *superview = ((UIView *)self).superview;
     while (superview) {
-        NSString *className = NSStringFromClass([superview class]);
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")] ||
-            [className containsString:@"Immersive"]) {
-            return %orig; // Return original size in detail/immersive view
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            return %orig;
         }
         superview = superview.superview;
     }
     return 48.0;
 }
 - (NSUInteger)buttonSize {
-    // Check if we're inside tweet detail view or immersive view
+    // Check current view controller
+    UIViewController *currentVC = [((UIView *)self) _viewControllerForAncestor];
+    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+        return %orig;
+    }
+    
+    // Check for detail view
     UIView *superview = ((UIView *)self).superview;
     while (superview) {
-        NSString *className = NSStringFromClass([superview class]);
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")] ||
-            [className containsString:@"Immersive"]) {
-            return %orig; // Return original size in detail/immersive view
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            return %orig;
         }
         superview = superview.superview;
     }
