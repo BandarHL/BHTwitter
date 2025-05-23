@@ -573,8 +573,16 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 // MARK: Show unrounded follower/following counts
 %hook T1ProfileFriendsFollowingViewModel
 - (id)_t1_followCountTextWithLabel:(id)label singularLabel:(id)singularLabel count:(id)count highlighted:(_Bool)highlighted {
+    // Debug logging
+    NSLog(@"[BHTwitter] _t1_followCountTextWithLabel called");
+    NSLog(@"[BHTwitter] label: %@ (class: %@)", label, [label class]);
+    NSLog(@"[BHTwitter] singularLabel: %@ (class: %@)", singularLabel, [singularLabel class]);
+    NSLog(@"[BHTwitter] count: %@ (class: %@)", count, [count class]);
+    NSLog(@"[BHTwitter] highlighted: %d", highlighted);
+    
     // First get the original result to understand the expected return type
     id originalResult = %orig;
+    NSLog(@"[BHTwitter] originalResult: %@ (class: %@)", originalResult, [originalResult class]);
     
     // Only proceed if we have a valid count that's an NSNumber
     if (count && [count isKindOfClass:[NSNumber class]]) {
@@ -586,14 +594,18 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         [formatter setGroupingSeparator:@","];
         [formatter setUsesGroupingSeparator:YES];
         NSString *formattedCount = [formatter stringFromNumber:number];
+        NSLog(@"[BHTwitter] formattedCount: %@", formattedCount);
         
         // If original result is an NSString, create a new formatted string
         if ([originalResult isKindOfClass:[NSString class]]) {
             NSString *originalString = (NSString *)originalResult;
             // Try to replace any abbreviated numbers in the original string with our formatted number
             NSString *numberString = [number stringValue];
+            NSLog(@"[BHTwitter] Looking for numberString '%@' in originalString '%@'", numberString, originalString);
             if ([originalString containsString:numberString]) {
-                return [originalString stringByReplacingOccurrencesOfString:numberString withString:formattedCount];
+                NSString *result = [originalString stringByReplacingOccurrencesOfString:numberString withString:formattedCount];
+                NSLog(@"[BHTwitter] Returning modified result: %@", result);
+                return result;
             }
         }
         // If original result is an NSAttributedString, modify that
@@ -602,16 +614,19 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             NSString *originalText = mutableResult.string;
             NSString *numberString = [number stringValue];
             
+            NSLog(@"[BHTwitter] AttributedString - Looking for numberString '%@' in originalText '%@'", numberString, originalText);
             if ([originalText containsString:numberString]) {
                 NSRange range = [originalText rangeOfString:numberString];
                 if (range.location != NSNotFound) {
                     [mutableResult replaceCharactersInRange:range withString:formattedCount];
+                    NSLog(@"[BHTwitter] Returning modified attributed result: %@", mutableResult.string);
                     return [mutableResult copy];
                 }
             }
         }
     }
     
+    NSLog(@"[BHTwitter] Returning original result: %@", originalResult);
     // Return original result if we couldn't modify it safely
     return originalResult;
 }
