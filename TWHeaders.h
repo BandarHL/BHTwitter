@@ -616,3 +616,8 @@ static UIViewController * _Nonnull topMostController() {
 @interface TFNBarButtonItemButtonV1 : UIView
 @property (nonatomic, strong) UIColor *tintColor;
 @end
+
+// T1ProfileFriendsFollowingViewModel interface for unrounded follower/following counts
+@interface T1ProfileFriendsFollowingViewModel : NSObject
+- (id)_t1_followCountTextWithLabel:(id)arg1 singularLabel:(id)arg2 count:(id)arg3 highlighted:(_Bool)arg4;
+@end

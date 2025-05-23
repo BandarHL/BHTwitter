@@ -570,6 +570,27 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
+// MARK: Show unrounded follower/following counts
+%hook T1ProfileFriendsFollowingViewModel
+- (id)_t1_followCountTextWithLabel:(id)label singularLabel:(id)singularLabel count:(id)count highlighted:(_Bool)highlighted {
+    if (count && [count isKindOfClass:[NSNumber class]]) {
+        NSNumber *number = (NSNumber *)count;
+        NSNumberFormatter *formatter = [[NSNumberFormatter alloc] init];
+        [formatter setNumberStyle:NSNumberFormatterDecimalStyle];
+        [formatter setGroupingSeparator:@","];
+        [formatter setUsesGroupingSeparator:YES];
+        
+        NSString *formattedCount = [formatter stringFromNumber:number];
+        NSString *labelText = label ?: @"";
+        
+        return [NSString stringWithFormat:@"%@ %@", formattedCount, labelText];
+    }
+    
+    // Fallback to original behavior if we can't format the number
+    return %orig;
+}
+%end
+
 // MARK: hide ADs - New Implementation
 %hook TFNItemsDataViewAdapterRegistry
 - (id)dataViewAdapterForItem:(id)item {
