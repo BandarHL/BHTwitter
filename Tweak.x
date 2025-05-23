@@ -957,46 +957,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     
     return [newOrig copy];
 }
-
-- (void)_t1_layoutInlineActionButtons {
-    %orig;
-    
-    NSLog(@"[BHTwitter] _t1_layoutInlineActionButtons called!");
-    
-    // Make all buttons bigger by adjusting their frames after layout
-    // Try accessing the underlying ivar first
-    NSMutableArray *buttons = nil;
-    @try {
-        buttons = [self valueForKey:@"_inlineActionButtons"];
-        NSLog(@"[BHTwitter] Found %lu buttons via valueForKey", (unsigned long)buttons.count);
-    } @catch (NSException *exception) {
-        NSLog(@"[BHTwitter] valueForKey failed, trying subviews");
-        // If that fails, find buttons as subviews
-        buttons = [NSMutableArray array];
-        for (UIView *subview in self.subviews) {
-            if ([subview isKindOfClass:[UIButton class]]) {
-                [buttons addObject:subview];
-            }
-        }
-        NSLog(@"[BHTwitter] Found %lu buttons via subviews", (unsigned long)buttons.count);
-    }
-    
-    for (UIView *button in buttons) {
-        NSLog(@"[BHTwitter] Button class: %@", NSStringFromClass([button class]));
-        CGRect frame = button.frame;
-        NSLog(@"[BHTwitter] Original button frame: %@", NSStringFromCGRect(frame));
-        CGFloat extraSize = 30.0; // Make it really big for testing
-        
-        // Expand the button by moving it slightly left/up and increasing size
-        frame.origin.x -= extraSize / 2.0;
-        frame.origin.y -= extraSize / 2.0;
-        frame.size.width += extraSize;
-        frame.size.height += extraSize;
-        
-        button.frame = frame;
-        NSLog(@"[BHTwitter] New button frame: %@", NSStringFromCGRect(button.frame));
-    }
-}
 %end
 
 // Twitter 9.30 and lower
@@ -5361,3 +5321,51 @@ static GeminiTranslator *_sharedInstance;
 }
 
 %end
+
+// Hook individual button classes to make them bigger
+%hook TTAStatusInlineReplyButton
+- (CGSize)intrinsicContentSize {
+    CGSize originalSize = %orig;
+    originalSize.width += 16.0;
+    originalSize.height += 16.0;
+    return originalSize;
+}
+%end
+
+%hook TTAStatusInlineRetweetButton
+- (CGSize)intrinsicContentSize {
+    CGSize originalSize = %orig;
+    originalSize.width += 16.0;
+    originalSize.height += 16.0;
+    return originalSize;
+}
+%end
+
+%hook TTAStatusInlineFavoriteButton
+- (CGSize)intrinsicContentSize {
+    CGSize originalSize = %orig;
+    originalSize.width += 16.0;
+    originalSize.height += 16.0;
+    return originalSize;
+}
+%end
+
+%hook TTAStatusInlineBookmarkButton
+- (CGSize)intrinsicContentSize {
+    CGSize originalSize = %orig;
+    originalSize.width += 16.0;
+    originalSize.height += 16.0;
+    return originalSize;
+}
+%end
+
+%hook TTAStatusInlineShareButton
+- (CGSize)intrinsicContentSize {
+    CGSize originalSize = %orig;
+    originalSize.width += 16.0;
+    originalSize.height += 16.0;
+    return originalSize;
+}
+%end
+
+// Twitter 9.30 and lower
