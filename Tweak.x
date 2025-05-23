@@ -3807,103 +3807,28 @@ static void PlayRefreshSound(int soundType) {
 %hook TFNPullToRefreshControl
 
 // Track state with instance-specific variables using associated objects
-static char kRefreshingKey;
+static char kPreviousLoadingStateKey;
 static char kPlayedPullSoundKey;
-static char kActualRefreshInProgressKey;
 
 // Always enable sound effects
 + (_Bool)_areSoundEffectsEnabled {
     return YES;
 }
 
-// Hook the completion-based setLoading method for reliable pop sound
-- (void)setLoading:(_Bool)loading completion:(void(^)(void))completion {
-    // Get previous state before changing
-    NSNumber *wasRefreshing = objc_getAssociatedObject(self, &kRefreshingKey);
-    BOOL wasRefreshingBool = wasRefreshing ? [wasRefreshing boolValue] : NO;
-    
-    // Check if this is an actual refresh operation
-    NSNumber *actualRefresh = objc_getAssociatedObject(self, &kActualRefreshInProgressKey);
-    BOOL isActualRefresh = actualRefresh ? [actualRefresh boolValue] : NO;
-    
-    // Set new state
-    objc_setAssociatedObject(self, &kRefreshingKey, @(loading), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    
-    // Create a wrapper completion block that plays the pop sound
-    void(^wrappedCompletion)(void) = nil;
-    if (completion) {
-        wrappedCompletion = ^{
-            // Call the original completion
-            completion();
-            
-            // Only play pop sound if we're finishing an actual refresh operation
-            if (wasRefreshingBool && !loading && isActualRefresh) {
-                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-                    PlayRefreshSound(1);
-                });
-                // Clear the actual refresh flag
-                objc_setAssociatedObject(self, &kActualRefreshInProgressKey, @NO, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-            }
-        };
-    } else if (wasRefreshingBool && !loading && isActualRefresh) {
-        // No original completion but we still want to play the sound for actual refresh
-        wrappedCompletion = ^{
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-                PlayRefreshSound(1);
-            });
-            // Clear the actual refresh flag
-            objc_setAssociatedObject(self, &kActualRefreshInProgressKey, @NO, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        };
-    }
-    
-    %orig(loading, wrappedCompletion);
-    
-    // Going from not loading to loading (start of refresh)
-    if (!wasRefreshingBool && loading && isActualRefresh) {
-        NSNumber *didPlayPull = objc_getAssociatedObject(self, &kPlayedPullSoundKey);
-        if (!didPlayPull || ![didPlayPull boolValue]) {
-            // This is for auto-refresh cases where _setStatus isn't called
-            PlayRefreshSound(0);
-        }
-        
-        // Reset status for next refresh
-        objc_setAssociatedObject(self, &kPlayedPullSoundKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    }
-}
-
-// Fallback for when setLoading:completion: isn't called (hook the simple setLoading method)
+// Simple property setter hook - this is called for all loading state changes
 - (void)setLoading:(_Bool)loading {
-    // Get previous state before changing
-    NSNumber *wasRefreshing = objc_getAssociatedObject(self, &kRefreshingKey);
-    BOOL wasRefreshingBool = wasRefreshing ? [wasRefreshing boolValue] : NO;
+    // Get previous loading state
+    NSNumber *previousLoadingState = objc_getAssociatedObject(self, &kPreviousLoadingStateKey);
+    BOOL wasLoading = previousLoadingState ? [previousLoadingState boolValue] : NO;
     
-    // Check if this is an actual refresh operation
-    NSNumber *actualRefresh = objc_getAssociatedObject(self, &kActualRefreshInProgressKey);
-    BOOL isActualRefresh = actualRefresh ? [actualRefresh boolValue] : NO;
-    
-    // Set new state
-    objc_setAssociatedObject(self, &kRefreshingKey, @(loading), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    // Store the new state
+    objc_setAssociatedObject(self, &kPreviousLoadingStateKey, @(loading), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     
     %orig;
     
-    // Going from not loading to loading (start of refresh)
-    if (!wasRefreshingBool && loading && isActualRefresh) {
-        NSNumber *didPlayPull = objc_getAssociatedObject(self, &kPlayedPullSoundKey);
-        if (!didPlayPull || ![didPlayPull boolValue]) {
-            // This is for auto-refresh cases where _setStatus isn't called
-            PlayRefreshSound(0);
-        }
-        
-        // Reset status for next refresh
-        objc_setAssociatedObject(self, &kPlayedPullSoundKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    }
-    // Going from loading to not loading (end of refresh) - only play pop sound for actual refresh
-    else if (wasRefreshingBool && !loading && isActualRefresh) {
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            PlayRefreshSound(1);
-        });
-        // Clear the actual refresh flag
-        objc_setAssociatedObject(self, &kActualRefreshInProgressKey, @NO, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    // If loading went from true to false (1 to 0), refresh is complete - play pop sound
+    if (wasLoading && !loading) {
+        PlayRefreshSound(1);
     }
 }
 
@@ -3912,32 +3837,22 @@ static char kActualRefreshInProgressKey;
     %orig;
     
     if (status == 1 && fromScrolling) {
-        // Status changed to "triggered" via pull - this indicates an actual refresh
-        objc_setAssociatedObject(self, &kActualRefreshInProgressKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        // Status changed to "triggered" via pull - play the pull sound
         PlayRefreshSound(0);
         objc_setAssociatedObject(self, &kPlayedPullSoundKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
 }
 
-// Detect programmatic refresh start
+// Handle programmatic refresh (like app launch)
 - (void)startPullToRefreshAnimationInScrollView:(id)scrollView {
-    // Mark this as an actual refresh operation
-    objc_setAssociatedObject(self, &kActualRefreshInProgressKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    
     %orig;
     
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        // For the initial app launch refresh, use slightly different timing
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            PlayRefreshSound(0); // Pull sound
-            
-            // Play pop with longer delay for initial refresh
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-                PlayRefreshSound(1); // Pop sound
-            });
-        });
-    });
+    // Play pull sound for programmatic refresh
+    NSNumber *didPlayPull = objc_getAssociatedObject(self, &kPlayedPullSoundKey);
+    if (!didPlayPull || ![didPlayPull boolValue]) {
+        PlayRefreshSound(0);
+        objc_setAssociatedObject(self, &kPlayedPullSoundKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
 }
 
 %end
