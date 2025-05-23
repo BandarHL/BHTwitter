@@ -5454,16 +5454,29 @@ static NSMapTable *followersTabFixMap = nil;
 
 %hook TFNScrollingSegmentedViewController
 - (void)setSelectedIndex:(NSUInteger)selectedIndex {
-    // If this is a 2-tab segmented controller (clean layout) and trying to set to index 1, force to 0
+    NSLog(@"[BHTwitter] TFNScrollingSegmentedViewController setSelectedIndex:%lu called", (unsigned long)selectedIndex);
+    NSLog(@"[BHTwitter] Self: %@", self);
+    
     if ([self respondsToSelector:@selector(numberOfSegments)]) {
         NSUInteger numSegments = [(id)self numberOfSegments];
+        NSLog(@"[BHTwitter] numberOfSegments: %lu", (unsigned long)numSegments);
+        
         if (numSegments == 2 && selectedIndex == 1) {
-            NSLog(@"[BHTwitter] Blocking setSelectedIndex:1 in 2-tab layout, forcing to 0");
+            NSLog(@"[BHTwitter] BLOCKING setSelectedIndex:1 in 2-tab layout, forcing to 0");
             %orig(0);
             return;
         }
+    } else {
+        NSLog(@"[BHTwitter] Does not respond to numberOfSegments");
     }
     
+    NSLog(@"[BHTwitter] Allowing setSelectedIndex:%lu", (unsigned long)selectedIndex);
     %orig;
+}
+
+- (NSUInteger)selectedIndex {
+    NSUInteger result = %orig;
+    NSLog(@"[BHTwitter] TFNScrollingSegmentedViewController selectedIndex getter returning: %lu", (unsigned long)result);
+    return result;
 }
 %end
