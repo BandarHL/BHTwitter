@@ -181,7 +181,7 @@
 "HIDE_SPACE_OPTION_TITLE" = "スペースバーを非表示";
 
 "STOP_HIDING_TAB_BAR_TITLE" = "タブバーを常に表示";
-"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "スクロール時にタブバーを非表示にしません。";
+"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "スクロール時にタブバーが非表示にならないようにします。";
 
 "DM_AVATARS_TITLE" = "DMのアバター";
 "DM_AVATARS_DETAIL_TITLE" = "同じ送信者からのグループ内の最後のメッセージにのみアバターを表示します。";
