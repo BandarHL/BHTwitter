@@ -957,6 +957,25 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     
     return [newOrig copy];
 }
+
+- (void)setFrame:(CGRect)frame {
+    // Move the actions view up by 6 points, but only if not in detail view
+    UIView *superview = self.superview;
+    BOOL isInDetailView = NO;
+    while (superview) {
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            isInDetailView = YES;
+            break;
+        }
+        superview = superview.superview;
+    }
+    
+    if (!isInDetailView) {
+        frame.origin.y -= 6.0;
+    }
+    
+    %orig(frame);
+}
 %end
 
 
@@ -5312,72 +5331,150 @@ static GeminiTranslator *_sharedInstance;
 // Hook individual button classes to make them bigger
 %hook TTAStatusInlineReplyButton
 - (CGFloat)extraWidth {
+    // Check if we're inside tweet detail view
+    UIView *superview = ((UIView *)self).superview;
+    while (superview) {
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            return %orig; // Return original size in detail view
+        }
+        superview = superview.superview;
+    }
     return 48.0;
 }
 - (NSUInteger)buttonSize {
+    // Check if we're inside tweet detail view
+    UIView *superview = ((UIView *)self).superview;
+    while (superview) {
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            return %orig; // Return original size in detail view
+        }
+        superview = superview.superview;
+    }
     return 1;
-}
-- (CGFloat)trailingEdgeInset {
-    return -7;
 }
 %end
 
 %hook TTAStatusInlineRetweetButton
 - (CGFloat)extraWidth {
+    // Check if we're inside tweet detail view
+    UIView *superview = ((UIView *)self).superview;
+    while (superview) {
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            return %orig; // Return original size in detail view
+        }
+        superview = superview.superview;
+    }
     return 48.0;
 }
 - (NSUInteger)buttonSize {
+    // Check if we're inside tweet detail view
+    UIView *superview = ((UIView *)self).superview;
+    while (superview) {
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            return %orig; // Return original size in detail view
+        }
+        superview = superview.superview;
+    }
     return 1;
-}
-- (CGFloat)trailingEdgeInset {
-    return -7;
 }
 %end
 
 %hook TTAStatusInlineFavoriteButton
 - (CGFloat)extraWidth {
+    // Check if we're inside tweet detail view
+    UIView *superview = ((UIView *)self).superview;
+    while (superview) {
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            return %orig; // Return original size in detail view
+        }
+        superview = superview.superview;
+    }
     return 48.0;
 }
 - (NSUInteger)buttonSize {
+    // Check if we're inside tweet detail view
+    UIView *superview = ((UIView *)self).superview;
+    while (superview) {
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            return %orig; // Return original size in detail view
+        }
+        superview = superview.superview;
+    }
     return 1;
-}
-- (CGFloat)trailingEdgeInset {
-    return -7;
 }
 %end
 
 %hook TTAStatusInlineBookmarkButton
 - (CGFloat)extraWidth {
+    // Check if we're inside tweet detail view
+    UIView *superview = ((UIView *)self).superview;
+    while (superview) {
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            return %orig; // Return original size in detail view
+        }
+        superview = superview.superview;
+    }
     return 48.0;
 }
 - (NSUInteger)buttonSize {
+    // Check if we're inside tweet detail view
+    UIView *superview = ((UIView *)self).superview;
+    while (superview) {
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            return %orig; // Return original size in detail view
+        }
+        superview = superview.superview;
+    }
     return 1;
-}
-- (CGFloat)trailingEdgeInset {
-    return -7;
 }
 %end
 
 %hook TTAStatusInlineShareButton
 - (CGFloat)extraWidth {
+    // Check if we're inside tweet detail view
+    UIView *superview = ((UIView *)self).superview;
+    while (superview) {
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            return %orig; // Return original size in detail view
+        }
+        superview = superview.superview;
+    }
     return 48.0;
 }
 - (NSUInteger)buttonSize {
+    // Check if we're inside tweet detail view
+    UIView *superview = ((UIView *)self).superview;
+    while (superview) {
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            return %orig; // Return original size in detail view
+        }
+        superview = superview.superview;
+    }
     return 1;
-}
-- (CGFloat)trailingEdgeInset {
-    return -7;
 }
 %end
 
 %hook TTAStatusInlineAnalyticsButton
 - (CGFloat)extraWidth {
+    // Check if we're inside tweet detail view
+    UIView *superview = ((UIView *)self).superview;
+    while (superview) {
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            return %orig; // Return original size in detail view
+        }
+        superview = superview.superview;
+    }
     return 48.0;
 }
 - (NSUInteger)buttonSize {
+    // Check if we're inside tweet detail view
+    UIView *superview = ((UIView *)self).superview;
+    while (superview) {
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+            return %orig; // Return original size in detail view
+        }
+        superview = superview.superview;
+    }
     return 1;
-}
-- (CGFloat)trailingEdgeInset {
-    return -7;
 }
 %end
