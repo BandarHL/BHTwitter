@@ -1210,6 +1210,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (BOOL)_t1_hasTextInComposer;
 - (void)_t1_searchForTextEditorInView:(UIView *)view hasText:(BOOL *)hasText;
 - (void)_t1_updateMediaRailVisibility;
+- (void)_t1_updateMediaRailVisibilityDelayed;
+- (void)_t1_performDelayedMediaRailUpdate;
 - (BOOL)_t1_shouldShowMediaRail;
 @end
 
@@ -1333,18 +1335,36 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 %new
 - (void)_t1_updateMediaRailVisibility {
-    if ([self _t1_shouldShowMediaRail]) {
+    BOOL shouldShow = [self _t1_shouldShowMediaRail];
+    BOOL isCurrentlyShowing = [self _t1_mediaRailShowing];
+    
+    // Only update if state actually needs to change
+    if (shouldShow && !isCurrentlyShowing) {
         [self _t1_showMediaRail];
-    } else {
+    } else if (!shouldShow && isCurrentlyShowing) {
         [self _t1_hideMediaRail];
     }
 }
 
+%new
+- (void)_t1_updateMediaRailVisibilityDelayed {
+    // Cancel any pending updates
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(_t1_performDelayedMediaRailUpdate) object:nil];
+    
+    // Schedule a new update with a small delay to debounce rapid changes
+    [self performSelector:@selector(_t1_performDelayedMediaRailUpdate) withObject:nil afterDelay:0.1];
+}
+
+%new
+- (void)_t1_performDelayedMediaRailUpdate {
+    [self _t1_updateMediaRailVisibility];
+}
+
 - (void)viewDidLoad {
     %orig;
-    // Set up proper media rail visibility
+    // Set up proper media rail visibility with delay to ensure view is ready
     dispatch_async(dispatch_get_main_queue(), ^{
-        [self _t1_updateMediaRailVisibility];
+        [self _t1_updateMediaRailVisibilityDelayed];
     });
 }
 
@@ -1352,34 +1372,35 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     %orig;
     // Update media rail visibility when view appears
     dispatch_async(dispatch_get_main_queue(), ^{
-        [self _t1_updateMediaRailVisibility];
+        [self _t1_updateMediaRailVisibilityDelayed];
     });
 }
 
 // Hook methods that get called when attachments change
 - (void)composer:(id)arg1 didAddOrReplaceAttachment:(id)arg2 {
     %orig;
-    // Update media rail when photo is added
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [self _t1_updateMediaRailVisibility];
-    });
+    // Update media rail when photo is added with delay
+    [self _t1_updateMediaRailVisibilityDelayed];
 }
 
 - (void)composer:(id)arg1 didReplaceAllAttachments:(id)arg2 {
     %orig;
-    // Update media rail when attachments change
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [self _t1_updateMediaRailVisibility];
-    });
+    // Update media rail when attachments change with delay
+    [self _t1_updateMediaRailVisibilityDelayed];
 }
 
 // Hook text change notifications
 - (void)_t1_compositionDidChange {
     %orig;
-    // Update media rail when text changes
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [self _t1_updateMediaRailVisibility];
-    });
+    // Update media rail when text changes with delay
+    [self _t1_updateMediaRailVisibilityDelayed];
+}
+
+// Hook method that might be called when attachments are removed
+- (void)composer:(id)arg1 didRemoveAttachment:(id)arg2 {
+    %orig;
+    // Update media rail when photo is removed with delay
+    [self _t1_updateMediaRailVisibilityDelayed];
 }
 
 %end
