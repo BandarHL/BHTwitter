@@ -1207,6 +1207,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (BOOL)_t1_mediaRailShowing;
 - (void)_t1_loadMediaRailViewController;
 - (void)_t1_updateMediaRailViewController;
+- (id)mediaRailViewController;
 @end
 
 %hook T1TweetComposeViewController
@@ -1255,16 +1256,24 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     return YES; // Always show media rail regardless of Twitter's logic
 }
 
+- (id)mediaRailViewController {
+    id controller = %orig;
+    if (!controller) {
+        // Force create the media rail if it doesn't exist
+        [self _t1_loadMediaRailViewController];
+        controller = %orig;
+    }
+    return controller;
+}
+
 - (void)viewDidLoad {
     %orig;
-    // Ensure media rail view controller is loaded and initially shown
+    // Force load and show the media rail
     dispatch_async(dispatch_get_main_queue(), ^{
-        [self _t1_loadMediaRailViewController];
+        // Ensure the media rail exists
+        [self mediaRailViewController];
         [self _t1_updateMediaRailViewController];
-        // Show it initially if it's not already showing
-        if (![self _t1_mediaRailShowing]) {
-            [self _t1_showMediaRail];
-        }
+        [self _t1_showMediaRail];
     });
 }
 %end
