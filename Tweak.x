@@ -5453,24 +5453,24 @@ static NSMapTable *followersTabFixMap = nil;
 %end
 
 %hook TFNScrollingSegmentedViewController
-- (NSUInteger)selectedIndex {
-    NSUInteger originalIndex = %orig;
-    
+- (void)setSelectedIndex:(NSUInteger)selectedIndex {
     // Check if this segmented controller belongs to a followers-mode view controller
-    // We can check this by walking up the view hierarchy to find the parent
     UIViewController *parent = self.parentViewController;
     while (parent) {
         if ([parent isKindOfClass:NSClassFromString(@"T1ProfileSegmentedFollowingViewController")]) {
             T1ProfileSegmentedFollowingViewController *followingVC = (T1ProfileSegmentedFollowingViewController *)parent;
             if ([followersTabFixMap objectForKey:followingVC.retainedDataSource]) {
-                NSLog(@"[BHTwitter] TFNScrollingSegmentedViewController selectedIndex: %lu → 0 (followers mode)", (unsigned long)originalIndex);
-                return 0;
+                if (selectedIndex != 0) {
+                    NSLog(@"[BHTwitter] Blocking setSelectedIndex:%lu, forcing to 0 (followers mode)", (unsigned long)selectedIndex);
+                    %orig(0);
+                    return;
+                }
             }
             break;
         }
         parent = parent.parentViewController;
     }
     
-    return originalIndex;
+    %orig;
 }
 %end
