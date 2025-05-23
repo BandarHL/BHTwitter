@@ -598,10 +598,6 @@ static UIViewController * _Nonnull topMostController() {
 - (void)updateLogoTheme;
 @end
 
-@interface UIView (ViewControllerAncestor)
-- (UIViewController *)_viewControllerForAncestor;
-@end
-
 @interface TFSTimelineViewController : UIViewController
 @end
 

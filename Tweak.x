@@ -957,32 +957,19 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     
     return [newOrig copy];
 }
+%end
 
-- (void)setFrame:(CGRect)frame {
-    // Check current view controller
-    UIViewController *currentVC = [self _viewControllerForAncestor];
+// Twitter 9.30 and lower
+%hook T1StatusInlineActionsView
++ (NSArray *)_t1_inlineActionViewClassesForViewModel:(id)arg1 options:(NSUInteger)arg2 displayType:(NSUInteger)arg3 account:(id)arg4 {
+    NSArray *_orig = %orig;
+    NSMutableArray *newOrig = [_orig mutableCopy];
     
-    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
-        // In immersive view - use original frame
-        %orig(frame);
-        return;
+    if ([BHTManager isVideoCell:arg1] && [BHTManager DownloadingVideos]) {
+        [newOrig addObject:%c(BHDownloadInlineButton)];
     }
     
-    // Check for detail view in superview hierarchy
-    UIView *superview = self.superview;
-    while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            // In detail view - use original frame
-            %orig(frame);
-            return;
-        }
-        superview = superview.superview;
-    }
-    
-    // Regular timeline - adjust frame
-    frame.origin.y -= 6.0;
-    %orig(frame);
+    return [newOrig copy];
 }
 %end
 
@@ -1212,7 +1199,16 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %end
 
 // MARK: Tweet confirm
+
+// Declare private T1TweetComposeViewController methods
+@interface T1TweetComposeViewController (BHTwitter)
+- (void)_t1_showMediaRail;
+- (void)_t1_hideMediaRail;
+- (BOOL)_t1_mediaRailShowing;
+@end
+
 %hook T1TweetComposeViewController
+
 - (void)_t1_didTapSendButton:(UIButton *)tweetButton {
     if ([BHTManager TweetConfirm]) {
         [%c(FLEXAlert) makeAlert:^(FLEXAlert *make) {
@@ -1251,6 +1247,28 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (BOOL)_t1_canEnableCollaboration {
     return true;
 }
+
+// MARK: Media Rail Restoration
+- (BOOL)_t1_shouldShowMediaRail {
+    return YES; // Always show media rail regardless of Twitter's logic
+}
+
+- (void)viewDidLoad {
+    %orig;
+    // Ensure media rail is shown when view loads
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self _t1_showMediaRail];
+    });
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    %orig;
+    // Ensure media rail remains visible
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self _t1_showMediaRail];
+    });
+}
+
 %end
 
 // MARK: Follow confirm
@@ -5333,240 +5351,4 @@ static GeminiTranslator *_sharedInstance;
     return originalProvider;
 }
 
-
-%end
-
-// Hook individual button classes to make them bigger
-%hook TTAStatusInlineReplyButton
-- (CGFloat)extraWidth {
-    // Check current view controller
-    UIViewController *currentVC = [((UIView *)self) _viewControllerForAncestor];
-    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
-        return %orig;
-    }
-    
-    // Check for detail view
-    UIView *superview = ((UIView *)self).superview;
-    while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            return %orig;
-        }
-        superview = superview.superview;
-    }
-    return 48.0;
-}
-- (NSUInteger)buttonSize {
-    // Check current view controller
-    UIViewController *currentVC = [((UIView *)self) _viewControllerForAncestor];
-    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
-        return %orig;
-    }
-    
-    // Check for detail view
-    UIView *superview = ((UIView *)self).superview;
-    while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            return %orig;
-        }
-        superview = superview.superview;
-    }
-    return 1;
-}
-%end
-
-%hook TTAStatusInlineRetweetButton
-- (CGFloat)extraWidth {
-    // Check current view controller
-    UIViewController *currentVC = [((UIView *)self) _viewControllerForAncestor];
-    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
-        return %orig;
-    }
-    
-    // Check for detail view
-    UIView *superview = ((UIView *)self).superview;
-    while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            return %orig;
-        }
-        superview = superview.superview;
-    }
-    return 48.0;
-}
-- (NSUInteger)buttonSize {
-    // Check current view controller
-    UIViewController *currentVC = [((UIView *)self) _viewControllerForAncestor];
-    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
-        return %orig;
-    }
-    
-    // Check for detail view
-    UIView *superview = ((UIView *)self).superview;
-    while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            return %orig;
-        }
-        superview = superview.superview;
-    }
-    return 1;
-}
-%end
-
-%hook TTAStatusInlineFavoriteButton
-- (CGFloat)extraWidth {
-    // Check current view controller
-    UIViewController *currentVC = [((UIView *)self) _viewControllerForAncestor];
-    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
-        return %orig;
-    }
-    
-    // Check for detail view
-    UIView *superview = ((UIView *)self).superview;
-    while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            return %orig;
-        }
-        superview = superview.superview;
-    }
-    return 48.0;
-}
-- (NSUInteger)buttonSize {
-    // Check current view controller
-    UIViewController *currentVC = [((UIView *)self) _viewControllerForAncestor];
-    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
-        return %orig;
-    }
-    
-    // Check for detail view
-    UIView *superview = ((UIView *)self).superview;
-    while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            return %orig;
-        }
-        superview = superview.superview;
-    }
-    return 1;
-}
-%end
-
-%hook TTAStatusInlineBookmarkButton
-- (CGFloat)extraWidth {
-    // Check current view controller
-    UIViewController *currentVC = [((UIView *)self) _viewControllerForAncestor];
-    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
-        return %orig;
-    }
-    
-    // Check for detail view
-    UIView *superview = ((UIView *)self).superview;
-    while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            return %orig;
-        }
-        superview = superview.superview;
-    }
-    return 48.0;
-}
-- (NSUInteger)buttonSize {
-    // Check current view controller
-    UIViewController *currentVC = [((UIView *)self) _viewControllerForAncestor];
-    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
-        return %orig;
-    }
-    
-    // Check for detail view
-    UIView *superview = ((UIView *)self).superview;
-    while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            return %orig;
-        }
-        superview = superview.superview;
-    }
-    return 1;
-}
-%end
-
-%hook TTAStatusInlineShareButton
-- (CGFloat)extraWidth {
-    // Check current view controller
-    UIViewController *currentVC = [((UIView *)self) _viewControllerForAncestor];
-    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
-        return %orig;
-    }
-    
-    // Check for detail view
-    UIView *superview = ((UIView *)self).superview;
-    while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            return %orig;
-        }
-        superview = superview.superview;
-    }
-    return 48.0;
-}
-- (NSUInteger)buttonSize {
-    // Check current view controller
-    UIViewController *currentVC = [((UIView *)self) _viewControllerForAncestor];
-    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
-        return %orig;
-    }
-    
-    // Check for detail view
-    UIView *superview = ((UIView *)self).superview;
-    while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            return %orig;
-        }
-        superview = superview.superview;
-    }
-    return 1;
-}
-%end
-
-%hook TTAStatusInlineAnalyticsButton
-- (CGFloat)extraWidth {
-    // Check current view controller
-    UIViewController *currentVC = [((UIView *)self) _viewControllerForAncestor];
-    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
-        return %orig;
-    }
-    
-    // Check for detail view
-    UIView *superview = ((UIView *)self).superview;
-    while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            return %orig;
-        }
-        superview = superview.superview;
-    }
-    return 48.0;
-}
-- (NSUInteger)buttonSize {
-    // Check current view controller
-    UIViewController *currentVC = [((UIView *)self) _viewControllerForAncestor];
-    if ([currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
-        [currentVC isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
-        return %orig;
-    }
-    
-    // Check for detail view
-    UIView *superview = ((UIView *)self).superview;
-    while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            return %orig;
-        }
-        superview = superview.superview;
-    }
-    return 1;
-}
 %end
