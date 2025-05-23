@@ -1253,7 +1253,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 // MARK: Media Rail Restoration
 - (BOOL)_t1_shouldShowMediaRail {
-    return YES; // Always show media rail regardless of Twitter's logic
+    return NO; // Always show media rail regardless of Twitter's logic
 }
 
 - (id)mediaRailViewController {
