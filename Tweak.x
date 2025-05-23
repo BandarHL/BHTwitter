@@ -961,12 +961,16 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)_t1_layoutInlineActionButtons {
     %orig;
     
+    NSLog(@"[BHTwitter] _t1_layoutInlineActionButtons called!");
+    
     // Make all buttons bigger by adjusting their frames after layout
     // Try accessing the underlying ivar first
     NSMutableArray *buttons = nil;
     @try {
         buttons = [self valueForKey:@"_inlineActionButtons"];
+        NSLog(@"[BHTwitter] Found %lu buttons via valueForKey", (unsigned long)buttons.count);
     } @catch (NSException *exception) {
+        NSLog(@"[BHTwitter] valueForKey failed, trying subviews");
         // If that fails, find buttons as subviews
         buttons = [NSMutableArray array];
         for (UIView *subview in self.subviews) {
@@ -974,11 +978,13 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                 [buttons addObject:subview];
             }
         }
+        NSLog(@"[BHTwitter] Found %lu buttons via subviews", (unsigned long)buttons.count);
     }
     
     for (UIView *button in buttons) {
         if ([button isKindOfClass:[UIButton class]]) {
             CGRect frame = button.frame;
+            NSLog(@"[BHTwitter] Original button frame: %@", NSStringFromCGRect(frame));
             CGFloat extraSize = 30.0; // Make it really big for testing
             
             // Expand the button by moving it slightly left/up and increasing size
@@ -988,6 +994,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             frame.size.height += extraSize;
             
             button.frame = frame;
+            NSLog(@"[BHTwitter] New button frame: %@", NSStringFromCGRect(button.frame));
         }
     }
 }
