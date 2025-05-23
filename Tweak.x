@@ -1253,22 +1253,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     return YES; // Always show media rail regardless of Twitter's logic
 }
 
-- (void)viewDidLoad {
-    %orig;
-    // Ensure media rail is shown when view loads
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [self _t1_showMediaRail];
-    });
-}
-
-- (void)viewWillAppear:(BOOL)animated {
-    %orig;
-    // Ensure media rail remains visible
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [self _t1_showMediaRail];
-    });
-}
-
 %end
 
 // MARK: Follow confirm
