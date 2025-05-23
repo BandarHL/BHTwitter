@@ -5455,19 +5455,22 @@ static NSMapTable *followersTabFixMap = nil;
 %hook TFNScrollingSegmentedViewController
 - (void)setSelectedIndex:(NSUInteger)selectedIndex {
     NSLog(@"[BHTwitter] TFNScrollingSegmentedViewController setSelectedIndex:%lu called", (unsigned long)selectedIndex);
-    NSLog(@"[BHTwitter] Self: %@", self);
     
-    if ([self respondsToSelector:@selector(numberOfSegments)]) {
-        NSUInteger numSegments = [(id)self numberOfSegments];
-        NSLog(@"[BHTwitter] numberOfSegments: %lu", (unsigned long)numSegments);
-        
-        if (numSegments == 2 && selectedIndex == 1) {
-            NSLog(@"[BHTwitter] BLOCKING setSelectedIndex:1 in 2-tab layout, forcing to 0");
-            %orig(0);
-            return;
+    // Check if parent is a followers mode view controller by checking the conversion
+    UIViewController *parent = self.parentViewController;
+    while (parent) {
+        if ([parent isKindOfClass:NSClassFromString(@"T1ProfileSegmentedFollowingViewController")]) {
+            T1ProfileSegmentedFollowingViewController *followingVC = (T1ProfileSegmentedFollowingViewController *)parent;
+            if ([followersTabFixMap objectForKey:followingVC.retainedDataSource]) {
+                if (selectedIndex == 1) {
+                    NSLog(@"[BHTwitter] BLOCKING setSelectedIndex:1 in followers mode, forcing to 0");
+                    %orig(0);
+                    return;
+                }
+            }
+            break;
         }
-    } else {
-        NSLog(@"[BHTwitter] Does not respond to numberOfSegments");
+        parent = parent.parentViewController;
     }
     
     NSLog(@"[BHTwitter] Allowing setSelectedIndex:%lu", (unsigned long)selectedIndex);
