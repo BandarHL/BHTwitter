@@ -3815,8 +3815,10 @@ static char kPlayedPullSoundKey;
     return YES;
 }
 
-// Hook the loading property setter directly
+// Hook the simple loading property setter
 - (void)setLoading:(_Bool)loading {
+    NSLog(@"[BHTwitter] setLoading: called with loading=%d", loading);
+    
     // Get previous loading state
     NSNumber *previousLoadingState = objc_getAssociatedObject(self, &kPreviousLoadingStateKey);
     BOOL wasLoading = previousLoadingState ? [previousLoadingState boolValue] : NO;
@@ -3837,8 +3839,33 @@ static char kPlayedPullSoundKey;
     }
 }
 
+// Hook the completion-based loading setter
+- (void)setLoading:(_Bool)loading completion:(void(^)(void))completion {
+    NSLog(@"[BHTwitter] setLoading:completion: called with loading=%d", loading);
+    
+    // Get previous loading state
+    NSNumber *previousLoadingState = objc_getAssociatedObject(self, &kPreviousLoadingStateKey);
+    BOOL wasLoading = previousLoadingState ? [previousLoadingState boolValue] : NO;
+    
+    %orig;
+    
+    // Store the new state AFTER calling original
+    objc_setAssociatedObject(self, &kPreviousLoadingStateKey, @(loading), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    
+    // If loading went from YES to NO, refresh is complete - play pop sound
+    if (wasLoading && !loading) {
+        NSLog(@"[BHTwitter] Loading changed from YES to NO (completion) - playing pop sound");
+        PlayRefreshSound(1);
+    }
+    
+    if (!wasLoading && loading) {
+        NSLog(@"[BHTwitter] Loading changed from NO to YES (completion) - refresh started");
+    }
+}
+
 // Detect manual pull-to-refresh and play pull sound
 - (void)_setStatus:(unsigned long long)status fromScrolling:(_Bool)fromScrolling {
+    NSLog(@"[BHTwitter] _setStatus:%llu fromScrolling:%d", status, fromScrolling);
     %orig;
     
     if (status == 1 && fromScrolling) {
