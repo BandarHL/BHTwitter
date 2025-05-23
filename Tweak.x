@@ -958,20 +958,38 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     return [newOrig copy];
 }
 
-+ (id)_t1_overrideButtonSizeForDisplayType:(long long)arg1 {
-    // Get the original button size
-    NSValue *originalSize = %orig(arg1);
+- (void)_t1_adjustInlineActionButtonTouchInsets {
+    %orig;
     
-    if (originalSize) {
-        CGSize size = [originalSize CGSizeValue];
-        // Make buttons bigger by increasing both width and height
-        size.width += 8.0;
-        size.height += 8.0;
-        return [NSValue valueWithCGSize:size];
+    // Make all buttons bigger by adjusting their frames after layout
+    // Try accessing the underlying ivar first
+    NSMutableArray *buttons = nil;
+    @try {
+        buttons = [self valueForKey:@"_inlineActionButtons"];
+    } @catch (NSException *exception) {
+        // If that fails, find buttons as subviews
+        buttons = [NSMutableArray array];
+        for (UIView *subview in self.subviews) {
+            if ([subview isKindOfClass:[UIButton class]]) {
+                [buttons addObject:subview];
+            }
+        }
     }
     
-    // If no original size, create a bigger default size
-    return [NSValue valueWithCGSize:CGSizeMake(52.0, 52.0)];
+    for (UIView *button in buttons) {
+        if ([button isKindOfClass:[UIButton class]]) {
+            CGRect frame = button.frame;
+            CGFloat extraSize = 8.0;
+            
+            // Expand the button by moving it slightly left/up and increasing size
+            frame.origin.x -= extraSize / 2.0;
+            frame.origin.y -= extraSize / 2.0;
+            frame.size.width += extraSize;
+            frame.size.height += extraSize;
+            
+            button.frame = frame;
+        }
+    }
 }
 %end
 
