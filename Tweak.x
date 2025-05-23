@@ -5453,7 +5453,7 @@ static NSMapTable *followersTabFixMap = nil;
 %end
 
 %hook TFNScrollingSegmentedViewController
-- (void)viewDidAppear:(BOOL)animated {
+- (void)viewDidLoad {
     %orig;
     
     // Check if this segmented controller belongs to a followers-mode view controller
@@ -5462,8 +5462,23 @@ static NSMapTable *followersTabFixMap = nil;
         if ([parent isKindOfClass:NSClassFromString(@"T1ProfileSegmentedFollowingViewController")]) {
             T1ProfileSegmentedFollowingViewController *followingVC = (T1ProfileSegmentedFollowingViewController *)parent;
             if ([followersTabFixMap objectForKey:followingVC.retainedDataSource]) {
-                NSLog(@"[BHTwitter] TFNScrollingSegmentedViewController viewDidAppear - forcing selectedIndex to 0");
-                self.selectedIndex = 0;
+                NSLog(@"[BHTwitter] Found followers-mode TFNScrollingSegmentedViewController - setting up timer");
+                
+                // Aggressively force it to 0 multiple times
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                    NSLog(@"[BHTwitter] Timer 1: Setting selectedIndex to 0");
+                    self.selectedIndex = 0;
+                });
+                
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                    NSLog(@"[BHTwitter] Timer 2: Setting selectedIndex to 0");
+                    self.selectedIndex = 0;
+                });
+                
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                    NSLog(@"[BHTwitter] Timer 3: Setting selectedIndex to 0");
+                    self.selectedIndex = 0;
+                });
             }
             break;
         }
