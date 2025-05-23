@@ -1,5 +1,5 @@
 /*
-  Language: en
+  Language: ja
   NeoFreeBird
 */
 
@@ -35,7 +35,7 @@
 "HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "「おすすめトピック」を非表示にします。";
 
 "PADLOCK_OPTION_TITLE" = "Twitterをロック";
-"PADLOCK_OPTION_DETAIL_TITLE" = "Face IDまたはパスコード認証を有効化";
+"PADLOCK_OPTION_DETAIL_TITLE" = "Twitterを開くためにFace IDまたはパスコード認証を必要とします。";
 
 "ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "外部ブラウザを使用";
 "ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "Safariまたはデフォルトのブラウザでリンクを開きます。";
@@ -57,7 +57,7 @@
 "ENABLE_TWEET_LABELS_OPTION_TITLE" = "ツイートのソースラベルを表示 (ベータ版)";
 "ENABLE_TWEET_LABELS_OPTION_DETAIL_TITLE" = "ツイートがどのクライアントから作成されたかを表示します。 (@nyaathea)";
 
-"LIKE_CONFIRM_OPTION_TITLE" = "いいねを確認";
+"LIKE_CONFIRM_OPTION_TITLE" = "いいねの確認";
 "LIKE_CONFIRM_OPTION_DETAIL_TITLE" = "ツイートに「いいね」する前に確認ダイアログを表示します。";
 
 "TWEET_CONFIRM_OPTION_TITLE" = "ツイートの確認";
@@ -203,7 +203,7 @@
 
 
 /*Legal*/
-"LEGAL_SECTION_HEADER_TITLE" = "法的";
+"LEGAL_SECTION_HEADER_TITLE" = "法的情報";
 
 "LEGAL_BUTTON_TITLE" = "法的情報";
 "ACKNOWLEDGEMENTS_SETTINGS_NAVIGATION_TITLE" = "法的情報";
@@ -254,12 +254,12 @@ Custom fonts*/
 
 /*Theme*/
 "THEME_SETTINGS_NAVIGATION_TITLE" = "テーマを変更";
-"THEME_OPTION_1" = "青";
-"THEME_OPTION_2" = "黄色";
-"THEME_OPTION_3" = "赤";
-"THEME_OPTION_4" = "紫";
+"THEME_OPTION_1" = "ブルー";
+"THEME_OPTION_2" = "イエロー";
+"THEME_OPTION_3" = "レッド";
+"THEME_OPTION_4" = "パープル";
 "THEME_OPTION_5" = "オレンジ";
-"THEME_OPTION_6" = "緑";
+"THEME_OPTION_6" = "グリーン";
 
 /*Tab bar*/
 "CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE" = "タブバーを編集";
