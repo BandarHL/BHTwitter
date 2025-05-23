@@ -1205,9 +1205,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)_t1_showMediaRail;
 - (void)_t1_hideMediaRail;
 - (BOOL)_t1_mediaRailShowing;
-- (void)_t1_loadMediaRailViewController;
-- (void)_t1_updateMediaRailViewController;
-- (id)mediaRailViewController;
+- (BOOL)_bht_hasSelectedPhoto;
+- (BOOL)_bht_hasTextContent;
+- (void)_bht_updateMediaRailVisibility;
 @end
 
 %hook T1TweetComposeViewController
@@ -1256,15 +1256,79 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     return YES; // Always show media rail regardless of Twitter's logic
 }
 
-- (id)mediaRailViewController {
-    id controller = %orig;
-    if (!controller) {
-        // Force create the media rail if it doesn't exist
-        [self _t1_loadMediaRailViewController];
-        controller = %orig;
-    }
-    return controller;
+- (BOOL)_bht_hasSelectedPhoto {
+    // Check if there's a delete photo button visible
+    __block BOOL hasDeleteButton = NO;
+    
+    void (^checkSubview)(UIView *) = ^(UIView *subview) {
+        if (hasDeleteButton) return; // Early exit if already found
+        
+        if ([subview isKindOfClass:[UIButton class]] || [subview isKindOfClass:NSClassFromString(@"TFNButton")]) {
+            if ([subview.accessibilityLabel isEqualToString:@"Delete photo"]) {
+                hasDeleteButton = YES;
+            }
+        }
+    };
+    
+    BH_EnumerateSubviewsRecursively(self.view, checkSubview);
+    return hasDeleteButton;
 }
+
+- (BOOL)_bht_hasTextContent {
+    // Check if there's meaningful text content
+    id compositionState = [self valueForKey:@"_compositionState"];
+    if (compositionState) {
+        // Try to get the text from composition state
+        id composition = [compositionState valueForKey:@"composition"];
+        if (composition) {
+            NSString *text = [composition valueForKey:@"text"];
+            return text.length > 0;
+        }
+    }
+    return NO;
+}
+
+- (void)_bht_updateMediaRailVisibility {
+    BOOL hasPhoto = [self _bht_hasSelectedPhoto];
+    BOOL hasText = [self _bht_hasTextContent];
+    
+    // Hide media rail if photo is selected or text is entered
+    if (hasPhoto || hasText) {
+        if ([self _t1_mediaRailShowing]) {
+            [self _t1_hideMediaRail];
+        }
+    } else {
+        // Show media rail if no photo and no text
+        if (![self _t1_mediaRailShowing]) {
+            [self _t1_showMediaRail];
+        }
+    }
+}
+
+- (void)viewDidLoad {
+    %orig;
+    // Ensure media rail is shown when view loads (if no content)
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self _bht_updateMediaRailVisibility];
+    });
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    %orig;
+    // Update media rail visibility when appearing
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self _bht_updateMediaRailVisibility];
+    });
+}
+
+// Hook into composition state changes to update visibility
+- (void)setCompositionState:(id)compositionState {
+    %orig;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self _bht_updateMediaRailVisibility];
+    });
+}
+
 %end
 
 // MARK: Follow confirm
