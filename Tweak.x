@@ -11,6 +11,68 @@
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
 
+// MARK: - Performance Optimization Constants
+static const NSTimeInterval BHT_THEME_DEBOUNCE_INTERVAL = 0.1; // 100ms
+static const NSTimeInterval BHT_CACHE_CLEANUP_INTERVAL = 30.0; // 30 seconds
+static const NSInteger BHT_MAX_VIEW_TRAVERSAL_DEPTH = 12; // Reduced from 15
+static const NSInteger BHT_BATCH_OPERATIONS_THRESHOLD = 3; // Batch operations
+
+// MARK: - Performance Optimization Variables
+static NSTimer *themeDebounceTimer = nil;
+static NSMutableSet<NSString *> *pendingThemeOperations = nil;
+static NSMapTable<NSString *, id> *operationCache = nil;
+static NSTimeInterval lastCacheCleanup = 0;
+
+// MARK: - Optimized Helper Functions
+static void BHT_InitializeOptimizationCaches(void) {
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        pendingThemeOperations = [NSMutableSet new];
+        operationCache = [NSMapTable strongToStrongObjectsMapTable];
+    });
+}
+
+static void BHT_CleanupCachesIfNeeded(void) {
+    NSTimeInterval now = [NSDate timeIntervalSinceReferenceDate];
+    if (now - lastCacheCleanup > BHT_CACHE_CLEANUP_INTERVAL) {
+        [operationCache removeAllObjects];
+        lastCacheCleanup = now;
+    }
+}
+
+static void BHT_PerformMainQueueOperation(NSString *operationKey, void(^operation)(void)) {
+    if (!operation) return;
+    
+    BHT_InitializeOptimizationCaches();
+    
+    // Check if we already have this operation pending
+    if ([pendingThemeOperations containsObject:operationKey]) {
+        return; // Skip duplicate operation
+    }
+    
+    [pendingThemeOperations addObject:operationKey];
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        operation();
+        [pendingThemeOperations removeObject:operationKey];
+    });
+}
+
+static UIAlertController *BHT_CreateStandardAlert(NSString *title, NSString *message, UIAlertControllerStyle style) {
+    NSString *cacheKey = [NSString stringWithFormat:@"alert_%@_%@_%ld", title ?: @"", message ?: @"", (long)style];
+    
+    BHT_InitializeOptimizationCaches();
+    UIAlertController *cachedAlert = [operationCache objectForKey:cacheKey];
+    
+    if (!cachedAlert) {
+        cachedAlert = [UIAlertController alertControllerWithTitle:title message:message preferredStyle:style];
+        [operationCache setObject:cachedAlert forKey:cacheKey];
+    }
+    
+    // Return a copy to avoid conflicts
+    return [UIAlertController alertControllerWithTitle:title message:message preferredStyle:style];
+}
+
 // Block type definitions for compatibility
 typedef void (^VoidBlock)(void);
 typedef id (^UnknownBlock)(void);
@@ -77,19 +139,26 @@ static const NSTimeInterval CACHE_INVALIDATION_INTERVAL = 10.0; // 10 seconds
 static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *currentView)) {
     if (!view || !block) return;
     
-    // Performance optimization: Skip hidden views and their subviews
-    if (view.hidden || view.alpha <= 0.01) return;
+    // Performance optimization: Skip hidden views and their subviews entirely
+    if (view.hidden || view.alpha <= 0.01 || !view.superview) return;
+    
+    // Performance optimization: Skip views that are outside visible bounds
+    if (view.frame.size.width <= 0 || view.frame.size.height <= 0) return;
     
     block(view);
     
-    // Performance optimization: Limit recursion depth to prevent excessive traversal
+    // Performance optimization: Use static variable for depth tracking to avoid recursive overhead
     static NSInteger recursionDepth = 0;
-    if (recursionDepth > 15) return; // Reasonable depth limit
+    if (recursionDepth >= BHT_MAX_VIEW_TRAVERSAL_DEPTH) return;
     
     recursionDepth++;
-    for (UIView *subview in view.subviews) {
+    
+    // Cache subviews array to avoid multiple property access
+    NSArray<UIView *> *subviews = view.subviews;
+    for (UIView *subview in subviews) {
         BH_EnumerateSubviewsRecursively(subview, block);
     }
+    
     recursionDepth--;
 }
 
@@ -162,13 +231,15 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (instancetype)init {
     id instance = %orig;
     if (instance && !BHT_themeManagerInitialized) {
+        BHT_InitializeOptimizationCaches();
+        
         // Register for system theme and appearance related notifications
         [[NSNotificationCenter defaultCenter] addObserverForName:@"UITraitCollectionDidChangeNotification"
                                                          object:nil
                                                           queue:[NSOperationQueue mainQueue]
                                                      usingBlock:^(NSNotification * _Nonnull note) {
             if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"]) {
-                dispatch_async(dispatch_get_main_queue(), ^{
+                BHT_PerformMainQueueOperation(@"theme_trait_change", ^{
                     BHT_ensureThemingEngineSynchronized(NO);
                 });
             }
@@ -180,7 +251,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                                                           queue:[NSOperationQueue mainQueue]
                                                      usingBlock:^(NSNotification * _Nonnull note) {
             if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"]) {
-                dispatch_async(dispatch_get_main_queue(), ^{
+                BHT_PerformMainQueueOperation(@"theme_foreground", ^{
                     BHT_ensureThemingEngineSynchronized(YES);
                 });
             }
@@ -217,26 +288,32 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)applyCurrentColorPalette {
     %orig;
     
-    // Signal UI to refresh after Twitter applies its palette
+    // Signal UI to refresh after Twitter applies its palette - debounced
     if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"] && !BHT_isInThemeChangeOperation) {
-        // This call happens after Twitter has applied its color changes,
-        // so we need to force refresh our special UI elements
-        dispatch_async(dispatch_get_main_queue(), ^{
+        // Debounce theme updates to prevent excessive calls
+        if (themeDebounceTimer) {
+            [themeDebounceTimer invalidate];
+        }
+        
+        themeDebounceTimer = [NSTimer scheduledTimerWithTimeInterval:BHT_THEME_DEBOUNCE_INTERVAL
+                                                              target:[NSBlockOperation blockOperationWithBlock:^{
             BHT_UpdateAllTabBarIcons();
             
-            // Refresh our navigation bar bird logos
-            for (UIWindow *window in UIApplication.sharedApplication.windows) {
-                if (window.isHidden || !window.isOpaque) continue;
+            // Batch window operations for better performance
+            NSArray<UIWindow *> *windows = UIApplication.sharedApplication.windows;
+            for (UIWindow *window in windows) {
+                if (window.isHidden || !window.isOpaque || !window.rootViewController || !window.rootViewController.isViewLoaded) continue;
                 
-                if (window.rootViewController && window.rootViewController.isViewLoaded) {
-                    BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
-                        if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
-                            [(TFNNavigationBar *)currentView updateLogoTheme];
-                        }
-                    });
-                }
+                BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
+                    if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
+                        [(TFNNavigationBar *)currentView updateLogoTheme];
+                    }
+                });
             }
-        });
+        }]
+                                                            selector:@selector(main)
+                                                            userInfo:nil
+                                                             repeats:NO];
     }
 }
 
@@ -251,8 +328,10 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     
     // If we have an active theme, ensure it's properly applied
     if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"]) {
-        // Synchronize our theme if needed (without forcing)
-        BHT_ensureThemingEngineSynchronized(NO);
+        // Synchronize our theme if needed (without forcing) - use optimized helper
+        BHT_PerformMainQueueOperation(@"theme_apply_primary", ^{
+            BHT_ensureThemingEngineSynchronized(NO);
+        });
     }
 }
 
@@ -262,7 +341,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     
     // Ensure our theme isn't lost during dark/light mode changes
     if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"]) {
-        dispatch_async(dispatch_get_main_queue(), ^{
+        BHT_PerformMainQueueOperation(@"theme_update_style", ^{
             BHT_UpdateAllTabBarIcons();
         });
     }
@@ -298,42 +377,50 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (_Bool)application:(UIApplication *)application didFinishLaunchingWithOptions:(id)arg2 {
     _Bool orig = %orig;
     
-    // Remove the animation trigger entirely since it causes black screen
-    // We'll rely solely on our hook to launchTransitionProvider to create the provider
-    // and our hook to setBlueBackgroundView to ensure correct color
+    // Initialize optimization caches early
+    BHT_InitializeOptimizationCaches();
     
+    // Batch default settings for first run
     if (![[NSUserDefaults standardUserDefaults] objectForKey:@"FirstRun_4.3"]) {
-        [[NSUserDefaults standardUserDefaults] setValue:@"1strun" forKey:@"FirstRun_4.3"];
-        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"dw_v"];
-        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"hide_promoted"];
-        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"voice"];
-        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"undo_tweet"];
-        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"TrustedFriends"];
-        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"disableSensitiveTweetWarnings"];
-        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"disable_immersive_player"];
-        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"custom_voice_upload"];
-        [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"dm_avatars"];
-        [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"tab_bar_theming"];
+        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+        
+        // Batch all defaults in a single operation
+        NSDictionary *defaultSettings = @{
+            @"FirstRun_4.3": @"1strun",
+            @"dw_v": @YES,
+            @"hide_promoted": @YES,
+            @"voice": @YES,
+            @"undo_tweet": @YES,
+            @"TrustedFriends": @YES,
+            @"disableSensitiveTweetWarnings": @YES,
+            @"disable_immersive_player": @YES,
+            @"custom_voice_upload": @YES,
+            @"dm_avatars": @NO,
+            @"tab_bar_theming": @NO
+        };
+        
+        [defaultSettings enumerateKeysAndObjectsUsingBlock:^(NSString *key, NSNumber *value, BOOL *stop) {
+            [defaults setBool:value.boolValue forKey:key];
+        }];
     }
+    
     [BHTManager cleanCache];
     if ([BHTManager FLEX]) {
         [[%c(FLEXManager) sharedManager] showExplorer];
     }
     
-    // Apply theme immediately after launch - simplified version using our new system
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            // Force synchronize our theme with Twitter's internal theme system
+    // Batch theme and cookie initialization to reduce main queue pressure
+    BHT_PerformMainQueueOperation(@"app_launch_init", ^{
+        // Apply theme immediately after launch
+        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
             BHT_ensureThemingEngineSynchronized(YES);
-        });
-    }
-    
-    // Start the cookie initialization process with retry mechanism
-    if ([BHTManager RestoreTweetLabels]) {
-        dispatch_async(dispatch_get_main_queue(), ^{
+        }
+        
+        // Start the cookie initialization process
+        if ([BHTManager RestoreTweetLabels]) {
             [TweetSourceHelper initializeCookiesWithRetry];
-        });
-    }
+        }
+    });
     
     return orig;
 }
@@ -341,40 +428,47 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)applicationDidBecomeActive:(id)arg1 {
     %orig;
     
-    // Re-apply theme on becoming active - simpler with our new management system
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        BHT_ensureThemingEngineSynchronized(YES);
-    }
-
-    // Check if we need to initialize cookies
-    if ([BHTManager RestoreTweetLabels]) {
-        // Check if we have valid cookies
-        NSDictionary *cachedCookies = [TweetSourceHelper loadCachedCookies];
-        if (!cachedCookies || cachedCookies.count == 0 || !cachedCookies[@"ct0"] || !cachedCookies[@"auth_token"]) {
-            // If not, start the initialization process
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [TweetSourceHelper initializeCookiesWithRetry];
-            });
+    BHT_CleanupCachesIfNeeded(); // Clean up caches periodically
+    
+    // Batch active state operations
+    BHT_PerformMainQueueOperation(@"app_become_active", ^{
+        // Re-apply theme on becoming active
+        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+            BHT_ensureThemingEngineSynchronized(YES);
         }
-    }
 
-    if ([BHTManager Padlock]) {
-        NSDictionary *keychainData = [[keychain shared] getData];
-        if (keychainData != nil) {
-            id isAuthenticated = [keychainData valueForKey:@"isAuthenticated"];
-            if (isAuthenticated == nil || [isAuthenticated isEqual:@NO]) {
-                dispatch_async(dispatch_get_main_queue(), ^{
+        // Check cookies initialization
+        if ([BHTManager RestoreTweetLabels]) {
+            NSDictionary *cachedCookies = [TweetSourceHelper loadCachedCookies];
+            if (!cachedCookies || cachedCookies.count == 0 || !cachedCookies[@"ct0"] || !cachedCookies[@"auth_token"]) {
+                [TweetSourceHelper initializeCookiesWithRetry];
+            }
+        }
+
+        // Handle authentication
+        if ([BHTManager Padlock]) {
+            NSDictionary *keychainData = [[keychain shared] getData];
+            if (keychainData != nil) {
+                id isAuthenticated = [keychainData valueForKey:@"isAuthenticated"];
+                if (isAuthenticated == nil || [isAuthenticated isEqual:@NO]) {
                     AuthViewController *auth = [[AuthViewController alloc] init];
                     [auth setModalPresentationStyle:UIModalPresentationFullScreen];
                     [self.window.rootViewController presentViewController:auth animated:true completion:nil];
-                });
+                }
             }
         }
-    }
+    });
 }
 
 - (void)applicationWillTerminate:(id)arg1 {
     %orig;
+    
+    // Cleanup operations on termination
+    if (themeDebounceTimer) {
+        [themeDebounceTimer invalidate];
+        themeDebounceTimer = nil;
+    }
+    
     if ([BHTManager Padlock]) {
         [[keychain shared] saveDictionary:@{@"isAuthenticated": @NO}];
     }
@@ -529,37 +623,37 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     }
 }
 %new - (void)copyButtonHandler:(UIButton *)sender {
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"hi" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
+    UIAlertController *alert = BHT_CreateStandardAlert(@"", nil, UIAlertControllerStyleActionSheet);
+    
     if (is_iPad()) {
         alert.popoverPresentationController.sourceView = self.view;
         alert.popoverPresentationController.sourceRect = sender.frame;
     }
-    UIAlertAction *bio = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_1"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-        if (self.viewModel.bio != nil)
-            UIPasteboard.generalPasteboard.string = self.viewModel.bio;
-    }];
-    UIAlertAction *username = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_2"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-        if (self.viewModel.username != nil)
-            UIPasteboard.generalPasteboard.string = self.viewModel.username;
-    }];
-    UIAlertAction *fullusername = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_3"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-        if (self.viewModel.fullName != nil)
-            UIPasteboard.generalPasteboard.string = self.viewModel.fullName;
-    }];
-    UIAlertAction *url = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_4"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-        if (self.viewModel.url != nil)
-            UIPasteboard.generalPasteboard.string = self.viewModel.url;
-    }];
-    UIAlertAction *location = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_5"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-        if (self.viewModel.location != nil)
-            UIPasteboard.generalPasteboard.string = self.viewModel.location;
-    }];
-    [alert addAction:bio];
-    [alert addAction:username];
-    [alert addAction:fullusername];
-    [alert addAction:url];
-    [alert addAction:location];
-    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"] style:UIAlertActionStyleCancel handler:nil]];
+    
+    // Create actions using a data-driven approach to reduce repetition
+    NSArray<NSDictionary *> *actionData = @[
+        @{@"title": [[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_1"], @"property": @"bio"},
+        @{@"title": [[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_2"], @"property": @"username"},
+        @{@"title": [[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_3"], @"property": @"fullName"},
+        @{@"title": [[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_4"], @"property": @"url"},
+        @{@"title": [[BHTBundle sharedBundle] localizedStringForKey:@"COPY_PROFILE_INFO_MENU_OPTION_5"], @"property": @"location"}
+    ];
+    
+    for (NSDictionary *data in actionData) {
+        UIAlertAction *action = [UIAlertAction actionWithTitle:data[@"title"] 
+                                                         style:UIAlertActionStyleDefault 
+                                                       handler:^(UIAlertAction *action) {
+            NSString *value = [self.viewModel valueForKey:data[@"property"]];
+            if (value != nil) {
+                UIPasteboard.generalPasteboard.string = value;
+            }
+        }];
+        [alert addAction:action];
+    }
+    
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"] 
+                                               style:UIAlertActionStyleCancel 
+                                             handler:nil]];
     [self presentViewController:alert animated:true completion:nil];
 }
 %end
@@ -622,11 +716,14 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     }];
     TFNActiveTextItem *title = [[%c(TFNActiveTextItem) alloc] initWithTextModel:[[%c(TFNAttributedTextModel) alloc] initWithAttributedString:AttString] activeRanges:nil];
     
-    NSMutableArray *actions = [[NSMutableArray alloc] init];
-    [actions addObject:title];
+    NSMutableArray *actions = [[NSMutableArray alloc] initWithObjects:title, nil];
     
     T1PlayerMediaEntitySessionProducible *session = self.inlineMediaView.viewModel.playerSessionProducer.sessionProducible;
-    for (TFSTwitterEntityMediaVideoVariant *i in session.mediaEntity.videoInfo.variants) {
+    
+    // Cache video variants to avoid repeated access
+    NSArray *variants = session.mediaEntity.videoInfo.variants;
+    
+    for (TFSTwitterEntityMediaVideoVariant *i in variants) {
         if ([i.contentType isEqualToString:@"video/mp4"]) {
             TFNActionItem *download = [%c(TFNActionItem) actionItemWithTitle:[BHTManager getVideoQuality:i.url] imageName:@"arrow_down_circle_stroke" action:^{
                 BHDownload *DownloadManager = [[BHDownload alloc] init];
@@ -646,23 +743,26 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                 self.hud.textLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"FETCHING_PROGRESS_TITLE"];
                 [self.hud showInView:topMostController().view];
                 
-                dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-                    MediaInformation *mediaInfo = [BHTManager getM3U8Information:[NSURL URLWithString:i.url]];
-                    dispatch_async(dispatch_get_main_queue(), ^(void) {
-                        [self.hud dismiss];
-
-                        TFNMenuSheetViewController *alert2 = [BHTManager newFFmpegDownloadSheet:mediaInfo downloadingURL:[NSURL URLWithString:i.url] progressView:self.hud];
-                        [alert2 tfnPresentedCustomPresentFromViewController:topMostController() animated:YES completion:nil];
+                // Use optimized async operation
+                NSURL *downloadURL = [NSURL URLWithString:i.url];
+                BHT_PerformMainQueueOperation([NSString stringWithFormat:@"m3u8_fetch_%@", i.url], ^{
+                    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                        MediaInformation *mediaInfo = [BHTManager getM3U8Information:downloadURL];
+                        
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            [self.hud dismiss];
+                            TFNMenuSheetViewController *alert2 = [BHTManager newFFmpegDownloadSheet:mediaInfo downloadingURL:downloadURL progressView:self.hud];
+                            [alert2 tfnPresentedCustomPresentFromViewController:topMostController() animated:YES completion:nil];
+                        });
                     });
                 });
-                
             }];
             
             [actions addObject:option];
         }
     }
     
-    TFNMenuSheetViewController *alert = [[%c(TFNMenuSheetViewController) alloc] initWithActionItems:[NSArray arrayWithArray:actions]];
+    TFNMenuSheetViewController *alert = [[%c(TFNMenuSheetViewController) alloc] initWithActionItems:actions];
     [alert tfnPresentedCustomPresentFromViewController:topMostController() animated:YES completion:nil];
 }
 %new - (void)downloadProgress:(float)progress {
@@ -1513,51 +1613,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 // MARK: Show Scroll Bar
 %hook TFNTableView
-
-- (void)BHT_clearCellLayoutsInGuideContainer;
-
 - (void)setShowsVerticalScrollIndicator:(BOOL)arg1 {
     %orig([BHTManager showScrollIndicator]);
-}
-
-%new
-- (void)BHT_clearCellLayoutsInGuideContainer {
-    // Check if we're in GuideContainerViewController context
-    UIViewController *parentVC = nil;
-    UIResponder *responder = self.nextResponder;
-    while (responder && ![responder isKindOfClass:[UIViewController class]]) {
-        responder = responder.nextResponder;
-    }
-    
-    if (responder && [responder isKindOfClass:[UIViewController class]]) {
-        parentVC = (UIViewController *)responder;
-        
-        // Get GuideContainerViewController class directly
-        Class guideContainerClass = NSClassFromString(@"T1TwitterSwift.GuideContainerViewController");
-        if (!guideContainerClass) {
-            guideContainerClass = NSClassFromString(@"T1TwitterSwift_GuideContainerViewController");
-        }
-        
-        // Check if this is GuideContainerViewController
-        if (guideContainerClass && [parentVC isKindOfClass:guideContainerClass]) {
-            // Access the helper using runtime
-            id helper = [self valueForKey:@"_helper"];
-            if (helper) {
-                // Access the cellLayouts array from the helper
-                NSMutableArray *cellLayouts = [helper valueForKey:@"cellLayouts"];
-                if (cellLayouts && [cellLayouts respondsToSelector:@selector(removeAllObjects)]) {
-                    [cellLayouts removeAllObjects];
-                    NSLog(@"[BHTwitter] Cleared cellLayouts in GuideContainerViewController");
-                }
-            }
-        }
-    }
-}
-
-- (void)reloadData {
-    %orig;
-    // Trigger our custom method when reloadData is called in GuideContainerViewController
-    [self performSelector:@selector(BHT_clearCellLayoutsInGuideContainer)];
 }
 %end
 
@@ -5193,7 +5250,7 @@ static GeminiTranslator *_sharedInstance;
         
         if (jsonError) {
             if (completion) {
-                dispatch_async(dispatch_get_main_queue(), ^{
+                BHT_PerformMainQueueOperation(@"translation_json_error", ^{
                     completion(nil, jsonError);
                 });
             }
@@ -5206,7 +5263,7 @@ static GeminiTranslator *_sharedInstance;
         NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
             if (error) {
                 if (completion) {
-                    dispatch_async(dispatch_get_main_queue(), ^{
+                    BHT_PerformMainQueueOperation(@"translation_network_error", ^{
                         completion(nil, error);
                     });
                 }
@@ -5226,7 +5283,7 @@ static GeminiTranslator *_sharedInstance;
                 
                 NSError *apiError = [NSError errorWithDomain:@"GeminiTranslator" code:httpResponse.statusCode userInfo:@{NSLocalizedDescriptionKey: errorMsg}];
                 if (completion) {
-                    dispatch_async(dispatch_get_main_queue(), ^{
+                    BHT_PerformMainQueueOperation(@"translation_api_error", ^{
                         completion(nil, apiError);
                     });
                 }
@@ -5240,7 +5297,7 @@ static GeminiTranslator *_sharedInstance;
                 
                 if (parseError) {
                     if (completion) {
-                        dispatch_async(dispatch_get_main_queue(), ^{
+                        BHT_PerformMainQueueOperation(@"translation_parse_error", ^{
                             completion(nil, parseError);
                         });
                     }
@@ -5263,14 +5320,14 @@ static GeminiTranslator *_sharedInstance;
                 
                 if (translatedText.length > 0) {
                     if (completion) {
-                        dispatch_async(dispatch_get_main_queue(), ^{
+                        BHT_PerformMainQueueOperation(@"translation_success", ^{
                             completion(translatedText, nil);
                         });
                     }
                 } else {
                     NSError *noTextError = [NSError errorWithDomain:@"GeminiTranslator" code:500 userInfo:@{NSLocalizedDescriptionKey: @"Could not parse translation from API response"}];
                     if (completion) {
-                        dispatch_async(dispatch_get_main_queue(), ^{
+                        BHT_PerformMainQueueOperation(@"translation_no_text", ^{
                             completion(nil, noTextError);
                         });
                     }
@@ -5278,7 +5335,7 @@ static GeminiTranslator *_sharedInstance;
             } else {
                 NSError *noDataError = [NSError errorWithDomain:@"GeminiTranslator" code:500 userInfo:@{NSLocalizedDescriptionKey: @"No data received from API"}];
                 if (completion) {
-                    dispatch_async(dispatch_get_main_queue(), ^{
+                    BHT_PerformMainQueueOperation(@"translation_no_data", ^{
                         completion(nil, noDataError);
                     });
                 }
@@ -5289,7 +5346,7 @@ static GeminiTranslator *_sharedInstance;
     } @catch (NSException *exception) {
         NSError *error = [NSError errorWithDomain:@"GeminiTranslator" code:500 userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat:@"Translation failed with exception: %@", exception.reason]}];
         if (completion) {
-            dispatch_async(dispatch_get_main_queue(), ^{
+            BHT_PerformMainQueueOperation(@"translation_exception", ^{
                 completion(nil, error);
             });
         }
@@ -5298,9 +5355,7 @@ static GeminiTranslator *_sharedInstance;
 
 - (void)simplifiedTranslateAndDisplay:(NSString *)text fromViewController:(UIViewController *)viewController {
     if (!text || text.length == 0 || !viewController) {
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
-                                                                       message:@"No valid text to translate." 
-                                                                preferredStyle:UIAlertControllerStyleAlert];
+        UIAlertController *alert = BHT_CreateStandardAlert(@"Translation Error", @"No valid text to translate.", UIAlertControllerStyleAlert);
         [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
         [viewController presentViewController:alert animated:YES completion:nil];
         return;
@@ -5311,18 +5366,16 @@ static GeminiTranslator *_sharedInstance;
              toLanguage:@"en" 
              completion:^(NSString *translatedText, NSError *error) {
         if (error || !translatedText) {
-            UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
-                                                                           message:error ? error.localizedDescription : @"Failed to translate text." 
-                                                                    preferredStyle:UIAlertControllerStyleAlert];
+            UIAlertController *alert = BHT_CreateStandardAlert(@"Translation Error", 
+                                                               error ? error.localizedDescription : @"Failed to translate text.", 
+                                                               UIAlertControllerStyleAlert);
             [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
             [viewController presentViewController:alert animated:YES completion:nil];
             return;
         }
         
         // Show translation with Copy and Cancel options
-        UIAlertController *resultAlert = [UIAlertController alertControllerWithTitle:@"Translation" 
-                                                                             message:translatedText 
-                                                                      preferredStyle:UIAlertControllerStyleAlert];
+        UIAlertController *resultAlert = BHT_CreateStandardAlert(@"Translation", translatedText, UIAlertControllerStyleAlert);
         
         [resultAlert addAction:[UIAlertAction actionWithTitle:@"Copy" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
             UIPasteboard.generalPasteboard.string = translatedText;
