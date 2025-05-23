@@ -957,6 +957,26 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     
     return [newOrig copy];
 }
+
+- (void)setFrame:(CGRect)frame {
+    // Increase the height by 10 points to make it slightly bigger
+    frame.size.height += 10.0;
+    %orig(frame);
+}
+
+- (CGSize)sizeThatFits:(CGSize)size {
+    CGSize originalSize = %orig(size);
+    // Increase the height by 10 points
+    originalSize.height += 10.0;
+    return originalSize;
+}
+
++ (CGSize)sizeForViewModel:(id)arg1 options:(unsigned long long)arg2 displayType:(long long)arg3 account:(id)arg4 maximumWidth:(double)arg5 {
+    CGSize originalSize = %orig(arg1, arg2, arg3, arg4, arg5);
+    // Increase the height by 10 points
+    originalSize.height += 10.0;
+    return originalSize;
+}
 %end
 
 // Twitter 9.30 and lower
@@ -3808,7 +3828,6 @@ static void PlayRefreshSound(int soundType) {
 
 // Track state with instance-specific variables using associated objects
 static char kPreviousLoadingStateKey;
-static char kPlayedPullSoundKey;
 static char kManualRefreshInProgressKey;
 
 // Always enable sound effects
