@@ -1,5 +1,5 @@
 /*
-  Language: ja
+  Language: en
   NeoFreeBird
 */
 
@@ -31,7 +31,7 @@
 "HIDE_TOPICS_OPTION_TITLE" = "トピックツイートを非表示";
 "HIDE_TOPICS_OPTION_DETAIL_TITLE" = "「おすすめトピック」に関連付けられたツイートを非表示にします。";
 
-"HIDE_TOPICS_TO_FOLLOW_OPTION" = "「トピックをフォロー」を非表示";
+"HIDE_TOPICS_TO_FOLLOW_OPTION" = "トピックを非表示";
 "HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "「おすすめトピック」を非表示にします。";
 
 "PADLOCK_OPTION_TITLE" = "Twitterをロック";
@@ -181,7 +181,7 @@
 "HIDE_SPACE_OPTION_TITLE" = "スペースバーを非表示";
 
 "STOP_HIDING_TAB_BAR_TITLE" = "タブバーを常に表示";
-"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "スクロール時にタブバーが非表示にならないようにします。";
+"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "スクロール時にタブバーを非表示にしない";
 
 "DM_AVATARS_TITLE" = "DMのアバター";
 "DM_AVATARS_DETAIL_TITLE" = "同じ送信者からのグループ内の最後のメッセージにのみアバターを表示します。";
