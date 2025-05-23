@@ -5324,7 +5324,7 @@ static GeminiTranslator *_sharedInstance;
 
 // Hook individual button classes to make them bigger
 %hook TTAStatusInlineReplyButton
-- (CGSize)intrinsicContentSize {
+- (CGSize)sizeThatFits:(CGSize)size {
     CGSize originalSize = %orig;
     originalSize.width += 16.0;
     originalSize.height += 16.0;
@@ -5333,7 +5333,7 @@ static GeminiTranslator *_sharedInstance;
 %end
 
 %hook TTAStatusInlineRetweetButton
-- (CGSize)intrinsicContentSize {
+- (CGSize)sizeThatFits:(CGSize)size {
     CGSize originalSize = %orig;
     originalSize.width += 16.0;
     originalSize.height += 16.0;
@@ -5342,7 +5342,7 @@ static GeminiTranslator *_sharedInstance;
 %end
 
 %hook TTAStatusInlineFavoriteButton
-- (CGSize)intrinsicContentSize {
+- (CGSize)sizeThatFits:(CGSize)size {
     CGSize originalSize = %orig;
     originalSize.width += 16.0;
     originalSize.height += 16.0;
@@ -5351,7 +5351,7 @@ static GeminiTranslator *_sharedInstance;
 %end
 
 %hook TTAStatusInlineBookmarkButton
-- (CGSize)intrinsicContentSize {
+- (CGSize)sizeThatFits:(CGSize)size {
     CGSize originalSize = %orig;
     originalSize.width += 16.0;
     originalSize.height += 16.0;
@@ -5360,7 +5360,7 @@ static GeminiTranslator *_sharedInstance;
 %end
 
 %hook TTAStatusInlineShareButton
-- (CGSize)intrinsicContentSize {
+- (CGSize)sizeThatFits:(CGSize)size {
     CGSize originalSize = %orig;
     originalSize.width += 16.0;
     originalSize.height += 16.0;
