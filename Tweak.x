@@ -1205,9 +1205,12 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)_t1_showMediaRail;
 - (void)_t1_hideMediaRail;
 - (BOOL)_t1_mediaRailShowing;
-- (BOOL)_bht_hasSelectedPhoto;
-- (BOOL)_bht_hasTextContent;
-- (void)_bht_updateMediaRailVisibility;
+- (BOOL)_t1_hasPhotoAttached;
+- (void)_t1_searchForDeletePhotoButtonInView:(UIView *)view found:(BOOL *)found;
+- (BOOL)_t1_hasTextInComposer;
+- (void)_t1_searchForTextEditorInView:(UIView *)view hasText:(BOOL *)hasText;
+- (void)_t1_updateMediaRailVisibility;
+- (BOOL)_t1_shouldShowMediaRail;
 @end
 
 %hook T1TweetComposeViewController
@@ -1253,79 +1256,129 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 // MARK: Media Rail Restoration
 - (BOOL)_t1_shouldShowMediaRail {
-    return YES; // Always show media rail regardless of Twitter's logic
+    // Check if there's a photo attached by looking for "Delete photo" button
+    BOOL hasPhotoAttached = [self _t1_hasPhotoAttached];
+    
+    // Check if there's text in the composer
+    BOOL hasText = [self _t1_hasTextInComposer];
+    
+    // Show media rail only when there's no photo AND no text
+    return !(hasPhotoAttached || hasText);
 }
 
-- (BOOL)_bht_hasSelectedPhoto {
-    // Check if there's a delete photo button visible
-    __block BOOL hasDeleteButton = NO;
+%new
+- (BOOL)_t1_hasPhotoAttached {
+    // Search for TFNButton with accessibilityLabel "Delete photo"
+    __block BOOL foundDeleteButton = NO;
     
-    void (^checkSubview)(UIView *) = ^(UIView *subview) {
-        if (hasDeleteButton) return; // Early exit if already found
-        
-        if ([subview isKindOfClass:[UIButton class]] || [subview isKindOfClass:NSClassFromString(@"TFNButton")]) {
-            if ([subview.accessibilityLabel isEqualToString:@"Delete photo"]) {
-                hasDeleteButton = YES;
-            }
+    [self.view.subviews enumerateObjectsUsingBlock:^(UIView *view, NSUInteger idx, BOOL *stop) {
+        [self _t1_searchForDeletePhotoButtonInView:view found:&foundDeleteButton];
+        if (foundDeleteButton) {
+            *stop = YES;
         }
-    };
+    }];
     
-    BH_EnumerateSubviewsRecursively(self.view, checkSubview);
-    return hasDeleteButton;
+    return foundDeleteButton;
 }
 
-- (BOOL)_bht_hasTextContent {
-    // Check if there's meaningful text content
-    id compositionState = [self valueForKey:@"_compositionState"];
-    if (compositionState) {
-        // Try to get the text from composition state
-        id composition = [compositionState valueForKey:@"composition"];
-        if (composition) {
-            NSString *text = [composition valueForKey:@"text"];
-            return text.length > 0;
+%new
+- (void)_t1_searchForDeletePhotoButtonInView:(UIView *)view found:(BOOL *)found {
+    if (*found) return;
+    
+    if ([view isKindOfClass:%c(TFNButton)] && 
+        [view.accessibilityLabel isEqualToString:@"Delete photo"]) {
+        *found = YES;
+        return;
+    }
+    
+    for (UIView *subview in view.subviews) {
+        [self _t1_searchForDeletePhotoButtonInView:subview found:found];
+        if (*found) return;
+    }
+}
+
+%new
+- (BOOL)_t1_hasTextInComposer {
+    // Search for TwitterTextEditor.TextView and check its hasText property
+    __block BOOL hasText = NO;
+    
+    [self.view.subviews enumerateObjectsUsingBlock:^(UIView *view, NSUInteger idx, BOOL *stop) {
+        [self _t1_searchForTextEditorInView:view hasText:&hasText];
+        if (hasText) {
+            *stop = YES;
+        }
+    }];
+    
+    return hasText;
+}
+
+%new
+- (void)_t1_searchForTextEditorInView:(UIView *)view hasText:(BOOL *)hasText {
+    if (*hasText) return;
+    
+    NSString *className = NSStringFromClass([view class]);
+    if ([className containsString:@"TwitterTextEditor"] && 
+        [className containsString:@"TextView"]) {
+        if ([view respondsToSelector:@selector(hasText)]) {
+            *hasText = [(id)view hasText];
+            return;
         }
     }
-    return NO;
+    
+    for (UIView *subview in view.subviews) {
+        [self _t1_searchForTextEditorInView:subview hasText:hasText];
+        if (*hasText) return;
+    }
 }
 
-- (void)_bht_updateMediaRailVisibility {
-    BOOL hasPhoto = [self _bht_hasSelectedPhoto];
-    BOOL hasText = [self _bht_hasTextContent];
-    
-    // Hide media rail if photo is selected or text is entered
-    if (hasPhoto || hasText) {
-        if ([self _t1_mediaRailShowing]) {
-            [self _t1_hideMediaRail];
-        }
+%new
+- (void)_t1_updateMediaRailVisibility {
+    if ([self _t1_shouldShowMediaRail]) {
+        [self _t1_showMediaRail];
     } else {
-        // Show media rail if no photo and no text
-        if (![self _t1_mediaRailShowing]) {
-            [self _t1_showMediaRail];
-        }
+        [self _t1_hideMediaRail];
     }
 }
 
 - (void)viewDidLoad {
     %orig;
-    // Ensure media rail is shown when view loads (if no content)
+    // Set up proper media rail visibility
     dispatch_async(dispatch_get_main_queue(), ^{
-        [self _bht_updateMediaRailVisibility];
+        [self _t1_updateMediaRailVisibility];
     });
 }
 
 - (void)viewWillAppear:(BOOL)animated {
     %orig;
-    // Update media rail visibility when appearing
+    // Update media rail visibility when view appears
     dispatch_async(dispatch_get_main_queue(), ^{
-        [self _bht_updateMediaRailVisibility];
+        [self _t1_updateMediaRailVisibility];
     });
 }
 
-// Hook into composition state changes to update visibility
-- (void)setCompositionState:(id)compositionState {
+// Hook methods that get called when attachments change
+- (void)composer:(id)arg1 didAddOrReplaceAttachment:(id)arg2 {
     %orig;
+    // Update media rail when photo is added
     dispatch_async(dispatch_get_main_queue(), ^{
-        [self _bht_updateMediaRailVisibility];
+        [self _t1_updateMediaRailVisibility];
+    });
+}
+
+- (void)composer:(id)arg1 didReplaceAllAttachments:(id)arg2 {
+    %orig;
+    // Update media rail when attachments change
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self _t1_updateMediaRailVisibility];
+    });
+}
+
+// Hook text change notifications
+- (void)_t1_compositionDidChange {
+    %orig;
+    // Update media rail when text changes
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self _t1_updateMediaRailVisibility];
     });
 }
 
