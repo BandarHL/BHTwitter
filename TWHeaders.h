@@ -646,3 +646,7 @@ static UIViewController * _Nonnull topMostController() {
 - (id)initWithTab:(long long)arg1 userDataSource:(id)arg2 account:(id)arg3 showFollowersYouKnow:(_Bool)arg4 shouldShowPeopleButton:(_Bool)arg5 showPrimaryTabOnly:(_Bool)arg6 shouldHideCreatorSubscriptions:(_Bool)arg7;
 - (void)setSelectedIndex:(NSInteger)index;
 @end
+
+@interface TFNScrollingSegmentedViewController : UIViewController
+@property(nonatomic) NSUInteger selectedIndex;
+@end
