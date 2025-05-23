@@ -3871,6 +3871,10 @@ static char kPlayedPullSoundKey;
     if (status == 1 && fromScrolling) {
         NSLog(@"[BHTwitter] Manual pull detected - playing pull sound");
         PlayRefreshSound(0);
+        
+        // Mark that loading started (even though setLoading: might not be called with loading=1)
+        objc_setAssociatedObject(self, &kPreviousLoadingStateKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        NSLog(@"[BHTwitter] Set previous loading state to YES for manual refresh");
     }
 }
 
