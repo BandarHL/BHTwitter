@@ -3815,20 +3815,25 @@ static char kPlayedPullSoundKey;
     return YES;
 }
 
-// Simple property setter hook - this is called for all loading state changes
+// Hook the loading property setter directly
 - (void)setLoading:(_Bool)loading {
     // Get previous loading state
     NSNumber *previousLoadingState = objc_getAssociatedObject(self, &kPreviousLoadingStateKey);
     BOOL wasLoading = previousLoadingState ? [previousLoadingState boolValue] : NO;
     
-    // Store the new state
-    objc_setAssociatedObject(self, &kPreviousLoadingStateKey, @(loading), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    
     %orig;
     
-    // If loading went from true to false (1 to 0), refresh is complete - play pop sound
+    // Store the new state AFTER calling original
+    objc_setAssociatedObject(self, &kPreviousLoadingStateKey, @(loading), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    
+    // If loading went from YES to NO, refresh is complete - play pop sound
     if (wasLoading && !loading) {
+        NSLog(@"[BHTwitter] Loading changed from YES to NO - playing pop sound");
         PlayRefreshSound(1);
+    }
+    
+    if (!wasLoading && loading) {
+        NSLog(@"[BHTwitter] Loading changed from NO to YES - refresh started");
     }
 }
 
@@ -3837,21 +3842,8 @@ static char kPlayedPullSoundKey;
     %orig;
     
     if (status == 1 && fromScrolling) {
-        // Status changed to "triggered" via pull - play the pull sound
+        NSLog(@"[BHTwitter] Manual pull detected - playing pull sound");
         PlayRefreshSound(0);
-        objc_setAssociatedObject(self, &kPlayedPullSoundKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    }
-}
-
-// Handle programmatic refresh (like app launch)
-- (void)startPullToRefreshAnimationInScrollView:(id)scrollView {
-    %orig;
-    
-    // Play pull sound for programmatic refresh
-    NSNumber *didPlayPull = objc_getAssociatedObject(self, &kPlayedPullSoundKey);
-    if (!didPlayPull || ![didPlayPull boolValue]) {
-        PlayRefreshSound(0);
-        objc_setAssociatedObject(self, &kPlayedPullSoundKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
 }
 
