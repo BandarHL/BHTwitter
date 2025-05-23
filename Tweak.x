@@ -5391,54 +5391,47 @@ static NSMapTable *followersTabFixMap = nil;
 
 - (id)initWithTab:(long long)tab userDataSource:(id)userDataSource account:(id)account showFollowersYouKnow:(_Bool)showFollowersYouKnow shouldShowPeopleButton:(_Bool)shouldShowPeopleButton showPrimaryTabOnly:(_Bool)showPrimaryTabOnly shouldHideCreatorSubscriptions:(_Bool)shouldHideCreatorSubscriptions {
     NSLog(@"[BHTwitter] T1ProfileSegmentedFollowingViewController initWithTab: %lld", tab);
-    NSLog(@"[BHTwitter] userDataSource: %@", userDataSource);
-    NSLog(@"[BHTwitter] showFollowersYouKnow: %d", showFollowersYouKnow);
-    NSLog(@"[BHTwitter] shouldShowPeopleButton: %d", shouldShowPeopleButton);
-    NSLog(@"[BHTwitter] showPrimaryTabOnly: %d", showPrimaryTabOnly);
-    NSLog(@"[BHTwitter] shouldHideCreatorSubscriptions: %d", shouldHideCreatorSubscriptions);
     
-    // Track if we're fixing the followers tab
-    BOOL isFixingFollowersTab = (tab == 0);
-    
-    // Fix: If tab is 0 (followers with verified tab), change to tab 3 (following layout) to avoid verified tab
+    // If this is tab 0 (followers with verified tab), mark the data source to hide verified tab
     if (tab == 0) {
-        NSLog(@"[BHTwitter] Changing tab from 0 to 3 to avoid verified followers tab");
-        tab = 3;
+        NSLog(@"[BHTwitter] Marking data source to hide verified followers tab");
+        [followersTabFixMap setObject:@YES forKey:userDataSource];
     }
     
     id result = %orig(tab, userDataSource, account, showFollowersYouKnow, shouldShowPeopleButton, showPrimaryTabOnly, shouldHideCreatorSubscriptions);
     NSLog(@"[BHTwitter] T1ProfileSegmentedFollowingViewController init result: %@", result);
     
-    // Store the flag that this instance should show followers when tab 3 is requested
-    if (isFixingFollowersTab && result) {
-        [followersTabFixMap setObject:@YES forKey:result];
-        NSLog(@"[BHTwitter] Marked this instance as followers-mode for tab 3");
-    }
-    
     return result;
 }
 
-- (void)viewDidAppear:(BOOL)animated {
-    %orig;
-    
-    // Check if this is a followers-mode instance and force selection to Followers tab
-    if ([followersTabFixMap objectForKey:self]) {
-        NSLog(@"[BHTwitter] viewDidAppear: Forcing selection to Followers tab (index 0)");
-        if ([self respondsToSelector:@selector(setSelectedIndex:)]) {
-            [self setSelectedIndex:0];
-        }
-    }
-}
+
 %end
 
 %hook T1ProfileSegmentedFollowingViewControllerDataSource
 - (long long)numberOfEntriesForSegmentedViewController:(id)segmentedViewController {
     long long result = %orig;
+    
+    // If this data source is marked to hide verified tab, return 2 instead of 3
+    if ([followersTabFixMap objectForKey:self] && result == 3) {
+        NSLog(@"[BHTwitter] Hiding verified followers tab: numberOfEntries 3 → 2");
+        return 2;
+    }
+    
     NSLog(@"[BHTwitter] numberOfEntriesForSegmentedViewController: %lld", result);
     return result;
 }
 
 - (id)segmentedViewController:(id)segmentedViewController titleAtIndex:(long long)index {
+    // If this data source is marked to hide verified tab, shift the indices
+    if ([followersTabFixMap objectForKey:self]) {
+        // Index 0 → "Followers" (skip "Verified followers")
+        // Index 1 → "Following" 
+        long long originalIndex = index + 1; // Skip the verified tab at index 0
+        id result = %orig(segmentedViewController, originalIndex);
+        NSLog(@"[BHTwitter] titleAtIndex: %lld (mapped to %lld) = %@", index, originalIndex, result);
+        return result;
+    }
+    
     id result = %orig;
     NSLog(@"[BHTwitter] titleAtIndex: %lld = %@", index, result);
     return result;
@@ -5447,30 +5440,18 @@ static NSMapTable *followersTabFixMap = nil;
 - (long long)segmentIndexForTab:(long long)tab {
     long long result = %orig;
     NSLog(@"[BHTwitter] segmentIndexForTab: %lld = %lld", tab, result);
-    
-    // Check if this data source belongs to a view controller that's in followers-mode
-    // We need to find the view controller that owns this data source
-    // This is a bit tricky since we don't have a direct reference
-    // Let's check if we're in 2-tab mode and this is tab 3
-    if (tab == 3 && result == 1) {
-        long long numEntries = [self numberOfEntriesForSegmentedViewController:nil];
-        if (numEntries == 2) {
-            // Check all stored view controllers to see if any are in followers-mode
-            for (id viewController in followersTabFixMap) {
-                if ([followersTabFixMap objectForKey:viewController]) {
-                    // Get the data source from the view controller to see if it matches
-                    if ([viewController respondsToSelector:@selector(retainedDataSource)]) {
-                        id dataSource = [viewController retainedDataSource];
-                        if (dataSource == self) {
-                            NSLog(@"[BHTwitter] Found followers-mode view controller, overriding segmentIndexForTab:3 to return 0");
-                            return 0;
-                        }
-                    }
-                }
-            }
-        }
+    return result;
+}
+
+- (id)segmentedViewController:(id)segmentedViewController viewControllerAtIndex:(long long)index {
+    // If this data source is marked to hide verified tab, shift the indices
+    if ([followersTabFixMap objectForKey:self]) {
+        long long originalIndex = index + 1; // Skip the verified tab at index 0
+        id result = %orig(segmentedViewController, originalIndex);
+        NSLog(@"[BHTwitter] viewControllerAtIndex: %lld (mapped to %lld)", index, originalIndex);
+        return result;
     }
     
-    return result;
+    return %orig;
 }
 %end
