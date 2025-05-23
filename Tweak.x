@@ -943,7 +943,27 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     NSArray *_orig = %orig;
     NSMutableArray *newOrig = [_orig mutableCopy];
     
-    if ([BHTManager isVideoCell:arg1] && [BHTManager DownloadingVideos]) {
+    // Check if we're in THFHomeTimelineItemsViewController context and skip adding download button
+    UIViewController *currentVC = nil;
+    UIResponder *responder = [UIApplication sharedApplication].keyWindow.rootViewController;
+    while (responder) {
+        if ([responder isKindOfClass:[UIViewController class]]) {
+            currentVC = (UIViewController *)responder;
+            break;
+        }
+        responder = responder.nextResponder;
+    }
+    
+    BOOL isInTHFHomeTimeline = NO;
+    if (currentVC) {
+        // Check if we're in THFHomeTimelineItemsViewController context
+        if ([currentVC isKindOfClass:NSClassFromString(@"THFHomeTimelineItemsViewController")] ||
+            [currentVC.parentViewController isKindOfClass:NSClassFromString(@"THFHomeTimelineItemsViewController")]) {
+            isInTHFHomeTimeline = YES;
+        }
+    }
+    
+    if ([BHTManager isVideoCell:arg1] && [BHTManager DownloadingVideos] && !isInTHFHomeTimeline) {
         [newOrig addObject:%c(BHDownloadInlineButton)];
     }
     
@@ -959,19 +979,28 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 
 - (void)setFrame:(CGRect)frame {
-    // Move the actions view up by 6 points, but only if not in detail view
+    // Move the actions view up, with different amounts for different contexts
     UIView *superview = self.superview;
     BOOL isInDetailView = NO;
+    BOOL isInImmersiveView = NO;
+    
     while (superview) {
         if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
             isInDetailView = YES;
             break;
         }
+        if ([superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+            isInImmersiveView = YES;
+            break;
+        }
         superview = superview.superview;
     }
     
-    if (!isInDetailView) {
-        frame.origin.y -= 6.0;
+    if (isInImmersiveView) {
+        frame.origin.y -= 15.0; // Push up more in immersive view
+    } else if (!isInDetailView) {
+        frame.origin.y -= 6.0; // Regular push up in timeline
     }
     
     %orig(frame);
