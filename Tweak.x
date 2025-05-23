@@ -5312,7 +5312,7 @@ static GeminiTranslator *_sharedInstance;
 // Hook individual button classes to make them bigger
 %hook TTAStatusInlineReplyButton
 - (CGFloat)extraWidth {
-    return 48.0;
+    return 24.0;
 }
 - (NSUInteger)buttonSize {
     return 2;
@@ -5321,7 +5321,7 @@ static GeminiTranslator *_sharedInstance;
 
 %hook TTAStatusInlineRetweetButton
 - (CGFloat)extraWidth {
-    return 48.0;
+    return 24.0;
 }
 - (NSUInteger)buttonSize {
     return 2;
@@ -5330,7 +5330,7 @@ static GeminiTranslator *_sharedInstance;
 
 %hook TTAStatusInlineFavoriteButton
 - (CGFloat)extraWidth {
-    return 48.0;
+    return 24.0;
 }
 - (NSUInteger)buttonSize {
     return 2;
@@ -5339,7 +5339,7 @@ static GeminiTranslator *_sharedInstance;
 
 %hook TTAStatusInlineBookmarkButton
 - (CGFloat)extraWidth {
-    return 48.0;
+    return 24.0;
 }
 - (NSUInteger)buttonSize {
     return 2;
@@ -5348,7 +5348,7 @@ static GeminiTranslator *_sharedInstance;
 
 %hook TTAStatusInlineShareButton
 - (CGFloat)extraWidth {
-    return 48.0;
+    return 24.0;
 }
 - (NSUInteger)buttonSize {
     return 2;
