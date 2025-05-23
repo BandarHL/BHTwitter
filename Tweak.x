@@ -573,21 +573,47 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 // MARK: Show unrounded follower/following counts
 %hook T1ProfileFriendsFollowingViewModel
 - (id)_t1_followCountTextWithLabel:(id)label singularLabel:(id)singularLabel count:(id)count highlighted:(_Bool)highlighted {
+    // First get the original result to understand the expected return type
+    id originalResult = %orig;
+    
+    // Only proceed if we have a valid count that's an NSNumber
     if (count && [count isKindOfClass:[NSNumber class]]) {
         NSNumber *number = (NSNumber *)count;
+        
+        // Format the number with commas
         NSNumberFormatter *formatter = [[NSNumberFormatter alloc] init];
         [formatter setNumberStyle:NSNumberFormatterDecimalStyle];
         [formatter setGroupingSeparator:@","];
         [formatter setUsesGroupingSeparator:YES];
-        
         NSString *formattedCount = [formatter stringFromNumber:number];
-        NSString *labelText = label ?: @"";
         
-        return [NSString stringWithFormat:@"%@ %@", formattedCount, labelText];
+        // If original result is an NSString, create a new formatted string
+        if ([originalResult isKindOfClass:[NSString class]]) {
+            NSString *originalString = (NSString *)originalResult;
+            // Try to replace any abbreviated numbers in the original string with our formatted number
+            NSString *numberString = [number stringValue];
+            if ([originalString containsString:numberString]) {
+                return [originalString stringByReplacingOccurrencesOfString:numberString withString:formattedCount];
+            }
+        }
+        // If original result is an NSAttributedString, modify that
+        else if ([originalResult isKindOfClass:[NSAttributedString class]]) {
+            NSMutableAttributedString *mutableResult = [[NSMutableAttributedString alloc] initWithAttributedString:(NSAttributedString *)originalResult];
+            NSString *originalText = mutableResult.string;
+            NSString *numberString = [number stringValue];
+            
+            if ([originalText containsString:numberString]) {
+                NSRange range = [originalText rangeOfString:numberString];
+                if (range.location != NSNotFound) {
+                    [mutableResult replaceCharactersInRange:range withString:formattedCount];
+                    return [mutableResult copy];
+                }
+            }
+        }
     }
     
-    // Fallback to original behavior if we can't format the number
-    return %orig;
+    // Return original result if we couldn't modify it safely
+    return originalResult;
 }
 %end
 
