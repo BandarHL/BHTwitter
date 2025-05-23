@@ -943,27 +943,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     NSArray *_orig = %orig;
     NSMutableArray *newOrig = [_orig mutableCopy];
     
-    // Check if we're in THFHomeTimelineItemsViewController context and skip adding download button
-    UIViewController *currentVC = nil;
-    UIResponder *responder = [UIApplication sharedApplication].keyWindow.rootViewController;
-    while (responder) {
-        if ([responder isKindOfClass:[UIViewController class]]) {
-            currentVC = (UIViewController *)responder;
-            break;
-        }
-        responder = responder.nextResponder;
-    }
-    
-    BOOL isInTHFHomeTimeline = NO;
-    if (currentVC) {
-        // Check if we're in THFHomeTimelineItemsViewController context
-        if ([currentVC isKindOfClass:NSClassFromString(@"THFHomeTimelineItemsViewController")] ||
-            [currentVC.parentViewController isKindOfClass:NSClassFromString(@"THFHomeTimelineItemsViewController")]) {
-            isInTHFHomeTimeline = YES;
-        }
-    }
-    
-    if ([BHTManager isVideoCell:arg1] && [BHTManager DownloadingVideos] && !isInTHFHomeTimeline) {
+    if ([BHTManager isVideoCell:arg1] && [BHTManager DownloadingVideos]) {
         [newOrig addObject:%c(BHDownloadInlineButton)];
     }
     
@@ -979,7 +959,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 
 - (void)setFrame:(CGRect)frame {
-    // Move the actions view up, with different amounts for different contexts
+    // Move the actions view up, but only if not in detail or immersive view
     UIView *superview = self.superview;
     BOOL isInDetailView = NO;
     BOOL isInImmersiveView = NO;
@@ -997,10 +977,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         superview = superview.superview;
     }
     
-    if (isInImmersiveView) {
-        frame.origin.y -= 15.0; // Push up more in immersive view
-    } else if (!isInDetailView) {
-        frame.origin.y -= 6.0; // Regular push up in timeline
+    if (!isInDetailView && !isInImmersiveView) {
+        frame.origin.y -= 6.0; // Only push up in regular timeline
     }
     
     %orig(frame);
@@ -5360,22 +5338,26 @@ static GeminiTranslator *_sharedInstance;
 // Hook individual button classes to make them bigger
 %hook TTAStatusInlineReplyButton
 - (CGFloat)extraWidth {
-    // Check if we're inside tweet detail view
+    // Check if we're inside tweet detail view or immersive view
     UIView *superview = ((UIView *)self).superview;
     while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            return %orig; // Return original size in detail view
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+            return %orig; // Return original size in detail/immersive view
         }
         superview = superview.superview;
     }
     return 48.0;
 }
 - (NSUInteger)buttonSize {
-    // Check if we're inside tweet detail view
+    // Check if we're inside tweet detail view or immersive view
     UIView *superview = ((UIView *)self).superview;
     while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            return %orig; // Return original size in detail view
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+            return %orig; // Return original size in detail/immersive view
         }
         superview = superview.superview;
     }
@@ -5385,22 +5367,26 @@ static GeminiTranslator *_sharedInstance;
 
 %hook TTAStatusInlineRetweetButton
 - (CGFloat)extraWidth {
-    // Check if we're inside tweet detail view
+    // Check if we're inside tweet detail view or immersive view
     UIView *superview = ((UIView *)self).superview;
     while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            return %orig; // Return original size in detail view
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+            return %orig; // Return original size in detail/immersive view
         }
         superview = superview.superview;
     }
     return 48.0;
 }
 - (NSUInteger)buttonSize {
-    // Check if we're inside tweet detail view
+    // Check if we're inside tweet detail view or immersive view
     UIView *superview = ((UIView *)self).superview;
     while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            return %orig; // Return original size in detail view
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+            return %orig; // Return original size in detail/immersive view
         }
         superview = superview.superview;
     }
@@ -5410,22 +5396,26 @@ static GeminiTranslator *_sharedInstance;
 
 %hook TTAStatusInlineFavoriteButton
 - (CGFloat)extraWidth {
-    // Check if we're inside tweet detail view
+    // Check if we're inside tweet detail view or immersive view
     UIView *superview = ((UIView *)self).superview;
     while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            return %orig; // Return original size in detail view
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+            return %orig; // Return original size in detail/immersive view
         }
         superview = superview.superview;
     }
     return 48.0;
 }
 - (NSUInteger)buttonSize {
-    // Check if we're inside tweet detail view
+    // Check if we're inside tweet detail view or immersive view
     UIView *superview = ((UIView *)self).superview;
     while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            return %orig; // Return original size in detail view
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+            return %orig; // Return original size in detail/immersive view
         }
         superview = superview.superview;
     }
@@ -5435,22 +5425,26 @@ static GeminiTranslator *_sharedInstance;
 
 %hook TTAStatusInlineBookmarkButton
 - (CGFloat)extraWidth {
-    // Check if we're inside tweet detail view
+    // Check if we're inside tweet detail view or immersive view
     UIView *superview = ((UIView *)self).superview;
     while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            return %orig; // Return original size in detail view
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+            return %orig; // Return original size in detail/immersive view
         }
         superview = superview.superview;
     }
     return 48.0;
 }
 - (NSUInteger)buttonSize {
-    // Check if we're inside tweet detail view
+    // Check if we're inside tweet detail view or immersive view
     UIView *superview = ((UIView *)self).superview;
     while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            return %orig; // Return original size in detail view
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+            return %orig; // Return original size in detail/immersive view
         }
         superview = superview.superview;
     }
@@ -5460,22 +5454,26 @@ static GeminiTranslator *_sharedInstance;
 
 %hook TTAStatusInlineShareButton
 - (CGFloat)extraWidth {
-    // Check if we're inside tweet detail view
+    // Check if we're inside tweet detail view or immersive view
     UIView *superview = ((UIView *)self).superview;
     while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            return %orig; // Return original size in detail view
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+            return %orig; // Return original size in detail/immersive view
         }
         superview = superview.superview;
     }
     return 48.0;
 }
 - (NSUInteger)buttonSize {
-    // Check if we're inside tweet detail view
+    // Check if we're inside tweet detail view or immersive view
     UIView *superview = ((UIView *)self).superview;
     while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            return %orig; // Return original size in detail view
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+            return %orig; // Return original size in detail/immersive view
         }
         superview = superview.superview;
     }
@@ -5485,22 +5483,26 @@ static GeminiTranslator *_sharedInstance;
 
 %hook TTAStatusInlineAnalyticsButton
 - (CGFloat)extraWidth {
-    // Check if we're inside tweet detail view
+    // Check if we're inside tweet detail view or immersive view
     UIView *superview = ((UIView *)self).superview;
     while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            return %orig; // Return original size in detail view
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+            return %orig; // Return original size in detail/immersive view
         }
         superview = superview.superview;
     }
     return 48.0;
 }
 - (NSUInteger)buttonSize {
-    // Check if we're inside tweet detail view
+    // Check if we're inside tweet detail view or immersive view
     UIView *superview = ((UIView *)self).superview;
     while (superview) {
-        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-            return %orig; // Return original size in detail view
+        if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveViewController")] ||
+            [superview isKindOfClass:NSClassFromString(@"T1ImmersiveFullScreenViewController")]) {
+            return %orig; // Return original size in detail/immersive view
         }
         superview = superview.superview;
     }
