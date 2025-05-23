@@ -959,20 +959,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
-// Twitter 9.30 and lower
-%hook T1StatusInlineActionsView
-+ (NSArray *)_t1_inlineActionViewClassesForViewModel:(id)arg1 options:(NSUInteger)arg2 displayType:(NSUInteger)arg3 account:(id)arg4 {
-    NSArray *_orig = %orig;
-    NSMutableArray *newOrig = [_orig mutableCopy];
-    
-    if ([BHTManager isVideoCell:arg1] && [BHTManager DownloadingVideos]) {
-        [newOrig addObject:%c(BHDownloadInlineButton)];
-    }
-    
-    return [newOrig copy];
-}
-%end
-
 
 // MARK: Always open in Safrai
 // Thanks nyuszika7h https://github.com/nyuszika7h/noinappsafari/
@@ -5320,52 +5306,51 @@ static GeminiTranslator *_sharedInstance;
     return originalProvider;
 }
 
+
 %end
 
 // Hook individual button classes to make them bigger
 %hook TTAStatusInlineReplyButton
-- (CGSize)sizeThatFits:(CGSize)size {
-    CGSize originalSize = %orig;
-    originalSize.width += 16.0;
-    originalSize.height += 16.0;
-    return originalSize;
+- (CGFloat)extraWidth {
+    return 48.0;
+}
+- (NSUInteger)buttonSize {
+    return 2;
 }
 %end
 
 %hook TTAStatusInlineRetweetButton
-- (CGSize)sizeThatFits:(CGSize)size {
-    CGSize originalSize = %orig;
-    originalSize.width += 16.0;
-    originalSize.height += 16.0;
-    return originalSize;
+- (CGFloat)extraWidth {
+    return 48.0;
+}
+- (NSUInteger)buttonSize {
+    return 2;
 }
 %end
 
 %hook TTAStatusInlineFavoriteButton
-- (CGSize)sizeThatFits:(CGSize)size {
-    CGSize originalSize = %orig;
-    originalSize.width += 16.0;
-    originalSize.height += 16.0;
-    return originalSize;
+- (CGFloat)extraWidth {
+    return 48.0;
+}
+- (NSUInteger)buttonSize {
+    return 2;
 }
 %end
 
 %hook TTAStatusInlineBookmarkButton
-- (CGSize)sizeThatFits:(CGSize)size {
-    CGSize originalSize = %orig;
-    originalSize.width += 16.0;
-    originalSize.height += 16.0;
-    return originalSize;
+- (CGFloat)extraWidth {
+    return 48.0;
+}
+- (NSUInteger)buttonSize {
+    return 2;
 }
 %end
 
 %hook TTAStatusInlineShareButton
-- (CGSize)sizeThatFits:(CGSize)size {
-    CGSize originalSize = %orig;
-    originalSize.width += 16.0;
-    originalSize.height += 16.0;
-    return originalSize;
+- (CGFloat)extraWidth {
+    return 48.0;
+}
+- (NSUInteger)buttonSize {
+    return 2;
 }
 %end
-
-// Twitter 9.30 and lower
