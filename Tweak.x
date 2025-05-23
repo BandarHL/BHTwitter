@@ -5378,3 +5378,97 @@ static GeminiTranslator *_sharedInstance;
 }
 
 %end
+
+// MARK: Fix followers/following tab inconsistency
+%hook T1ProfileSegmentedFollowingViewController
+- (id)initWithTab:(long long)tab userDataSource:(id)userDataSource account:(id)account showFollowersYouKnow:(_Bool)showFollowersYouKnow shouldShowPeopleButton:(_Bool)shouldShowPeopleButton showPrimaryTabOnly:(_Bool)showPrimaryTabOnly shouldHideCreatorSubscriptions:(_Bool)shouldHideCreatorSubscriptions {
+    NSLog(@"[BHTwitter] T1ProfileSegmentedFollowingViewController initWithTab: %lld", tab);
+    NSLog(@"[BHTwitter] userDataSource: %@", userDataSource);
+    NSLog(@"[BHTwitter] showFollowersYouKnow: %d", showFollowersYouKnow);
+    NSLog(@"[BHTwitter] shouldShowPeopleButton: %d", shouldShowPeopleButton);
+    NSLog(@"[BHTwitter] showPrimaryTabOnly: %d", showPrimaryTabOnly);
+    NSLog(@"[BHTwitter] shouldHideCreatorSubscriptions: %d", shouldHideCreatorSubscriptions);
+    
+    id result = %orig;
+    NSLog(@"[BHTwitter] T1ProfileSegmentedFollowingViewController init result: %@", result);
+    return result;
+}
+
+- (void)segmentedViewController:(id)segmentedViewController didSelectContentViewController:(id)contentViewController atIndex:(long long)index lastIndex:(long long)lastIndex userGestureType:(long long)userGestureType {
+    NSLog(@"[BHTwitter] segmentedViewController didSelectContentViewController");
+    NSLog(@"[BHTwitter] contentViewController: %@", contentViewController);
+    NSLog(@"[BHTwitter] atIndex: %lld", index);
+    NSLog(@"[BHTwitter] lastIndex: %lld", lastIndex);
+    NSLog(@"[BHTwitter] userGestureType: %lld", userGestureType);
+    
+    %orig;
+}
+%end
+
+%hook T1ProfileSegmentedFollowingViewControllerDataSource
+- (long long)numberOfEntriesForSegmentedViewController:(id)segmentedViewController {
+    long long result = %orig;
+    NSLog(@"[BHTwitter] numberOfEntriesForSegmentedViewController: %lld", result);
+    return result;
+}
+
+- (id)segmentedViewController:(id)segmentedViewController titleAtIndex:(long long)index {
+    id result = %orig;
+    NSLog(@"[BHTwitter] titleAtIndex: %lld = %@", index, result);
+    return result;
+}
+
+- (id)segmentedViewController:(id)segmentedViewController viewControllerAtIndex:(long long)index {
+    id result = %orig;
+    NSLog(@"[BHTwitter] viewControllerAtIndex: %lld = %@ (class: %@)", index, result, [result class]);
+    return result;
+}
+
+- (long long)tabForSegmentIndex:(long long)segmentIndex {
+    long long result = %orig;
+    NSLog(@"[BHTwitter] tabForSegmentIndex: %lld = %lld", segmentIndex, result);
+    return result;
+}
+
+- (long long)segmentIndexForTab:(long long)tab {
+    long long result = %orig;
+    NSLog(@"[BHTwitter] segmentIndexForTab: %lld = %lld", tab, result);
+    return result;
+}
+
+- (long long)_t1_segmentTabForIndex:(long long)index {
+    long long result = %orig;
+    NSLog(@"[BHTwitter] _t1_segmentTabForIndex: %lld = %lld", index, result);
+    return result;
+}
+
+- (id)followersViewController {
+    id result = %orig;
+    NSLog(@"[BHTwitter] followersViewController: %@ (class: %@)", result, [result class]);
+    return result;
+}
+
+- (id)verifiedFollowersViewController {
+    id result = %orig;
+    NSLog(@"[BHTwitter] verifiedFollowersViewController: %@ (class: %@)", result, [result class]);
+    return result;
+}
+
+- (id)followingViewController {
+    id result = %orig;
+    NSLog(@"[BHTwitter] followingViewController: %@ (class: %@)", result, [result class]);
+    return result;
+}
+
+- (id)superFollowersViewController {
+    id result = %orig;
+    NSLog(@"[BHTwitter] superFollowersViewController: %@ (class: %@)", result, [result class]);
+    return result;
+}
+
+- (id)subscriptionsViewController {
+    id result = %orig;
+    NSLog(@"[BHTwitter] subscriptionsViewController: %@ (class: %@)", result, [result class]);
+    return result;
+}
+%end
