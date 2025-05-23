@@ -964,12 +964,22 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     BOOL isInDetailView = NO;
     BOOL isInImmersiveView = NO;
     
+    // Log all superview classes for debugging
+    NSMutableArray *hierarchy = [NSMutableArray array];
+    UIView *debugView = self.superview;
+    while (debugView) {
+        [hierarchy addObject:NSStringFromClass([debugView class])];
+        debugView = debugView.superview;
+    }
+    NSLog(@"[BHTwitter] View hierarchy: %@", [hierarchy componentsJoinedByString:@" -> "]);
+    
     while (superview) {
         NSString *className = NSStringFromClass([superview class]);
         
         // Check for detail view
         if ([superview isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
             isInDetailView = YES;
+            NSLog(@"[BHTwitter] Found detail view: %@", className);
             break;
         }
         
