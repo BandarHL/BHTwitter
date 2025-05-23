@@ -5413,6 +5413,14 @@ static NSMapTable *followersTabFixMap = nil;
     if (isFixingFollowersTab && result) {
         [followersTabFixMap setObject:@YES forKey:result];
         NSLog(@"[BHTwitter] Marked this instance as followers-mode for tab 3");
+        
+        // Force initial selection to Followers tab (index 0) after a short delay
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if ([result respondsToSelector:@selector(setSelectedIndex:)]) {
+                NSLog(@"[BHTwitter] Forcing initial selection to Followers tab (index 0)");
+                [result setSelectedIndex:0];
+            }
+        });
     }
     
     return result;
