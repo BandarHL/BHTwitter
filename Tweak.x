@@ -5315,7 +5315,7 @@ static GeminiTranslator *_sharedInstance;
     return 48.0;
 }
 - (NSUInteger)buttonSize {
-    return 0;
+    return 1;
 }
 - (NSUInteger)inlineActionType {
     return 3;
@@ -5327,7 +5327,7 @@ static GeminiTranslator *_sharedInstance;
     return 48.0;
 }
 - (NSUInteger)buttonSize {
-    return 0;
+    return 1;
 }
 - (NSUInteger)inlineActionType {
     return 3;
@@ -5339,7 +5339,7 @@ static GeminiTranslator *_sharedInstance;
     return 48.0;
 }
 - (NSUInteger)buttonSize {
-    return 0;
+    return 1;
 }
 - (NSUInteger)inlineActionType {
     return 3;
@@ -5351,7 +5351,7 @@ static GeminiTranslator *_sharedInstance;
     return 48.0;
 }
 - (NSUInteger)buttonSize {
-    return 0;
+    return 1;
 }
 - (NSUInteger)inlineActionType {
     return 3;
@@ -5363,19 +5363,19 @@ static GeminiTranslator *_sharedInstance;
     return 48.0;
 }
 - (NSUInteger)buttonSize {
-    return 0;
+    return 1;
 }
 - (NSUInteger)inlineActionType {
     return 3;
 }
 %end
 
-%hook TTAStatusInlineAnalyticssButton
+%hook TTAStatusInlineAnalyticsButton
 - (CGFloat)extraWidth {
     return 48.0;
 }
 - (NSUInteger)buttonSize {
-    return 0;
+    return 1;
 }
 - (NSUInteger)inlineActionType {
     return 3;
