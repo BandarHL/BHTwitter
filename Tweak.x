@@ -982,20 +982,19 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     }
     
     for (UIView *button in buttons) {
-        if ([button isKindOfClass:[UIButton class]]) {
-            CGRect frame = button.frame;
-            NSLog(@"[BHTwitter] Original button frame: %@", NSStringFromCGRect(frame));
-            CGFloat extraSize = 30.0; // Make it really big for testing
-            
-            // Expand the button by moving it slightly left/up and increasing size
-            frame.origin.x -= extraSize / 2.0;
-            frame.origin.y -= extraSize / 2.0;
-            frame.size.width += extraSize;
-            frame.size.height += extraSize;
-            
-            button.frame = frame;
-            NSLog(@"[BHTwitter] New button frame: %@", NSStringFromCGRect(button.frame));
-        }
+        NSLog(@"[BHTwitter] Button class: %@", NSStringFromClass([button class]));
+        CGRect frame = button.frame;
+        NSLog(@"[BHTwitter] Original button frame: %@", NSStringFromCGRect(frame));
+        CGFloat extraSize = 30.0; // Make it really big for testing
+        
+        // Expand the button by moving it slightly left/up and increasing size
+        frame.origin.x -= extraSize / 2.0;
+        frame.origin.y -= extraSize / 2.0;
+        frame.size.width += extraSize;
+        frame.size.height += extraSize;
+        
+        button.frame = frame;
+        NSLog(@"[BHTwitter] New button frame: %@", NSStringFromCGRect(button.frame));
     }
 }
 %end
