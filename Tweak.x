@@ -5453,36 +5453,17 @@ static NSMapTable *followersTabFixMap = nil;
 %end
 
 %hook TFNScrollingSegmentedViewController
-- (void)viewDidLoad {
-    %orig;
-    
-    // Check if this segmented controller belongs to a followers-mode view controller
-    UIViewController *parent = self.parentViewController;
-    while (parent) {
-        if ([parent isKindOfClass:NSClassFromString(@"T1ProfileSegmentedFollowingViewController")]) {
-            T1ProfileSegmentedFollowingViewController *followingVC = (T1ProfileSegmentedFollowingViewController *)parent;
-            if ([followersTabFixMap objectForKey:followingVC.retainedDataSource]) {
-                NSLog(@"[BHTwitter] Found followers-mode TFNScrollingSegmentedViewController - setting up timer");
-                
-                // Aggressively force it to 0 multiple times
-                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                    NSLog(@"[BHTwitter] Timer 1: Setting selectedIndex to 0");
-                    self.selectedIndex = 0;
-                });
-                
-                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                    NSLog(@"[BHTwitter] Timer 2: Setting selectedIndex to 0");
-                    self.selectedIndex = 0;
-                });
-                
-                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                    NSLog(@"[BHTwitter] Timer 3: Setting selectedIndex to 0");
-                    self.selectedIndex = 0;
-                });
-            }
-            break;
+- (void)setSelectedIndex:(NSUInteger)selectedIndex {
+    // If this is a 2-tab segmented controller (clean layout) and trying to set to index 1, force to 0
+    if ([self respondsToSelector:@selector(numberOfSegments)]) {
+        NSUInteger numSegments = [(id)self numberOfSegments];
+        if (numSegments == 2 && selectedIndex == 1) {
+            NSLog(@"[BHTwitter] Blocking setSelectedIndex:1 in 2-tab layout, forcing to 0");
+            %orig(0);
+            return;
         }
-        parent = parent.parentViewController;
     }
+    
+    %orig;
 }
 %end
