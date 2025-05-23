@@ -958,24 +958,20 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     return [newOrig copy];
 }
 
-- (void)setFrame:(CGRect)frame {
-    // Increase the height by 10 points to make it slightly bigger
-    frame.size.height += 10.0;
-    %orig(frame);
-}
-
-- (CGSize)sizeThatFits:(CGSize)size {
-    CGSize originalSize = %orig(size);
-    // Increase the height by 10 points
-    originalSize.height += 10.0;
-    return originalSize;
-}
-
-+ (CGSize)sizeForViewModel:(id)arg1 options:(unsigned long long)arg2 displayType:(long long)arg3 account:(id)arg4 maximumWidth:(double)arg5 {
-    CGSize originalSize = %orig(arg1, arg2, arg3, arg4, arg5);
-    // Increase the height by 10 points
-    originalSize.height += 10.0;
-    return originalSize;
++ (id)_t1_overrideButtonSizeForDisplayType:(long long)arg1 {
+    // Get the original button size
+    NSValue *originalSize = %orig(arg1);
+    
+    if (originalSize) {
+        CGSize size = [originalSize CGSizeValue];
+        // Make buttons bigger by increasing both width and height
+        size.width += 8.0;
+        size.height += 8.0;
+        return [NSValue valueWithCGSize:size];
+    }
+    
+    // If no original size, create a bigger default size
+    return [NSValue valueWithCGSize:CGSizeMake(52.0, 52.0)];
 }
 %end
 
