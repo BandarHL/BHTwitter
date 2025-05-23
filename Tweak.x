@@ -1257,10 +1257,14 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 - (void)viewDidLoad {
     %orig;
-    // Ensure media rail view controller is loaded and updated
+    // Ensure media rail view controller is loaded and initially shown
     dispatch_async(dispatch_get_main_queue(), ^{
         [self _t1_loadMediaRailViewController];
         [self _t1_updateMediaRailViewController];
+        // Show it initially if it's not already showing
+        if (![self _t1_mediaRailShowing]) {
+            [self _t1_showMediaRail];
+        }
     });
 }
 %end
