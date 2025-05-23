@@ -580,6 +580,12 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     if (count && [count isKindOfClass:[NSNumber class]]) {
         NSNumber *number = (NSNumber *)count;
         
+        // Only show full numbers for counts under 10,000
+        if ([number integerValue] >= 10000) {
+            NSLog(@"[BHTwitter] Count %@ is >= 10k, keeping original format", number);
+            return originalResult;
+        }
+        
         // Format the number with commas
         NSNumberFormatter *formatter = [[NSNumberFormatter alloc] init];
         [formatter setNumberStyle:NSNumberFormatterDecimalStyle];
