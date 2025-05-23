@@ -958,7 +958,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     return [newOrig copy];
 }
 
-- (void)_t1_adjustInlineActionButtonTouchInsets {
+- (void)_t1_layoutInlineActionButtons {
     %orig;
     
     // Make all buttons bigger by adjusting their frames after layout
