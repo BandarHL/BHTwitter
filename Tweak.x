@@ -979,7 +979,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     for (UIView *button in buttons) {
         if ([button isKindOfClass:[UIButton class]]) {
             CGRect frame = button.frame;
-            CGFloat extraSize = 8.0;
+            CGFloat extraSize = 30.0; // Make it really big for testing
             
             // Expand the button by moving it slightly left/up and increasing size
             frame.origin.x -= extraSize / 2.0;
