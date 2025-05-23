@@ -5318,7 +5318,7 @@ static GeminiTranslator *_sharedInstance;
     return 1;
 }
 - (CGFloat)trailingEdgeInset {
-    return 7;
+    return -7;
 }
 %end
 
@@ -5330,7 +5330,7 @@ static GeminiTranslator *_sharedInstance;
     return 1;
 }
 - (CGFloat)trailingEdgeInset {
-    return 7;
+    return -7;
 }
 %end
 
@@ -5342,7 +5342,7 @@ static GeminiTranslator *_sharedInstance;
     return 1;
 }
 - (CGFloat)trailingEdgeInset {
-    return 7;
+    return -7;
 }
 %end
 
@@ -5354,7 +5354,7 @@ static GeminiTranslator *_sharedInstance;
     return 1;
 }
 - (CGFloat)trailingEdgeInset {
-    return 7;
+    return -7;
 }
 %end
 
@@ -5366,7 +5366,7 @@ static GeminiTranslator *_sharedInstance;
     return 1;
 }
 - (CGFloat)trailingEdgeInset {
-    return 7;
+    return -7;
 }
 %end
 
@@ -5378,6 +5378,6 @@ static GeminiTranslator *_sharedInstance;
     return 1;
 }
 - (CGFloat)trailingEdgeInset {
-    return 7;
+    return -7;
 }
 %end
