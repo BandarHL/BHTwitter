@@ -5392,10 +5392,11 @@ static NSMapTable *followersTabFixMap = nil;
 - (id)initWithTab:(long long)tab userDataSource:(id)userDataSource account:(id)account showFollowersYouKnow:(_Bool)showFollowersYouKnow shouldShowPeopleButton:(_Bool)shouldShowPeopleButton showPrimaryTabOnly:(_Bool)showPrimaryTabOnly shouldHideCreatorSubscriptions:(_Bool)shouldHideCreatorSubscriptions {
     NSLog(@"[BHTwitter] T1ProfileSegmentedFollowingViewController initWithTab: %lld", tab);
     
-    // If this is tab 0 (followers with verified tab), mark the data source to hide verified tab
+    // Convert tab 0 (followers with verified) to tab 3 (clean following layout) and mark data source
     if (tab == 0) {
-        NSLog(@"[BHTwitter] Marking data source to hide verified followers tab");
+        NSLog(@"[BHTwitter] Converting tab 0 to tab 3 and marking for followers selection");
         [followersTabFixMap setObject:@YES forKey:userDataSource];
+        tab = 3;
     }
     
     id result = %orig(tab, userDataSource, account, showFollowersYouKnow, shouldShowPeopleButton, showPrimaryTabOnly, shouldHideCreatorSubscriptions);
@@ -5410,28 +5411,11 @@ static NSMapTable *followersTabFixMap = nil;
 %hook T1ProfileSegmentedFollowingViewControllerDataSource
 - (long long)numberOfEntriesForSegmentedViewController:(id)segmentedViewController {
     long long result = %orig;
-    
-    // If this data source is marked to hide verified tab, return 2 instead of 3
-    if ([followersTabFixMap objectForKey:self] && result == 3) {
-        NSLog(@"[BHTwitter] Hiding verified followers tab: numberOfEntries 3 → 2");
-        return 2;
-    }
-    
     NSLog(@"[BHTwitter] numberOfEntriesForSegmentedViewController: %lld", result);
     return result;
 }
 
 - (id)segmentedViewController:(id)segmentedViewController titleAtIndex:(long long)index {
-    // If this data source is marked to hide verified tab, shift the indices
-    if ([followersTabFixMap objectForKey:self]) {
-        // Index 0 → "Followers" (skip "Verified followers")
-        // Index 1 → "Following" 
-        long long originalIndex = index + 1; // Skip the verified tab at index 0
-        id result = %orig(segmentedViewController, originalIndex);
-        NSLog(@"[BHTwitter] titleAtIndex: %lld (mapped to %lld) = %@", index, originalIndex, result);
-        return result;
-    }
-    
     id result = %orig;
     NSLog(@"[BHTwitter] titleAtIndex: %lld = %@", index, result);
     return result;
@@ -5439,19 +5423,16 @@ static NSMapTable *followersTabFixMap = nil;
 
 - (long long)segmentIndexForTab:(long long)tab {
     long long result = %orig;
+    
+    // If this is a converted tab 3 request and we're in followers mode, return 0 instead of 1
+    if (tab == 3 && result == 1 && [followersTabFixMap objectForKey:self]) {
+        NSLog(@"[BHTwitter] segmentIndexForTab: %lld = %lld → 0 (followers mode)", tab, result);
+        return 0;
+    }
+    
     NSLog(@"[BHTwitter] segmentIndexForTab: %lld = %lld", tab, result);
     return result;
 }
 
-- (id)segmentedViewController:(id)segmentedViewController viewControllerAtIndex:(long long)index {
-    // If this data source is marked to hide verified tab, shift the indices
-    if ([followersTabFixMap objectForKey:self]) {
-        long long originalIndex = index + 1; // Skip the verified tab at index 0
-        id result = %orig(segmentedViewController, originalIndex);
-        NSLog(@"[BHTwitter] viewControllerAtIndex: %lld (mapped to %lld)", index, originalIndex);
-        return result;
-    }
-    
-    return %orig;
-}
+
 %end
