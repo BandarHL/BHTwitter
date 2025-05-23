@@ -5317,8 +5317,8 @@ static GeminiTranslator *_sharedInstance;
 - (NSUInteger)buttonSize {
     return 1;
 }
-- (NSUInteger)inlineActionType {
-    return 3;
+- (CGFloat)trailingEdgeInset {
+    return 7;
 }
 %end
 
@@ -5329,8 +5329,8 @@ static GeminiTranslator *_sharedInstance;
 - (NSUInteger)buttonSize {
     return 1;
 }
-- (NSUInteger)inlineActionType {
-    return 3;
+- (CGFloat)trailingEdgeInset {
+    return 7;
 }
 %end
 
@@ -5341,8 +5341,8 @@ static GeminiTranslator *_sharedInstance;
 - (NSUInteger)buttonSize {
     return 1;
 }
-- (NSUInteger)inlineActionType {
-    return 3;
+- (CGFloat)trailingEdgeInset {
+    return 7;
 }
 %end
 
@@ -5353,8 +5353,8 @@ static GeminiTranslator *_sharedInstance;
 - (NSUInteger)buttonSize {
     return 1;
 }
-- (NSUInteger)inlineActionType {
-    return 3;
+- (CGFloat)trailingEdgeInset {
+    return 7;
 }
 %end
 
@@ -5365,8 +5365,8 @@ static GeminiTranslator *_sharedInstance;
 - (NSUInteger)buttonSize {
     return 1;
 }
-- (NSUInteger)inlineActionType {
-    return 3;
+- (CGFloat)trailingEdgeInset {
+    return 7;
 }
 %end
 
@@ -5377,7 +5377,7 @@ static GeminiTranslator *_sharedInstance;
 - (NSUInteger)buttonSize {
     return 1;
 }
-- (NSUInteger)inlineActionType {
-    return 3;
+- (CGFloat)trailingEdgeInset {
+    return 7;
 }
 %end
