@@ -11,6 +11,10 @@
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
 
+// Block type definitions for compatibility
+typedef void (^VoidBlock)(void);
+typedef id (^UnknownBlock)(void);
+
 // Forward declare T1ColorSettings and its private method to satisfy the compiler
 @interface T1ColorSettings : NSObject
 + (void)_t1_applyPrimaryColorOption;
@@ -3782,7 +3786,12 @@ static void PlayRefreshSound(int soundType) {
                 OSStatus status = AudioServicesCreateSystemSoundID((__bridge CFURLRef)soundURL, &sounds[soundType]);
                 if (status == 0) {
                     soundsInitialized[soundType] = YES;
+                    NSLog(@"[BHTwitter] Successfully initialized sound %@ (type %d)", soundFile, soundType);
+                } else {
+                    NSLog(@"[BHTwitter] Failed to initialize sound %@ (type %d), status: %d", soundFile, soundType, (int)status);
                 }
+            } else {
+                NSLog(@"[BHTwitter] Could not find sound file: %@", soundFile);
             }
         }
     }
@@ -3798,109 +3807,83 @@ static void PlayRefreshSound(int soundType) {
 %hook TFNPullToRefreshControl
 
 // Track state with instance-specific variables using associated objects
-static char kRefreshingKey;
-static char kPlayedPullSoundKey;
-static char kNeedsPopSoundKey;
-static char kPopSoundTimerKey;
+static char kPreviousLoadingStateKey;
+static char kManualRefreshInProgressKey;
 
 // Always enable sound effects
 + (_Bool)_areSoundEffectsEnabled {
     return YES;
 }
 
-// Track refresh animation completion to ensure pop sound plays after content is loaded
-- (void)_updateContentInset:(id)arg1 animated:(_Bool)arg2 {
+// Hook the simple loading property setter
+- (void)setLoading:(_Bool)loading {
+    NSLog(@"[BHTwitter] setLoading: called with loading=%d", loading);
+    
+    // Get previous loading state
+    NSNumber *previousLoadingState = objc_getAssociatedObject(self, &kPreviousLoadingStateKey);
+    BOOL wasLoading = previousLoadingState ? [previousLoadingState boolValue] : NO;
+    
     %orig;
     
-    // This method is called when animation completes - check if we should play pop sound
-    if (objc_getAssociatedObject(self, &kNeedsPopSoundKey)) {
-        // Get the timer if it exists
-        NSTimer *popTimer = objc_getAssociatedObject(self, &kPopSoundTimerKey);
-        if (popTimer) {
-            [popTimer invalidate]; // Cancel any pending timer
-        }
-        
-        // Reset state
-        objc_setAssociatedObject(self, &kNeedsPopSoundKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        objc_setAssociatedObject(self, &kPopSoundTimerKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        
-        // Play the pop sound with slight delay to ensure animation is visible
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            PlayRefreshSound(1);
-        });
+    // Store the new state AFTER calling original
+    objc_setAssociatedObject(self, &kPreviousLoadingStateKey, @(loading), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    
+    // If loading went from YES to NO, refresh is complete - play pop sound
+    if (wasLoading && !loading) {
+        NSLog(@"[BHTwitter] Loading changed from YES to NO - playing pop sound");
+        PlayRefreshSound(1);
+    }
+    
+    if (!wasLoading && loading) {
+        NSLog(@"[BHTwitter] Loading changed from NO to YES - refresh started");
     }
 }
 
-// Play sounds when loading state changes - this catches all refreshes
-- (void)setLoading:(_Bool)loading {
-    // Get previous state before changing
-    NSNumber *wasRefreshing = objc_getAssociatedObject(self, &kRefreshingKey);
-    BOOL wasRefreshingBool = wasRefreshing ? [wasRefreshing boolValue] : NO;
+// Hook the completion-based loading setter
+- (void)setLoading:(_Bool)loading completion:(void(^)(void))completion {
+    NSLog(@"[BHTwitter] setLoading:completion: called with loading=%d", loading);
     
-    // Set new state
-    objc_setAssociatedObject(self, &kRefreshingKey, @(loading), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    // Get previous loading state
+    NSNumber *previousLoadingState = objc_getAssociatedObject(self, &kPreviousLoadingStateKey);
+    BOOL wasLoading = previousLoadingState ? [previousLoadingState boolValue] : NO;
+    
+    // Check if we're in a manual refresh
+    NSNumber *manualRefresh = objc_getAssociatedObject(self, &kManualRefreshInProgressKey);
+    BOOL isManualRefresh = manualRefresh ? [manualRefresh boolValue] : NO;
     
     %orig;
     
-    // Going from not loading to loading (start of refresh)
-    if (!wasRefreshingBool && loading) {
-        NSNumber *didPlayPull = objc_getAssociatedObject(self, &kPlayedPullSoundKey);
-        if (!didPlayPull || ![didPlayPull boolValue]) {
-            // This is for auto-refresh cases where _setStatus isn't called
-            PlayRefreshSound(0);
-        }
-        
-        // Reset status for next refresh
-        objc_setAssociatedObject(self, &kPlayedPullSoundKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    // Store the new state AFTER calling original
+    objc_setAssociatedObject(self, &kPreviousLoadingStateKey, @(loading), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    
+    // If loading went from YES to NO AND we're in a manual refresh, play pop sound
+    if (wasLoading && !loading && isManualRefresh) {
+        NSLog(@"[BHTwitter] Manual refresh completed (completion) - playing pop sound");
+        PlayRefreshSound(1);
+        // Clear the manual refresh flag
+        objc_setAssociatedObject(self, &kManualRefreshInProgressKey, @NO, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
-    // Going from loading to not loading (end of refresh)
-    else if (wasRefreshingBool && !loading) {
-        // Mark that we need to play pop sound after animation completes
-        objc_setAssociatedObject(self, &kNeedsPopSoundKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        
-        // Set a fallback timer in case _updateContentInset doesn't get called
-        NSTimer *popTimer = [NSTimer scheduledTimerWithTimeInterval:0.7 
-                                                          repeats:NO 
-                                                            block:^(NSTimer *timer) {
-            // Only play if not already played
-            if (objc_getAssociatedObject(self, &kNeedsPopSoundKey)) {
-                objc_setAssociatedObject(self, &kNeedsPopSoundKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-                objc_setAssociatedObject(self, &kPopSoundTimerKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-                PlayRefreshSound(1);
-            }
-        }];
-        
-        objc_setAssociatedObject(self, &kPopSoundTimerKey, popTimer, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    
+    if (!wasLoading && loading) {
+        NSLog(@"[BHTwitter] Loading changed from NO to YES (completion) - refresh started");
     }
 }
 
 // Detect manual pull-to-refresh and play pull sound
 - (void)_setStatus:(unsigned long long)status fromScrolling:(_Bool)fromScrolling {
+    NSLog(@"[BHTwitter] _setStatus:%llu fromScrolling:%d", status, fromScrolling);
     %orig;
     
     if (status == 1 && fromScrolling) {
-        // Status changed to "triggered" via pull - play the pull sound
+        NSLog(@"[BHTwitter] Manual pull detected - playing pull sound");
         PlayRefreshSound(0);
-        objc_setAssociatedObject(self, &kPlayedPullSoundKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        
+        // Mark that we're in a manual refresh
+        objc_setAssociatedObject(self, &kManualRefreshInProgressKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        // Mark that loading started (even though setLoading: might not be called with loading=1)
+        objc_setAssociatedObject(self, &kPreviousLoadingStateKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        NSLog(@"[BHTwitter] Set manual refresh flag and previous loading state to YES");
     }
-}
-
-// Handle initial load refresh when app launches
-- (void)startPullToRefreshAnimationInScrollView:(id)scrollView {
-    %orig;
-    
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        // For the initial app launch refresh, use slightly different timing
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            PlayRefreshSound(0); // Pull sound
-            
-            // Play pop with longer delay for initial refresh
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-                PlayRefreshSound(1); // Pop sound
-            });
-        });
-    });
 }
 
 %end
