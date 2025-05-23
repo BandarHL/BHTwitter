@@ -1199,24 +1199,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %end
 
 // MARK: Tweet confirm
-
-// Declare private T1TweetComposeViewController methods
-@interface T1TweetComposeViewController (BHTwitter)
-- (void)_t1_showMediaRail;
-- (void)_t1_hideMediaRail;
-- (BOOL)_t1_mediaRailShowing;
-- (BOOL)_t1_hasPhotoAttached;
-- (void)_t1_searchForDeletePhotoButtonInView:(UIView *)view found:(BOOL *)found;
-- (BOOL)_t1_hasTextInComposer;
-- (void)_t1_searchForTextEditorInView:(UIView *)view hasText:(BOOL *)hasText;
-- (void)_t1_updateMediaRailVisibility;
-- (void)_t1_updateMediaRailVisibilityDelayed;
-- (void)_t1_performDelayedMediaRailUpdate;
-- (BOOL)_t1_shouldShowMediaRail;
-@end
-
 %hook T1TweetComposeViewController
-
 - (void)_t1_didTapSendButton:(UIButton *)tweetButton {
     if ([BHTManager TweetConfirm]) {
         [%c(FLEXAlert) makeAlert:^(FLEXAlert *make) {
@@ -1255,154 +1238,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (BOOL)_t1_canEnableCollaboration {
     return true;
 }
-
-// MARK: Media Rail Restoration
-- (BOOL)_t1_shouldShowMediaRail {
-    // Check if there's a photo attached by looking for "Delete photo" button
-    BOOL hasPhotoAttached = [self _t1_hasPhotoAttached];
-    
-    // Check if there's text in the composer
-    BOOL hasText = [self _t1_hasTextInComposer];
-    
-    // Show media rail only when there's no photo AND no text
-    return !(hasPhotoAttached || hasText);
-}
-
-%new
-- (BOOL)_t1_hasPhotoAttached {
-    // Search for TFNButton with accessibilityLabel "Delete photo"
-    __block BOOL foundDeleteButton = NO;
-    
-    [self.view.subviews enumerateObjectsUsingBlock:^(UIView *view, NSUInteger idx, BOOL *stop) {
-        [self _t1_searchForDeletePhotoButtonInView:view found:&foundDeleteButton];
-        if (foundDeleteButton) {
-            *stop = YES;
-        }
-    }];
-    
-    return foundDeleteButton;
-}
-
-%new
-- (void)_t1_searchForDeletePhotoButtonInView:(UIView *)view found:(BOOL *)found {
-    if (*found) return;
-    
-    if ([view isKindOfClass:%c(TFNButton)] && 
-        [view.accessibilityLabel isEqualToString:@"Delete photo"]) {
-        *found = YES;
-        return;
-    }
-    
-    for (UIView *subview in view.subviews) {
-        [self _t1_searchForDeletePhotoButtonInView:subview found:found];
-        if (*found) return;
-    }
-}
-
-%new
-- (BOOL)_t1_hasTextInComposer {
-    // Search for TwitterTextEditor.TextView and check its hasText property
-    __block BOOL hasText = NO;
-    
-    [self.view.subviews enumerateObjectsUsingBlock:^(UIView *view, NSUInteger idx, BOOL *stop) {
-        [self _t1_searchForTextEditorInView:view hasText:&hasText];
-        if (hasText) {
-            *stop = YES;
-        }
-    }];
-    
-    return hasText;
-}
-
-%new
-- (void)_t1_searchForTextEditorInView:(UIView *)view hasText:(BOOL *)hasText {
-    if (*hasText) return;
-    
-    NSString *className = NSStringFromClass([view class]);
-    if ([className containsString:@"TwitterTextEditor"] && 
-        [className containsString:@"TextView"]) {
-        if ([view respondsToSelector:@selector(hasText)]) {
-            *hasText = [(id)view hasText];
-            return;
-        }
-    }
-    
-    for (UIView *subview in view.subviews) {
-        [self _t1_searchForTextEditorInView:subview hasText:hasText];
-        if (*hasText) return;
-    }
-}
-
-%new
-- (void)_t1_updateMediaRailVisibility {
-    BOOL shouldShow = [self _t1_shouldShowMediaRail];
-    BOOL isCurrentlyShowing = [self _t1_mediaRailShowing];
-    
-    // Only update if state actually needs to change
-    if (shouldShow && !isCurrentlyShowing) {
-        [self _t1_showMediaRail];
-    } else if (!shouldShow && isCurrentlyShowing) {
-        [self _t1_hideMediaRail];
-    }
-}
-
-%new
-- (void)_t1_updateMediaRailVisibilityDelayed {
-    // Cancel any pending updates
-    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(_t1_performDelayedMediaRailUpdate) object:nil];
-    
-    // Schedule a new update with a small delay to debounce rapid changes
-    [self performSelector:@selector(_t1_performDelayedMediaRailUpdate) withObject:nil afterDelay:0.1];
-}
-
-%new
-- (void)_t1_performDelayedMediaRailUpdate {
-    [self _t1_updateMediaRailVisibility];
-}
-
-- (void)viewDidLoad {
-    %orig;
-    // Set up proper media rail visibility with delay to ensure view is ready
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [self _t1_updateMediaRailVisibilityDelayed];
-    });
-}
-
-- (void)viewWillAppear:(BOOL)animated {
-    %orig;
-    // Update media rail visibility when view appears
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [self _t1_updateMediaRailVisibilityDelayed];
-    });
-}
-
-// Hook methods that get called when attachments change
-- (void)composer:(id)arg1 didAddOrReplaceAttachment:(id)arg2 {
-    %orig;
-    // Update media rail when photo is added with delay
-    [self _t1_updateMediaRailVisibilityDelayed];
-}
-
-- (void)composer:(id)arg1 didReplaceAllAttachments:(id)arg2 {
-    %orig;
-    // Update media rail when attachments change with delay
-    [self _t1_updateMediaRailVisibilityDelayed];
-}
-
-// Hook text change notifications
-- (void)_t1_compositionDidChange {
-    %orig;
-    // Update media rail when text changes with delay
-    [self _t1_updateMediaRailVisibilityDelayed];
-}
-
-// Hook method that might be called when attachments are removed
-- (void)composer:(id)arg1 didRemoveAttachment:(id)arg2 {
-    %orig;
-    // Update media rail when photo is removed with delay
-    [self _t1_updateMediaRailVisibilityDelayed];
-}
-
 %end
 
 // MARK: Follow confirm
@@ -1678,8 +1513,51 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 // MARK: Show Scroll Bar
 %hook TFNTableView
+
+- (void)BHT_clearCellLayoutsInGuideContainer;
+
 - (void)setShowsVerticalScrollIndicator:(BOOL)arg1 {
     %orig([BHTManager showScrollIndicator]);
+}
+
+%new
+- (void)BHT_clearCellLayoutsInGuideContainer {
+    // Check if we're in GuideContainerViewController context
+    UIViewController *parentVC = nil;
+    UIResponder *responder = self.nextResponder;
+    while (responder && ![responder isKindOfClass:[UIViewController class]]) {
+        responder = responder.nextResponder;
+    }
+    
+    if (responder && [responder isKindOfClass:[UIViewController class]]) {
+        parentVC = (UIViewController *)responder;
+        
+        // Get GuideContainerViewController class directly
+        Class guideContainerClass = NSClassFromString(@"T1TwitterSwift.GuideContainerViewController");
+        if (!guideContainerClass) {
+            guideContainerClass = NSClassFromString(@"T1TwitterSwift_GuideContainerViewController");
+        }
+        
+        // Check if this is GuideContainerViewController
+        if (guideContainerClass && [parentVC isKindOfClass:guideContainerClass]) {
+            // Access the helper using runtime
+            id helper = [self valueForKey:@"_helper"];
+            if (helper) {
+                // Access the cellLayouts array from the helper
+                NSMutableArray *cellLayouts = [helper valueForKey:@"cellLayouts"];
+                if (cellLayouts && [cellLayouts respondsToSelector:@selector(removeAllObjects)]) {
+                    [cellLayouts removeAllObjects];
+                    NSLog(@"[BHTwitter] Cleared cellLayouts in GuideContainerViewController");
+                }
+            }
+        }
+    }
+}
+
+- (void)reloadData {
+    %orig;
+    // Trigger our custom method when reloadData is called in GuideContainerViewController
+    [self performSelector:@selector(BHT_clearCellLayoutsInGuideContainer)];
 }
 %end
 
