@@ -3809,6 +3809,7 @@ static void PlayRefreshSound(int soundType) {
 // Track state with instance-specific variables using associated objects
 static char kPreviousLoadingStateKey;
 static char kPlayedPullSoundKey;
+static char kManualRefreshInProgressKey;
 
 // Always enable sound effects
 + (_Bool)_areSoundEffectsEnabled {
@@ -3847,15 +3848,21 @@ static char kPlayedPullSoundKey;
     NSNumber *previousLoadingState = objc_getAssociatedObject(self, &kPreviousLoadingStateKey);
     BOOL wasLoading = previousLoadingState ? [previousLoadingState boolValue] : NO;
     
+    // Check if we're in a manual refresh
+    NSNumber *manualRefresh = objc_getAssociatedObject(self, &kManualRefreshInProgressKey);
+    BOOL isManualRefresh = manualRefresh ? [manualRefresh boolValue] : NO;
+    
     %orig;
     
     // Store the new state AFTER calling original
     objc_setAssociatedObject(self, &kPreviousLoadingStateKey, @(loading), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     
-    // If loading went from YES to NO, refresh is complete - play pop sound
-    if (wasLoading && !loading) {
-        NSLog(@"[BHTwitter] Loading changed from YES to NO (completion) - playing pop sound");
+    // If loading went from YES to NO AND we're in a manual refresh, play pop sound
+    if (wasLoading && !loading && isManualRefresh) {
+        NSLog(@"[BHTwitter] Manual refresh completed (completion) - playing pop sound");
         PlayRefreshSound(1);
+        // Clear the manual refresh flag
+        objc_setAssociatedObject(self, &kManualRefreshInProgressKey, @NO, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
     
     if (!wasLoading && loading) {
@@ -3872,9 +3879,11 @@ static char kPlayedPullSoundKey;
         NSLog(@"[BHTwitter] Manual pull detected - playing pull sound");
         PlayRefreshSound(0);
         
+        // Mark that we're in a manual refresh
+        objc_setAssociatedObject(self, &kManualRefreshInProgressKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         // Mark that loading started (even though setLoading: might not be called with loading=1)
         objc_setAssociatedObject(self, &kPreviousLoadingStateKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        NSLog(@"[BHTwitter] Set previous loading state to YES for manual refresh");
+        NSLog(@"[BHTwitter] Set manual refresh flag and previous loading state to YES");
     }
 }
 
