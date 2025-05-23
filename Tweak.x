@@ -1253,7 +1253,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 // MARK: Media Rail Restoration
 - (BOOL)_t1_shouldShowMediaRail {
-    return NO; // Always show media rail regardless of Twitter's logic
+    return YES; // Always show media rail regardless of Twitter's logic
 }
 
 - (id)mediaRailViewController {
@@ -1264,17 +1264,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         controller = %orig;
     }
     return controller;
-}
-
-- (void)viewDidLoad {
-    %orig;
-    // Force load and show the media rail
-    dispatch_async(dispatch_get_main_queue(), ^{
-        // Ensure the media rail exists
-        [self mediaRailViewController];
-        [self _t1_updateMediaRailViewController];
-        [self _t1_showMediaRail];
-    });
 }
 %end
 
