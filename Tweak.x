@@ -5413,14 +5413,6 @@ static NSMapTable *followersTabFixMap = nil;
     if (isFixingFollowersTab && result) {
         [followersTabFixMap setObject:@YES forKey:result];
         NSLog(@"[BHTwitter] Marked this instance as followers-mode for tab 3");
-        
-        // Force initial selection to Followers tab (index 0) after a short delay
-        dispatch_async(dispatch_get_main_queue(), ^{
-            if ([result respondsToSelector:@selector(setSelectedIndex:)]) {
-                NSLog(@"[BHTwitter] Forcing initial selection to Followers tab (index 0)");
-                [result setSelectedIndex:0];
-            }
-        });
     }
     
     return result;
@@ -5432,6 +5424,14 @@ static NSMapTable *followersTabFixMap = nil;
     NSLog(@"[BHTwitter] atIndex: %lld", index);
     NSLog(@"[BHTwitter] lastIndex: %lld", lastIndex);
     NSLog(@"[BHTwitter] userGestureType: %lld", userGestureType);
+    
+    // Check if this is a followers-mode instance and the system is auto-selecting Following tab
+    if ([followersTabFixMap objectForKey:self] && index == 1 && lastIndex == 0 && userGestureType == 1) {
+        NSLog(@"[BHTwitter] Blocking automatic selection of Following tab, forcing Followers tab (index 0)");
+        // Call the original method but with index 0 instead of 1
+        %orig(segmentedViewController, contentViewController, 0, lastIndex, userGestureType);
+        return;
+    }
     
     %orig;
 }
