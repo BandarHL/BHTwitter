@@ -644,4 +644,5 @@ static UIViewController * _Nonnull topMostController() {
 @property(readonly, nonatomic) TFNTwitterAccount *account;
 - (void)segmentedViewController:(id)arg1 didSelectContentViewController:(id)arg2 atIndex:(long long)arg3 lastIndex:(long long)arg4 userGestureType:(long long)arg5;
 - (id)initWithTab:(long long)arg1 userDataSource:(id)arg2 account:(id)arg3 showFollowersYouKnow:(_Bool)arg4 shouldShowPeopleButton:(_Bool)arg5 showPrimaryTabOnly:(_Bool)arg6 shouldHideCreatorSubscriptions:(_Bool)arg7;
+- (void)setSelectedIndex:(NSInteger)index;
 @end

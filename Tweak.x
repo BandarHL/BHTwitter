@@ -5418,22 +5418,16 @@ static NSMapTable *followersTabFixMap = nil;
     return result;
 }
 
-- (void)segmentedViewController:(id)segmentedViewController didSelectContentViewController:(id)contentViewController atIndex:(long long)index lastIndex:(long long)lastIndex userGestureType:(long long)userGestureType {
-    NSLog(@"[BHTwitter] segmentedViewController didSelectContentViewController");
-    NSLog(@"[BHTwitter] contentViewController: %@", contentViewController);
-    NSLog(@"[BHTwitter] atIndex: %lld", index);
-    NSLog(@"[BHTwitter] lastIndex: %lld", lastIndex);
-    NSLog(@"[BHTwitter] userGestureType: %lld", userGestureType);
-    
-    // Check if this is a followers-mode instance and the system is auto-selecting Following tab
-    if ([followersTabFixMap objectForKey:self] && index == 1 && lastIndex == 0 && userGestureType == 1) {
-        NSLog(@"[BHTwitter] Blocking automatic selection of Following tab, forcing Followers tab (index 0)");
-        // Call the original method but with index 0 instead of 1
-        %orig(segmentedViewController, contentViewController, 0, lastIndex, userGestureType);
-        return;
-    }
-    
+- (void)viewDidAppear:(BOOL)animated {
     %orig;
+    
+    // Check if this is a followers-mode instance and force selection to Followers tab
+    if ([followersTabFixMap objectForKey:self]) {
+        NSLog(@"[BHTwitter] viewDidAppear: Forcing selection to Followers tab (index 0)");
+        if ([self respondsToSelector:@selector(setSelectedIndex:)]) {
+            [self setSelectedIndex:0];
+        }
+    }
 }
 %end
 
