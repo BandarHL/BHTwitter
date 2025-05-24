@@ -5439,9 +5439,9 @@ static NSMapTable *followersTabFixMap = nil;
 - (long long)segmentIndexForTab:(long long)tab {
     long long result = %orig;
     
-    // If this is a converted tab 3 request and we're in followers mode, return 0 instead of 1
-    if (tab == 3 && result == 1 && [followersTabFixMap objectForKey:self]) {
-        NSLog(@"[BHTwitter] segmentIndexForTab: %lld = %lld → 0 (followers mode)", tab, result);
+    // If this is tab 3 (converted from tab 0) and returns 1, force it to 0 to show Followers first
+    if (tab == 3 && result == 1) {
+        NSLog(@"[BHTwitter] segmentIndexForTab: %lld = %lld → 0 (forcing followers first)", tab, result);
         return 0;
     }
     
