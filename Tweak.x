@@ -5388,38 +5388,36 @@ static GeminiTranslator *_sharedInstance;
         return originalView;
     }
     
-    // Create the full hierarchy with text
+    // Check if this is a reply
     id viewModel = [self performSelector:@selector(viewModel)];
     if (viewModel) {
         id tweet = [viewModel performSelector:@selector(tweet)];
         if (tweet && [tweet respondsToSelector:@selector(inReplyToStatusID)]) {
             id replyID = [tweet performSelector:@selector(inReplyToStatusID)];
             if (replyID) {
-                // Create TTATimelinesStatusConversationContextView
+                // Create TTATimelinesStatusConversationContextView properly
                 Class contextClass = NSClassFromString(@"TTATimelinesStatusConversationContextView");
                 if (contextClass) {
-                    id contextView = [[contextClass alloc] initWithFrame:CGRectMake(0, 0, 200, 30)];
+                    id contextView = [[contextClass alloc] initWithFrame:CGRectZero];
                     
-                    // Create TFNTappableHighlightView
-                    Class highlightClass = NSClassFromString(@"TFNTappableHighlightView");
-                    if (highlightClass) {
-                        id highlightView = [[highlightClass alloc] initWithFrame:CGRectMake(0, 0, 200, 30)];
+                    // Create TFNAttributedActiveTextModel with reply text
+                    Class activeTextModelClass = NSClassFromString(@"TFNAttributedActiveTextModel");
+                    if (activeTextModelClass) {
+                        NSString *replyText = @"Replying to @someone";
+                        NSAttributedString *attrString = [[NSAttributedString alloc] initWithString:replyText];
                         
-                        // Create TFNAttributedTextView with "replying to" text
-                        Class textClass = NSClassFromString(@"TFNAttributedTextView");
-                        if (textClass) {
-                            id textView = [[textClass alloc] initWithFrame:CGRectMake(0, 0, 200, 30)];
-                            
-                            // Set the text
-                            NSString *replyText = @"Replying to @someone";
-                            if ([textView respondsToSelector:@selector(setText:)]) {
-                                [textView performSelector:@selector(setText:) withObject:replyText];
-                            }
-                            
-                            [highlightView addSubview:textView];
+                        id activeTextModel = [[activeTextModelClass alloc] init];
+                        if ([activeTextModel respondsToSelector:@selector(setAttributedString:)]) {
+                            [activeTextModel performSelector:@selector(setAttributedString:) withObject:attrString];
                         }
                         
-                        [contextView addSubview:highlightView];
+                        // Set the activeTextModel
+                        [contextView setValue:activeTextModel forKey:@"activeTextModel"];
+                        
+                        // Update layout to render
+                        if ([contextView respondsToSelector:@selector(updateWithLayoutState:resettingFrame:)]) {
+                            [contextView performSelector:@selector(updateWithLayoutState:resettingFrame:) withObject:nil withObject:@YES];
+                        }
                     }
                     
                     return contextView;
