@@ -5405,16 +5405,43 @@ static GeminiTranslator *_sharedInstance;
                 tweet = [viewModel performSelector:@selector(tweet)];
             }
             
-            NSString *tweetInfo = @"unknown";
-            if (tweet) {
-                if ([tweet respondsToSelector:@selector(inReplyToStatusID)]) {
-                    id replyID = [tweet performSelector:@selector(inReplyToStatusID)];
-                    tweetInfo = replyID ? @"REPLY" : @"ORIGINAL";
-                } else if ([tweet respondsToSelector:@selector(isReply)]) {
-                    BOOL isReply = [[tweet performSelector:@selector(isReply)] boolValue];
-                    tweetInfo = isReply ? @"REPLY" : @"ORIGINAL";
-                }
-            }
+                         NSString *tweetInfo = @"unknown";
+             if (tweet) {
+                 // Try multiple ways to detect replies
+                 BOOL isReply = NO;
+                 NSString *debugInfo = @"";
+                 
+                 // Method 1: inReplyToStatusID
+                 if ([tweet respondsToSelector:@selector(inReplyToStatusID)]) {
+                     id replyID = [tweet performSelector:@selector(inReplyToStatusID)];
+                     if (replyID) {
+                         isReply = YES;
+                         debugInfo = [debugInfo stringByAppendingString:@"inReplyToStatusID:YES "];
+                     } else {
+                         debugInfo = [debugInfo stringByAppendingString:@"inReplyToStatusID:NO "];
+                     }
+                 }
+                 
+                 // Method 2: isReply
+                 if ([tweet respondsToSelector:@selector(isReply)]) {
+                     BOOL methodResult = [[tweet performSelector:@selector(isReply)] boolValue];
+                     if (methodResult) isReply = YES;
+                     debugInfo = [debugInfo stringByAppendingFormat:@"isReply:%@ ", methodResult ? @"YES" : @"NO"];
+                 }
+                 
+                 // Method 3: Check for replyingTo or similar
+                 if ([tweet respondsToSelector:@selector(replyingToTweet)]) {
+                     id replyingTo = [tweet performSelector:@selector(replyingToTweet)];
+                     if (replyingTo) {
+                         isReply = YES;
+                         debugInfo = [debugInfo stringByAppendingString:@"replyingToTweet:YES "];
+                     } else {
+                         debugInfo = [debugInfo stringByAppendingString:@"replyingToTweet:NO "];
+                     }
+                 }
+                 
+                 tweetInfo = isReply ? [NSString stringWithFormat:@"REPLY(%@)", debugInfo] : [NSString stringWithFormat:@"ORIGINAL(%@)", debugInfo];
+             }
             
             NSLog(@"[BHTwitter] T1StandardStatusView (%@) - checking context views", tweetInfo);
             
@@ -5438,7 +5465,30 @@ static GeminiTranslator *_sharedInstance;
 
 - (id)visibleConversationContextView {
     id originalView = %orig;
-    NSLog(@"[BHTwitter] visibleConversationContextView called - returning: %@", originalView ? NSStringFromClass([originalView class]) : @"nil");
+    
+    // Get more context about this view
+    id viewModel = nil;
+    if ([self respondsToSelector:@selector(viewModel)]) {
+        viewModel = [self performSelector:@selector(viewModel)];
+    }
+    
+    NSString *tweetType = @"unknown";
+    if (viewModel) {
+        id tweet = nil;
+        if ([viewModel respondsToSelector:@selector(tweet)]) {
+            tweet = [viewModel performSelector:@selector(tweet)];
+        }
+        
+        if (tweet) {
+            if ([tweet respondsToSelector:@selector(inReplyToStatusID)]) {
+                id replyID = [tweet performSelector:@selector(inReplyToStatusID)];
+                tweetType = replyID ? @"REPLY" : @"ORIGINAL";
+            }
+        }
+    }
+    
+    NSLog(@"[BHTwitter] visibleConversationContextView called for %@ - returning: %@", 
+          tweetType, originalView ? NSStringFromClass([originalView class]) : @"nil");
     return originalView;
 }
 
