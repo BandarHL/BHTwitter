@@ -5391,42 +5391,19 @@ static NSMapTable *followersTabFixMap = nil;
 
 - (id)initWithTab:(long long)tab userDataSource:(id)userDataSource account:(id)account showFollowersYouKnow:(_Bool)showFollowersYouKnow shouldShowPeopleButton:(_Bool)shouldShowPeopleButton showPrimaryTabOnly:(_Bool)showPrimaryTabOnly shouldHideCreatorSubscriptions:(_Bool)shouldHideCreatorSubscriptions {
     NSLog(@"[BHTwitter] T1ProfileSegmentedFollowingViewController initWithTab: %lld", tab);
-    NSLog(@"[BHTwitter] showFollowersYouKnow: %d, shouldShowPeopleButton: %d, showPrimaryTabOnly: %d", showFollowersYouKnow, shouldShowPeopleButton, showPrimaryTabOnly);
-    NSLog(@"[BHTwitter] userDataSource class: %@", NSStringFromClass([userDataSource class]));
     
-    // Get stack trace to understand the call context
-    NSArray *callStack = [NSThread callStackSymbols];
-    for (NSString *frame in callStack) {
-        if ([frame containsString:@"T1Profile"] || [frame containsString:@"Following"] || [frame containsString:@"Follower"]) {
-            NSLog(@"[BHTwitter] Relevant stack frame: %@", frame);
-        }
-    }
-    
-    // Track whether this is a converted case
-    BOOL isConvertedFromTab0 = (tab == 0);
-    
-    // Convert tab 0 (followers with verified) to tab 3 (clean following layout)
+    // Convert tab 0 (followers with verified) to tab 3 (clean following layout) and mark this instance
     if (tab == 0) {
-        NSLog(@"[BHTwitter] Converting tab 0 to tab 3 for clean layout");
+        NSLog(@"[BHTwitter] Converting tab 0 to tab 3 and marking instance for followers mode");
         tab = 3;
     }
     
     id result = %orig(tab, userDataSource, account, showFollowersYouKnow, shouldShowPeopleButton, showPrimaryTabOnly, shouldHideCreatorSubscriptions);
-    NSLog(@"[BHTwitter] T1ProfileSegmentedFollowingViewController init result: %@", result);
     
-    // Mark controller instance if this was converted from tab 0
-    if (isConvertedFromTab0) {
-        NSLog(@"[BHTwitter] Marking controller instance as converted from tab 0 → should show followers first");
+    // Mark this instance as a converted followers instance
+    if (result && tab == 3) {
         [followersTabFixMap setObject:@YES forKey:result];
-        
-        // Also mark the data source so we can check it in segmentIndexForTab
-        if ([result respondsToSelector:@selector(retainedDataSource)]) {
-            id dataSource = [result retainedDataSource];
-            if (dataSource) {
-                NSLog(@"[BHTwitter] Also marking data source: %@", dataSource);
-                [followersTabFixMap setObject:@YES forKey:dataSource];
-            }
-        }
+        NSLog(@"[BHTwitter] Marked instance %@ as converted followers", result);
     }
     
     return result;
@@ -5438,11 +5415,23 @@ static NSMapTable *followersTabFixMap = nil;
     NSLog(@"[BHTwitter] lastIndex: %lld", lastIndex);
     NSLog(@"[BHTwitter] userGestureType: %lld", userGestureType);
     
-    // Block automatic selection to Following tab (index 1) but allow user taps
-    if (index == 1 && userGestureType == 1) {
-        NSLog(@"[BHTwitter] Blocking automatic selection of Following tab - calling with index 0 instead");
-        %orig(segmentedViewController, contentViewController, 0, lastIndex, userGestureType);
-        return;
+    // Only interfere if this is a converted followers instance (not a real following instance)
+    BOOL isConvertedFollowers = [[followersTabFixMap objectForKey:self] boolValue];
+    
+    if (isConvertedFollowers) {
+        NSLog(@"[BHTwitter] This is a converted followers instance");
+        
+        // For converted followers instances, force selection to index 0 (Followers tab) on initial load
+        if (index == 1 && lastIndex == -1) {
+            NSLog(@"[BHTwitter] Initial load - forcing selection to Followers (index 0)");
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if ([self respondsToSelector:@selector(setSelectedIndex:)]) {
+                    [self performSelector:@selector(setSelectedIndex:) withObject:@(0)];
+                }
+            });
+            %orig(segmentedViewController, contentViewController, 0, lastIndex, userGestureType);
+            return;
+        }
     }
     
     %orig;
@@ -5466,15 +5455,18 @@ static NSMapTable *followersTabFixMap = nil;
 - (long long)segmentIndexForTab:(long long)tab {
     long long result = %orig;
     
-    // Only force followers first if this data source is marked as converted from tab 0
-    if (tab == 3 && result == 1) {
-        NSObject *markedValue = [followersTabFixMap objectForKey:self];
-        if (markedValue) {
-            NSLog(@"[BHTwitter] segmentIndexForTab: %lld = %lld → 0 (forcing followers first for converted case)", tab, result);
-            return 0;
-        } else {
-            NSLog(@"[BHTwitter] segmentIndexForTab: %lld = %lld (not converted, keeping Following)", tab, result);
-        }
+    // Get the view controller instance from the data source to check if it's converted
+    id viewController = nil;
+    if ([self respondsToSelector:@selector(viewController)]) {
+        viewController = [self performSelector:@selector(viewController)];
+    }
+    
+    BOOL isConvertedFollowers = viewController ? [[followersTabFixMap objectForKey:viewController] boolValue] : NO;
+    
+    // Only force followers first for converted followers instances
+    if (isConvertedFollowers && tab == 3 && result == 1) {
+        NSLog(@"[BHTwitter] segmentIndexForTab: %lld = %lld → 0 (forcing followers first for converted instance)", tab, result);
+        return 0;
     }
     
     NSLog(@"[BHTwitter] segmentIndexForTab: %lld = %lld", tab, result);
