@@ -5395,8 +5395,11 @@ static GeminiTranslator *_sharedInstance;
 - (UIView *)visibleConversationContextView {
     UIView *originalView = %orig;
     
+    NSLog(@"[BHTwitter] visibleConversationContextView called, originalView: %@", originalView);
+    
     // If there's already a visible conversation context view, return it
     if (originalView) {
+        NSLog(@"[BHTwitter] Original view exists, returning it");
         return originalView;
     }
     
@@ -5413,6 +5416,8 @@ static GeminiTranslator *_sharedInstance;
         view = view.superview;
     }
     
+    NSLog(@"[BHTwitter] isNotificationView: %d", isNotificationView);
+    
     if (isNotificationView) {
         return originalView;
     }
@@ -5421,9 +5426,12 @@ static GeminiTranslator *_sharedInstance;
     // Find existing conversation context view first
     for (UIView *subview in self.subviews) {
         if ([subview isKindOfClass:%c(TTATimelinesStatusConversationContextView)]) {
+            NSLog(@"[BHTwitter] Found existing conversation context view");
             return subview;
         }
     }
+    
+    NSLog(@"[BHTwitter] Creating new reply label");
     
     // No existing view found, create a simple text view to show "Replying to @username"
     UILabel *replyLabel = [[UILabel alloc] init];
@@ -5438,6 +5446,53 @@ static GeminiTranslator *_sharedInstance;
     [replyLabel sizeToFit];
     
     return replyLabel;
+}
+
+- (void)setViewModel:(id)viewModel options:(unsigned long long)options account:(id)account {
+    %orig;
+    
+    NSLog(@"[BHTwitter] T1StandardStatusView setViewModel called");
+    
+    // Check if we're in a notification context
+    UIView *view = self;
+    BOOL isNotificationView = NO;
+    
+    while (view && !isNotificationView) {
+        if ([NSStringFromClass([view class]) containsString:@"Notification"] ||
+            [NSStringFromClass([view class]) containsString:@"T1NotificationsTimeline"]) {
+            isNotificationView = YES;
+            break;
+        }
+        view = view.superview;
+    }
+    
+    if (!isNotificationView && viewModel) {
+        NSLog(@"[BHTwitter] Non-notification view model set, forcing conversation context");
+        
+        // Create and add reply label immediately
+        UILabel *replyLabel = [[UILabel alloc] init];
+        replyLabel.text = @"TEST REPLY CONTEXT";
+        replyLabel.font = [UIFont systemFontOfSize:14.0];
+        replyLabel.textColor = [UIColor redColor];
+        replyLabel.backgroundColor = [UIColor yellowColor];
+        replyLabel.tag = 12345; // Tag to identify our label
+        
+        // Remove any existing test labels
+        for (UIView *subview in self.subviews) {
+            if (subview.tag == 12345) {
+                [subview removeFromSuperview];
+            }
+        }
+        
+        // Add to view hierarchy and set frame
+        [self addSubview:replyLabel];
+        replyLabel.frame = CGRectMake(16, 8, 200, 20);
+        [replyLabel sizeToFit];
+        
+        // Force layout
+        [self setNeedsLayout];
+        [self layoutIfNeeded];
+    }
 }
 
 %end
