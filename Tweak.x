@@ -96,38 +96,18 @@ static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *
 // Add this before the hooks, after the imports
 
 UIColor *BHTCurrentAccentColor(void) {
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    
-    // First check our custom theme selection
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        NSLog(@"[BHTwitter] BHTCurrentAccentColor: Custom theme selected = %ld", (long)opt);
-        
-        // Handle our custom colors directly - this should always work
-        if (opt == 7) {
-            NSLog(@"[BHTwitter] Returning Pastel Pink for option 7");
-            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
-        } else if (opt == 8) {
-            NSLog(@"[BHTwitter] Returning Dark Red for option 8");
-            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
-        }
-        
-        // For options 1-6, get from Twitter's system
-        Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
-        if (TAEColorSettingsCls) {
-            id settings = [TAEColorSettingsCls sharedSettings];
-            id current = [settings currentColorPalette];
-            id palette = [current colorPalette];
-            UIColor *color = [palette primaryColorForOption:opt];
-            NSLog(@"[BHTwitter] Got Twitter color for option %ld: %@", (long)opt, color);
-            return color ?: [UIColor systemBlueColor];
-        }
+    Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
+    if (!TAEColorSettingsCls) {
+        return [UIColor systemBlueColor];
     }
 
-    // Fallback to Twitter's selected color
-    if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
-        NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-        NSLog(@"[BHTwitter] Using Twitter's color option: %ld", (long)opt);
+    id settings = [TAEColorSettingsCls sharedSettings];
+    id current = [settings currentColorPalette];
+    id palette = [current colorPalette];
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
         // Handle our custom colors directly
         if (opt == 7) {
@@ -136,16 +116,22 @@ UIColor *BHTCurrentAccentColor(void) {
             return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
         }
         
-        Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
-        if (TAEColorSettingsCls) {
-            id settings = [TAEColorSettingsCls sharedSettings];
-            id current = [settings currentColorPalette];
-            id palette = [current colorPalette];
-            return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
-        }
+        return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
     }
 
-    NSLog(@"[BHTwitter] No color theme found, returning system blue");
+    if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
+        NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+        
+        // Handle our custom colors directly
+        if (opt == 7) {
+            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
+        } else if (opt == 8) {
+            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
+        }
+        
+        return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
+    }
+
     return [UIColor systemBlueColor];
 }
 
@@ -224,32 +210,23 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)setPrimaryColorOption:(NSInteger)colorOption {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     
-    // Store our custom color selection first
-    [defaults setObject:@(colorOption) forKey:@"bh_color_theme_selectedColor"];
-    
-    // For custom colors (7, 8), set Twitter's internal color to a valid fallback
-    NSInteger twitterColorOption = colorOption;
-    if (colorOption == 7 || colorOption == 8) {
-        twitterColorOption = 1; // Use Twitter's blue as fallback
-    }
-    
     // If we have a BHTwitter theme selected, ensure it takes precedence
     if ([defaults objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger ourSelectedOption = [defaults integerForKey:@"bh_color_theme_selectedColor"];
         
         // Only allow changes that match our selection (avoids fighting with Twitter's system)
-        if (twitterColorOption == ourSelectedOption || BHT_isInThemeChangeOperation) {
-            %orig(twitterColorOption);
+        if (colorOption == ourSelectedOption || BHT_isInThemeChangeOperation) {
+            %orig(colorOption);
         } else {
             // If not from our theme operation, apply our own theme instead
-            %orig(ourSelectedOption <= 6 ? ourSelectedOption : 1);
+            %orig(ourSelectedOption);
             
             // Also ensure Twitter's defaults match our setting for consistency
-            [defaults setObject:@(ourSelectedOption <= 6 ? ourSelectedOption : 1) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+            [defaults setObject:@(ourSelectedOption) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
         }
     } else {
         // No BHTwitter theme active, let Twitter handle it normally
-        %orig(twitterColorOption);
+        %orig(colorOption);
     }
 }
 
@@ -319,9 +296,19 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         id selectedColor = [defaults objectForKey:@"bh_color_theme_selectedColor"];
         
         if (selectedColor != nil && !BHT_isInThemeChangeOperation) {
+            NSInteger ourSelectedOption = [selectedColor integerValue];
+            
+            // Map our custom colors to Twitter-compatible colors
+            NSInteger expectedTwitterColor = ourSelectedOption;
+            if (ourSelectedOption == 7) {
+                expectedTwitterColor = 3; // Pastel Pink maps to Red
+            } else if (ourSelectedOption == 8) {
+                expectedTwitterColor = 3; // Dark Red maps to Red
+            }
+            
             // If our theme is active and this change isn't part of our operation,
-            // only allow the change if it matches our selection
-            if (![value isEqual:selectedColor]) {
+            // only allow the change if it matches our expected mapped color
+            if (![value isEqual:@(expectedTwitterColor)]) {
                 // Silently reject the change, our theme has priority
                 return;
             }
@@ -4585,21 +4572,30 @@ static void BHT_ensureThemingEngineSynchronized(BOOL forceSynchronize) {
     if (!selectedColorObj) return;
     
     NSInteger selectedColor = [selectedColorObj integerValue];
+    
+    // Map custom colors to existing Twitter colors for native system compatibility
+    NSInteger twitterColorID = selectedColor;
+    if (selectedColor == 7) {
+        twitterColorID = 3; // Map Pastel Pink to Red internally for Twitter's system
+    } else if (selectedColor == 8) {
+        twitterColorID = 3; // Map Dark Red to Red internally for Twitter's system
+    }
+    
     id twitterColorObj = [defaults objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
     
-    // Check if Twitter's color setting matches our desired color
-    if (forceSynchronize || !twitterColorObj || ![twitterColorObj isEqual:selectedColorObj]) {
+    // Check if Twitter's color setting matches our desired mapped color
+    if (forceSynchronize || !twitterColorObj || ![twitterColorObj isEqual:@(twitterColorID)]) {
         // Mark that we're performing our own theme change to avoid recursion
         BHT_isInThemeChangeOperation = YES;
         
-        // Apply our theme color through Twitter's system
+        // Apply our mapped theme color through Twitter's system
         TAEColorSettings *taeSettings = [%c(TAEColorSettings) sharedSettings];
         if ([taeSettings respondsToSelector:@selector(setPrimaryColorOption:)]) {
-            [taeSettings setPrimaryColorOption:selectedColor];
+            [taeSettings setPrimaryColorOption:twitterColorID];
         }
         
-        // Set Twitter's user defaults key to match our selection
-        [defaults setObject:selectedColorObj forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+        // Set Twitter's user defaults key to match our mapped selection
+        [defaults setObject:@(twitterColorID) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
         
         // Call Twitter's internal theme application methods
         if ([%c(T1ColorSettings) respondsToSelector:@selector(_t1_applyPrimaryColorOption)]) {
@@ -5657,29 +5653,4 @@ static GeminiTranslator *_sharedInstance;
     }
     return nil;
 }
-%end
-
-// Hook the actual color palette to return our custom colors
-%hook NSObject
-
-- (UIColor *)primaryColorForOption:(NSUInteger)colorOption {
-    // Only hook if this is actually a color palette object
-    NSString *className = NSStringFromClass([self class]);
-    if ([className containsString:@"ColorPalette"] || [className containsString:@"Color"]) {
-        NSLog(@"[BHTwitter] primaryColorForOption:%lu called on class: %@", (unsigned long)colorOption, className);
-        
-        // Handle our custom colors directly
-        if (colorOption == 7) {
-            NSLog(@"[BHTwitter] Returning Pastel Pink from palette hook");
-            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
-        } else if (colorOption == 8) {
-            NSLog(@"[BHTwitter] Returning Dark Red from palette hook");
-            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
-        }
-    }
-    
-    // For standard colors or non-color classes, call original
-    return %orig(colorOption);
-}
-
 %end
