@@ -5376,17 +5376,8 @@ static GeminiTranslator *_sharedInstance;
 
 %end
 
-%hook T1ExploreFeatures
-- (_Bool)enableNewsTab {
-    return false;
-}
-- (_Bool)enableNewExplore {
-    return false;
-}
-- (_Bool)isTabsEnabled {
-    return false;
-}
-- (_Bool)isTrendingTabEnabled {
-    return false;
+%hook TwitterHomeFeaturesConfiguration
+- (_Bool)isThreadedHomeConversationsEnabled {
+    return true;
 }
 %end
