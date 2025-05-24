@@ -5380,31 +5380,18 @@ static GeminiTranslator *_sharedInstance;
 %end
 
 // MARK: Fix followers/following tab inconsistency
-static NSMapTable *originalFollowersInstances = nil;
 
 %hook T1ProfileSegmentedFollowingViewController
-+ (void)load {
-    if (!originalFollowersInstances) {
-        originalFollowersInstances = [NSMapTable weakToStrongObjectsMapTable];
-    }
-}
-
 - (id)initWithTab:(long long)tab userDataSource:(id)userDataSource account:(id)account showFollowersYouKnow:(_Bool)showFollowersYouKnow shouldShowPeopleButton:(_Bool)shouldShowPeopleButton showPrimaryTabOnly:(_Bool)showPrimaryTabOnly shouldHideCreatorSubscriptions:(_Bool)shouldHideCreatorSubscriptions {
-    BOOL wasOriginallyFollowers = (tab == 0);
-    
-    // Convert tab 0 (followers with verified) to tab 3 (clean layout)
+    // If original was tab 0 (followers), convert to tab 3 but store original tab
     if (tab == 0) {
+        objc_setAssociatedObject(userDataSource, @"originalTab", @(0), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         tab = 3;
+    } else {
+        objc_setAssociatedObject(userDataSource, @"originalTab", @(tab), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
     
-    id result = %orig(tab, userDataSource, account, showFollowersYouKnow, shouldShowPeopleButton, showPrimaryTabOnly, shouldHideCreatorSubscriptions);
-    
-    // Mark instances that were originally tab 0 (followers)
-    if (wasOriginallyFollowers && userDataSource) {
-        [originalFollowersInstances setObject:@YES forKey:userDataSource];
-    }
-    
-    return result;
+    return %orig(tab, userDataSource, account, showFollowersYouKnow, shouldShowPeopleButton, showPrimaryTabOnly, shouldHideCreatorSubscriptions);
 }
 %end
 
@@ -5412,12 +5399,12 @@ static NSMapTable *originalFollowersInstances = nil;
 - (long long)segmentIndexForTab:(long long)tab {
     long long result = %orig;
     
-    // Only modify tab 3 if this was originally a followers instance (tab 0)
-    if (tab == 3 && result == 1) {
-        BOOL wasOriginallyFollowers = [[originalFollowersInstances objectForKey:self] boolValue];
-        if (wasOriginallyFollowers) {
-            return 0; // Show followers first for converted instances
-        }
+    // Check what the original tab was
+    NSNumber *originalTab = objc_getAssociatedObject(self, @"originalTab");
+    
+    // If this was originally tab 0 (followers) and now tab 3, show followers first
+    if (tab == 3 && [originalTab integerValue] == 0 && result == 1) {
+        return 0;
     }
     
     return result;
