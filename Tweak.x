@@ -5391,6 +5391,16 @@ static NSMapTable *followersTabFixMap = nil;
 
 - (id)initWithTab:(long long)tab userDataSource:(id)userDataSource account:(id)account showFollowersYouKnow:(_Bool)showFollowersYouKnow shouldShowPeopleButton:(_Bool)shouldShowPeopleButton showPrimaryTabOnly:(_Bool)showPrimaryTabOnly shouldHideCreatorSubscriptions:(_Bool)shouldHideCreatorSubscriptions {
     NSLog(@"[BHTwitter] T1ProfileSegmentedFollowingViewController initWithTab: %lld", tab);
+    NSLog(@"[BHTwitter] showFollowersYouKnow: %d, shouldShowPeopleButton: %d, showPrimaryTabOnly: %d", showFollowersYouKnow, shouldShowPeopleButton, showPrimaryTabOnly);
+    NSLog(@"[BHTwitter] userDataSource class: %@", NSStringFromClass([userDataSource class]));
+    
+    // Get stack trace to understand the call context
+    NSArray *callStack = [NSThread callStackSymbols];
+    for (NSString *frame in callStack) {
+        if ([frame containsString:@"T1Profile"] || [frame containsString:@"Following"] || [frame containsString:@"Follower"]) {
+            NSLog(@"[BHTwitter] Relevant stack frame: %@", frame);
+        }
+    }
     
     // Convert tab 0 (followers with verified) to tab 3 (clean following layout) and mark data source
     if (tab == 0) {
