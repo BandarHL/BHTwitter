@@ -1234,21 +1234,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (_Bool)continueWatchingEnabled {
     return false;
 }
-- (_Bool)blueVerified {
-    return true;
-}
-- (_Bool)verified {
-    return true;
-}
-- (_Bool)_verified {
-    return true;
-}
-- (_Bool)isBusinessOrAffiliateAccount {
-    return true;
-}
-- (_Bool)isVerifiedOrganizationAccount {
-    return true;
-}
 - (_Bool)isEditProfileUsernameEnabled {
     return true;
 }
