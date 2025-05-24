@@ -644,6 +644,159 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
+%hook TFNItemsDataViewController
+- (id)tableViewCellForItem:(id)arg1 atIndexPath:(id)arg2 {
+    UITableViewCell *_orig = %orig;
+    id tweet = [self itemAtIndexPath:arg2];
+    NSString *class_name = NSStringFromClass([tweet classForCoder]);
+    
+    if ([BHTManager HidePromoted] && [tweet respondsToSelector:@selector(isPromoted)] && [tweet performSelector:@selector(isPromoted)]) {
+        [_orig setHidden:YES];
+    }
+    
+    
+    if ([self.adDisplayLocation isEqualToString:@"PROFILE_TWEETS"]) {
+        if ([BHTManager hideWhoToFollow]) {
+            if ([class_name isEqualToString:@"T1URTTimelineUserItemViewModel"] || [class_name isEqualToString:@"T1TwitterSwift.URTTimelineCarouselViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"]) {
+                [_orig setHidden:true];
+            }
+        }
+        
+        if ([BHTManager hideTopicsToFollow]) {
+            if ([class_name isEqualToString:@"T1TwitterSwift.URTTimelineTopicCollectionViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"] || [class_name isEqualToString:@"TwitterURT.URTTimelineCarouselViewModel"]) {
+                [_orig setHidden:true];
+            }
+        }
+    }
+    
+    if ([self.adDisplayLocation isEqualToString:@"OTHER"]) {
+        if ([BHTManager HidePromoted] && ([class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"] || [class_name isEqualToString:@"T1URTTimelineMessageItemViewModel"])) {
+            [_orig setHidden:true];
+        }
+        
+        if ([BHTManager HidePromoted] && [class_name isEqualToString:@"TwitterURT.URTTimelineEventSummaryViewModel"]) {
+            _TtC10TwitterURT32URTTimelineEventSummaryViewModel *trendModel = tweet;
+            if ([[trendModel.scribeItem allKeys] containsObject:@"promoted_id"]) {
+                [_orig setHidden:true];
+            }
+        }
+        if ([BHTManager HidePromoted] && [class_name isEqualToString:@"TwitterURT.URTTimelineTrendViewModel"]) {
+            _TtC10TwitterURT25URTTimelineTrendViewModel *trendModel = tweet;
+            if ([[trendModel.scribeItem allKeys] containsObject:@"promoted_id"]) {
+                [_orig setHidden:true];
+            }
+        }
+        if ([BHTManager hideTrendVideos] && ([class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"] || [class_name isEqualToString:@"T1TwitterSwift.URTTimelineCarouselViewModel"])) {
+            [_orig setHidden:true];
+        }
+    }
+    
+    if ([self.adDisplayLocation isEqualToString:@"TIMELINE_HOME"]) {
+        if ([tweet isKindOfClass:%c(T1URTTimelineStatusItemViewModel)]) {
+            T1URTTimelineStatusItemViewModel *fullTweet = tweet;
+            if ([BHTManager HideTopics]) {
+                if ((fullTweet.banner != nil) && [fullTweet.banner isKindOfClass:%c(TFNTwitterURTTimelineStatusTopicBanner)]) {
+                    [_orig setHidden:true];
+                }
+            }
+        }
+        
+        if ([BHTManager HideTopics]) {
+            if ([tweet isKindOfClass:%c(_TtC10TwitterURT26URTTimelinePromptViewModel)]) {
+                [_orig setHidden:true];
+            }
+        }
+
+        if ([BHTManager hidePremiumOffer]) {
+            if ([class_name isEqualToString:@"T1URTTimelineMessageItemViewModel"]) {
+                [_orig setHidden:true];
+            }
+        }
+    }
+    
+    return _orig;
+}
+- (double)tableView:(id)arg1 heightForRowAtIndexPath:(id)arg2 {
+    id tweet = [self itemAtIndexPath:arg2];
+    NSString *class_name = NSStringFromClass([tweet classForCoder]);
+    
+    if ([BHTManager HidePromoted] && [tweet respondsToSelector:@selector(isPromoted)] && [tweet performSelector:@selector(isPromoted)]) {
+        return 0;
+    }
+    
+    if ([self.adDisplayLocation isEqualToString:@"PROFILE_TWEETS"]) {
+        if ([BHTManager hideWhoToFollow]) {
+            if ([class_name isEqualToString:@"T1URTTimelineUserItemViewModel"] || [class_name isEqualToString:@"T1TwitterSwift.URTTimelineCarouselViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"]) {
+                return 0;
+            }
+        }
+        if ([BHTManager hideTopicsToFollow]) {
+            if ([class_name isEqualToString:@"T1TwitterSwift.URTTimelineTopicCollectionViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"] || [class_name isEqualToString:@"TwitterURT.URTTimelineCarouselViewModel"]) {
+                return 0;
+            }
+        }
+    }
+    
+    if ([self.adDisplayLocation isEqualToString:@"OTHER"]) {
+        if ([BHTManager HidePromoted] && ([class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"] || [class_name isEqualToString:@"T1URTTimelineMessageItemViewModel"])) {
+            return 0;
+        }
+        
+        if ([BHTManager HidePromoted] && [class_name isEqualToString:@"TwitterURT.URTTimelineEventSummaryViewModel"]) {
+            _TtC10TwitterURT32URTTimelineEventSummaryViewModel *trendModel = tweet;
+            if ([[trendModel.scribeItem allKeys] containsObject:@"promoted_id"]) {
+                return 0;
+            }
+        }
+        if ([BHTManager HidePromoted] && [class_name isEqualToString:@"TwitterURT.URTTimelineTrendViewModel"]) {
+            _TtC10TwitterURT25URTTimelineTrendViewModel *trendModel = tweet;
+            if ([[trendModel.scribeItem allKeys] containsObject:@"promoted_id"]) {
+                return 0;
+            }
+        }
+
+        if ([BHTManager hideTrendVideos] && ([class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"] || [class_name isEqualToString:@"T1TwitterSwift.URTTimelineCarouselViewModel"])) {
+            return 0;
+        }
+    }
+    
+    if ([self.adDisplayLocation isEqualToString:@"TIMELINE_HOME"]) {
+        if ([tweet isKindOfClass:%c(T1URTTimelineStatusItemViewModel)]) {
+            T1URTTimelineStatusItemViewModel *fullTweet = tweet;
+            
+            if ([BHTManager HideTopics]) {
+                if ((fullTweet.banner != nil) && [fullTweet.banner isKindOfClass:%c(TFNTwitterURTTimelineStatusTopicBanner)]) {
+                    return 0;
+                }
+            }
+        }
+        
+        if ([BHTManager HideTopics]) {
+            if ([tweet isKindOfClass:%c(_TtC10TwitterURT26URTTimelinePromptViewModel)]) {
+                return 0;
+            }
+        }
+
+        if ([BHTManager hidePremiumOffer]) {
+            if ([class_name isEqualToString:@"T1URTTimelineMessageItemViewModel"]) {
+                return 0;
+            }
+        }
+    }
+    
+    return %orig;
+}
+- (double)tableView:(id)arg1 heightForHeaderInSection:(long long)arg2 {
+    if (self.sections && self.sections[arg2] && ((NSArray* )self.sections[arg2]).count && self.sections[arg2][0]) {
+        NSString *sectionClassName = NSStringFromClass([self.sections[arg2][0] classForCoder]);
+        if ([sectionClassName isEqualToString:@"TFNTwitterUser"]) {
+            return 0;
+        }
+    }
+    return %orig;
+}
+%end
+
 %hook TFNTwitterStatus
 - (_Bool)isCardHidden {
     return ([BHTManager HidePromoted] && [self isPromoted]) ? true : %orig;
@@ -906,14 +1059,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             }
         }
     }
-}
-
-// Also hook layoutSubviews to catch changes
-- (void)layoutSubviews {
-    %orig;
-    // Call updateLogoTheme, but perhaps with a guard to prevent infinite loops if setting the image triggers layout.
-    // A simple flag or checking if the theme is already applied might work.
-    [self updateLogoTheme];
 }
 
 %end
@@ -1571,9 +1716,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     %orig([BHTManager showScrollIndicator]);
 }
 %end
-
-// MARK: Clean tracking from copied links: https://github.com/BandarHL/BHTwitter/issues/75
-
 
 // MARK: Restore Source Labels - This is still pretty experimental and may break. This restores Tweet Source Labels by using an Legacy API. by: @nyaathea
 
@@ -5374,10 +5516,4 @@ static GeminiTranslator *_sharedInstance;
     return originalProvider;
 }
 
-%end
-
-%hook TFSVersionProvider
- -(id)clientVersion {
-    return @"10.0";
-}
 %end
