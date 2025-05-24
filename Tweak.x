@@ -5379,54 +5379,66 @@ static GeminiTranslator *_sharedInstance;
 
 %end
 
-// MARK: T1StandardStatusView Hook to modify visibleConversationContextView
+// MARK: - Show "Replying to @username" text above all replies
 %hook T1StandardStatusView
 
-- (id)visibleConversationContextView {
-    id originalView = %orig;
-    if (originalView) {
-        return originalView;
-    }
+- (UIView *)visibleConversationContextView {
+    UIView *contextView = %orig;
     
-    // Check if this is a reply
-    id viewModel = [self performSelector:@selector(viewModel)];
-    if (viewModel) {
-        id tweet = [viewModel performSelector:@selector(tweet)];
-        if (tweet && [tweet respondsToSelector:@selector(inReplyToStatusID)]) {
-            id replyID = [tweet performSelector:@selector(inReplyToStatusID)];
-            if (replyID) {
-                // Create TTATimelinesStatusConversationContextView properly
-                Class contextClass = NSClassFromString(@"TTATimelinesStatusConversationContextView");
-                if (contextClass) {
-                    id contextView = [[contextClass alloc] initWithFrame:CGRectZero];
-                    
-                    // Create TFNAttributedActiveTextModel with reply text
-                    Class activeTextModelClass = NSClassFromString(@"TFNAttributedActiveTextModel");
-                    if (activeTextModelClass) {
-                        NSString *replyText = @"Replying to @someone";
-                        NSAttributedString *attrString = [[NSAttributedString alloc] initWithString:replyText];
-                        
-                        id activeTextModel = [[activeTextModelClass alloc] init];
-                        if ([activeTextModel respondsToSelector:@selector(setAttributedString:)]) {
-                            [activeTextModel performSelector:@selector(setAttributedString:) withObject:attrString];
-                        }
-                        
-                        // Set the activeTextModel
-                        [contextView setValue:activeTextModel forKey:@"activeTextModel"];
-                        
-                        // Update layout to render
-                        if ([contextView respondsToSelector:@selector(updateWithLayoutState:resettingFrame:)]) {
-                            [contextView performSelector:@selector(updateWithLayoutState:resettingFrame:) withObject:nil withObject:@YES];
+    // If there's no visible context view but we have a reply, create one
+    id viewModel = [self valueForKey:@"viewModel"];
+    if (!contextView && viewModel) {
+        // Check if this is a reply by looking at the view model
+        @try {
+            id status = [viewModel valueForKey:@"status"];
+            if (status) {
+                // Check if this status is a reply
+                NSString *inReplyToStatusID = nil;
+                NSString *inReplyToUsername = nil;
+                
+                @try {
+                    inReplyToStatusID = [status valueForKey:@"inReplyToStatusIDString"];
+                    if (!inReplyToStatusID) {
+                        inReplyToStatusID = [status valueForKey:@"inReplyToStatusID"];
+                    }
+                } @catch (NSException *e) {}
+                
+                @try {
+                    inReplyToUsername = [status valueForKey:@"inReplyToUsername"];
+                    if (!inReplyToUsername) {
+                        inReplyToUsername = [status valueForKey:@"inReplyToScreenName"];
+                    }
+                } @catch (NSException *e) {}
+                
+                // If this is a reply, force the conversation context to be shown
+                if (inReplyToStatusID && inReplyToUsername && inReplyToUsername.length > 0) {
+                    // Find the conversation context view in the view hierarchy
+                    for (UIView *subview in self.subviews) {
+                        if ([subview isKindOfClass:%c(TTATimelinesStatusConversationContextView)]) {
+                            return subview;
                         }
                     }
                     
-                    return contextView;
+                    // If not found, try to find it in the viewSet
+                    id viewSet = [self valueForKey:@"viewSet"];
+                    if (viewSet && [viewSet respondsToSelector:@selector(allObjects)]) {
+                        NSArray *views = [viewSet allObjects];
+                        for (UIView *view in views) {
+                            if ([view isKindOfClass:%c(TTATimelinesStatusConversationContextView)]) {
+                                // Make sure it's visible
+                                view.hidden = NO;
+                                return view;
+                            }
+                        }
+                    }
                 }
             }
+        } @catch (NSException *e) {
+            NSLog(@"[BHTwitter] Exception checking reply status: %@", e);
         }
     }
     
-    return originalView;
+    return contextView;
 }
 
 %end
