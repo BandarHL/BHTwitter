@@ -1815,15 +1815,15 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
         }
         
         if (cookiesStillValid) {
-            // We have valid cookies from cache
-            // Make them immediately available for pending tweets
-            dispatch_async(dispatch_get_main_queue(), ^{
-                // Direct notification - more reliable than delayed polling
-                [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
-            });
-            
-            isInitializingCookies = NO;
-            return;
+        // We have valid cookies from cache
+        // Make them immediately available for pending tweets
+        dispatch_async(dispatch_get_main_queue(), ^{
+            // Direct notification - more reliable than delayed polling
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
+        });
+        
+        isInitializingCookies = NO;
+        return;
         }
     }
     
@@ -2270,9 +2270,9 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
                     
                     // Mark this tweet as "Fetching..." instead of unavailable
                     tweetSources[tweetID] = @"Fetching...";
-                    fetchPending[tweetID] = @(NO);
-                    [fetchTimeouts removeObjectForKey:tweetID];
-                    [timeoutTimer invalidate];
+                fetchPending[tweetID] = @(NO);
+                [fetchTimeouts removeObjectForKey:tweetID];
+                [timeoutTimer invalidate];
                     
                     // Notify UI that we're waiting for login
                     dispatch_async(dispatch_get_main_queue(), ^{
@@ -5628,8 +5628,8 @@ static GeminiTranslator *_sharedInstance;
 
 %hook T1AppDelegate
 + (id)launchTransitionProvider {
-    Class T1AppLaunchTransitionClass = NSClassFromString(@"T1AppLaunchTransition");
-    if (T1AppLaunchTransitionClass) {
+        Class T1AppLaunchTransitionClass = NSClassFromString(@"T1AppLaunchTransition");
+        if (T1AppLaunchTransitionClass) {
         return [[T1AppLaunchTransitionClass alloc] init];
     }
     return nil;
@@ -5638,6 +5638,18 @@ static GeminiTranslator *_sharedInstance;
 
 // Hook the color palette to return our custom colors
 %hook TAEStandardColorPalette
+
+- (UIColor *)primaryColorForOption:(long long)colorOption {
+    // Return our custom colors for options 7 and 8
+    if (colorOption == 7) {
+        return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
+    } else if (colorOption == 8) {
+        return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
+    }
+    
+    // For all other colors, use Twitter's original implementation
+    return %orig;
+}
 
 - (UIColor *)primaryColor {
     // Check if we have a custom color set
@@ -5654,189 +5666,20 @@ static GeminiTranslator *_sharedInstance;
         }
     }
     
-    if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
-        NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-        
-        // Return our custom colors for options 7 and 8
-        if (opt == 7) {
-            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
-        } else if (opt == 8) {
-            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
-        }
-    }
-    
     // For all other cases, use Twitter's original implementation
     return %orig;
 }
 
 - (UIColor *)textLinkColor {
-    // Check if we have a custom color set
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        
-        // Return our custom colors for options 7 and 8
-        if (opt == 7) {
-            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
-        } else if (opt == 8) {
-            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
-        }
-    }
-    
-    if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
-        NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-        
-        // Return our custom colors for options 7 and 8
-        if (opt == 7) {
-            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
-        } else if (opt == 8) {
-            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
-        }
-    }
-    
-    // For all other cases, use Twitter's original implementation
-    return %orig;
+    // Use the same color as primaryColor for consistency
+    return [self primaryColor];
 }
 
 - (UIColor *)tabBarItemColor {
-    // Check if we have a custom color set
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        
-        // Return our custom colors for options 7 and 8
-        if (opt == 7) {
-            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
-        } else if (opt == 8) {
-            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
-        }
-    }
-    
-    if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
-        NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-        
-        // Return our custom colors for options 7 and 8
-        if (opt == 7) {
-            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
-        } else if (opt == 8) {
-            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
-        }
-    }
-    
-    // For all other cases, use Twitter's original implementation
-    return %orig;
-}
-
-- (UIColor *)primaryColorForOption:(long long)colorOption {
-    // Return our custom colors for options 7 and 8
-    if (colorOption == 7) {
-        return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
-    } else if (colorOption == 8) {
-        return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
-    }
-    
-    // For all other colors, use Twitter's original implementation
-    return %orig;
+    // Use the same color as primaryColor for consistency
+    return [self primaryColor];
 }
 
 %end
 
-// Debug hook to see what colors Twitter is actually requesting
-%hook UIColor
-
-+ (UIColor *)systemBlueColor {
-    // Check if we have custom colors set
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        
-        // Return our custom colors for options 7 and 8
-        if (opt == 7) {
-            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
-        } else if (opt == 8) {
-            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
-        }
-    }
-    
-    if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
-        NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-        
-        // Return our custom colors for options 7 and 8
-        if (opt == 7) {
-            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
-        } else if (opt == 8) {
-            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
-        }
-    }
-    
-    // For all other cases, use original systemBlueColor
-    return %orig;
-}
-
-+ (UIColor *)blueColor {
-    // Check if we have custom colors set
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        
-        // Return our custom colors for options 7 and 8
-        if (opt == 7) {
-            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
-        } else if (opt == 8) {
-            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
-        }
-    }
-    
-    if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
-        NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-        
-        // Return our custom colors for options 7 and 8
-        if (opt == 7) {
-            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
-        } else if (opt == 8) {
-            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
-        }
-    }
-    
-    // For all other cases, use original blueColor
-    return %orig;
-}
-
-+ (UIColor *)colorWithRed:(CGFloat)red green:(CGFloat)green blue:(CGFloat)blue alpha:(CGFloat)alpha {
-    UIColor *originalColor = %orig;
-    
-    // Check for Twitter's specific blue color (RGB: 29, 155, 240 or approximately 0.114, 0.608, 0.941)
-    if (fabs(red - 29.0/255.0) < 0.01 && fabs(green - 155.0/255.0) < 0.01 && fabs(blue - 240.0/255.0) < 0.01) {
-        NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-        
-        if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
-            NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
-            
-            // Return our custom colors for options 7 and 8
-            if (opt == 7) {
-                return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
-            } else if (opt == 8) {
-                return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
-            }
-        }
-        
-        if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
-            NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-            
-            // Return our custom colors for options 7 and 8
-            if (opt == 7) {
-                return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
-            } else if (opt == 8) {
-                return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
-            }
-        }
-    }
-    
-    return originalColor;
-}
-
-%end
+// Remove the UIColor hooks since we're now properly integrated with Twitter's color system
