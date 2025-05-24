@@ -1253,6 +1253,15 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (_Bool)isDoubleMaxZoomFor4KImagesEnabled {
     return [BHTManager autoHighestLoad] ? true : %orig;
 }
+- (_Bool)isVitVerifiedFollowersViewEnabled {
+    return false;
+}
+- (_Bool)isVitScopedNotificationsEnabled {
+    return false;
+}
+- (_Bool)isVitNotificationFilteringEnabled {
+    return false;
+}
 %end
 
 // MARK: Tweet confirm
@@ -5377,31 +5386,4 @@ static GeminiTranslator *_sharedInstance;
     return originalProvider;
 }
 
-%end
-
-// MARK: Fix followers/following tab inconsistency
-
-%hook T1ProfileSegmentedFollowingViewController
-- (id)initWithTab:(long long)tab userDataSource:(id)userDataSource account:(id)account showFollowersYouKnow:(_Bool)showFollowersYouKnow shouldShowPeopleButton:(_Bool)shouldShowPeopleButton showPrimaryTabOnly:(_Bool)showPrimaryTabOnly shouldHideCreatorSubscriptions:(_Bool)shouldHideCreatorSubscriptions {
-    // Store whether this was originally followers (tab 0)
-    BOOL wasFollowers = (tab == 0);
-    
-    // Convert tab 0 to tab 3 for clean layout
-    if (tab == 0) {
-        tab = 3;
-    }
-    
-    id result = %orig(tab, userDataSource, account, showFollowersYouKnow, shouldShowPeopleButton, showPrimaryTabOnly, shouldHideCreatorSubscriptions);
-    
-    // If this was originally followers, force selection to followers tab after view loads
-    if (wasFollowers && result) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            if ([result respondsToSelector:@selector(setSelectedIndex:)]) {
-                [result performSelector:@selector(setSelectedIndex:) withObject:@(0)];
-            }
-        });
-    }
-    
-    return result;
-}
 %end
