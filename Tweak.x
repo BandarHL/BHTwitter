@@ -210,23 +210,32 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)setPrimaryColorOption:(NSInteger)colorOption {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     
+    // Store our custom color selection first
+    [defaults setObject:@(colorOption) forKey:@"bh_color_theme_selectedColor"];
+    
+    // For custom colors (7, 8), set Twitter's internal color to a valid fallback
+    NSInteger twitterColorOption = colorOption;
+    if (colorOption == 7 || colorOption == 8) {
+        twitterColorOption = 1; // Use Twitter's blue as fallback
+    }
+    
     // If we have a BHTwitter theme selected, ensure it takes precedence
     if ([defaults objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger ourSelectedOption = [defaults integerForKey:@"bh_color_theme_selectedColor"];
         
         // Only allow changes that match our selection (avoids fighting with Twitter's system)
-        if (colorOption == ourSelectedOption || BHT_isInThemeChangeOperation) {
-            %orig(colorOption);
+        if (twitterColorOption == ourSelectedOption || BHT_isInThemeChangeOperation) {
+            %orig(twitterColorOption);
         } else {
             // If not from our theme operation, apply our own theme instead
-            %orig(ourSelectedOption);
+            %orig(ourSelectedOption <= 6 ? ourSelectedOption : 1);
             
             // Also ensure Twitter's defaults match our setting for consistency
-            [defaults setObject:@(ourSelectedOption) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+            [defaults setObject:@(ourSelectedOption <= 6 ? ourSelectedOption : 1) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
         }
     } else {
         // No BHTwitter theme active, let Twitter handle it normally
-        %orig(colorOption);
+        %orig(twitterColorOption);
     }
 }
 
@@ -5634,4 +5643,24 @@ static GeminiTranslator *_sharedInstance;
     }
     return nil;
 }
+%end
+
+// Hook the actual color palette to return our custom colors
+%hook NSObject
+
+- (UIColor *)primaryColorForOption:(NSUInteger)colorOption {
+    // Check if this object conforms to TAEColorPalette protocol
+    if ([self conformsToProtocol:@protocol(TAEColorPalette)]) {
+        // Handle our custom colors directly
+        if (colorOption == 7) {
+            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
+        } else if (colorOption == 8) {
+            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
+        }
+    }
+    
+    // For standard colors (1-6), call original
+    return %orig(colorOption);
+}
+
 %end
