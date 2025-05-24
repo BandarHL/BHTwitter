@@ -680,10 +680,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         }
         
         if ([BHTManager HidePromoted] && [class_name isEqualToString:@"TwitterURT.URTTimelineEventSummaryViewModel"]) {
-            _TtC10TwitterURT32URTTimelineEventSummaryViewModel *trendModel = tweet;
-            if ([[trendModel.scribeItem allKeys] containsObject:@"promoted_id"]) {
-                [_orig setHidden:true];
-            }
+            // Hide all EventSummaryViewModel items, not just promoted ones
+            NSLog(@"[BHTwitter] Hiding TwitterURT.URTTimelineEventSummaryViewModel in location: %@", self.adDisplayLocation);
+            [_orig setHidden:true];
         }
         if ([BHTManager HidePromoted] && [class_name isEqualToString:@"TwitterURT.URTTimelineTrendViewModel"]) {
             _TtC10TwitterURT25URTTimelineTrendViewModel *trendModel = tweet;
@@ -724,11 +723,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         }
     }
     
-    // Hide ExploreEventSummaryHero globally (regardless of location)
-    if ([BHTManager HidePromoted] && [class_name isEqualToString:@"T1TwitterSwift.ExploreEventSummaryHero"]) {
-        NSLog(@"[BHTwitter] Hiding ExploreEventSummaryHero in location: %@", self.adDisplayLocation);
-        [_orig setHidden:true];
-    }
+
     
     return _orig;
 }
@@ -759,10 +754,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         }
         
         if ([BHTManager HidePromoted] && [class_name isEqualToString:@"TwitterURT.URTTimelineEventSummaryViewModel"]) {
-            _TtC10TwitterURT32URTTimelineEventSummaryViewModel *trendModel = tweet;
-            if ([[trendModel.scribeItem allKeys] containsObject:@"promoted_id"]) {
-                return 0;
-            }
+            // Hide all EventSummaryViewModel items, not just promoted ones
+            return 0;
         }
         if ([BHTManager HidePromoted] && [class_name isEqualToString:@"TwitterURT.URTTimelineTrendViewModel"]) {
             _TtC10TwitterURT25URTTimelineTrendViewModel *trendModel = tweet;
@@ -805,10 +798,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         }
     }
     
-    // Hide ExploreEventSummaryHero globally (regardless of location)
-    if ([BHTManager HidePromoted] && [class_name isEqualToString:@"T1TwitterSwift.ExploreEventSummaryHero"]) {
-        return 0;
-    }
+
     
     return %orig;
 }
