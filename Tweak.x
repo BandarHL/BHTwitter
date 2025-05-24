@@ -5448,10 +5448,8 @@ static GeminiTranslator *_sharedInstance;
     return replyLabel;
 }
 
-- (void)setViewModel:(id)viewModel options:(unsigned long long)options account:(id)account {
-    %orig;
-    
-    NSLog(@"[BHTwitter] T1StandardStatusView setViewModel called");
+- (id)_t1_updateLayoutState {
+    id layoutState = %orig;
     
     // Check if we're in a notification context
     UIView *view = self;
@@ -5466,76 +5464,25 @@ static GeminiTranslator *_sharedInstance;
         view = view.superview;
     }
     
-    if (!isNotificationView && viewModel) {
-        // Try to extract reply information from the view model
-        NSString *inReplyToUsername = nil;
+    // If we're NOT in notifications, try to force conversation context to be included
+    if (!isNotificationView && layoutState) {
         @try {
-            // Try different paths to get the tweet/status data
-            id tweet = nil;
-            NSArray *possibleKeys = @[@"tweet", @"status", @"item", @"model"];
-            
-            for (NSString *key in possibleKeys) {
-                @try {
-                    tweet = [viewModel valueForKey:key];
-                    if (tweet) break;
-                } @catch (NSException *e) {
-                    continue;
-                }
+            // Try to force conversation context to be visible by modifying the layout state
+            if ([layoutState respondsToSelector:@selector(setValue:forKey:)]) {
+                [layoutState setValue:@YES forKey:@"shouldShowConversationContext"];
             }
-            
-            if (tweet) {
-                NSArray *usernameKeys = @[@"inReplyToUsername", @"inReplyToScreenName", @"replyToUsername"];
-                
-                for (NSString *key in usernameKeys) {
-                    @try {
-                        inReplyToUsername = [tweet valueForKey:key];
-                        if (inReplyToUsername && inReplyToUsername.length > 0) break;
-                    } @catch (NSException *e) {
-                        continue;
-                    }
-                }
+            if ([layoutState respondsToSelector:@selector(setValue:forKey:)]) {
+                [layoutState setValue:@YES forKey:@"conversationContextVisible"];
+            }
+            if ([layoutState respondsToSelector:@selector(setValue:forKey:)]) {
+                [layoutState setValue:@YES forKey:@"showConversationContext"];
             }
         } @catch (NSException *e) {
-            NSLog(@"[BHTwitter] Exception extracting reply info: %@", e);
-        }
-        
-        // Only create the reply context if this is actually a reply
-        if (inReplyToUsername && inReplyToUsername.length > 0) {
-            NSLog(@"[BHTwitter] Found reply to: %@", inReplyToUsername);
-            
-            // Remove any existing reply labels
-            for (UIView *subview in self.subviews) {
-                if (subview.tag == 12345) {
-                    [subview removeFromSuperview];
-                }
-            }
-            
-            // Create reply context label
-            UILabel *replyLabel = [[UILabel alloc] init];
-            replyLabel.text = [NSString stringWithFormat:@"Replying to @%@", inReplyToUsername];
-            replyLabel.font = [UIFont systemFontOfSize:13.0];
-            replyLabel.textColor = [UIColor secondaryLabelColor];
-            replyLabel.backgroundColor = [UIColor clearColor];
-            replyLabel.tag = 12345;
-            
-            // Add to view hierarchy first
-            [self addSubview:replyLabel];
-            
-            // Position it at the very top of the status view
-            UIView *authorView = [self valueForKey:@"visibleAuthorView"];
-            if (authorView) {
-                CGRect authorFrame = authorView.frame;
-                replyLabel.frame = CGRectMake(authorFrame.origin.x, 8, self.bounds.size.width - authorFrame.origin.x - 16, 16);
-            } else {
-                replyLabel.frame = CGRectMake(16, 8, self.bounds.size.width - 32, 16);
-            }
-            
-            [replyLabel sizeToFit];
-            
-            // Force layout
-            [self setNeedsLayout];
+            NSLog(@"[BHTwitter] Exception modifying layout state: %@", e);
         }
     }
+    
+    return layoutState;
 }
 
 %end
