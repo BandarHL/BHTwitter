@@ -5383,8 +5383,12 @@ static GeminiTranslator *_sharedInstance;
 %hook T1StandardStatusView
 
 - (id)visibleConversationContextView {
+    NSLog(@"[BHTwitter] visibleConversationContextView called on %@", NSStringFromClass([self class]));
+    
     // First check if original implementation returns something
     id originalView = %orig;
+    NSLog(@"[BHTwitter] Original view: %@ (bounds: %@)", originalView, originalView ? NSStringFromCGRect([originalView bounds]) : @"nil");
+    
     if (originalView) {
         return originalView;
     }
@@ -5394,16 +5398,25 @@ static GeminiTranslator *_sharedInstance;
     if ([self respondsToSelector:@selector(viewModel)]) {
         viewModel = [self performSelector:@selector(viewModel)];
     }
+    NSLog(@"[BHTwitter] ViewModel: %@", viewModel);
     
     // If original returns nil, try to create and configure TTATimelinesStatusConversationContextView
     Class TTATimelinesStatusConversationContextViewClass = NSClassFromString(@"TTATimelinesStatusConversationContextView");
+    NSLog(@"[BHTwitter] TTATimelinesStatusConversationContextView class: %@", TTATimelinesStatusConversationContextViewClass);
+    
     if (TTATimelinesStatusConversationContextViewClass && viewModel) {
+        NSLog(@"[BHTwitter] Creating new TTATimelinesStatusConversationContextView");
+        
         // Create new context view instance
         id contextView = [[TTATimelinesStatusConversationContextViewClass alloc] init];
+        NSLog(@"[BHTwitter] Created contextView: %@ (initial bounds: %@)", contextView, NSStringFromCGRect([contextView bounds]));
         
         // Try to configure it with the view model data
         if ([contextView respondsToSelector:@selector(setViewModel:)]) {
+            NSLog(@"[BHTwitter] Calling setViewModel:");
             [contextView performSelector:@selector(setViewModel:) withObject:viewModel];
+        } else {
+            NSLog(@"[BHTwitter] contextView does not respond to setViewModel:");
         }
         
         // Try to configure with options if available
@@ -5413,16 +5426,31 @@ static GeminiTranslator *_sharedInstance;
                 id optionsObj = [self performSelector:@selector(options)];
                 options = [optionsObj unsignedLongValue];
             }
+            NSLog(@"[BHTwitter] Calling setViewModel:options: with options: %lu", (unsigned long)options);
             ((void (*)(id, SEL, id, NSUInteger))objc_msgSend)(contextView, @selector(setViewModel:options:), viewModel, options);
+        } else {
+            NSLog(@"[BHTwitter] contextView does not respond to setViewModel:options:");
         }
+        
+        // Check bounds after configuration
+        NSLog(@"[BHTwitter] contextView bounds after configuration: %@", NSStringFromCGRect([contextView bounds]));
         
         // Add to the view hierarchy
         [self addSubview:contextView];
+        NSLog(@"[BHTwitter] Added contextView to superview");
+        
+        // Force layout
+        [contextView setNeedsLayout];
+        [contextView layoutIfNeeded];
+        NSLog(@"[BHTwitter] contextView bounds after layout: %@", NSStringFromCGRect([contextView bounds]));
         
         return contextView;
+    } else {
+        NSLog(@"[BHTwitter] Cannot create TTATimelinesStatusConversationContextView - class: %@, viewModel: %@", TTATimelinesStatusConversationContextViewClass, viewModel);
     }
     
     // Fallback to original implementation
+    NSLog(@"[BHTwitter] Returning original view");
     return originalView;
 }
 
