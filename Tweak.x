@@ -108,27 +108,11 @@ UIColor *BHTCurrentAccentColor(void) {
 
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        
-        // Handle our custom colors directly
-        if (opt == 7) {
-            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
-        } else if (opt == 8) {
-            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
-        }
-        
         return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
     }
 
     if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
         NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-        
-        // Handle our custom colors directly
-        if (opt == 7) {
-            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
-        } else if (opt == 8) {
-            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
-        }
-        
         return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
     }
 
@@ -1815,15 +1799,15 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
         }
         
         if (cookiesStillValid) {
-        // We have valid cookies from cache
-        // Make them immediately available for pending tweets
-        dispatch_async(dispatch_get_main_queue(), ^{
-            // Direct notification - more reliable than delayed polling
-            [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
-        });
-        
-        isInitializingCookies = NO;
-        return;
+            // We have valid cookies from cache
+            // Make them immediately available for pending tweets
+            dispatch_async(dispatch_get_main_queue(), ^{
+                // Direct notification - more reliable than delayed polling
+                [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
+            });
+            
+            isInitializingCookies = NO;
+            return;
         }
     }
     
@@ -2270,9 +2254,9 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
                     
                     // Mark this tweet as "Fetching..." instead of unavailable
                     tweetSources[tweetID] = @"Fetching...";
-                fetchPending[tweetID] = @(NO);
-                [fetchTimeouts removeObjectForKey:tweetID];
-                [timeoutTimer invalidate];
+                    fetchPending[tweetID] = @(NO);
+                    [fetchTimeouts removeObjectForKey:tweetID];
+                    [timeoutTimer invalidate];
                     
                     // Notify UI that we're waiting for login
                     dispatch_async(dispatch_get_main_queue(), ^{
@@ -5628,8 +5612,8 @@ static GeminiTranslator *_sharedInstance;
 
 %hook T1AppDelegate
 + (id)launchTransitionProvider {
-        Class T1AppLaunchTransitionClass = NSClassFromString(@"T1AppLaunchTransition");
-        if (T1AppLaunchTransitionClass) {
+    Class T1AppLaunchTransitionClass = NSClassFromString(@"T1AppLaunchTransition");
+    if (T1AppLaunchTransitionClass) {
         return [[T1AppLaunchTransitionClass alloc] init];
     }
     return nil;
@@ -5651,35 +5635,4 @@ static GeminiTranslator *_sharedInstance;
     return %orig;
 }
 
-- (UIColor *)primaryColor {
-    // Check if we have a custom color set
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        
-        // Return our custom colors for options 7 and 8
-        if (opt == 7) {
-            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
-        } else if (opt == 8) {
-            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
-        }
-    }
-    
-    // For all other cases, use Twitter's original implementation
-    return %orig;
-}
-
-- (UIColor *)textLinkColor {
-    // Use the same color as primaryColor for consistency
-    return [self primaryColor];
-}
-
-- (UIColor *)tabBarItemColor {
-    // Use the same color as primaryColor for consistency
-    return [self primaryColor];
-}
-
 %end
-
-// Remove the UIColor hooks since we're now properly integrated with Twitter's color system
