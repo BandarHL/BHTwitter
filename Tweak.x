@@ -5375,3 +5375,9 @@ static GeminiTranslator *_sharedInstance;
 }
 
 %end
+
+%hook T1ProfileSegmentedFollowingViewControllerDataSource
+- (BOOL)_showSegmentedVerifiedFollowersViewController {
+    return false;
+}
+%end
