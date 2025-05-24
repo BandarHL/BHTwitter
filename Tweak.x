@@ -5382,6 +5382,12 @@ static GeminiTranslator *_sharedInstance;
 // MARK: T1StandardStatusView Hook to modify visibleConversationContextView
 %hook T1StandardStatusView
 
+// Test if our hook is working at all
+- (void)layoutSubviews {
+    NSLog(@"[BHTwitter] T1StandardStatusView layoutSubviews called");
+    %orig;
+}
+
 - (id)visibleConversationContextView {
     NSLog(@"[BHTwitter] visibleConversationContextView called on %@", NSStringFromClass([self class]));
     
