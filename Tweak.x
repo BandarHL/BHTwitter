@@ -5645,22 +5645,22 @@ static GeminiTranslator *_sharedInstance;
 - (UIColor *)primaryColorForOption:(long long)colorOption {
     NSLog(@"[BHTwitter] TAEStandardColorPalette primaryColorForOption called with option: %lld", colorOption);
     
-    // Check if we have a custom theme active
+    // Check if we have a custom theme active and Twitter is asking for our base color (1)
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
-        // If we have custom color 7 or 8 active, override whatever Twitter asks for
-        if (customOption == 7) {
-            NSLog(@"[BHTwitter] Custom theme 7 active, returning Pastel Pink regardless of requested option %lld", colorOption);
+        // If we have custom color 7 or 8 active and Twitter asks for color 1, return our custom color
+        if (customOption == 7 && colorOption == 1) {
+            NSLog(@"[BHTwitter] Custom theme 7 active, returning Pastel Pink for Twitter's color 1 request");
             return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
-        } else if (customOption == 8) {
-            NSLog(@"[BHTwitter] Custom theme 8 active, returning Dark Red regardless of requested option %lld", colorOption);
+        } else if (customOption == 8 && colorOption == 1) {
+            NSLog(@"[BHTwitter] Custom theme 8 active, returning Dark Red for Twitter's color 1 request");
             return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
         }
     }
     
-    // For normal colors (1-6) or no custom theme, use Twitter's original implementation
+    // For all other cases, use Twitter's original implementation
     UIColor *result = %orig;
     NSLog(@"[BHTwitter] Returning original color for option %lld: %@", colorOption, result);
     return result;
@@ -5679,6 +5679,7 @@ static GeminiTranslator *_sharedInstance;
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
+        // Since we're using color 1 as base for custom themes, return our custom color
         if (customOption == 7) {
             NSLog(@"[BHTwitter] Returning custom Pastel Pink for primaryColor");
             return [UIColor colorFromHexString:@"#FFB6C1"];
