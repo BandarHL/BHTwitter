@@ -5456,21 +5456,11 @@ static NSMapTable *followersTabFixMap = nil;
 - (void)setSelectedIndex:(NSUInteger)selectedIndex {
     NSLog(@"[BHTwitter] TFNScrollingSegmentedViewController setSelectedIndex:%lu called", (unsigned long)selectedIndex);
     
-    // Check if parent is a followers mode view controller by checking the conversion
-    UIViewController *parent = self.parentViewController;
-    while (parent) {
-        if ([parent isKindOfClass:NSClassFromString(@"T1ProfileSegmentedFollowingViewController")]) {
-            T1ProfileSegmentedFollowingViewController *followingVC = (T1ProfileSegmentedFollowingViewController *)parent;
-            if ([followersTabFixMap objectForKey:followingVC.retainedDataSource]) {
-                if (selectedIndex == 1) {
-                    NSLog(@"[BHTwitter] BLOCKING setSelectedIndex:1 in followers mode, forcing to 0");
-                    %orig(0);
-                    return;
-                }
-            }
-            break;
-        }
-        parent = parent.parentViewController;
+    // Just block ALL setSelectedIndex:1 calls - brute force approach
+    if (selectedIndex == 1) {
+        NSLog(@"[BHTwitter] BLOCKING ALL setSelectedIndex:1 calls, forcing to 0");
+        %orig(0);
+        return;
     }
     
     NSLog(@"[BHTwitter] Allowing setSelectedIndex:%lu", (unsigned long)selectedIndex);
