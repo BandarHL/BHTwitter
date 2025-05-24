@@ -5382,16 +5382,53 @@ static GeminiTranslator *_sharedInstance;
 // MARK: T1StandardStatusView Hook to modify visibleConversationContextView
 %hook T1StandardStatusView
 
-- (void)setViewModel:(id)viewModel options:(NSUInteger)options account:(id)account {
-    %orig;
-    
-    // After setting the view model, add conversation context view
-    Class contextClass = NSClassFromString(@"TTATimelinesStatusConversationContextView");
-    if (contextClass && viewModel) {
-        id contextView = [[contextClass alloc] init];
-        [contextView performSelector:@selector(setViewModel:) withObject:viewModel];
-        [self addSubview:contextView];
+- (id)visibleConversationContextView {
+    id originalView = %orig;
+    if (originalView) {
+        return originalView;
     }
+    
+    // Create the full hierarchy with text
+    id viewModel = [self performSelector:@selector(viewModel)];
+    if (viewModel) {
+        id tweet = [viewModel performSelector:@selector(tweet)];
+        if (tweet && [tweet respondsToSelector:@selector(inReplyToStatusID)]) {
+            id replyID = [tweet performSelector:@selector(inReplyToStatusID)];
+            if (replyID) {
+                // Create TTATimelinesStatusConversationContextView
+                Class contextClass = NSClassFromString(@"TTATimelinesStatusConversationContextView");
+                if (contextClass) {
+                    id contextView = [[contextClass alloc] initWithFrame:CGRectMake(0, 0, 200, 30)];
+                    
+                    // Create TFNTappableHighlightView
+                    Class highlightClass = NSClassFromString(@"TFNTappableHighlightView");
+                    if (highlightClass) {
+                        id highlightView = [[highlightClass alloc] initWithFrame:CGRectMake(0, 0, 200, 30)];
+                        
+                        // Create TFNAttributedTextView with "replying to" text
+                        Class textClass = NSClassFromString(@"TFNAttributedTextView");
+                        if (textClass) {
+                            id textView = [[textClass alloc] initWithFrame:CGRectMake(0, 0, 200, 30)];
+                            
+                            // Set the text
+                            NSString *replyText = @"Replying to @someone";
+                            if ([textView respondsToSelector:@selector(setText:)]) {
+                                [textView performSelector:@selector(setText:) withObject:replyText];
+                            }
+                            
+                            [highlightView addSubview:textView];
+                        }
+                        
+                        [contextView addSubview:highlightView];
+                    }
+                    
+                    return contextView;
+                }
+            }
+        }
+    }
+    
+    return originalView;
 }
 
 %end
