@@ -530,16 +530,8 @@ static void BH_changeTwitterColor(NSInteger colorID) {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];
     
-    // Map custom colors to existing Twitter colors for native system compatibility
-    NSInteger twitterColorID = colorID;
-    if (colorID == 7) {
-        twitterColorID = 3; // Map Pastel Pink to Red internally for Twitter's system
-    } else if (colorID == 8) {
-        twitterColorID = 3; // Map Dark Red to Red internally for Twitter's system
-    }
-    
-    [defaults setObject:@(twitterColorID) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-    [colorSettings setPrimaryColorOption:twitterColorID];
+    [defaults setObject:@(colorID) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    [colorSettings setPrimaryColorOption:colorID];
 }
 static UIImage *BH_imageFromView(UIView *view) {
     TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];
