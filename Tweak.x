@@ -5380,15 +5380,31 @@ static GeminiTranslator *_sharedInstance;
 %end
 
 // MARK: Fix followers/following tab inconsistency
+static NSMapTable *originalFollowersInstances = nil;
 
 %hook T1ProfileSegmentedFollowingViewController
++ (void)load {
+    if (!originalFollowersInstances) {
+        originalFollowersInstances = [NSMapTable weakToStrongObjectsMapTable];
+    }
+}
+
 - (id)initWithTab:(long long)tab userDataSource:(id)userDataSource account:(id)account showFollowersYouKnow:(_Bool)showFollowersYouKnow shouldShowPeopleButton:(_Bool)shouldShowPeopleButton showPrimaryTabOnly:(_Bool)showPrimaryTabOnly shouldHideCreatorSubscriptions:(_Bool)shouldHideCreatorSubscriptions {
+    BOOL wasOriginallyFollowers = (tab == 0);
+    
     // Convert tab 0 (followers with verified) to tab 3 (clean layout)
     if (tab == 0) {
         tab = 3;
     }
     
-    return %orig(tab, userDataSource, account, showFollowersYouKnow, shouldShowPeopleButton, showPrimaryTabOnly, shouldHideCreatorSubscriptions);
+    id result = %orig(tab, userDataSource, account, showFollowersYouKnow, shouldShowPeopleButton, showPrimaryTabOnly, shouldHideCreatorSubscriptions);
+    
+    // Mark instances that were originally tab 0 (followers)
+    if (wasOriginallyFollowers && userDataSource) {
+        [originalFollowersInstances setObject:@YES forKey:userDataSource];
+    }
+    
+    return result;
 }
 %end
 
@@ -5396,9 +5412,12 @@ static GeminiTranslator *_sharedInstance;
 - (long long)segmentIndexForTab:(long long)tab {
     long long result = %orig;
     
-    // If this is tab 3 (converted from followers tab 0), return 0 to show followers first
+    // Only modify tab 3 if this was originally a followers instance (tab 0)
     if (tab == 3 && result == 1) {
-        return 0;
+        BOOL wasOriginallyFollowers = [[originalFollowersInstances objectForKey:self] boolValue];
+        if (wasOriginallyFollowers) {
+            return 0; // Show followers first for converted instances
+        }
     }
     
     return result;
