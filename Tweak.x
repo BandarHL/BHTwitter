@@ -5608,31 +5608,14 @@ static GeminiTranslator *_sharedInstance;
 
 @end
 
-// No custom interface declarations needed - we'll use selectors
-
 // MARK: Restore Launch Animation
-
-// Add interface for T1AppLaunchTransition
-@interface T1AppLaunchTransition : NSObject
-@property(retain, nonatomic) UIView *hostView;
-@property(retain, nonatomic) UIView *blueBackgroundView;
-@property(retain, nonatomic) UIView *whiteBackgroundView;
-- (void)runLaunchTransition;
-@end
 
 %hook T1AppDelegate
 + (id)launchTransitionProvider {
-    id originalProvider = %orig;
-    
-    // Only create a new provider if the original is null (newer Twitter versions)
-    if (!originalProvider) {
-        Class T1AppLaunchTransitionClass = NSClassFromString(@"T1AppLaunchTransition");
-        if (T1AppLaunchTransitionClass) {
-            id provider = [[T1AppLaunchTransitionClass alloc] init];
-            return provider;
-        }
+    Class T1AppLaunchTransitionClass = NSClassFromString(@"T1AppLaunchTransition");
+    if (T1AppLaunchTransitionClass) {
+        return [[T1AppLaunchTransitionClass alloc] init];
     }
-    return originalProvider;
+    return nil;
 }
-
 %end
