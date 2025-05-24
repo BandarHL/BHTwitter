@@ -5415,8 +5415,9 @@ static NSMapTable *followersTabFixMap = nil;
     // when we're in followers mode - block it
     if ([followersTabFixMap objectForKey:self.retainedDataSource] && 
         index == 1 && userGestureType == 1) {
-        NSLog(@"[BHTwitter] Blocking automatic selection of Following tab - staying on Followers");
-        return; // Don't call %orig, effectively blocking this selection
+        NSLog(@"[BHTwitter] Blocking automatic selection of Following tab - calling with index 0 instead");
+        %orig(segmentedViewController, contentViewController, 0, lastIndex, userGestureType);
+        return;
     }
     
     %orig;
@@ -5453,19 +5454,6 @@ static NSMapTable *followersTabFixMap = nil;
 %end
 
 %hook TFNScrollingSegmentedViewController
-- (void)setSelectedIndex:(NSUInteger)selectedIndex {
-    NSLog(@"[BHTwitter] TFNScrollingSegmentedViewController setSelectedIndex:%lu called", (unsigned long)selectedIndex);
-    
-    // Just block ALL setSelectedIndex:1 calls - brute force approach
-    if (selectedIndex == 1) {
-        NSLog(@"[BHTwitter] BLOCKING ALL setSelectedIndex:1 calls, forcing to 0");
-        %orig(0);
-        return;
-    }
-    
-    NSLog(@"[BHTwitter] Allowing setSelectedIndex:%lu", (unsigned long)selectedIndex);
-    %orig;
-}
 
 - (NSUInteger)selectedIndex {
     NSUInteger result = %orig;
