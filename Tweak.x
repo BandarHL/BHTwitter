@@ -1262,6 +1262,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (_Bool)isVitNotificationFilteringEnabled {
     return false;
 }
+- (_Bool)_isVITModeEnabled {
+    return false;
+}
 %end
 
 // MARK: Tweet confirm
