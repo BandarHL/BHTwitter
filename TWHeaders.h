@@ -621,3 +621,14 @@ static UIViewController * _Nonnull topMostController() {
 @interface T1ProfileFriendsFollowingViewModel : NSObject
 - (id)_t1_followCountTextWithLabel:(id)arg1 singularLabel:(id)arg2 count:(id)arg3 highlighted:(_Bool)arg4;
 @end
+
+@interface T1ExploreFeatures : NSObject
+@property(readonly, nonatomic) _Bool enableNewsTab;
+@property(readonly, nonatomic) _Bool enableNewExplore;
+@property(readonly, nonatomic) _Bool isTrendingTabEnabled;
+@property(readonly, nonatomic) _Bool isTabsEnabled;
+@end
+
+@interface T1ExploreRelaunchFeatures : NSObject
+@property(readonly, nonatomic) _Bool v2UIEnabled;
+@end

@@ -5386,10 +5386,7 @@ static GeminiTranslator *_sharedInstance;
 - (_Bool)isTabsEnabled {
     return false;
 }
-%end
-
-%hook T1ExploreRelaunchFeatures
-- (_Bool)v2UIEnabled {
+- (_Bool)isTrendingTabEnabled {
     return false;
 }
 %end
