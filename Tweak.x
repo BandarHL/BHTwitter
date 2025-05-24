@@ -5385,60 +5385,42 @@ static GeminiTranslator *_sharedInstance;
 - (UIView *)visibleConversationContextView {
     UIView *contextView = %orig;
     
-    // If there's no visible context view but we have a reply, create one
-    id viewModel = [self valueForKey:@"viewModel"];
-    if (!contextView && viewModel) {
-        // Check if this is a reply by looking at the view model
-        @try {
-            id status = [viewModel valueForKey:@"status"];
-            if (status) {
-                // Check if this status is a reply
-                NSString *inReplyToStatusID = nil;
-                NSString *inReplyToUsername = nil;
-                
-                @try {
-                    inReplyToStatusID = [status valueForKey:@"inReplyToStatusIDString"];
-                    if (!inReplyToStatusID) {
-                        inReplyToStatusID = [status valueForKey:@"inReplyToStatusID"];
-                    }
-                } @catch (NSException *e) {}
-                
-                @try {
-                    inReplyToUsername = [status valueForKey:@"inReplyToUsername"];
-                    if (!inReplyToUsername) {
-                        inReplyToUsername = [status valueForKey:@"inReplyToScreenName"];
-                    }
-                } @catch (NSException *e) {}
-                
-                // If this is a reply, force the conversation context to be shown
-                if (inReplyToStatusID && inReplyToUsername && inReplyToUsername.length > 0) {
-                    // Find the conversation context view in the view hierarchy
-                    for (UIView *subview in self.subviews) {
-                        if ([subview isKindOfClass:%c(TTATimelinesStatusConversationContextView)]) {
-                            return subview;
-                        }
-                    }
-                    
-                    // If not found, try to find it in the viewSet
-                    id viewSet = [self valueForKey:@"viewSet"];
-                    if (viewSet && [viewSet respondsToSelector:@selector(allObjects)]) {
-                        NSArray *views = [viewSet allObjects];
-                        for (UIView *view in views) {
-                            if ([view isKindOfClass:%c(TTATimelinesStatusConversationContextView)]) {
-                                // Make sure it's visible
-                                view.hidden = NO;
-                                return view;
-                            }
-                        }
-                    }
+    // If there's no visible context view, check if there's a hidden one we can show
+    if (!contextView) {
+        // Try to find a conversation context view in the view hierarchy
+        for (UIView *subview in self.subviews) {
+            if ([subview isKindOfClass:%c(TTATimelinesStatusConversationContextView)]) {
+                // Make sure it's visible
+                subview.hidden = NO;
+                return subview;
+            }
+        }
+        
+        // Try to find it in the viewSet
+        id viewSet = [self valueForKey:@"viewSet"];
+        if (viewSet && [viewSet respondsToSelector:@selector(allObjects)]) {
+            NSArray *views = [viewSet allObjects];
+            for (UIView *view in views) {
+                if ([view isKindOfClass:%c(TTATimelinesStatusConversationContextView)]) {
+                    // Make sure it's visible
+                    view.hidden = NO;
+                    return view;
                 }
             }
-        } @catch (NSException *e) {
-            NSLog(@"[BHTwitter] Exception checking reply status: %@", e);
         }
     }
     
     return contextView;
+}
+
+%end
+
+// Force conversation context view to always be visible when it exists
+%hook TTATimelinesStatusConversationContextView
+
+- (void)setHidden:(_Bool)hidden {
+    // Always keep conversation context visible
+    %orig(NO);
 }
 
 %end
