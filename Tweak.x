@@ -5669,6 +5669,66 @@ static GeminiTranslator *_sharedInstance;
     return %orig;
 }
 
+- (UIColor *)textLinkColor {
+    // Check if we have a custom color set
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        
+        // Return our custom colors for options 7 and 8
+        if (opt == 7) {
+            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
+        } else if (opt == 8) {
+            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
+        }
+    }
+    
+    if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
+        NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+        
+        // Return our custom colors for options 7 and 8
+        if (opt == 7) {
+            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
+        } else if (opt == 8) {
+            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
+        }
+    }
+    
+    // For all other cases, use Twitter's original implementation
+    return %orig;
+}
+
+- (UIColor *)tabBarItemColor {
+    // Check if we have a custom color set
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        
+        // Return our custom colors for options 7 and 8
+        if (opt == 7) {
+            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
+        } else if (opt == 8) {
+            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
+        }
+    }
+    
+    if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
+        NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+        
+        // Return our custom colors for options 7 and 8
+        if (opt == 7) {
+            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
+        } else if (opt == 8) {
+            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
+        }
+    }
+    
+    // For all other cases, use Twitter's original implementation
+    return %orig;
+}
+
 - (UIColor *)primaryColorForOption:(long long)colorOption {
     // Return our custom colors for options 7 and 8
     if (colorOption == 7) {
@@ -5679,6 +5739,26 @@ static GeminiTranslator *_sharedInstance;
     
     // For all other colors, use Twitter's original implementation
     return %orig;
+}
+
+%end
+
+// Debug hook to see what colors Twitter is actually requesting
+%hook UIColor
+
++ (UIColor *)systemBlueColor {
+    UIColor *originalColor = %orig;
+    NSLog(@"[BHTwitter Color Debug] systemBlueColor requested from: %@", [NSThread callStackSymbols]);
+    return originalColor;
+}
+
++ (UIColor *)colorWithRed:(CGFloat)red green:(CGFloat)green blue:(CGFloat)blue alpha:(CGFloat)alpha {
+    UIColor *originalColor = %orig;
+    // Log if it looks like Twitter blue
+    if (fabs(red - 0.114) < 0.01 && fabs(green - 0.608) < 0.01 && fabs(blue - 0.941) < 0.01) {
+        NSLog(@"[BHTwitter Color Debug] Twitter blue RGB created from: %@", [[NSThread callStackSymbols] subarrayWithRange:NSMakeRange(0, MIN(5, [NSThread callStackSymbols].count))]);
+    }
+    return originalColor;
 }
 
 %end
