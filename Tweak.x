@@ -5392,10 +5392,15 @@ static GeminiTranslator *_sharedInstance;
 // MARK: - Show "Replying to @username" text above all replies
 %hook T1StandardStatusView
 
-- (void)layoutSubviews {
-    %orig;
+- (UIView *)visibleConversationContextView {
+    UIView *originalView = %orig;
     
-    // Check if we're in a notification context
+    // If there's already a visible conversation context view, return it
+    if (originalView) {
+        return originalView;
+    }
+    
+    // Check if we're in a notification context - if so, let original behavior work
     UIView *view = self;
     BOOL isNotificationView = NO;
     
@@ -5408,84 +5413,26 @@ static GeminiTranslator *_sharedInstance;
         view = view.superview;
     }
     
-    // If we're NOT in notifications, check if we need to create conversation context
-    if (!isNotificationView) {
-        // Check if we already have a conversation context view
-        TTATimelinesStatusConversationContextView *contextView = nil;
-        for (UIView *subview in self.subviews) {
-            if ([subview isKindOfClass:%c(TTATimelinesStatusConversationContextView)]) {
-                contextView = (TTATimelinesStatusConversationContextView *)subview;
-                break;
-            }
-        }
-        
-        // If no conversation context view exists, try to determine if this is a reply and create one
-        if (!contextView) {
-            @try {
-                id viewModel = [self valueForKey:@"viewModel"];
-                if (viewModel) {
-                    // Try multiple ways to access the status/tweet data
-                    id status = nil;
-                    NSArray *possibleKeys = @[@"status", @"tweet", @"item", @"model"];
-                    
-                    for (NSString *key in possibleKeys) {
-                        @try {
-                            status = [viewModel valueForKey:key];
-                            if (status) break;
-                        } @catch (NSException *e) {
-                            continue;
-                        }
-                    }
-                    
-                    if (status) {
-                        // Check if this is a reply
-                        NSString *inReplyToUsername = nil;
-                        NSArray *usernameKeys = @[@"inReplyToUsername", @"inReplyToScreenName", @"replyToUsername"];
-                        
-                        for (NSString *key in usernameKeys) {
-                            @try {
-                                inReplyToUsername = [status valueForKey:key];
-                                if (inReplyToUsername && inReplyToUsername.length > 0) break;
-                            } @catch (NSException *e) {
-                                continue;
-                            }
-                        }
-                        
-                        // If this is a reply, create and add conversation context view
-                        if (inReplyToUsername && inReplyToUsername.length > 0) {
-                            contextView = [[%c(TTATimelinesStatusConversationContextView) alloc] initWithFrame:CGRectZero];
-                            
-                            // Create the "Replying to @username" text
-                            NSString *replyText = [NSString stringWithFormat:@"Replying to @%@", inReplyToUsername];
-                            NSAttributedString *attrString = [[NSAttributedString alloc] initWithString:replyText attributes:@{
-                                NSForegroundColorAttributeName: [UIColor systemBlueColor],
-                                NSFontAttributeName: [UIFont systemFontOfSize:14.0]
-                            }];
-                            
-                            // Create text model
-                            id textModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:attrString];
-                            id activeTextModel = [[%c(TFNAttributedActiveTextModel) alloc] initWithTextModel:textModel activeRanges:@[]];
-                            
-                            // Set the text model
-                            [contextView setValue:activeTextModel forKey:@"activeTextModel"];
-                            
-                            // Add to view hierarchy
-                            [self addSubview:contextView];
-                            
-                            // Position it at the top
-                            contextView.translatesAutoresizingMaskIntoConstraints = NO;
-                            [contextView.leadingAnchor constraintEqualToAnchor:self.leadingAnchor].active = YES;
-                            [contextView.trailingAnchor constraintEqualToAnchor:self.trailingAnchor].active = YES;
-                            [contextView.topAnchor constraintEqualToAnchor:self.topAnchor].active = YES;
-                            [contextView.heightAnchor constraintEqualToConstant:20.0].active = YES;
-                        }
-                    }
-                }
-            } @catch (NSException *e) {
-                NSLog(@"[BHTwitter] Exception creating conversation context: %@", e);
-            }
+    if (isNotificationView) {
+        return originalView;
+    }
+    
+    // For non-notification contexts, always return a conversation context view for replies
+    // Find existing conversation context view first
+    for (UIView *subview in self.subviews) {
+        if ([subview isKindOfClass:%c(TTATimelinesStatusConversationContextView)]) {
+            return subview;
         }
     }
+    
+    // No existing view found, create a simple text view to show "Replying to @username"
+    UILabel *replyLabel = [[UILabel alloc] init];
+    replyLabel.text = @"Replying to @someone";
+    replyLabel.font = [UIFont systemFontOfSize:14.0];
+    replyLabel.textColor = [UIColor systemBlueColor];
+    replyLabel.backgroundColor = [UIColor clearColor];
+    
+    return replyLabel;
 }
 
 %end
