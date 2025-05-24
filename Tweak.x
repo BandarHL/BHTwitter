@@ -5666,4 +5666,29 @@ static GeminiTranslator *_sharedInstance;
     return result;
 }
 
++ (instancetype)sharedPalette {
+    NSLog(@"[BHTwitter] TAEStandardColorPalette sharedPalette called");
+    return %orig;
+}
+
+- (UIColor *)primaryColor {
+    NSLog(@"[BHTwitter] TAEStandardColorPalette primaryColor called");
+    
+    // Check if we have a custom theme active
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        
+        if (customOption == 7) {
+            NSLog(@"[BHTwitter] Returning custom Pastel Pink for primaryColor");
+            return [UIColor colorFromHexString:@"#FFB6C1"];
+        } else if (customOption == 8) {
+            NSLog(@"[BHTwitter] Returning custom Dark Red for primaryColor");
+            return [UIColor colorFromHexString:@"#8B0000"];
+        }
+    }
+    
+    return %orig;
+}
+
 %end
