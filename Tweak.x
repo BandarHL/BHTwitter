@@ -5376,8 +5376,8 @@ static GeminiTranslator *_sharedInstance;
 
 %end
 
-%hook TwitterHomeFeaturesConfiguration
-- (_Bool)isThreadedHomeConversationsEnabled {
-    return true;
+%hook TFSVersionProvider
+ -(id)clientVersion {
+    return @"10.0";
 }
 %end

@@ -621,7 +621,3 @@ static UIViewController * _Nonnull topMostController() {
 @interface T1ProfileFriendsFollowingViewModel : NSObject
 - (id)_t1_followCountTextWithLabel:(id)arg1 singularLabel:(id)arg2 count:(id)arg3 highlighted:(_Bool)arg4;
 @end
-
-@interface TwitterHomeFeaturesConfiguration : NSObject
-@property(nonatomic, readonly) _Bool isThreadedHomeConversationsEnabled;
-@end
