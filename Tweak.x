@@ -5382,136 +5382,24 @@ static GeminiTranslator *_sharedInstance;
 // MARK: T1StandardStatusView Hook to modify visibleConversationContextView
 %hook T1StandardStatusView
 
-// Test if our hook is working at all
-- (void)layoutSubviews {
-    %orig;
-    
-    // Look for conversation context views in the hierarchy
-    static int logCount = 0;
-    logCount++;
-    
-    // Only log every 20th time to avoid spam
-    if (logCount % 20 == 1) {
-        // Check what kind of tweet this is
-        id viewModel = nil;
-        if ([self respondsToSelector:@selector(viewModel)]) {
-            viewModel = [self performSelector:@selector(viewModel)];
-        }
-        
-        if (viewModel) {
-            // Try to get tweet info
-            id tweet = nil;
-            if ([viewModel respondsToSelector:@selector(tweet)]) {
-                tweet = [viewModel performSelector:@selector(tweet)];
-            }
-            
-                         NSString *tweetInfo = @"unknown";
-             if (tweet) {
-                 // Try multiple ways to detect replies
-                 BOOL isReply = NO;
-                 NSString *debugInfo = @"";
-                 
-                 // Method 1: inReplyToStatusID
-                 if ([tweet respondsToSelector:@selector(inReplyToStatusID)]) {
-                     id replyID = [tweet performSelector:@selector(inReplyToStatusID)];
-                     if (replyID) {
-                         isReply = YES;
-                         debugInfo = [debugInfo stringByAppendingString:@"inReplyToStatusID:YES "];
-                     } else {
-                         debugInfo = [debugInfo stringByAppendingString:@"inReplyToStatusID:NO "];
-                     }
-                 }
-                 
-                 // Method 2: isReply
-                 if ([tweet respondsToSelector:@selector(isReply)]) {
-                     BOOL methodResult = [[tweet performSelector:@selector(isReply)] boolValue];
-                     if (methodResult) isReply = YES;
-                     debugInfo = [debugInfo stringByAppendingFormat:@"isReply:%@ ", methodResult ? @"YES" : @"NO"];
-                 }
-                 
-                 // Method 3: Check for replyingTo or similar
-                 if ([tweet respondsToSelector:@selector(replyingToTweet)]) {
-                     id replyingTo = [tweet performSelector:@selector(replyingToTweet)];
-                     if (replyingTo) {
-                         isReply = YES;
-                         debugInfo = [debugInfo stringByAppendingString:@"replyingToTweet:YES "];
-                     } else {
-                         debugInfo = [debugInfo stringByAppendingString:@"replyingToTweet:NO "];
-                     }
-                 }
-                 
-                 tweetInfo = isReply ? [NSString stringWithFormat:@"REPLY(%@)", debugInfo] : [NSString stringWithFormat:@"ORIGINAL(%@)", debugInfo];
-             }
-            
-            NSLog(@"[BHTwitter] T1StandardStatusView (%@) - checking context views", tweetInfo);
-            
-            // Check if we have any conversation context views
-            __block BOOL foundContextView = NO;
-            BH_EnumerateSubviewsRecursively(self, ^(UIView *view) {
-                NSString *className = NSStringFromClass([view class]);
-                if ([className containsString:@"Conversation"] || [className containsString:@"Context"]) {
-                    NSLog(@"[BHTwitter] Found conversation/context view: %@ (bounds: %@, hidden: %@)", 
-                          className, NSStringFromCGRect(view.bounds), view.hidden ? @"YES" : @"NO");
-                    foundContextView = YES;
-                }
-            });
-            
-            if (!foundContextView && [tweetInfo isEqualToString:@"REPLY"]) {
-                NSLog(@"[BHTwitter] REPLY tweet missing context view!");
-            }
-        }
-    }
-}
-
 - (id)visibleConversationContextView {
     id originalView = %orig;
-    
-    // Get more context about this view
-    id viewModel = nil;
-    if ([self respondsToSelector:@selector(viewModel)]) {
-        viewModel = [self performSelector:@selector(viewModel)];
+    if (originalView) {
+        return originalView;
     }
     
-    NSString *tweetType = @"unknown";
+    // If no context view exists, always create one
+    id viewModel = [self performSelector:@selector(viewModel)];
     if (viewModel) {
-        id tweet = nil;
-        if ([viewModel respondsToSelector:@selector(tweet)]) {
-            tweet = [viewModel performSelector:@selector(tweet)];
-        }
-        
-        if (tweet) {
-            if ([tweet respondsToSelector:@selector(inReplyToStatusID)]) {
-                id replyID = [tweet performSelector:@selector(inReplyToStatusID)];
-                tweetType = replyID ? @"REPLY" : @"ORIGINAL";
-            }
+        Class contextClass = NSClassFromString(@"TTATimelinesStatusConversationContextView");
+        if (contextClass) {
+            id contextView = [[contextClass alloc] init];
+            [contextView performSelector:@selector(setViewModel:) withObject:viewModel];
+            return contextView;
         }
     }
     
-    NSLog(@"[BHTwitter] visibleConversationContextView called for %@ - returning: %@", 
-          tweetType, originalView ? NSStringFromClass([originalView class]) : @"nil");
     return originalView;
-}
-
-%end
-
-// MARK: Hook TTATimelinesStatusConversationContextView for diagnostics
-%hook TTATimelinesStatusConversationContextView
-
-- (instancetype)initWithFrame:(CGRect)frame {
-    id result = %orig;
-    NSLog(@"[BHTwitter] TTATimelinesStatusConversationContextView created with frame: %@", NSStringFromCGRect(frame));
-    return result;
-}
-
-- (void)setHidden:(BOOL)hidden {
-    NSLog(@"[BHTwitter] TTATimelinesStatusConversationContextView setHidden:%@", hidden ? @"YES" : @"NO");
-    %orig;
-}
-
-- (void)layoutSubviews {
-    %orig;
-    NSLog(@"[BHTwitter] TTATimelinesStatusConversationContextView layoutSubviews - bounds: %@ hidden: %@", 
-          NSStringFromCGRect(((UIView *)self).bounds), ((UIView *)self).hidden ? @"YES" : @"NO");
 }
 
 %end
