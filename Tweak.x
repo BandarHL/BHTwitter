@@ -5432,6 +5432,11 @@ static GeminiTranslator *_sharedInstance;
     replyLabel.textColor = [UIColor systemBlueColor];
     replyLabel.backgroundColor = [UIColor clearColor];
     
+    // Add to view hierarchy and set frame
+    [self addSubview:replyLabel];
+    replyLabel.frame = CGRectMake(16, 8, self.bounds.size.width - 32, 20);
+    [replyLabel sizeToFit];
+    
     return replyLabel;
 }
 
