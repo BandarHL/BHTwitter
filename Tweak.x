@@ -108,12 +108,12 @@ UIColor *BHTCurrentAccentColor(void) {
 
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
+        return [palette primaryColorForOption:opt];
     }
 
     if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
         NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-        return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
+        return [palette primaryColorForOption:opt];
     }
 
     return [UIColor systemBlueColor];
