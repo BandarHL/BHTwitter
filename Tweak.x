@@ -1786,7 +1786,6 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
     if (hasValidCachedCookies) {
         // IMPROVED: Verify cached cookies are still valid by checking their expiration
         BOOL cookiesStillValid = YES;
-        NSTimeInterval currentTime = [[NSDate date] timeIntervalSince1970];
         
         // Check if cookies are too old (older than 6 hours)
         if (lastCookieRefresh) {
@@ -1816,8 +1815,8 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         NSDictionary *freshCookies = nil;
         
-        // Try up to 3 times with short delays to get cookies
-        for (int attempt = 0; attempt < 3; attempt++) {
+        // PERFORMANCE: Reduce to 2 attempts with shorter delay
+        for (int attempt = 0; attempt < 2; attempt++) {
             freshCookies = [self fetchCookies];
             BOOL hasValidFreshCookies = freshCookies && freshCookies.count > 0 && 
                                        freshCookies[@"ct0"] && freshCookies[@"auth_token"];
@@ -1826,9 +1825,9 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
                 break; // Got valid cookies, stop trying
             }
             
-            // Wait a bit before next attempt (unless it's the last attempt)
-            if (attempt < 2) {
-                [NSThread sleepForTimeInterval:0.5]; // 500ms delay
+            // PERFORMANCE: Reduce delay to 200ms for faster response
+            if (attempt < 1) {
+                [NSThread sleepForTimeInterval:0.2];
             }
         }
         
@@ -2208,7 +2207,7 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
         // Force cookie refresh if we're retrying and previous attempts failed
         BOOL forceRefresh = (retryCount >= COOKIE_FORCE_REFRESH_RETRY_COUNT);
         
-        // IMPROVED: Also force refresh if cookies look invalid or are very old
+        // PERFORMANCE: Simplified age check to reduce overhead
         if (!forceRefresh && hasCriticalCookies && lastCookieRefresh) {
             NSTimeInterval timeSinceRefresh = [[NSDate date] timeIntervalSinceDate:lastCookieRefresh];
             if (timeSinceRefresh > (4 * 60 * 60)) { // Force refresh after 4 hours
@@ -2221,26 +2220,8 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
         if (!hasCriticalCookies || forceRefresh || [self shouldRefreshCookies]) {
             [self logDebugInfo:@"Fetching fresh cookies"];
             
-            // IMPROVED: Try multiple times to get fresh cookies before giving up
-            NSDictionary *freshCookies = nil;
-            for (int attempt = 0; attempt < 2; attempt++) {
-                freshCookies = [self fetchCookies];
-                
-                // Check if the fresh cookies are valid
-                BOOL freshCookiesValid = freshCookies && freshCookies.count > 0 && 
-                                         freshCookies[@"ct0"] && freshCookies[@"auth_token"] &&
-                                         [freshCookies[@"ct0"] length] > 10 &&
-                                         [freshCookies[@"auth_token"] length] > 10;
-                
-                if (freshCookiesValid) {
-                    break; // Got valid cookies
-                }
-                
-                if (attempt == 0) {
-                    // Wait a bit before second attempt
-                    [NSThread sleepForTimeInterval:0.3];
-                }
-            }
+            // PERFORMANCE: Reduce to single attempt with quick fallback
+            NSDictionary *freshCookies = [self fetchCookies];
             
             // Check if the fresh cookies are valid
             BOOL freshCookiesValid = freshCookies && freshCookies.count > 0 && 
@@ -2673,66 +2654,52 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
 
 + (void)handleAppForeground:(NSNotification *)notification {
     @try {
-        // IMPROVED: More aggressive cookie refresh on app foreground
+        // PERFORMANCE: More efficient cookie refresh check on app foreground
         BOOL shouldRefreshCookies = NO;
         
-        if (!cookieCache || cookieCache.count == 0) {
+        if (!cookieCache || cookieCache.count == 0 || !cookieCache[@"ct0"] || !cookieCache[@"auth_token"]) {
             shouldRefreshCookies = YES;
-            [self logDebugInfo:@"No cached cookies found, forcing refresh"];
-        } else if (![cookieCache[@"ct0"] length] || ![cookieCache[@"auth_token"] length]) {
-            shouldRefreshCookies = YES;
-            [self logDebugInfo:@"Invalid cached cookies found, forcing refresh"];
-        } else if ([self shouldRefreshCookies]) {
-            shouldRefreshCookies = YES;
-            [self logDebugInfo:@"Cached cookies are old, refreshing"];
+            [self logDebugInfo:@"Missing critical cookies, forcing refresh"];
         } else if (lastCookieRefresh) {
-            // Force refresh if cookies are more than 2 hours old on app foreground
+            // PERFORMANCE: Only force refresh if cookies are more than 3 hours old on app foreground
             NSTimeInterval timeSinceRefresh = [[NSDate date] timeIntervalSinceDate:lastCookieRefresh];
-            if (timeSinceRefresh > (2 * 60 * 60)) {
+            if (timeSinceRefresh > (3 * 60 * 60)) {
                 shouldRefreshCookies = YES;
-                [self logDebugInfo:@"Cached cookies are more than 2 hours old, forcing refresh"];
+                [self logDebugInfo:@"Cached cookies are more than 3 hours old, forcing refresh"];
             }
+        } else {
+            shouldRefreshCookies = YES; // No refresh date means we should refresh
         }
         
         if (shouldRefreshCookies) {
-            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
-                // Try multiple times to get fresh cookies
-                NSDictionary *freshCookies = nil;
-                for (int attempt = 0; attempt < 3; attempt++) {
-                    freshCookies = [self fetchCookies];
-                    
-                    BOOL cookiesValid = freshCookies && freshCookies.count > 0 && 
-                                        freshCookies[@"ct0"] && freshCookies[@"auth_token"] &&
-                                        [freshCookies[@"ct0"] length] > 10 &&
-                                        [freshCookies[@"auth_token"] length] > 10;
-                    
-                    if (cookiesValid) {
-                        [self cacheCookies:freshCookies];
-                        
-                        // Notify that cookies are ready
-                        dispatch_async(dispatch_get_main_queue(), ^{
-                            [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" 
-                                                                              object:nil];
-                        });
-                        break;
-                    }
-                    
-                    if (attempt < 2) {
-                        [NSThread sleepForTimeInterval:0.5]; // Wait before retrying
-                    }
-                }
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                // PERFORMANCE: Single attempt with quick fallback
+                NSDictionary *freshCookies = [self fetchCookies];
                 
-                // If we still couldn't get cookies, start the initialization process
-                if (!freshCookies || !freshCookies[@"ct0"] || !freshCookies[@"auth_token"]) {
+                BOOL cookiesValid = freshCookies && freshCookies.count > 0 && 
+                                    freshCookies[@"ct0"] && freshCookies[@"auth_token"];
+                
+                if (cookiesValid) {
+                    [self cacheCookies:freshCookies];
+                    
+                    // Notify that cookies are ready
                     dispatch_async(dispatch_get_main_queue(), ^{
-                        [self initializeCookiesWithRetry];
+                        [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" 
+                                                                          object:nil];
+                    });
+                } else {
+                    // If we couldn't get cookies, start the initialization process (but don't block)
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        if (!isInitializingCookies) {
+                            [self initializeCookiesWithRetry];
+                        }
                     });
                 }
             });
         }
         
-        // Start polling for updates (after a short delay)
-        [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:1.5];
+        // PERFORMANCE: Slightly longer delay to reduce immediate overhead
+        [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:2.0];
         
     } @catch (__unused NSException *e) {
         // Minimized error logging in production
