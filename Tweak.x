@@ -650,6 +650,11 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     id tweet = [self itemAtIndexPath:arg2];
     NSString *class_name = NSStringFromClass([tweet classForCoder]);
     
+    // Debug logging to see what classes we encounter
+    if ([class_name containsString:@"ExploreEvent"] || [class_name containsString:@"EventSummary"]) {
+        NSLog(@"[BHTwitter] Found event class: %@ in location: %@", class_name, self.adDisplayLocation);
+    }
+    
     if ([BHTManager HidePromoted] && [tweet respondsToSelector:@selector(isPromoted)] && [tweet performSelector:@selector(isPromoted)]) {
         [_orig setHidden:YES];
     }
@@ -717,6 +722,12 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                 [_orig setHidden:true];
             }
         }
+    }
+    
+    // Hide ExploreEventSummaryHero globally (regardless of location)
+    if ([BHTManager HidePromoted] && [class_name isEqualToString:@"T1TwitterSwift.ExploreEventSummaryHero"]) {
+        NSLog(@"[BHTwitter] Hiding ExploreEventSummaryHero in location: %@", self.adDisplayLocation);
+        [_orig setHidden:true];
     }
     
     return _orig;
@@ -792,6 +803,11 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                 return 0;
             }
         }
+    }
+    
+    // Hide ExploreEventSummaryHero globally (regardless of location)
+    if ([BHTManager HidePromoted] && [class_name isEqualToString:@"T1TwitterSwift.ExploreEventSummaryHero"]) {
+        return 0;
     }
     
     return %orig;
