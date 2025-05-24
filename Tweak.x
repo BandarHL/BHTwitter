@@ -15,16 +15,6 @@
 typedef void (^VoidBlock)(void);
 typedef id (^UnknownBlock)(void);
 
-// Forward declarations for conversation context restoration
-@interface TTATimelinesStatusConversationContextView : UIView
-@property(retain, nonatomic) id activeTextModel;
-- (instancetype)initWithFrame:(CGRect)frame;
-@end
-
-@interface TFNAttributedActiveTextModel : NSObject
-- (instancetype)initWithTextModel:(id)textModel activeRanges:(NSArray *)activeRanges;
-@end
-
 // Forward declare T1ColorSettings and its private method to satisfy the compiler
 @interface T1ColorSettings : NSObject
 + (void)_t1_applyPrimaryColorOption;
@@ -1235,7 +1225,28 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %end
 
 %hook TFNTwitterAccount
-- (_Bool)isXChatEnabled {
+- (_Bool)mediaDownloadVideoEnabled {
+    return false;
+}
+- (_Bool)mediaAllowDownloadSettingAvaliable {
+    return false;
+}
+- (_Bool)continueWatchingEnabled {
+    return false;
+}
+- (_Bool)blueVerified {
+    return true;
+}
+- (_Bool)verified {
+    return true;
+}
+- (_Bool)_verified {
+    return true;
+}
+- (_Bool)isBusinessOrAffiliateAccount {
+    return true;
+}
+- (_Bool)isVerifiedOrganizationAccount {
     return true;
 }
 - (_Bool)isEditProfileUsernameEnabled {
@@ -5376,52 +5387,6 @@ static GeminiTranslator *_sharedInstance;
         }
     }
     return originalProvider;
-}
-
-%end
-
-// MARK: - Show "Replying to @username" text above all replies
-%hook T1StandardStatusView
-
-- (UIView *)visibleConversationContextView {
-    return %orig;
-}
-
-- (id)_t1_updateLayoutState {
-    id layoutState = %orig;
-    
-    // Check if we're in a notification context
-    UIView *view = self;
-    BOOL isNotificationView = NO;
-    
-    while (view && !isNotificationView) {
-        if ([NSStringFromClass([view class]) containsString:@"Notification"] ||
-            [NSStringFromClass([view class]) containsString:@"T1NotificationsTimeline"]) {
-            isNotificationView = YES;
-            break;
-        }
-        view = view.superview;
-    }
-    
-    // If we're NOT in notifications, try to force conversation context to be included
-    if (!isNotificationView && layoutState) {
-        @try {
-            // Try to force conversation context to be visible by modifying the layout state
-            if ([layoutState respondsToSelector:@selector(setValue:forKey:)]) {
-                [layoutState setValue:@YES forKey:@"shouldShowConversationContext"];
-            }
-            if ([layoutState respondsToSelector:@selector(setValue:forKey:)]) {
-                [layoutState setValue:@YES forKey:@"conversationContextVisible"];
-            }
-            if ([layoutState respondsToSelector:@selector(setValue:forKey:)]) {
-                [layoutState setValue:@YES forKey:@"showConversationContext"];
-            }
-        } @catch (NSException *e) {
-            NSLog(@"[BHTwitter] Exception modifying layout state: %@", e);
-        }
-    }
-    
-    return layoutState;
 }
 
 %end
