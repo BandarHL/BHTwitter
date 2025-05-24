@@ -5380,106 +5380,27 @@ static GeminiTranslator *_sharedInstance;
 %end
 
 // MARK: Fix followers/following tab inconsistency
-static NSMapTable *followersTabFixMap = nil;
 
 %hook T1ProfileSegmentedFollowingViewController
-+ (void)load {
-    if (!followersTabFixMap) {
-        followersTabFixMap = [NSMapTable weakToStrongObjectsMapTable];
-    }
-}
-
 - (id)initWithTab:(long long)tab userDataSource:(id)userDataSource account:(id)account showFollowersYouKnow:(_Bool)showFollowersYouKnow shouldShowPeopleButton:(_Bool)shouldShowPeopleButton showPrimaryTabOnly:(_Bool)showPrimaryTabOnly shouldHideCreatorSubscriptions:(_Bool)shouldHideCreatorSubscriptions {
-    NSLog(@"[BHTwitter] T1ProfileSegmentedFollowingViewController initWithTab: %lld", tab);
-    
-    // Convert tab 0 (followers with verified) to tab 3 (clean following layout) and mark this instance
+    // Convert tab 0 (followers with verified) to tab 3 (clean layout)
     if (tab == 0) {
-        NSLog(@"[BHTwitter] Converting tab 0 to tab 3 and marking instance for followers mode");
         tab = 3;
     }
     
-    id result = %orig(tab, userDataSource, account, showFollowersYouKnow, shouldShowPeopleButton, showPrimaryTabOnly, shouldHideCreatorSubscriptions);
-    
-    // Mark this instance as a converted followers instance
-    if (result && tab == 3) {
-        [followersTabFixMap setObject:@YES forKey:result];
-        NSLog(@"[BHTwitter] Marked instance %@ as converted followers", result);
-    }
-    
-    return result;
+    return %orig(tab, userDataSource, account, showFollowersYouKnow, shouldShowPeopleButton, showPrimaryTabOnly, shouldHideCreatorSubscriptions);
 }
-
-- (void)segmentedViewController:(id)segmentedViewController didSelectContentViewController:(id)contentViewController atIndex:(long long)index lastIndex:(long long)lastIndex userGestureType:(long long)userGestureType {
-    NSLog(@"[BHTwitter] segmentedViewController didSelectContentViewController");
-    NSLog(@"[BHTwitter] atIndex: %lld", index);
-    NSLog(@"[BHTwitter] lastIndex: %lld", lastIndex);
-    NSLog(@"[BHTwitter] userGestureType: %lld", userGestureType);
-    
-    // Only interfere if this is a converted followers instance (not a real following instance)
-    BOOL isConvertedFollowers = [[followersTabFixMap objectForKey:self] boolValue];
-    
-    if (isConvertedFollowers) {
-        NSLog(@"[BHTwitter] This is a converted followers instance");
-        
-        // For converted followers instances, force selection to index 0 (Followers tab) on initial load
-        if (index == 1 && lastIndex == -1) {
-            NSLog(@"[BHTwitter] Initial load - forcing selection to Followers (index 0)");
-            dispatch_async(dispatch_get_main_queue(), ^{
-                if ([self respondsToSelector:@selector(setSelectedIndex:)]) {
-                    [self performSelector:@selector(setSelectedIndex:) withObject:@(0)];
-                }
-            });
-            %orig(segmentedViewController, contentViewController, 0, lastIndex, userGestureType);
-            return;
-        }
-    }
-    
-    %orig;
-}
-
 %end
 
 %hook T1ProfileSegmentedFollowingViewControllerDataSource
-- (long long)numberOfEntriesForSegmentedViewController:(id)segmentedViewController {
-    long long result = %orig;
-    NSLog(@"[BHTwitter] numberOfEntriesForSegmentedViewController: %lld", result);
-    return result;
-}
-
-- (id)segmentedViewController:(id)segmentedViewController titleAtIndex:(long long)index {
-    id result = %orig;
-    NSLog(@"[BHTwitter] titleAtIndex: %lld = %@", index, result);
-    return result;
-}
-
 - (long long)segmentIndexForTab:(long long)tab {
     long long result = %orig;
     
-    // Get the view controller instance from the data source to check if it's converted
-    id viewController = nil;
-    if ([self respondsToSelector:@selector(viewController)]) {
-        viewController = [self performSelector:@selector(viewController)];
-    }
-    
-    BOOL isConvertedFollowers = viewController ? [[followersTabFixMap objectForKey:viewController] boolValue] : NO;
-    
-    // Only force followers first for converted followers instances
-    if (isConvertedFollowers && tab == 3 && result == 1) {
-        NSLog(@"[BHTwitter] segmentIndexForTab: %lld = %lld → 0 (forcing followers first for converted instance)", tab, result);
+    // If this is tab 3 (converted from followers tab 0), return 0 to show followers first
+    if (tab == 3 && result == 1) {
         return 0;
     }
     
-    NSLog(@"[BHTwitter] segmentIndexForTab: %lld = %lld", tab, result);
-    return result;
-}
-
-%end
-
-%hook TFNScrollingSegmentedViewController
-
-- (NSUInteger)selectedIndex {
-    NSUInteger result = %orig;
-    NSLog(@"[BHTwitter] TFNScrollingSegmentedViewController selectedIndex getter returning: %lu", (unsigned long)result);
     return result;
 }
 %end
