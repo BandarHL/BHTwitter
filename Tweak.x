@@ -5384,8 +5384,36 @@ static GeminiTranslator *_sharedInstance;
 
 // Test if our hook is working at all
 - (void)layoutSubviews {
-    NSLog(@"[BHTwitter] T1StandardStatusView layoutSubviews called");
     %orig;
+    
+    // Look for conversation context views in the hierarchy
+    static int logCount = 0;
+    logCount++;
+    
+    // Only log every 10th time to avoid spam
+    if (logCount % 10 == 1) {
+        NSLog(@"[BHTwitter] T1StandardStatusView layoutSubviews - inspecting hierarchy");
+        
+        // Check if we have any conversation context views
+        __block BOOL foundContextView = NO;
+        BH_EnumerateSubviewsRecursively(self, ^(UIView *view) {
+            NSString *className = NSStringFromClass([view class]);
+            if ([className containsString:@"Conversation"] || [className containsString:@"Context"]) {
+                NSLog(@"[BHTwitter] Found conversation/context view: %@ (bounds: %@, hidden: %@)", 
+                      className, NSStringFromCGRect(view.bounds), view.hidden ? @"YES" : @"NO");
+                foundContextView = YES;
+            }
+        });
+        
+        if (!foundContextView) {
+            NSLog(@"[BHTwitter] No conversation context views found in hierarchy");
+            
+            // Let's see what subviews we do have
+            for (UIView *subview in self.subviews) {
+                NSLog(@"[BHTwitter] Subview: %@ (bounds: %@)", NSStringFromClass([subview class]), NSStringFromCGRect(subview.bounds));
+            }
+        }
+    }
 }
 
 - (id)visibleConversationContextView {
