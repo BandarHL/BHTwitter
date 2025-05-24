@@ -5390,27 +5390,47 @@ static GeminiTranslator *_sharedInstance;
     static int logCount = 0;
     logCount++;
     
-    // Only log every 10th time to avoid spam
-    if (logCount % 10 == 1) {
-        NSLog(@"[BHTwitter] T1StandardStatusView layoutSubviews - inspecting hierarchy");
+    // Only log every 20th time to avoid spam
+    if (logCount % 20 == 1) {
+        // Check what kind of tweet this is
+        id viewModel = nil;
+        if ([self respondsToSelector:@selector(viewModel)]) {
+            viewModel = [self performSelector:@selector(viewModel)];
+        }
         
-        // Check if we have any conversation context views
-        __block BOOL foundContextView = NO;
-        BH_EnumerateSubviewsRecursively(self, ^(UIView *view) {
-            NSString *className = NSStringFromClass([view class]);
-            if ([className containsString:@"Conversation"] || [className containsString:@"Context"]) {
-                NSLog(@"[BHTwitter] Found conversation/context view: %@ (bounds: %@, hidden: %@)", 
-                      className, NSStringFromCGRect(view.bounds), view.hidden ? @"YES" : @"NO");
-                foundContextView = YES;
+        if (viewModel) {
+            // Try to get tweet info
+            id tweet = nil;
+            if ([viewModel respondsToSelector:@selector(tweet)]) {
+                tweet = [viewModel performSelector:@selector(tweet)];
             }
-        });
-        
-        if (!foundContextView) {
-            NSLog(@"[BHTwitter] No conversation context views found in hierarchy");
             
-            // Let's see what subviews we do have
-            for (UIView *subview in self.subviews) {
-                NSLog(@"[BHTwitter] Subview: %@ (bounds: %@)", NSStringFromClass([subview class]), NSStringFromCGRect(subview.bounds));
+            NSString *tweetInfo = @"unknown";
+            if (tweet) {
+                if ([tweet respondsToSelector:@selector(inReplyToStatusID)]) {
+                    id replyID = [tweet performSelector:@selector(inReplyToStatusID)];
+                    tweetInfo = replyID ? @"REPLY" : @"ORIGINAL";
+                } else if ([tweet respondsToSelector:@selector(isReply)]) {
+                    BOOL isReply = [[tweet performSelector:@selector(isReply)] boolValue];
+                    tweetInfo = isReply ? @"REPLY" : @"ORIGINAL";
+                }
+            }
+            
+            NSLog(@"[BHTwitter] T1StandardStatusView (%@) - checking context views", tweetInfo);
+            
+            // Check if we have any conversation context views
+            __block BOOL foundContextView = NO;
+            BH_EnumerateSubviewsRecursively(self, ^(UIView *view) {
+                NSString *className = NSStringFromClass([view class]);
+                if ([className containsString:@"Conversation"] || [className containsString:@"Context"]) {
+                    NSLog(@"[BHTwitter] Found conversation/context view: %@ (bounds: %@, hidden: %@)", 
+                          className, NSStringFromCGRect(view.bounds), view.hidden ? @"YES" : @"NO");
+                    foundContextView = YES;
+                }
+            });
+            
+            if (!foundContextView && [tweetInfo isEqualToString:@"REPLY"]) {
+                NSLog(@"[BHTwitter] REPLY tweet missing context view!");
             }
         }
     }
@@ -5418,42 +5438,30 @@ static GeminiTranslator *_sharedInstance;
 
 - (id)visibleConversationContextView {
     id originalView = %orig;
-    
-    // If Twitter already returns a view, use it
-    if (originalView) {
-        return originalView;
-    }
-    
-    // If not, look for any TTATimelinesStatusConversationContextView in our hierarchy
-    __block id foundContextView = nil;
-    BH_EnumerateSubviewsRecursively(self, ^(UIView *view) {
-        if ([view isKindOfClass:NSClassFromString(@"TTATimelinesStatusConversationContextView")]) {
-            foundContextView = view;
-        }
-    });
-    
-    if (foundContextView) {
-        NSLog(@"[BHTwitter] Found existing TTATimelinesStatusConversationContextView, making it visible");
-        return foundContextView;
-    }
-    
+    NSLog(@"[BHTwitter] visibleConversationContextView called - returning: %@", originalView ? NSStringFromClass([originalView class]) : @"nil");
     return originalView;
 }
 
 %end
 
-// MARK: Hook TTATimelinesStatusConversationContextView to force visibility
+// MARK: Hook TTATimelinesStatusConversationContextView for diagnostics
 %hook TTATimelinesStatusConversationContextView
 
+- (instancetype)initWithFrame:(CGRect)frame {
+    id result = %orig;
+    NSLog(@"[BHTwitter] TTATimelinesStatusConversationContextView created with frame: %@", NSStringFromCGRect(frame));
+    return result;
+}
+
 - (void)setHidden:(BOOL)hidden {
-    NSLog(@"[BHTwitter] TTATimelinesStatusConversationContextView setHidden:%@ - forcing visible", hidden ? @"YES" : @"NO");
-    // Always force it to be visible for replies
-    %orig(NO);
+    NSLog(@"[BHTwitter] TTATimelinesStatusConversationContextView setHidden:%@", hidden ? @"YES" : @"NO");
+    %orig;
 }
 
 - (void)layoutSubviews {
     %orig;
-    NSLog(@"[BHTwitter] TTATimelinesStatusConversationContextView layoutSubviews - bounds: %@", NSStringFromCGRect(((UIView *)self).bounds));
+    NSLog(@"[BHTwitter] TTATimelinesStatusConversationContextView layoutSubviews - bounds: %@ hidden: %@", 
+          NSStringFromCGRect(((UIView *)self).bounds), ((UIView *)self).hidden ? @"YES" : @"NO");
 }
 
 %end
