@@ -530,8 +530,10 @@ static void BH_changeTwitterColor(NSInteger colorID) {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];
     
+    // Always store the actual selected color ID first (including 7, 8)
+    [defaults setObject:@(colorID) forKey:@"bh_color_theme_selectedColor"];
+    
     // For custom colors (7, 8), set Twitter's internal color to a valid fallback
-    // while keeping our custom selection in bh_color_theme_selectedColor
     NSInteger twitterColorID = colorID;
     if (colorID == 7 || colorID == 8) {
         // Use Twitter's blue (color 1) as fallback for Twitter's native components
@@ -539,7 +541,7 @@ static void BH_changeTwitterColor(NSInteger colorID) {
     }
     
     [defaults setObject:@(twitterColorID) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-    [colorSettings setPrimaryColorOption:twitterColorID];
+    [colorSettings setPrimaryColorOption:colorID]; // Pass the real colorID, not the fallback
 }
 static UIImage *BH_imageFromView(UIView *view) {
     TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];

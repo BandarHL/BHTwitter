@@ -96,31 +96,38 @@ static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *
 // Add this before the hooks, after the imports
 
 UIColor *BHTCurrentAccentColor(void) {
-    Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
-    if (!TAEColorSettingsCls) {
-        return [UIColor systemBlueColor];
-    }
-
-    id settings = [TAEColorSettingsCls sharedSettings];
-    id current = [settings currentColorPalette];
-    id palette = [current colorPalette];
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-
+    
+    // First check our custom theme selection
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        NSLog(@"[BHTwitter] BHTCurrentAccentColor: Custom theme selected = %ld", (long)opt);
         
-        // Handle our custom colors directly
+        // Handle our custom colors directly - this should always work
         if (opt == 7) {
+            NSLog(@"[BHTwitter] Returning Pastel Pink for option 7");
             return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
         } else if (opt == 8) {
+            NSLog(@"[BHTwitter] Returning Dark Red for option 8");
             return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
         }
         
-        return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
+        // For options 1-6, get from Twitter's system
+        Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
+        if (TAEColorSettingsCls) {
+            id settings = [TAEColorSettingsCls sharedSettings];
+            id current = [settings currentColorPalette];
+            id palette = [current colorPalette];
+            UIColor *color = [palette primaryColorForOption:opt];
+            NSLog(@"[BHTwitter] Got Twitter color for option %ld: %@", (long)opt, color);
+            return color ?: [UIColor systemBlueColor];
+        }
     }
 
+    // Fallback to Twitter's selected color
     if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
         NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+        NSLog(@"[BHTwitter] Using Twitter's color option: %ld", (long)opt);
         
         // Handle our custom colors directly
         if (opt == 7) {
@@ -129,9 +136,16 @@ UIColor *BHTCurrentAccentColor(void) {
             return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
         }
         
-        return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
+        Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
+        if (TAEColorSettingsCls) {
+            id settings = [TAEColorSettingsCls sharedSettings];
+            id current = [settings currentColorPalette];
+            id palette = [current colorPalette];
+            return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
+        }
     }
 
+    NSLog(@"[BHTwitter] No color theme found, returning system blue");
     return [UIColor systemBlueColor];
 }
 
@@ -5649,17 +5663,22 @@ static GeminiTranslator *_sharedInstance;
 %hook NSObject
 
 - (UIColor *)primaryColorForOption:(NSUInteger)colorOption {
-    // Check if this object conforms to TAEColorPalette protocol
-    if ([self conformsToProtocol:@protocol(TAEColorPalette)]) {
+    // Only hook if this is actually a color palette object
+    NSString *className = NSStringFromClass([self class]);
+    if ([className containsString:@"ColorPalette"] || [className containsString:@"Color"]) {
+        NSLog(@"[BHTwitter] primaryColorForOption:%lu called on class: %@", (unsigned long)colorOption, className);
+        
         // Handle our custom colors directly
         if (colorOption == 7) {
+            NSLog(@"[BHTwitter] Returning Pastel Pink from palette hook");
             return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
         } else if (colorOption == 8) {
+            NSLog(@"[BHTwitter] Returning Dark Red from palette hook");
             return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
         }
     }
     
-    // For standard colors (1-6), call original
+    // For standard colors or non-color classes, call original
     return %orig(colorOption);
 }
 
