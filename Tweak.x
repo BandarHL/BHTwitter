@@ -5399,12 +5399,22 @@ static GeminiTranslator *_sharedInstance;
 - (long long)segmentIndexForTab:(long long)tab {
     long long result = %orig;
     
-    // Check what the original tab was
+    // Check what the original tab was and if this is the initial call
     NSNumber *originalTab = objc_getAssociatedObject(self, @"originalTab");
+    NSNumber *hasBeenCalled = objc_getAssociatedObject(self, @"segmentIndexCalled");
     
-    // If this was originally tab 0 (followers) and now tab 3, show followers first
-    if (tab == 3 && [originalTab integerValue] == 0 && result == 1) {
-        return 0;
+    // Only modify the initial selection
+    if (!hasBeenCalled) {
+        objc_setAssociatedObject(self, @"segmentIndexCalled", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        
+        // If this was originally tab 0 (followers) and now tab 3, show followers first
+        if (tab == 3 && [originalTab integerValue] == 0 && result == 1) {
+            return 0;
+        }
+        // If this was originally tab 3 (following), keep showing following first  
+        if (tab == 3 && [originalTab integerValue] == 3 && result == 1) {
+            return 1;
+        }
     }
     
     return result;
