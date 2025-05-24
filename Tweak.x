@@ -5382,24 +5382,16 @@ static GeminiTranslator *_sharedInstance;
 // MARK: T1StandardStatusView Hook to modify visibleConversationContextView
 %hook T1StandardStatusView
 
-- (id)visibleConversationContextView {
-    id originalView = %orig;
-    if (originalView) {
-        return originalView;
-    }
+- (void)setViewModel:(id)viewModel options:(NSUInteger)options account:(id)account {
+    %orig;
     
-    // If no context view exists, always create one
-    id viewModel = [self performSelector:@selector(viewModel)];
-    if (viewModel) {
-        Class contextClass = NSClassFromString(@"TTATimelinesStatusConversationContextView");
-        if (contextClass) {
-            id contextView = [[contextClass alloc] init];
-            [contextView performSelector:@selector(setViewModel:) withObject:viewModel];
-            return contextView;
-        }
+    // After setting the view model, add conversation context view
+    Class contextClass = NSClassFromString(@"TTATimelinesStatusConversationContextView");
+    if (contextClass && viewModel) {
+        id contextView = [[contextClass alloc] init];
+        [contextView performSelector:@selector(setViewModel:) withObject:viewModel];
+        [self addSubview:contextView];
     }
-    
-    return originalView;
 }
 
 %end
