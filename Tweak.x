@@ -1253,18 +1253,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (_Bool)isDoubleMaxZoomFor4KImagesEnabled {
     return [BHTManager autoHighestLoad] ? true : %orig;
 }
-- (_Bool)isVitVerifiedFollowersViewEnabled {
-    return false;
-}
-- (_Bool)isVitScopedNotificationsEnabled {
-    return false;
-}
-- (_Bool)isVitNotificationFilteringEnabled {
-    return false;
-}
-- (_Bool)_isVITModeEnabled {
-    return false;
-}
 %end
 
 // MARK: Tweet confirm
@@ -5387,6 +5375,23 @@ static GeminiTranslator *_sharedInstance;
         }
     }
     return originalProvider;
+}
+
+%end
+
+// MARK: T1StandardStatusView Hook to modify visibleConversationContextView
+%hook T1StandardStatusView
+
+- (id)visibleConversationContextView {
+    // Create and return TTATimelinesStatusConversationContextView instead of original
+    Class TTATimelinesStatusConversationContextViewClass = NSClassFromString(@"TTATimelinesStatusConversationContextView");
+    if (TTATimelinesStatusConversationContextViewClass) {
+        id contextView = [[TTATimelinesStatusConversationContextViewClass alloc] init];
+        return contextView;
+    }
+    
+    // Fallback to original implementation if class not found
+    return %orig;
 }
 
 %end
