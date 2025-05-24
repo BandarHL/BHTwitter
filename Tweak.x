@@ -5411,10 +5411,8 @@ static NSMapTable *followersTabFixMap = nil;
     NSLog(@"[BHTwitter] lastIndex: %lld", lastIndex);
     NSLog(@"[BHTwitter] userGestureType: %lld", userGestureType);
     
-    // Check if this is an automatic selection (userGestureType: 1) of Following tab (index: 1) 
-    // when we're in followers mode - block it
-    if ([followersTabFixMap objectForKey:self.retainedDataSource] && 
-        index == 1 && userGestureType == 1) {
+    // Block automatic selection to Following tab (index 1) but allow user taps
+    if (index == 1 && userGestureType == 1) {
         NSLog(@"[BHTwitter] Blocking automatic selection of Following tab - calling with index 0 instead");
         %orig(segmentedViewController, contentViewController, 0, lastIndex, userGestureType);
         return;
