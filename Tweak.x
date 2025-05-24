@@ -5417,75 +5417,43 @@ static GeminiTranslator *_sharedInstance;
 }
 
 - (id)visibleConversationContextView {
-    NSLog(@"[BHTwitter] visibleConversationContextView called on %@", NSStringFromClass([self class]));
-    
-    // First check if original implementation returns something
     id originalView = %orig;
-    NSLog(@"[BHTwitter] Original view: %@ (bounds: %@)", originalView, originalView ? NSStringFromCGRect([originalView bounds]) : @"nil");
     
+    // If Twitter already returns a view, use it
     if (originalView) {
         return originalView;
     }
     
-    // Get viewModel using performSelector
-    id viewModel = nil;
-    if ([self respondsToSelector:@selector(viewModel)]) {
-        viewModel = [self performSelector:@selector(viewModel)];
-    }
-    NSLog(@"[BHTwitter] ViewModel: %@", viewModel);
-    
-    // If original returns nil, try to create and configure TTATimelinesStatusConversationContextView
-    Class TTATimelinesStatusConversationContextViewClass = NSClassFromString(@"TTATimelinesStatusConversationContextView");
-    NSLog(@"[BHTwitter] TTATimelinesStatusConversationContextView class: %@", TTATimelinesStatusConversationContextViewClass);
-    
-    if (TTATimelinesStatusConversationContextViewClass && viewModel) {
-        NSLog(@"[BHTwitter] Creating new TTATimelinesStatusConversationContextView");
-        
-        // Create new context view instance
-        id contextView = [[TTATimelinesStatusConversationContextViewClass alloc] init];
-        NSLog(@"[BHTwitter] Created contextView: %@ (initial bounds: %@)", contextView, NSStringFromCGRect([contextView bounds]));
-        
-        // Try to configure it with the view model data
-        if ([contextView respondsToSelector:@selector(setViewModel:)]) {
-            NSLog(@"[BHTwitter] Calling setViewModel:");
-            [contextView performSelector:@selector(setViewModel:) withObject:viewModel];
-        } else {
-            NSLog(@"[BHTwitter] contextView does not respond to setViewModel:");
+    // If not, look for any TTATimelinesStatusConversationContextView in our hierarchy
+    __block id foundContextView = nil;
+    BH_EnumerateSubviewsRecursively(self, ^(UIView *view) {
+        if ([view isKindOfClass:NSClassFromString(@"TTATimelinesStatusConversationContextView")]) {
+            foundContextView = view;
         }
-        
-        // Try to configure with options if available
-        if ([contextView respondsToSelector:@selector(setViewModel:options:)]) {
-            NSUInteger options = 0;
-            if ([self respondsToSelector:@selector(options)]) {
-                id optionsObj = [self performSelector:@selector(options)];
-                options = [optionsObj unsignedLongValue];
-            }
-            NSLog(@"[BHTwitter] Calling setViewModel:options: with options: %lu", (unsigned long)options);
-            ((void (*)(id, SEL, id, NSUInteger))objc_msgSend)(contextView, @selector(setViewModel:options:), viewModel, options);
-        } else {
-            NSLog(@"[BHTwitter] contextView does not respond to setViewModel:options:");
-        }
-        
-        // Check bounds after configuration
-        NSLog(@"[BHTwitter] contextView bounds after configuration: %@", NSStringFromCGRect([contextView bounds]));
-        
-        // Add to the view hierarchy
-        [self addSubview:contextView];
-        NSLog(@"[BHTwitter] Added contextView to superview");
-        
-        // Force layout
-        [contextView setNeedsLayout];
-        [contextView layoutIfNeeded];
-        NSLog(@"[BHTwitter] contextView bounds after layout: %@", NSStringFromCGRect([contextView bounds]));
-        
-        return contextView;
-    } else {
-        NSLog(@"[BHTwitter] Cannot create TTATimelinesStatusConversationContextView - class: %@, viewModel: %@", TTATimelinesStatusConversationContextViewClass, viewModel);
+    });
+    
+    if (foundContextView) {
+        NSLog(@"[BHTwitter] Found existing TTATimelinesStatusConversationContextView, making it visible");
+        return foundContextView;
     }
     
-    // Fallback to original implementation
-    NSLog(@"[BHTwitter] Returning original view");
     return originalView;
+}
+
+%end
+
+// MARK: Hook TTATimelinesStatusConversationContextView to force visibility
+%hook TTATimelinesStatusConversationContextView
+
+- (void)setHidden:(BOOL)hidden {
+    NSLog(@"[BHTwitter] TTATimelinesStatusConversationContextView setHidden:%@ - forcing visible", hidden ? @"YES" : @"NO");
+    // Always force it to be visible for replies
+    %orig(NO);
+}
+
+- (void)layoutSubviews {
+    %orig;
+    NSLog(@"[BHTwitter] TTATimelinesStatusConversationContextView layoutSubviews - bounds: %@", NSStringFromCGRect(((UIView *)self).bounds));
 }
 
 %end
