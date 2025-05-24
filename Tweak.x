@@ -5639,6 +5639,36 @@ static GeminiTranslator *_sharedInstance;
 // Hook the color palette to return our custom colors
 %hook TAEStandardColorPalette
 
+- (UIColor *)primaryColor {
+    // Check if we have a custom color set
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        
+        // Return our custom colors for options 7 and 8
+        if (opt == 7) {
+            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
+        } else if (opt == 8) {
+            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
+        }
+    }
+    
+    if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
+        NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+        
+        // Return our custom colors for options 7 and 8
+        if (opt == 7) {
+            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
+        } else if (opt == 8) {
+            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
+        }
+    }
+    
+    // For all other cases, use Twitter's original implementation
+    return %orig;
+}
+
 - (UIColor *)primaryColorForOption:(long long)colorOption {
     // Return our custom colors for options 7 and 8
     if (colorOption == 7) {
