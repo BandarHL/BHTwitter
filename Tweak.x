@@ -5776,4 +5776,67 @@ static GeminiTranslator *_sharedInstance;
     return %orig;
 }
 
++ (UIColor *)blueColor {
+    // Check if we have custom colors set
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        
+        // Return our custom colors for options 7 and 8
+        if (opt == 7) {
+            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
+        } else if (opt == 8) {
+            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
+        }
+    }
+    
+    if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
+        NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+        
+        // Return our custom colors for options 7 and 8
+        if (opt == 7) {
+            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
+        } else if (opt == 8) {
+            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
+        }
+    }
+    
+    // For all other cases, use original blueColor
+    return %orig;
+}
+
++ (UIColor *)colorWithRed:(CGFloat)red green:(CGFloat)green blue:(CGFloat)blue alpha:(CGFloat)alpha {
+    UIColor *originalColor = %orig;
+    
+    // Check for Twitter's specific blue color (RGB: 29, 155, 240 or approximately 0.114, 0.608, 0.941)
+    if (fabs(red - 29.0/255.0) < 0.01 && fabs(green - 155.0/255.0) < 0.01 && fabs(blue - 240.0/255.0) < 0.01) {
+        NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+        
+        if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+            NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
+            
+            // Return our custom colors for options 7 and 8
+            if (opt == 7) {
+                return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
+            } else if (opt == 8) {
+                return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
+            }
+        }
+        
+        if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
+            NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+            
+            // Return our custom colors for options 7 and 8
+            if (opt == 7) {
+                return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
+            } else if (opt == 8) {
+                return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
+            }
+        }
+    }
+    
+    return originalColor;
+}
+
 %end
