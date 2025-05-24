@@ -5635,42 +5635,22 @@ static GeminiTranslator *_sharedInstance;
 // Hook the color palette to return our custom colors
 %hook TAEStandardColorPalette
 
-+ (id)sharedPalette {
-    id palette = %orig;
-    
-    // Inject our custom colors into Twitter's color provider dictionary
-    if (palette) {
-        // Get the internal color provider dictionary
-        NSDictionary *colorDict = [palette valueForKey:@"_colorProviderDictionary"];
-        if (colorDict) {
-            NSMutableDictionary *mutableColorDict = [colorDict mutableCopy];
-            
-            // Add our custom color providers for options 7 and 8
-            mutableColorDict[@"primaryColorOption7Color"] = ^UIColor *{
-                return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
-            };
-            mutableColorDict[@"primaryColorOption8Color"] = ^UIColor *{
-                return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red  
-            };
-            
-            // Set the updated dictionary back
-            [palette setValue:mutableColorDict forKey:@"_colorProviderDictionary"];
-        }
-    }
-    
-    return palette;
-}
-
 - (UIColor *)primaryColorForOption:(long long)colorOption {
+    NSLog(@"[BHTwitter] TAEStandardColorPalette primaryColorForOption called with option: %lld", colorOption);
+    
     // Return our custom colors for options 7 and 8
     if (colorOption == 7) {
+        NSLog(@"[BHTwitter] Returning Pastel Pink for option 7");
         return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
     } else if (colorOption == 8) {
+        NSLog(@"[BHTwitter] Returning Dark Red for option 8");
         return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
     }
     
     // For all other colors, use Twitter's original implementation
-    return %orig;
+    UIColor *result = %orig;
+    NSLog(@"[BHTwitter] Returning original color for option %lld: %@", colorOption, result);
+    return result;
 }
 
 %end
