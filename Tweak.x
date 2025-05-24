@@ -5383,15 +5383,47 @@ static GeminiTranslator *_sharedInstance;
 %hook T1StandardStatusView
 
 - (id)visibleConversationContextView {
-    // Create and return TTATimelinesStatusConversationContextView instead of original
+    // First check if original implementation returns something
+    id originalView = %orig;
+    if (originalView) {
+        return originalView;
+    }
+    
+    // Get viewModel using performSelector
+    id viewModel = nil;
+    if ([self respondsToSelector:@selector(viewModel)]) {
+        viewModel = [self performSelector:@selector(viewModel)];
+    }
+    
+    // If original returns nil, try to create and configure TTATimelinesStatusConversationContextView
     Class TTATimelinesStatusConversationContextViewClass = NSClassFromString(@"TTATimelinesStatusConversationContextView");
-    if (TTATimelinesStatusConversationContextViewClass) {
+    if (TTATimelinesStatusConversationContextViewClass && viewModel) {
+        // Create new context view instance
         id contextView = [[TTATimelinesStatusConversationContextViewClass alloc] init];
+        
+        // Try to configure it with the view model data
+        if ([contextView respondsToSelector:@selector(setViewModel:)]) {
+            [contextView performSelector:@selector(setViewModel:) withObject:viewModel];
+        }
+        
+        // Try to configure with options if available
+        if ([contextView respondsToSelector:@selector(setViewModel:options:)]) {
+            NSUInteger options = 0;
+            if ([self respondsToSelector:@selector(options)]) {
+                id optionsObj = [self performSelector:@selector(options)];
+                options = [optionsObj unsignedLongValue];
+            }
+            ((void (*)(id, SEL, id, NSUInteger))objc_msgSend)(contextView, @selector(setViewModel:options:), viewModel, options);
+        }
+        
+        // Add to the view hierarchy
+        [self addSubview:contextView];
+        
         return contextView;
     }
     
-    // Fallback to original implementation if class not found
-    return %orig;
+    // Fallback to original implementation
+    return originalView;
 }
 
 %end
