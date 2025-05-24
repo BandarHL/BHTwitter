@@ -5402,15 +5402,32 @@ static NSMapTable *followersTabFixMap = nil;
         }
     }
     
-    // Convert tab 0 (followers with verified) to tab 3 (clean following layout) and mark data source
+    // Track whether this is a converted case
+    BOOL isConvertedFromTab0 = (tab == 0);
+    
+    // Convert tab 0 (followers with verified) to tab 3 (clean following layout)
     if (tab == 0) {
-        NSLog(@"[BHTwitter] Converting tab 0 to tab 3 and marking for followers selection");
-        [followersTabFixMap setObject:@YES forKey:userDataSource];
+        NSLog(@"[BHTwitter] Converting tab 0 to tab 3 for clean layout");
         tab = 3;
     }
     
     id result = %orig(tab, userDataSource, account, showFollowersYouKnow, shouldShowPeopleButton, showPrimaryTabOnly, shouldHideCreatorSubscriptions);
     NSLog(@"[BHTwitter] T1ProfileSegmentedFollowingViewController init result: %@", result);
+    
+    // Mark controller instance if this was converted from tab 0
+    if (isConvertedFromTab0) {
+        NSLog(@"[BHTwitter] Marking controller instance as converted from tab 0 → should show followers first");
+        [followersTabFixMap setObject:@YES forKey:result];
+        
+        // Also mark the data source so we can check it in segmentIndexForTab
+        if ([result respondsToSelector:@selector(retainedDataSource)]) {
+            id dataSource = [result retainedDataSource];
+            if (dataSource) {
+                NSLog(@"[BHTwitter] Also marking data source: %@", dataSource);
+                [followersTabFixMap setObject:@YES forKey:dataSource];
+            }
+        }
+    }
     
     return result;
 }
@@ -5449,10 +5466,15 @@ static NSMapTable *followersTabFixMap = nil;
 - (long long)segmentIndexForTab:(long long)tab {
     long long result = %orig;
     
-    // If this is tab 3 (converted from tab 0) and returns 1, force it to 0 to show Followers first
+    // Only force followers first if this data source is marked as converted from tab 0
     if (tab == 3 && result == 1) {
-        NSLog(@"[BHTwitter] segmentIndexForTab: %lld = %lld → 0 (forcing followers first)", tab, result);
-        return 0;
+        NSObject *markedValue = [followersTabFixMap objectForKey:self];
+        if (markedValue) {
+            NSLog(@"[BHTwitter] segmentIndexForTab: %lld = %lld → 0 (forcing followers first for converted case)", tab, result);
+            return 0;
+        } else {
+            NSLog(@"[BHTwitter] segmentIndexForTab: %lld = %lld (not converted, keeping Following)", tab, result);
+        }
     }
     
     NSLog(@"[BHTwitter] segmentIndexForTab: %lld = %lld", tab, result);
