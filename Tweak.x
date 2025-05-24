@@ -5376,8 +5376,20 @@ static GeminiTranslator *_sharedInstance;
 
 %end
 
-%hook T1ProfileSegmentedFollowingViewControllerDataSource
-- (BOOL)_showSegmentedVerifiedFollowersViewController {
+%hook T1ExploreFeatures
+- (_Bool)enableNewsTab {
+    return false;
+}
+- (_Bool)enableNewExplore {
+    return false;
+}
+- (_Bool)isTabsEnabled {
+    return false;
+}
+%end
+
+%hook T1ExploreRelaunchFeatures
+- (_Bool)v2UIEnabled {
     return false;
 }
 %end
