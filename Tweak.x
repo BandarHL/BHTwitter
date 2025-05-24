@@ -108,11 +108,23 @@ UIColor *BHTCurrentAccentColor(void) {
 
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        // Handle our custom colors directly
+        if (opt == 7) {
+            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
+        } else if (opt == 8) {
+            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
+        }
         return [palette primaryColorForOption:opt];
     }
 
     if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
         NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+        // Handle our custom colors directly
+        if (opt == 7) {
+            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
+        } else if (opt == 8) {
+            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
+        }
         return [palette primaryColorForOption:opt];
     }
 
