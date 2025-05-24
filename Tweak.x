@@ -5383,38 +5383,23 @@ static GeminiTranslator *_sharedInstance;
 
 %hook T1ProfileSegmentedFollowingViewController
 - (id)initWithTab:(long long)tab userDataSource:(id)userDataSource account:(id)account showFollowersYouKnow:(_Bool)showFollowersYouKnow shouldShowPeopleButton:(_Bool)shouldShowPeopleButton showPrimaryTabOnly:(_Bool)showPrimaryTabOnly shouldHideCreatorSubscriptions:(_Bool)shouldHideCreatorSubscriptions {
-    // If original was tab 0 (followers), convert to tab 3 but store original tab
+    // Store whether this was originally followers (tab 0)
+    BOOL wasFollowers = (tab == 0);
+    
+    // Convert tab 0 to tab 3 for clean layout
     if (tab == 0) {
-        objc_setAssociatedObject(userDataSource, @"originalTab", @(0), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         tab = 3;
-    } else {
-        objc_setAssociatedObject(userDataSource, @"originalTab", @(tab), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
     
-    return %orig(tab, userDataSource, account, showFollowersYouKnow, shouldShowPeopleButton, showPrimaryTabOnly, shouldHideCreatorSubscriptions);
-}
-%end
-
-%hook T1ProfileSegmentedFollowingViewControllerDataSource
-- (long long)segmentIndexForTab:(long long)tab {
-    long long result = %orig;
+    id result = %orig(tab, userDataSource, account, showFollowersYouKnow, shouldShowPeopleButton, showPrimaryTabOnly, shouldHideCreatorSubscriptions);
     
-    // Check what the original tab was and if this is the initial call
-    NSNumber *originalTab = objc_getAssociatedObject(self, @"originalTab");
-    NSNumber *hasBeenCalled = objc_getAssociatedObject(self, @"segmentIndexCalled");
-    
-    // Only modify the initial selection
-    if (!hasBeenCalled) {
-        objc_setAssociatedObject(self, @"segmentIndexCalled", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        
-        // If this was originally tab 0 (followers) and now tab 3, show followers first
-        if (tab == 3 && [originalTab integerValue] == 0 && result == 1) {
-            return 0;
-        }
-        // If this was originally tab 3 (following), keep showing following first  
-        if (tab == 3 && [originalTab integerValue] == 3 && result == 1) {
-            return 1;
-        }
+    // If this was originally followers, force selection to followers tab after view loads
+    if (wasFollowers && result) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if ([result respondsToSelector:@selector(setSelectedIndex:)]) {
+                [result performSelector:@selector(setSelectedIndex:) withObject:@(0)];
+            }
+        });
     }
     
     return result;
