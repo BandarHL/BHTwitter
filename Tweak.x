@@ -15,6 +15,16 @@
 typedef void (^VoidBlock)(void);
 typedef id (^UnknownBlock)(void);
 
+// Forward declarations for conversation context restoration
+@interface TTATimelinesStatusConversationContextView : UIView
+@property(retain, nonatomic) id activeTextModel;
+- (instancetype)initWithFrame:(CGRect)frame;
+@end
+
+@interface TFNAttributedActiveTextModel : NSObject
+- (instancetype)initWithTextModel:(id)textModel activeRanges:(NSArray *)activeRanges;
+@end
+
 // Forward declare T1ColorSettings and its private method to satisfy the compiler
 @interface T1ColorSettings : NSObject
 + (void)_t1_applyPrimaryColorOption;
@@ -5382,45 +5392,100 @@ static GeminiTranslator *_sharedInstance;
 // MARK: - Show "Replying to @username" text above all replies
 %hook T1StandardStatusView
 
-- (UIView *)visibleConversationContextView {
-    UIView *contextView = %orig;
+- (void)layoutSubviews {
+    %orig;
     
-    // If there's no visible context view, check if there's a hidden one we can show
-    if (!contextView) {
-        // Try to find a conversation context view in the view hierarchy
+    // Check if we're in a notification context
+    UIView *view = self;
+    BOOL isNotificationView = NO;
+    
+    while (view && !isNotificationView) {
+        if ([NSStringFromClass([view class]) containsString:@"Notification"] ||
+            [NSStringFromClass([view class]) containsString:@"T1NotificationsTimeline"]) {
+            isNotificationView = YES;
+            break;
+        }
+        view = view.superview;
+    }
+    
+    // If we're NOT in notifications, check if we need to create conversation context
+    if (!isNotificationView) {
+        // Check if we already have a conversation context view
+        TTATimelinesStatusConversationContextView *contextView = nil;
         for (UIView *subview in self.subviews) {
             if ([subview isKindOfClass:%c(TTATimelinesStatusConversationContextView)]) {
-                // Make sure it's visible
-                subview.hidden = NO;
-                return subview;
+                contextView = (TTATimelinesStatusConversationContextView *)subview;
+                break;
             }
         }
         
-        // Try to find it in the viewSet
-        id viewSet = [self valueForKey:@"viewSet"];
-        if (viewSet && [viewSet respondsToSelector:@selector(allObjects)]) {
-            NSArray *views = [viewSet allObjects];
-            for (UIView *view in views) {
-                if ([view isKindOfClass:%c(TTATimelinesStatusConversationContextView)]) {
-                    // Make sure it's visible
-                    view.hidden = NO;
-                    return view;
+        // If no conversation context view exists, try to determine if this is a reply and create one
+        if (!contextView) {
+            @try {
+                id viewModel = [self valueForKey:@"viewModel"];
+                if (viewModel) {
+                    // Try multiple ways to access the status/tweet data
+                    id status = nil;
+                    NSArray *possibleKeys = @[@"status", @"tweet", @"item", @"model"];
+                    
+                    for (NSString *key in possibleKeys) {
+                        @try {
+                            status = [viewModel valueForKey:key];
+                            if (status) break;
+                        } @catch (NSException *e) {
+                            continue;
+                        }
+                    }
+                    
+                    if (status) {
+                        // Check if this is a reply
+                        NSString *inReplyToUsername = nil;
+                        NSArray *usernameKeys = @[@"inReplyToUsername", @"inReplyToScreenName", @"replyToUsername"];
+                        
+                        for (NSString *key in usernameKeys) {
+                            @try {
+                                inReplyToUsername = [status valueForKey:key];
+                                if (inReplyToUsername && inReplyToUsername.length > 0) break;
+                            } @catch (NSException *e) {
+                                continue;
+                            }
+                        }
+                        
+                        // If this is a reply, create and add conversation context view
+                        if (inReplyToUsername && inReplyToUsername.length > 0) {
+                            contextView = [[%c(TTATimelinesStatusConversationContextView) alloc] initWithFrame:CGRectZero];
+                            
+                            // Create the "Replying to @username" text
+                            NSString *replyText = [NSString stringWithFormat:@"Replying to @%@", inReplyToUsername];
+                            NSAttributedString *attrString = [[NSAttributedString alloc] initWithString:replyText attributes:@{
+                                NSForegroundColorAttributeName: [UIColor systemBlueColor],
+                                NSFontAttributeName: [UIFont systemFontOfSize:14.0]
+                            }];
+                            
+                            // Create text model
+                            id textModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:attrString];
+                            id activeTextModel = [[%c(TFNAttributedActiveTextModel) alloc] initWithTextModel:textModel activeRanges:@[]];
+                            
+                            // Set the text model
+                            [contextView setValue:activeTextModel forKey:@"activeTextModel"];
+                            
+                            // Add to view hierarchy
+                            [self addSubview:contextView];
+                            
+                            // Position it at the top
+                            contextView.translatesAutoresizingMaskIntoConstraints = NO;
+                            [contextView.leadingAnchor constraintEqualToAnchor:self.leadingAnchor].active = YES;
+                            [contextView.trailingAnchor constraintEqualToAnchor:self.trailingAnchor].active = YES;
+                            [contextView.topAnchor constraintEqualToAnchor:self.topAnchor].active = YES;
+                            [contextView.heightAnchor constraintEqualToConstant:20.0].active = YES;
+                        }
+                    }
                 }
+            } @catch (NSException *e) {
+                NSLog(@"[BHTwitter] Exception creating conversation context: %@", e);
             }
         }
     }
-    
-    return contextView;
-}
-
-%end
-
-// Force conversation context view to always be visible when it exists
-%hook TTATimelinesStatusConversationContextView
-
-- (void)setHidden:(_Bool)hidden {
-    // Always keep conversation context visible
-    %orig(NO);
 }
 
 %end
