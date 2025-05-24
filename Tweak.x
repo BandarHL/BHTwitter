@@ -1235,6 +1235,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %end
 
 %hook TFNTwitterAccount
+- (_Bool)isXChatEnabled {
+    return true;
+}
 - (_Bool)isEditProfileUsernameEnabled {
     return true;
 }
@@ -1292,18 +1295,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     } else {
         return %orig;
     }
-}
-
-// MARK: Status tweet
-- (BOOL)_t1_isVibeCompositionEnabled {
-    return true;
-}
-// MARK: CoTweet
-- (BOOL)isTweetCollaborationEnabled {
-    return true;
-}
-- (BOOL)_t1_canEnableCollaboration {
-    return true;
 }
 %end
 
