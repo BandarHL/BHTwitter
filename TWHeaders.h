@@ -531,9 +531,19 @@ static void BH_changeTwitterColor(NSInteger colorID) {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];
     
+    // Check if we're switching between custom colors
+    NSInteger previousCustom = [defaults objectForKey:@"bh_color_theme_selectedColor"] ? [defaults integerForKey:@"bh_color_theme_selectedColor"] : 0;
+    BOOL isCustomToCustomSwitch = (previousCustom == 7 || previousCustom == 8) && (colorID == 7 || colorID == 8) && (previousCustom != colorID);
+    
     if (colorID == 7 || colorID == 8) {
         // For custom colors, set a base Twitter color (like blue) internally
         // but keep track of our custom selection separately
+        if (isCustomToCustomSwitch) {
+            // For custom-to-custom transitions, briefly toggle Twitter's color to force refresh
+            [colorSettings setPrimaryColorOption:2]; // Yellow first
+            [defaults setObject:@(2) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+        }
+        
         [defaults setObject:@(1) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
         [defaults setObject:@(colorID) forKey:@"bh_color_theme_selectedColor"];
         [colorSettings setPrimaryColorOption:1];
@@ -547,27 +557,6 @@ static void BH_changeTwitterColor(NSInteger colorID) {
     // Single notification for all cases
     dispatch_async(dispatch_get_main_queue(), ^{
         [objc_getClass("TAEColorSettings") _tae_postNotificationForDefaultsChange];
-        
-        // Simple tintColorDidChange trigger to help UI elements refresh
-        for (UIWindow *window in [UIApplication sharedApplication].windows) {
-            if (!window.isOpaque || window.isHidden) continue;
-            
-            UIViewController *rootVC = window.rootViewController;
-            if (rootVC && rootVC.isViewLoaded) {
-                // Simple recursive tintColorDidChange call - non-aggressive but effective
-                void (^triggerTintChange)(UIView *) = ^(UIView *view) {
-                    if ([view respondsToSelector:@selector(tintColorDidChange)]) {
-                        [view tintColorDidChange];
-                    }
-                    for (UIView *subview in view.subviews) {
-                        if ([subview respondsToSelector:@selector(tintColorDidChange)]) {
-                            [subview tintColorDidChange];
-                        }
-                    }
-                };
-                triggerTintChange(rootVC.view);
-            }
-        }
     });
 }
 static UIImage *BH_imageFromView(UIView *view) {
