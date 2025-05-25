@@ -5659,6 +5659,38 @@ static GeminiTranslator *_sharedInstance;
     return %orig;
 }
 
+- (UIColor *)primaryColor {
+    // Check if we have a custom theme active
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        
+        if (customOption == 7) {
+            return [UIColor colorFromHexString:@"#FFB6C1"];
+        } else if (customOption == 8) {
+            return [UIColor colorFromHexString:@"#8B0000"];
+        }
+    }
+    
+    return %orig;
+}
+
+- (UIColor *)primaryColorOptionBlueColor {
+    // Check if we have a custom theme active
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        
+        if (customOption == 7) {
+            return [UIColor colorFromHexString:@"#FFB6C1"];
+        } else if (customOption == 8) {
+            return [UIColor colorFromHexString:@"#8B0000"];
+        }
+    }
+    
+    return %orig;
+}
+
 %end
 
 // Hook TAEDarkerColorPalette for dark mode support
@@ -5679,6 +5711,38 @@ static GeminiTranslator *_sharedInstance;
     }
     
     // For all other cases, use Twitter's original implementation
+    return %orig;
+}
+
+- (UIColor *)primaryColor {
+    // Check if we have a custom theme active
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        
+        if (customOption == 7) {
+            return [UIColor colorFromHexString:@"#FFB6C1"];
+        } else if (customOption == 8) {
+            return [UIColor colorFromHexString:@"#8B0000"];
+        }
+    }
+    
+    return %orig;
+}
+
+- (UIColor *)primaryColorOptionBlueColor {
+    // Check if we have a custom theme active
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        
+        if (customOption == 7) {
+            return [UIColor colorFromHexString:@"#FFB6C1"];
+        } else if (customOption == 8) {
+            return [UIColor colorFromHexString:@"#8B0000"];
+        }
+    }
+    
     return %orig;
 }
 
