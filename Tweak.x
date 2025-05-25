@@ -5720,12 +5720,15 @@ static GeminiTranslator *_sharedInstance;
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
         if (customOption == 7) {
+            NSLog(@"[BHTwitter] Returning Pastel Pink for textLinkColor");
             return [UIColor colorFromHexString:@"#FFB6C1"];
         } else if (customOption == 8) {
+            NSLog(@"[BHTwitter] Returning Dark Red for textLinkColor");
             return [UIColor colorFromHexString:@"#8B0000"];
         }
     }
     
+    NSLog(@"[BHTwitter] Returning original textLinkColor");
     return %orig;
 }
 
@@ -5737,12 +5740,15 @@ static GeminiTranslator *_sharedInstance;
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
         if (customOption == 7) {
+            NSLog(@"[BHTwitter] Returning Pastel Pink for primaryButtonBackgroundColor");
             return [UIColor colorFromHexString:@"#FFB6C1"];
         } else if (customOption == 8) {
+            NSLog(@"[BHTwitter] Returning Dark Red for primaryButtonBackgroundColor");
             return [UIColor colorFromHexString:@"#8B0000"];
         }
     }
     
+    NSLog(@"[BHTwitter] Returning original primaryButtonBackgroundColor");
     return %orig;
 }
 
@@ -5754,12 +5760,15 @@ static GeminiTranslator *_sharedInstance;
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
         if (customOption == 7) {
+            NSLog(@"[BHTwitter] Returning Pastel Pink for tabBarItemColor");
             return [UIColor colorFromHexString:@"#FFB6C1"];
         } else if (customOption == 8) {
+            NSLog(@"[BHTwitter] Returning Dark Red for tabBarItemColor");
             return [UIColor colorFromHexString:@"#8B0000"];
         }
     }
     
+    NSLog(@"[BHTwitter] Returning original tabBarItemColor");
     return %orig;
 }
 
