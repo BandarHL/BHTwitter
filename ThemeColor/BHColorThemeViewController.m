@@ -3,8 +3,7 @@
 //  BHTwitter
 //
 //  Created by Bandar Alruwaili on 10/12/2023.
-//  Revised: applied Chirp font to header & labels, left‐aligned header,
-//           and forced white text for theme option labels.
+//  Modified by actuallyaridan on 25/05/2025.
 //
 
 #import "BHColorThemeViewController.h"
