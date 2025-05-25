@@ -5645,14 +5645,21 @@ static GeminiTranslator *_sharedInstance;
     // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
     NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    NSObject *customColorObj = [defs objectForKey:@"bh_color_theme_selectedColor"];
     
-    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
+    // When we're in custom color mode (Twitter set to blue but we have custom selection)
+    if (twitterColorOption == 1 && customColorObj != nil) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
-        // Return our custom colors when we have an active custom theme
+        NSLog(@"BHTwitter: primaryColorForOption called with option %lld, Twitter setting: %ld, Custom: %ld", 
+              colorOption, (long)twitterColorOption, (long)customOption);
+        
+        // Return our custom colors regardless of what colorOption Twitter asks for
         if (customOption == 7) {
+            NSLog(@"BHTwitter: Returning Hot Pink");
             return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
         } else if (customOption == 8) {
+            NSLog(@"BHTwitter: Returning Crimson");
             return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
         }
     }
@@ -5752,10 +5759,11 @@ static GeminiTranslator *_sharedInstance;
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
     NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
     
+    // When we're in custom color mode (Twitter set to blue but we have custom selection)
     if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
-        // Return our custom colors when we have an active custom theme
+        // Return our custom colors regardless of what colorOption Twitter asks for
         if (customOption == 7) {
             return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
         } else if (customOption == 8) {
