@@ -1,16 +1,37 @@
 //
 //  BHAppIconViewController.m
-//  BHTwitter
+//  NeoFreeBird
 //
 //  Created by Bandar Alruwaili on 10/12/2023.
-//  Revised: moved APP_ICON_HEADER_TITLE into section-0 header so it scrolls,
-//           removed sticky headerLabel from the main view.
+//  Modified by actuallyaridan on 25/05/2025.
 //
 
 #import "BHAppIconViewController.h"
 #import "BHAppIconItem.h"
 #import "BHAppIconCell.h"
 #import "../BHTBundle/BHTBundle.h"
+#import <UIKit/UIKit.h>
+
+typedef NS_ENUM(NSInteger, TwitterFontStyle) {
+    TwitterFontStyleRegular,
+    TwitterFontStyleSemibold,
+    TwitterFontStyleBold
+};
+
+static UIFont *TwitterChirpFont(TwitterFontStyle style) {
+    switch (style) {
+        case TwitterFontStyleBold:
+            return [UIFont fontWithName:@"ChirpUIVF_wght3200000_opsz150000" size:17] ?:
+                   [UIFont systemFontOfSize:17 weight:UIFontWeightBold];
+        case TwitterFontStyleSemibold:
+            return [UIFont fontWithName:@"ChirpUIVF_wght2BC0000_opszE0000" size:14] ?:
+                   [UIFont systemFontOfSize:14 weight:UIFontWeightSemibold];
+        case TwitterFontStyleRegular:
+        default:
+            return [UIFont fontWithName:@"ChirpUIVF_wght1900000_opszE0000" size:12] ?:
+                   [UIFont systemFontOfSize:12 weight:UIFontWeightRegular];
+    }
+}
 
 @interface BHAppIconViewController () <
     UICollectionViewDelegate,
@@ -27,17 +48,14 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
 
-    // Navigation title
     self.navigationItem.title =
       [[BHTBundle sharedBundle] localizedStringForKey:@"APP_ICON_NAV_TITLE"];
 
-    // Collection view layout
     UICollectionViewFlowLayout *flow = [UICollectionViewFlowLayout new];
     flow.sectionInset            = UIEdgeInsetsMake(16,16,16,16);
     flow.minimumLineSpacing      = 10;
     flow.minimumInteritemSpacing = 10;
 
-    // Collection view
     self.appIconCollectionView = [[UICollectionView alloc]
         initWithFrame:CGRectZero
   collectionViewLayout:flow];
@@ -74,15 +92,15 @@
 - (void)setupAppIcons {
     NSDictionary *iconsDict =
       [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIcons"];
-
-    // 1) flat list
     NSMutableArray<BHAppIconItem*> *flat = [NSMutableArray new];
+
     NSDictionary *pri = iconsDict[@"CFBundlePrimaryIcon"];
     [flat addObject:
       [[BHAppIconItem alloc]
          initWithBundleIconName:pri[@"CFBundleIconName"]
                   iconFileNames:pri[@"CFBundleIconFiles"]
                    isPrimaryIcon:YES]];
+
     NSDictionary *alts = iconsDict[@"CFBundleAlternateIcons"];
     [alts enumerateKeysAndObjectsUsingBlock:
       ^(NSString *key, NSDictionary *alt, BOOL *stop) {
@@ -93,33 +111,26 @@
                        isPrimaryIcon:NO]];
     }];
 
-    // 2) buckets
     NSArray<NSString*> *allCats = @[
-      @"Icons",
-      @"Seasonal Icons",
-      @"Holidays",
-      @"Sports",
-      @"Pride",
-      @"Other"
+      @"Icons", @"Seasonal Icons", @"Holidays", @"Sports", @"Pride", @"Other"
     ];
-    NSMutableDictionary<NSString*,NSMutableArray*> *buckets = [NSMutableDictionary new];
+    NSMutableDictionary *buckets = [NSMutableDictionary new];
     for (NSString *c in allCats) buckets[c] = [NSMutableArray new];
 
     NSSet *seasonKeys = [NSSet setWithArray:@[@"Autumn",@"Summer",@"Winter",@"Spring",@"Fall"]];
     NSSet *holidayKeys = [NSSet setWithArray:@[
       @"BlackHistory",@"Holi",@"EarthHour",@"WomansDay",
-      @"LunarNewYear",@"StPatricksDay",@"Christmas",@"NewYears"
+      @"LunarNewYear",@"StPatricksDay",@"Christmas",@"NewYears", @"Halloween",
+      @"Thanksgiving",@"ValentinesDay",@"EidAlFitr",@"EidAlAdha"
     ]];
     NSSet *sportKeys = [NSSet setWithArray:@[
       @"BeijingOlympics",@"FormulaOne",@"Daytona",@"Nba",@"Ncaa"
     ]];
 
-    // 3) distribute
     for (BHAppIconItem *item in flat) {
       if (item.isPrimaryIcon ||
           [item.bundleIconName hasPrefix:@"Custom-Icon"]) {
-        [buckets[@"Icons"] addObject:item];
-        continue;
+        [buckets[@"Icons"] addObject:item]; continue;
       }
       BOOL placed = NO;
       for (NSString *k in seasonKeys) {
@@ -150,7 +161,6 @@
       }
     }
 
-    // 4) build section arrays
     NSMutableArray<NSString*> *titles   = [NSMutableArray new];
     NSMutableArray<NSArray*>   *sections = [NSMutableArray new];
     for (NSString *cat in allCats) {
@@ -165,7 +175,7 @@
     [self.appIconCollectionView reloadData];
 }
 
-#pragma mark - UICollectionViewDataSource
+#pragma mark – UICollectionViewDataSource
 
 - (NSInteger)numberOfSectionsInCollectionView:(UICollectionView*)cv {
     return self.sectionedIcons.count;
@@ -180,7 +190,6 @@
         [BHAppIconCell reuseIdentifier] forIndexPath:ip];
     BHAppIconItem *item = self.sectionedIcons[ip.section][ip.row];
 
-    // Load image (settings→catalog→bundle)
     NSString *settings;
     if (item.isPrimaryIcon) {
       NSString *nm = item.bundleIconName;
@@ -200,7 +209,6 @@
     }
     cell.imageView.image = img;
 
-    // Checkmark
     NSString *curr = [UIApplication sharedApplication].alternateIconName;
     BOOL active = curr ? [curr isEqualToString:item.bundleIconName] : item.isPrimaryIcon;
     [cv.visibleCells enumerateObjectsUsingBlock:
@@ -212,7 +220,7 @@
     return cell;
 }
 
-#pragma mark - UICollectionViewDelegate
+#pragma mark – UICollectionViewDelegate
 
 - (void)collectionView:(UICollectionView*)cv
 didSelectItemAtIndexPath:(NSIndexPath*)ip {
@@ -233,7 +241,7 @@ didSelectItemAtIndexPath:(NSIndexPath*)ip {
     }];
 }
 
-#pragma mark - Section Headers
+#pragma mark – Section Headers
 
 - (UICollectionReusableView*)collectionView:(UICollectionView*)cv
                viewForSupplementaryElementOfKind:(NSString*)kind
@@ -243,14 +251,12 @@ didSelectItemAtIndexPath:(NSIndexPath*)ip {
       [cv dequeueReusableSupplementaryViewOfKind:kind
                              withReuseIdentifier:@"HeaderView"
                                     forIndexPath:ip];
-    // clear any old subviews
     [header.subviews makeObjectsPerformSelector:@selector(removeFromSuperview)];
 
-    // Section 0: use APP_ICON_HEADER_TITLE as a detail header
     if (ip.section == 0) {
         UILabel *detail = [UILabel new];
         detail.translatesAutoresizingMaskIntoConstraints = NO;
-        detail.font          = [UIFont systemFontOfSize:15];
+        detail.font          = [TwitterChirpFont(TwitterFontStyleRegular) fontWithSize:15];
         detail.textColor     = [UIColor secondaryLabelColor];
         detail.numberOfLines = 0;
         detail.textAlignment = NSTextAlignmentLeft;
@@ -266,7 +272,6 @@ didSelectItemAtIndexPath:(NSIndexPath*)ip {
         return header;
     }
 
-    // Other sections: title + optional detail
     NSString *cat   = self.sectionTitles[ip.section];
     NSString *titleKey, *detailKey;
     if ([cat isEqualToString:@"Seasonal Icons"]) {
@@ -284,13 +289,11 @@ didSelectItemAtIndexPath:(NSIndexPath*)ip {
     } else if ([cat isEqualToString:@"Other"]) {
       titleKey  = @"APP_ICON_OTHER_HEADER_TITLE";
       detailKey = nil;
-    } else {
-      titleKey = detailKey = nil;
     }
 
     UILabel *titleLabel = [UILabel new];
     titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    titleLabel.font      = [UIFont boldSystemFontOfSize:16];
+    titleLabel.font      = [TwitterChirpFont(TwitterFontStyleBold) fontWithSize:16];
     titleLabel.textColor = [UIColor labelColor];
     titleLabel.text      = [[BHTBundle sharedBundle] localizedStringForKey:titleKey];
     [header addSubview:titleLabel];
@@ -299,7 +302,7 @@ didSelectItemAtIndexPath:(NSIndexPath*)ip {
     if (detailKey) {
       detailLabel = [UILabel new];
       detailLabel.translatesAutoresizingMaskIntoConstraints = NO;
-      detailLabel.font          = [UIFont systemFontOfSize:13];
+      detailLabel.font          = [TwitterChirpFont(TwitterFontStyleRegular) fontWithSize:13];
       detailLabel.textColor     = [UIColor secondaryLabelColor];
       detailLabel.numberOfLines = 0;
       detailLabel.textAlignment = NSTextAlignmentLeft;
@@ -329,7 +332,6 @@ didSelectItemAtIndexPath:(NSIndexPath*)ip {
 referenceSizeForHeaderInSection:(NSInteger)section
 {
     if (section == 0) {
-        // estimate height for description text (~2 lines)
         return CGSizeMake(cv.bounds.size.width, 60);
     }
     NSString *cat = self.sectionTitles[section];
@@ -340,7 +342,7 @@ referenceSizeForHeaderInSection:(NSInteger)section
     return CGSizeMake(cv.bounds.size.width, hasDetail ? 60 : 30);
 }
 
-#pragma mark - FlowLayout sizing
+#pragma mark – FlowLayout sizing
 
 - (CGSize)collectionView:(UICollectionView*)cv
                   layout:(UICollectionViewLayout*)layout
