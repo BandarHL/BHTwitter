@@ -3,7 +3,7 @@
 //  BHTwitter
 //
 //  Created by Bandar Alruwaili on 10/12/2023.
-//  Revised to load icons directly from CFBundleIconFiles
+//  Revised to prefer “-settings” asset, then asset catalog, then bundle files.
 //
 
 #import "BHAppIconViewController.h"
@@ -36,7 +36,7 @@
     self.headerLabel.textAlignment = NSTextAlignmentJustified;
     self.headerLabel.translatesAutoresizingMaskIntoConstraints = NO;
 
-    // Collection view
+    // Collection view setup
     UICollectionViewFlowLayout *flowLayout = [[UICollectionViewFlowLayout alloc] init];
     self.appIconCollectionView = [[UICollectionView alloc]
         initWithFrame:CGRectZero
@@ -125,27 +125,40 @@
                                   forIndexPath:indexPath];
     BHAppIconItem *item = self.icons[indexPath.row];
 
-    // Load the image from bundleIconFiles (last = largest)
-    NSString *baseName = item.bundleIconFiles.lastObject;
-    UIImage  *img = [UIImage imageNamed:baseName];
-    if (!img) {
-        NSString *path =
-          [[NSBundle mainBundle] pathForResource:baseName ofType:@"png"];
-        img = [UIImage imageWithContentsOfFile:path];
+    // 1) Try “-settings” asset
+    NSString *settingsName = [item.bundleIconName stringByAppendingString:@"-settings"];
+    UIImage *iconImg = [UIImage imageNamed:settingsName];
+
+    // 2) Fallback: asset catalog icon
+    if (!iconImg) {
+        iconImg = [UIImage imageNamed:item.bundleIconName];
     }
-    cell.imageView.image = img;
+
+    // 3) Fallback: loose bundle files
+    if (!iconImg) {
+        NSString *fileBase = item.bundleIconFiles.lastObject;
+        iconImg = [UIImage imageNamed:fileBase];
+        if (!iconImg) {
+            NSString *path = [[NSBundle mainBundle] pathForResource:fileBase
+                                                              ofType:@"png"];
+            iconImg = [UIImage imageWithContentsOfFile:path];
+        }
+    }
+
+    cell.imageView.image = iconImg;
 
     // Checkmark logic
     NSString *currentAlt = [UIApplication sharedApplication].alternateIconName;
     BOOL isActive = currentAlt
                   ? [currentAlt isEqualToString:item.bundleIconName]
                   : item.isPrimaryIcon;
-    // clear all
+
+    // Clear all
     [collectionView.visibleCells
       enumerateObjectsUsingBlock:^(__kindof UICollectionViewCell *obj,
                                    NSUInteger idx, BOOL *stop) {
         ((BHAppIconCell*)obj).checkIMG.image =
-          [UIImage systemImageNamed:@"circle"];
+            [UIImage systemImageNamed:@"circle"];
     }];
     if (isActive) {
         cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
@@ -161,23 +174,25 @@ didSelectItemAtIndexPath:(NSIndexPath *)indexPath
 {
     BHAppIconItem *item = self.icons[indexPath.row];
 
-    // reset all
+    // Clear
     [collectionView.visibleCells
       enumerateObjectsUsingBlock:^(__kindof UICollectionViewCell *obj,
                                    NSUInteger idx, BOOL *stop) {
         ((BHAppIconCell*)obj).checkIMG.image =
-          [UIImage systemImageNamed:@"circle"];
+            [UIImage systemImageNamed:@"circle"];
     }];
 
     BHAppIconCell *cell = (BHAppIconCell*)
-      [collectionView cellForItemAtIndexPath:indexPath];
-    NSString *nameToSet = item.isPrimaryIcon ? nil : item.bundleIconName;
+        [collectionView cellForItemAtIndexPath:indexPath];
+    NSString *toSet = item.isPrimaryIcon
+                    ? nil
+                    : item.bundleIconName;
     [[UIApplication sharedApplication]
-        setAlternateIconName:nameToSet
+        setAlternateIconName:toSet
              completionHandler:^(NSError * _Nullable error) {
         if (!error) {
             cell.checkIMG.image =
-              [UIImage systemImageNamed:@"checkmark.circle"];
+                [UIImage systemImageNamed:@"checkmark.circle"];
         }
     }];
 }
