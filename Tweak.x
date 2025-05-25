@@ -5517,6 +5517,32 @@ static char kTranslatedTextKey;
 
 %end
 
+// Hook T1ConversationFocalStatusView to prevent translate view creation
+%hook T1ConversationFocalStatusView
+
+- (id)translateActionView {
+    if ([BHTManager enableTranslate]) {
+        return nil;
+    }
+    return %orig;
+}
+
+- (id)translateLoadingView {
+    if ([BHTManager enableTranslate]) {
+        return nil;
+    }
+    return %orig;
+}
+
+- (id)visibleTranslateTweetView {
+    if ([BHTManager enableTranslate]) {
+        return nil;
+    }
+    return %orig;
+}
+
+%end
+
 @implementation GeminiTranslator
 
 static GeminiTranslator *_sharedInstance;
