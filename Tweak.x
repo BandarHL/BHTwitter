@@ -5641,7 +5641,7 @@ static GeminiTranslator *_sharedInstance;
 // Hook the color palette to return our custom colors
 %hook TAEStandardColorPalette
 
-- (UIColor *)primaryColorForOption:(long long)colorOption {
+- (UIColor *)accentColor {
     // Check if we have a custom theme active
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
@@ -5659,7 +5659,7 @@ static GeminiTranslator *_sharedInstance;
     return %orig;
 }
 
-- (UIColor *)primaryColor {
+- (UIColor *)primaryControlColor {
     // Check if we have a custom theme active
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
@@ -5677,44 +5677,7 @@ static GeminiTranslator *_sharedInstance;
     return %orig;
 }
 
-- (UIColor *)primaryColorOptionBlueColor {
-    // Check if we have a custom theme active
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        
-        // Return our custom colors for options 7 and 8
-        if (customOption == 7) {
-            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
-        } else if (customOption == 8) {
-            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
-        }
-    }
-    
-    // For all other cases, use Twitter's original implementation
-    return %orig;
-}
-
-// Hook additional color methods that Twitter might call
-- (UIColor *)brandColor {
-    // Check if we have a custom theme active
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        
-        // Return our custom colors for options 7 and 8
-        if (customOption == 7) {
-            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
-        } else if (customOption == 8) {
-            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
-        }
-    }
-    
-    // For all other cases, use Twitter's original implementation
-    return %orig;
-}
-
-- (UIColor *)tintColor {
+- (UIColor *)linkColor {
     // Check if we have a custom theme active
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
@@ -5734,10 +5697,10 @@ static GeminiTranslator *_sharedInstance;
 
 %end
 
-// Hook TAEDarkerColorPalette for dark mode support
+// Hook TAEDarkerColorPalette additional methods for dark mode
 %hook TAEDarkerColorPalette
 
-- (UIColor *)primaryColorForOption:(long long)colorOption {
+- (UIColor *)accentColor {
     // Check if we have a custom theme active
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
@@ -5755,7 +5718,7 @@ static GeminiTranslator *_sharedInstance;
     return %orig;
 }
 
-- (UIColor *)primaryColor {
+- (UIColor *)primaryControlColor {
     // Check if we have a custom theme active
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
@@ -5773,7 +5736,65 @@ static GeminiTranslator *_sharedInstance;
     return %orig;
 }
 
-- (UIColor *)primaryColorOptionBlueColor {
+- (UIColor *)linkColor {
+    // Check if we have a custom theme active
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        
+        // Return our custom colors for options 7 and 8
+        if (customOption == 7) {
+            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
+        } else if (customOption == 8) {
+            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
+        }
+    }
+    
+    // For all other cases, use Twitter's original implementation
+    return %orig;
+}
+
+%end
+
+%hook TAEDarkColorPalette
+
+- (UIColor *)accentColor {
+    // Check if we have a custom theme active
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        
+        // Return our custom colors for options 7 and 8
+        if (customOption == 7) {
+            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
+        } else if (customOption == 8) {
+            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
+        }
+    }
+    
+    // For all other cases, use Twitter's original implementation
+    return %orig;
+}
+
+- (UIColor *)primaryControlColor {
+    // Check if we have a custom theme active
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        
+        // Return our custom colors for options 7 and 8
+        if (customOption == 7) {
+            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
+        } else if (customOption == 8) {
+            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
+        }
+    }
+    
+    // For all other cases, use Twitter's original implementation
+    return %orig;
+}
+
+- (UIColor *)linkColor {
     // Check if we have a custom theme active
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {

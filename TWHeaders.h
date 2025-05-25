@@ -545,6 +545,11 @@ static void BH_changeTwitterColor(NSInteger colorID) {
         // For standard Twitter colors (1-6), use them directly
         [defaults setObject:@(colorID) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
         [colorSettings setPrimaryColorOption:colorID];
+        
+        // Also trigger the notification for consistency
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [objc_getClass("TAEColorSettings") _tae_postNotificationForDefaultsChange];
+        });
     }
 }
 static UIImage *BH_imageFromView(UIView *view) {
