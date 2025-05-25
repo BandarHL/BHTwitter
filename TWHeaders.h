@@ -535,6 +535,11 @@ static void BH_changeTwitterColor(NSInteger colorID) {
         // but keep track of our custom selection separately
         [defaults setObject:@(1) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
         [colorSettings setPrimaryColorOption:1];
+        
+        // Simple notification only
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"TAEColorSettingsDidChangeNotification" object:colorSettings];
+        });
     } else {
         // For standard Twitter colors (1-6), use them directly
         [defaults setObject:@(colorID) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
