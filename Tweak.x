@@ -5476,30 +5476,42 @@ static char kTranslatedTextKey;
 
 %end
 
-// Hook to hide Twitter's default translate button
+// Hook to remove Twitter's default translate button
 %hook T1StandardStatusTranslateView
 
-- (void)setHidden:(BOOL)hidden {
-    // Always keep Twitter's translate button hidden when our translate feature is enabled
+- (instancetype)initWithFrame:(CGRect)frame {
     if ([BHTManager enableTranslate]) {
-        %orig(YES);
-    } else {
-        %orig(hidden);
+        // Return instance with zero frame to take up no space
+        return %orig(CGRectZero);
     }
+    return %orig(frame);
 }
 
-- (instancetype)initWithFrame:(CGRect)frame {
-    id instance = %orig;
-    if (instance && [BHTManager enableTranslate]) {
-        [instance setHidden:YES];
+- (void)setFrame:(CGRect)frame {
+    if ([BHTManager enableTranslate]) {
+        // Always set frame to zero to take up no space
+        %orig(CGRectZero);
+    } else {
+        %orig(frame);
     }
-    return instance;
 }
 
 - (void)layoutSubviews {
-    %orig;
     if ([BHTManager enableTranslate]) {
-        self.hidden = YES;
+        // Set frame to zero and remove from superview
+        self.frame = CGRectZero;
+        [self removeFromSuperview];
+        return;
+    }
+    %orig;
+}
+
+- (void)didMoveToSuperview {
+    %orig;
+    if ([BHTManager enableTranslate] && self.superview) {
+        // Remove from superview immediately when added
+        self.frame = CGRectZero;
+        [self removeFromSuperview];
     }
 }
 
