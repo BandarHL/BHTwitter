@@ -533,6 +533,23 @@ static void BH_changeTwitterColor(NSInteger colorID) {
     // For colors 7 and 8, we set them directly since our palette hooks support them
     [defaults setObject:@(colorID) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
     [colorSettings setPrimaryColorOption:colorID];
+    
+    // Force Twitter to refresh all UI elements by posting color change notification
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"TAEColorSettingsDidChangeNotification" object:colorSettings];
+        
+        // Also try the generic appearance change notification
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"UIApplicationDidChangeStatusBarOrientationNotification" object:nil];
+        
+        // Force a complete UI refresh by updating the color palette
+        if ([colorSettings respondsToSelector:@selector(currentColorPalette)]) {
+            id currentPalette = [colorSettings currentColorPalette];
+            if ([currentPalette respondsToSelector:@selector(colorPalette)]) {
+                // This forces the palette to refresh
+                [currentPalette colorPalette];
+            }
+        }
+    });
 }
 static UIImage *BH_imageFromView(UIView *view) {
     TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];
