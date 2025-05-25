@@ -3,9 +3,8 @@
 //  BHTwitter
 //
 //  Created by Bandar Alruwaili on 10/12/2023.
-//  Revised: categorized icons into sections (default, custom, seasonal, holiday, sports, pride)
+//  Revised: categorized icons, dynamic "Other" section, proper taps to change the icon
 //
-
 #import "BHAppIconViewController.h"
 #import "BHAppIconItem.h"
 #import "BHAppIconCell.h"
@@ -18,8 +17,6 @@
 >
 @property (nonatomic, strong) UICollectionView *appIconCollectionView;
 @property (nonatomic, strong) UILabel *headerLabel;
-
-// Sectioned data
 @property (nonatomic, copy) NSArray<NSString *> *sectionTitles;
 @property (nonatomic, copy) NSArray<NSArray<BHAppIconItem *> *> *sectionedIcons;
 @end
@@ -29,7 +26,7 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
 
-    // Top header
+    // Header label
     self.headerLabel = [[UILabel alloc] init];
     self.headerLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"APP_ICON_HEADER_TITLE"];
     self.headerLabel.textColor = [UIColor secondaryLabelColor];
@@ -55,7 +52,6 @@
     self.appIconCollectionView.dataSource = self;
     self.appIconCollectionView.translatesAutoresizingMaskIntoConstraints = NO;
 
-    // Static header + collection view
     self.navigationController.navigationBar.prefersLargeTitles = NO;
     self.view.backgroundColor = [UIColor systemBackgroundColor];
     [self.view addSubview:self.headerLabel];
@@ -65,7 +61,6 @@
         [self.headerLabel.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor],
         [self.headerLabel.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:16],
         [self.headerLabel.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-16],
-
         [self.appIconCollectionView.topAnchor constraintEqualToAnchor:self.headerLabel.bottomAnchor],
         [self.appIconCollectionView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
         [self.appIconCollectionView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
@@ -76,39 +71,39 @@
 }
 
 - (void)setupAppIcons {
-    // 1. Read flat icon items
     NSBundle *bundle = [NSBundle mainBundle];
     NSDictionary *iconsDict = [bundle objectForInfoDictionaryKey:@"CFBundleIcons"];
 
-    // Primary
-    NSDictionary *priDict = iconsDict[@"CFBundlePrimaryIcon"];
-    NSString *priName = priDict[@"CFBundleIconName"];
-    NSArray<NSString*> *priFiles = priDict[@"CFBundleIconFiles"];
-    BHAppIconItem *primaryItem = [[BHAppIconItem alloc]
-        initWithBundleIconName:priName
-                 iconFileNames:priFiles
-                  isPrimaryIcon:YES];
-
-    // Alternates
+    // Build flat list
     NSMutableArray<BHAppIconItem*> *flat = [NSMutableArray array];
-    [flat addObject:primaryItem];
+    NSDictionary *priDict = iconsDict[@"CFBundlePrimaryIcon"];
+    BHAppIconItem *primary = [[BHAppIconItem alloc]
+        initWithBundleIconName:priDict[@"CFBundleIconName"]
+                 iconFileNames:priDict[@"CFBundleIconFiles"]
+                  isPrimaryIcon:YES];
+    [flat addObject:primary];
+
     NSDictionary *alts = iconsDict[@"CFBundleAlternateIcons"];
     [alts enumerateKeysAndObjectsUsingBlock:^(NSString *key, NSDictionary *alt, BOOL *stop) {
-        NSString *altName = alt[@"CFBundleIconName"];
-        NSArray<NSString*> *altFiles = alt[@"CFBundleIconFiles"];
         BHAppIconItem *item = [[BHAppIconItem alloc]
-            initWithBundleIconName:altName
-                     iconFileNames:altFiles
+            initWithBundleIconName:alt[@"CFBundleIconName"]
+                     iconFileNames:alt[@"CFBundleIconFiles"]
                       isPrimaryIcon:NO];
         [flat addObject:item];
     }];
 
-    // 2. Define categories and keywords
-    self.sectionTitles = @[@"Default", @"Custom Icons", @"Seasonal Icons", @"Holidays", @"Sports", @"Pride"];
-    NSMutableArray<NSMutableArray<BHAppIconItem *>*> *sections = [NSMutableArray new];
-    for (NSInteger i = 0; i < self.sectionTitles.count; i++) {
-        [sections addObject:[NSMutableArray new]];
-    }
+    // Categories
+    NSArray<NSString*> *allCategories = @[
+        @"Default",
+        @"Custom Icons",
+        @"Seasonal Icons",
+        @"Holidays",
+        @"Sports",
+        @"Pride",
+        @"Other"
+    ];
+    NSMutableDictionary<NSString*, NSMutableArray<BHAppIconItem*>*> *buckets = [NSMutableDictionary new];
+    for (NSString *cat in allCategories) buckets[cat] = [NSMutableArray new];
 
     NSSet<NSString*> *seasonKeys = [NSSet setWithArray:@[@"Autumn", @"Summer", @"Winter"]];
     NSSet<NSString*> *holidayKeys = [NSSet setWithArray:@[@"BlackHistory", @"Holi", @"EarthHour", @"WomansDay", @"LunarNewYear", @"StPatricksDay"]];
@@ -116,36 +111,33 @@
 
     for (BHAppIconItem *item in flat) {
         if (item.isPrimaryIcon) {
-            [sections[0] addObject:item];
+            [buckets[@"Default"] addObject:item];
         } else if ([item.bundleIconName hasPrefix:@"Custom-Icon"]) {
-            [sections[1] addObject:item];
+            [buckets[@"Custom Icons"] addObject:item];
         } else {
             BOOL placed = NO;
-            for (NSString *key in seasonKeys) {
-                if ([item.bundleIconName containsString:key]) {
-                    [sections[2] addObject:item]; placed = YES; break;
-                }
-            }
+            for (NSString *key in seasonKeys) if ([item.bundleIconName containsString:key]) { [buckets[@"Seasonal Icons"] addObject:item]; placed=YES; break; }
             if (placed) continue;
-            for (NSString *key in holidayKeys) {
-                if ([item.bundleIconName containsString:key]) {
-                    [sections[3] addObject:item]; placed = YES; break;
-                }
-            }
+            for (NSString *key in holidayKeys) if ([item.bundleIconName containsString:key]) { [buckets[@"Holidays"] addObject:item]; placed=YES; break; }
             if (placed) continue;
-            for (NSString *key in sportKeys) {
-                if ([item.bundleIconName containsString:key]) {
-                    [sections[4] addObject:item]; placed = YES; break;
-                }
-            }
+            for (NSString *key in sportKeys) if ([item.bundleIconName containsString:key]) { [buckets[@"Sports"] addObject:item]; placed=YES; break; }
             if (placed) continue;
             if ([item.bundleIconName containsString:@"Pride"]) {
-                [sections[5] addObject:item];
+                [buckets[@"Pride"] addObject:item];
+            } else {
+                [buckets[@"Other"] addObject:item];
             }
         }
     }
 
-    // 3. Assign and reload
+    // Build sections
+    NSMutableArray<NSString*> *titles = [NSMutableArray new];
+    NSMutableArray<NSArray<BHAppIconItem*>*> *sections = [NSMutableArray new];
+    for (NSString *cat in allCategories) {
+        NSArray *arr = buckets[cat];
+        if (arr.count) { [titles addObject:cat]; [sections addObject:arr]; }
+    }
+    self.sectionTitles = titles;
     self.sectionedIcons = sections;
     [self.appIconCollectionView reloadData];
 }
@@ -163,52 +155,65 @@
 - (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath {
     BHAppIconCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:[BHAppIconCell reuseIdentifier]
                                                                        forIndexPath:indexPath];
-    BHAppIconItem *item = self.sectionedIcons[indexPath.section][indexPath.item];
-
-    // Load image (using existing priority: -settings asset, then plain asset, then bundle files)
-    UIImage *img = nil;
-    NSString *settingsAsset = [item.bundleIconName stringByAppendingString:@"-settings"];
-    img = [UIImage imageNamed:settingsAsset];
-    if (!img) img = [UIImage imageNamed:item.bundleIconName];
-    if (!img && item.bundleIconFiles.count) {
-        // highest-res first
+    BHAppIconItem *item = self.sectionedIcons[indexPath.section][indexPath.row];
+    // Load image
+    NSString *settingsAsset;
+    if (item.isPrimaryIcon) {
+        NSString *name = item.bundleIconName;
+        if ([name hasSuffix:@"AppIcon"]) name = [name substringToIndex:name.length-@"AppIcon".length];
+        settingsAsset = [NSString stringWithFormat:@"Icon-%@-settings", name];
+    } else {
+        settingsAsset = [item.bundleIconName stringByAppendingString:@"-settings"];
+    }
+    UIImage *img = [UIImage imageNamed:settingsAsset] ?: [UIImage imageNamed:item.bundleIconName];
+    if (!img) {
         for (NSString *base in item.bundleIconFiles.reverseObjectEnumerator) {
-            img = [UIImage imageNamed:base];
-            if (img) break;
+            img = [UIImage imageNamed:base]; if (img) break;
         }
     }
     cell.imageView.image = img;
 
-    // Checkmark logic
+    // Checkmark
     NSString *current = [UIApplication sharedApplication].alternateIconName;
     BOOL isActive = current ? [current isEqualToString:item.bundleIconName] : item.isPrimaryIcon;
     [collectionView.visibleCells enumerateObjectsUsingBlock:^(__kindof UICollectionViewCell *c, NSUInteger idx, BOOL *stop) {
         ((BHAppIconCell*)c).checkIMG.image = [UIImage systemImageNamed:@"circle"];
     }];
     if (isActive) cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
-    
     return cell;
 }
 
-#pragma mark - Supplementary (Section Headers)
+#pragma mark - UICollectionViewDelegate
+
+- (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath {
+    BHAppIconItem *item = self.sectionedIcons[indexPath.section][indexPath.row];
+    // Reset checkmarks
+    [collectionView.visibleCells enumerateObjectsUsingBlock:^(__kindof UICollectionViewCell *c, NSUInteger idx, BOOL *stop) {
+        ((BHAppIconCell*)c).checkIMG.image = [UIImage systemImageNamed:@"circle"];
+    }];
+    BHAppIconCell *cell = (BHAppIconCell*)[collectionView cellForItemAtIndexPath:indexPath];
+    NSString *toSet = item.isPrimaryIcon ? nil : item.bundleIconName;
+    [[UIApplication sharedApplication] setAlternateIconName:toSet completionHandler:^(NSError * _Nullable error) {
+        if (!error) {
+            cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
+        }
+    }];
+}
+
+#pragma mark - Section Headers
 
 - (UICollectionReusableView *)collectionView:(UICollectionView *)collectionView viewForSupplementaryElementOfKind:(NSString *)kind atIndexPath:(NSIndexPath *)indexPath {
     UICollectionReusableView *header = [collectionView dequeueReusableSupplementaryViewOfKind:kind
                                                                             withReuseIdentifier:@"HeaderView"
                                                                                    forIndexPath:indexPath];
-    // Remove existing labels
     [header.subviews makeObjectsPerformSelector:@selector(removeFromSuperview)];
-
-    // Only show header for sections >= 2 (seasonal and beyond)
     if (indexPath.section < 2) return header;
-
     UILabel *lbl = [[UILabel alloc] init];
     lbl.translatesAutoresizingMaskIntoConstraints = NO;
     lbl.font = [UIFont boldSystemFontOfSize:16];
     lbl.textColor = [UIColor labelColor];
     lbl.text = self.sectionTitles[indexPath.section];
     [header addSubview:lbl];
-
     [NSLayoutConstraint activateConstraints:@[
         [lbl.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16],
         [lbl.centerYAnchor constraintEqualToAnchor:header.centerYAnchor]
@@ -216,13 +221,11 @@
     return header;
 }
 
-#pragma mark - UICollectionViewDelegateFlowLayout
-
 - (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)layout referenceSizeForHeaderInSection:(NSInteger)section {
-    return (section < 2)
-        ? CGSizeZero
-        : CGSizeMake(collectionView.bounds.size.width, 30);
+    return (section < 2) ? CGSizeZero : CGSizeMake(collectionView.bounds.size.width, 30);
 }
+
+#pragma mark - FlowLayout Sizes
 
 - (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout sizeForItemAtIndexPath:(NSIndexPath *)indexPath {
     return CGSizeMake(98, 136);
