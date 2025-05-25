@@ -3,9 +3,7 @@
 //  BHTwitter
 //
 //  Created by Bandar Alruwaili on 10/12/2023.
-//  Revised: merged Default+Custom into “Icons” (no header),
-//           special headers driven by your localization keys,
-//           including "Other" section.
+//  Revised: added localized detail subtitles under category headers.
 //
 
 #import "BHAppIconViewController.h"
@@ -33,23 +31,22 @@
     self.navigationItem.title =
       [[BHTBundle sharedBundle] localizedStringForKey:@"APP_ICON_NAV_TITLE"];
 
-    // Header label
+    // Description label
     self.headerLabel = [UILabel new];
     self.headerLabel.text =
       [[BHTBundle sharedBundle] localizedStringForKey:@"APP_ICON_HEADER_TITLE"];
     self.headerLabel.textColor    = [UIColor secondaryLabelColor];
     self.headerLabel.numberOfLines = 0;
     self.headerLabel.font         = [UIFont systemFontOfSize:15];
-    self.headerLabel.textAlignment = NSTextAlignmentJustified;
+    self.headerLabel.textAlignment = NSTextAlignmentLeft;
     self.headerLabel.translatesAutoresizingMaskIntoConstraints = NO;
 
-    // Collection view layout
+    // Collection view setup
     UICollectionViewFlowLayout *flow = [UICollectionViewFlowLayout new];
     flow.sectionInset            = UIEdgeInsetsMake(16,16,16,16);
     flow.minimumLineSpacing      = 10;
     flow.minimumInteritemSpacing = 10;
 
-    // Collection view
     self.appIconCollectionView = [[UICollectionView alloc]
         initWithFrame:CGRectZero
   collectionViewLayout:flow];
@@ -72,14 +69,14 @@
 
     [NSLayoutConstraint activateConstraints:@[
       [self.headerLabel.topAnchor
-         constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor],
+         constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor constant:16],
       [self.headerLabel.leadingAnchor
          constraintEqualToAnchor:self.view.leadingAnchor constant:16],
       [self.headerLabel.trailingAnchor
          constraintEqualToAnchor:self.view.trailingAnchor constant:-16],
 
       [self.appIconCollectionView.topAnchor
-         constraintEqualToAnchor:self.headerLabel.bottomAnchor],
+         constraintEqualToAnchor:self.headerLabel.bottomAnchor constant:8],
       [self.appIconCollectionView.leadingAnchor
          constraintEqualToAnchor:self.view.leadingAnchor],
       [self.appIconCollectionView.trailingAnchor
@@ -95,18 +92,14 @@
     NSDictionary *iconsDict =
       [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIcons"];
 
-    // 1) Flat list of all icons
+    // Build flat list
     NSMutableArray<BHAppIconItem*> *flat = [NSMutableArray new];
-
-    // Primary icon
     NSDictionary *pri = iconsDict[@"CFBundlePrimaryIcon"];
     [flat addObject:
       [[BHAppIconItem alloc]
          initWithBundleIconName:pri[@"CFBundleIconName"]
                   iconFileNames:pri[@"CFBundleIconFiles"]
                    isPrimaryIcon:YES]];
-
-    // Alternate icons
     NSDictionary *alts = iconsDict[@"CFBundleAlternateIcons"];
     [alts enumerateKeysAndObjectsUsingBlock:
       ^(NSString *key, NSDictionary *alt, BOOL *stop) {
@@ -117,29 +110,22 @@
                        isPrimaryIcon:NO]];
     }];
 
-    // 2) Prepare buckets
+    // Categories
     NSArray<NSString*> *allCats = @[
-      @"Icons",
-      @"Seasonal Icons",
-      @"Holidays",
-      @"Sports",
-      @"Pride",
-      @"Other"
+      @"Icons", @"Seasonal Icons", @"Holidays", @"Sports", @"Pride", @"Other"
     ];
-    NSMutableDictionary<NSString*,NSMutableArray*> *buckets = [NSMutableDictionary new];
+    NSMutableDictionary *buckets = [NSMutableDictionary new];
     for (NSString *c in allCats) buckets[c] = [NSMutableArray new];
 
     NSSet *seasonKeys = [NSSet setWithArray:@[@"Autumn",@"Summer",@"Winter",@"Spring",@"Fall"]];
     NSSet *holidayKeys = [NSSet setWithArray:@[
       @"BlackHistory",@"Holi",@"EarthHour",@"WomansDay",
-      @"LunarNewYear",@"StPatricksDay",@"Easter",
-      @"Halloween",@"Thanksgiving",@"Christmas",@"NewYears"
+      @"LunarNewYear",@"StPatricksDay",@"Christmas",@"NewYears"
     ]];
     NSSet *sportKeys = [NSSet setWithArray:@[
       @"BeijingOlympics",@"FormulaOne",@"Daytona",@"Nba",@"Ncaa"
     ]];
 
-    // 3) Distribute into buckets
     for (BHAppIconItem *item in flat) {
       if (item.isPrimaryIcon ||
           [item.bundleIconName hasPrefix:@"Custom-Icon"]) {
@@ -149,22 +135,19 @@
       BOOL placed = NO;
       for (NSString *k in seasonKeys) {
         if ([item.bundleIconName containsString:k]) {
-          [buckets[@"Seasonal Icons"] addObject:item];
-          placed = YES; break;
+          [buckets[@"Seasonal Icons"] addObject:item]; placed=YES; break;
         }
       }
       if (placed) continue;
       for (NSString *k in holidayKeys) {
         if ([item.bundleIconName containsString:k]) {
-          [buckets[@"Holidays"] addObject:item];
-          placed = YES; break;
+          [buckets[@"Holidays"] addObject:item]; placed=YES; break;
         }
       }
       if (placed) continue;
       for (NSString *k in sportKeys) {
         if ([item.bundleIconName containsString:k]) {
-          [buckets[@"Sports"] addObject:item];
-          placed = YES; break;
+          [buckets[@"Sports"] addObject:item]; placed=YES; break;
         }
       }
       if (placed) continue;
@@ -175,9 +158,8 @@
       }
     }
 
-    // 4) Build section arrays, dropping empty
-    NSMutableArray<NSString*> *titles   = [NSMutableArray new];
-    NSMutableArray<NSArray*>   *sections = [NSMutableArray new];
+    NSMutableArray *titles   = [NSMutableArray new];
+    NSMutableArray *sections = [NSMutableArray new];
     for (NSString *cat in allCats) {
       NSArray *arr = buckets[cat];
       if (arr.count > 0) {
@@ -192,22 +174,20 @@
 
 #pragma mark - UICollectionViewDataSource
 
-- (NSInteger)numberOfSectionsInCollectionView:(UICollectionView*)collectionView {
+- (NSInteger)numberOfSectionsInCollectionView:(UICollectionView*)cv {
     return self.sectionedIcons.count;
 }
-
-- (NSInteger)collectionView:(UICollectionView*)collectionView
+- (NSInteger)collectionView:(UICollectionView*)cv
      numberOfItemsInSection:(NSInteger)section {
     return self.sectionedIcons[section].count;
 }
+- (UICollectionViewCell*)collectionView:(UICollectionView*)cv
+              cellForItemAtIndexPath:(NSIndexPath*)ip {
+    BHAppIconCell *cell = [cv dequeueReusableCellWithReuseIdentifier:
+        [BHAppIconCell reuseIdentifier] forIndexPath:ip];
+    BHAppIconItem *item = self.sectionedIcons[ip.section][ip.row];
 
-- (UICollectionViewCell*)collectionView:(UICollectionView*)collectionView
-              cellForItemAtIndexPath:(NSIndexPath*)indexPath {
-    BHAppIconCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:
-        [BHAppIconCell reuseIdentifier] forIndexPath:indexPath];
-    BHAppIconItem *item = self.sectionedIcons[indexPath.section][indexPath.row];
-
-    // Load icon image (settings → catalog → bundle highest-res)
+    // image loading (settings → catalog → bundle)
     NSString *settings;
     if (item.isPrimaryIcon) {
       NSString *nm = item.bundleIconName;
@@ -227,30 +207,29 @@
     }
     cell.imageView.image = img;
 
-    // Checkmark
+    // checkmark
     NSString *curr = [UIApplication sharedApplication].alternateIconName;
     BOOL active = curr ? [curr isEqualToString:item.bundleIconName] : item.isPrimaryIcon;
-    [collectionView.visibleCells enumerateObjectsUsingBlock:
+    [cv.visibleCells enumerateObjectsUsingBlock:
       ^(__kindof UICollectionViewCell *c, NSUInteger idx, BOOL *stop) {
         ((BHAppIconCell*)c).checkIMG.image =
           [UIImage systemImageNamed:@"circle"];
     }];
     if (active) cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
-
     return cell;
 }
 
 #pragma mark - UICollectionViewDelegate
 
-- (void)collectionView:(UICollectionView*)collectionView
-didSelectItemAtIndexPath:(NSIndexPath*)indexPath {
-    BHAppIconItem *item = self.sectionedIcons[indexPath.section][indexPath.row];
-    [collectionView.visibleCells enumerateObjectsUsingBlock:
+- (void)collectionView:(UICollectionView*)cv
+didSelectItemAtIndexPath:(NSIndexPath*)ip {
+    BHAppIconItem *item = self.sectionedIcons[ip.section][ip.row];
+    [cv.visibleCells enumerateObjectsUsingBlock:
       ^(__kindof UICollectionViewCell *c, NSUInteger idx, BOOL *stop) {
         ((BHAppIconCell*)c).checkIMG.image =
           [UIImage systemImageNamed:@"circle"];
     }];
-    BHAppIconCell *cell = (BHAppIconCell*)[collectionView cellForItemAtIndexPath:indexPath];
+    BHAppIconCell *cell = (BHAppIconCell*)[cv cellForItemAtIndexPath:ip];
     NSString *toSet = item.isPrimaryIcon ? nil : item.bundleIconName;
     [[UIApplication sharedApplication]
        setAlternateIconName:toSet
@@ -263,69 +242,103 @@ didSelectItemAtIndexPath:(NSIndexPath*)indexPath {
 
 #pragma mark - Section Headers
 
-- (UICollectionReusableView*)collectionView:(UICollectionView*)collectionView
+- (UICollectionReusableView*)collectionView:(UICollectionView*)cv
                viewForSupplementaryElementOfKind:(NSString*)kind
-                                     atIndexPath:(NSIndexPath*)indexPath
+                                     atIndexPath:(NSIndexPath*)ip
 {
     UICollectionReusableView *header =
-      [collectionView dequeueReusableSupplementaryViewOfKind:kind
-                                         withReuseIdentifier:@"HeaderView"
-                                                forIndexPath:indexPath];
+      [cv dequeueReusableSupplementaryViewOfKind:kind
+                             withReuseIdentifier:@"HeaderView"
+                                    forIndexPath:ip];
+    // remove any old subviews
     [header.subviews makeObjectsPerformSelector:@selector(removeFromSuperview)];
 
     // First section ("Icons") has no header
-    if (indexPath.section == 0) return header;
+    if (ip.section == 0) return header;
 
-    // Determine localization key
-    NSString *cat   = self.sectionTitles[indexPath.section];
-    NSString *locKey;
+    // Determine localization keys for title & detail
+    NSString *cat   = self.sectionTitles[ip.section];
+    NSString *titleKey;
+    NSString *detailKey;
     if ([cat isEqualToString:@"Seasonal Icons"]) {
-      locKey = @"APP_ICON_SEASONS_HEADER_TITLE";
+      titleKey  = @"APP_ICON_SEASONS_HEADER_TITLE";
+      detailKey = @"APP_ICON_SEASONS_HEADER_DETAIL";
     } else if ([cat isEqualToString:@"Holidays"]) {
-      locKey = @"APP_ICON_HOLIDAYS_HEADER_TITLE";
+      titleKey  = @"APP_ICON_HOLIDAYS_HEADER_TITLE";
+      detailKey = @"APP_ICON_HOLIDAYS_HEADER_DETAIL";
     } else if ([cat isEqualToString:@"Sports"]) {
-      locKey = @"APP_ICON_SPORTS_HEADER_TITLE";
+      titleKey  = @"APP_ICON_SPORTS_HEADER_TITLE";
+      detailKey = @"APP_ICON_SPORTS_HEADER_DETAIL";
     } else if ([cat isEqualToString:@"Pride"]) {
-      locKey = @"APP_ICON_PRIDE_HEADER_TITLE";
+      titleKey  = @"APP_ICON_PRIDE_HEADER_TITLE";
+      detailKey = @"APP_ICON_PRIDE_HEADER_DETAIL";
     } else if ([cat isEqualToString:@"Other"]) {
-      locKey = @"APP_ICON_OTHER_HEADER_TITLE";
-    } else {
-      locKey = nil;
+      titleKey  = @"APP_ICON_OTHER_HEADER_TITLE";
+      detailKey = nil;
     }
 
-    UILabel *lbl = [UILabel new];
-    lbl.translatesAutoresizingMaskIntoConstraints = NO;
-    lbl.font      = [UIFont boldSystemFontOfSize:16];
-    lbl.textColor = [UIColor labelColor];
+    // Title label
+    UILabel *titleLabel = [UILabel new];
+    titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    titleLabel.font      = [UIFont boldSystemFontOfSize:16];
+    titleLabel.textColor = [UIColor labelColor];
+    titleLabel.text      = [[BHTBundle sharedBundle] localizedStringForKey:titleKey];
+    [header addSubview:titleLabel];
 
-    if (locKey) {
-      lbl.text = [[BHTBundle sharedBundle] localizedStringForKey:locKey];
-    } else {
-      lbl.text = cat;
+    // Detail label (if provided)
+    UILabel *detailLabel = nil;
+    if (detailKey) {
+      detailLabel = [UILabel new];
+      detailLabel.translatesAutoresizingMaskIntoConstraints = NO;
+      detailLabel.font          = [UIFont systemFontOfSize:13];
+      detailLabel.textColor     = [UIColor secondaryLabelColor];
+      detailLabel.numberOfLines = 0;
+      detailLabel.textAlignment = NSTextAlignmentLeft;
+      detailLabel.text          = [[BHTBundle sharedBundle] localizedStringForKey:detailKey];
+      [header addSubview:detailLabel];
     }
 
-    [header addSubview:lbl];
-    [NSLayoutConstraint activateConstraints:@[
-      [lbl.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16],
-      [lbl.centerYAnchor constraintEqualToAnchor:header.centerYAnchor]
+    // Constraints
+    NSMutableArray<NSLayoutConstraint*> *cons = [NSMutableArray new];
+    [cons addObjectsFromArray:@[
+      [titleLabel.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16],
+      [titleLabel.topAnchor constraintEqualToAnchor:header.topAnchor constant:8],
+      [titleLabel.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-16],
     ]];
+    if (detailLabel) {
+      [cons addObjectsFromArray:@[
+        [detailLabel.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16],
+        [detailLabel.topAnchor constraintEqualToAnchor:titleLabel.bottomAnchor constant:4],
+        [detailLabel.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-16],
+      ]];
+    }
+    [NSLayoutConstraint activateConstraints:cons];
+
     return header;
 }
 
-- (CGSize)collectionView:(UICollectionView*)collectionView
+- (CGSize)collectionView:(UICollectionView*)cv
                   layout:(UICollectionViewLayout*)layout
 referenceSizeForHeaderInSection:(NSInteger)section
 {
-    return (section == 0)
-      ? CGSizeZero
-      : CGSizeMake(collectionView.bounds.size.width, 30);
+    // Section 0: no header
+    if (section == 0) return CGSizeZero;
+
+    // If detail exists (sections 1–4), taller header; Other no detail → shorter
+    NSString *cat = self.sectionTitles[section];
+    BOOL hasDetail = [cat isEqualToString:@"Seasonal Icons"]
+                  || [cat isEqualToString:@"Holidays"]
+                  || [cat isEqualToString:@"Sports"]
+                  || [cat isEqualToString:@"Pride"];
+    CGFloat height = hasDetail ? 60 : 30;
+    return CGSizeMake(cv.bounds.size.width, height);
 }
 
 #pragma mark - FlowLayout sizing
 
-- (CGSize)collectionView:(UICollectionView*)collectionView
+- (CGSize)collectionView:(UICollectionView*)cv
                   layout:(UICollectionViewLayout*)layout
- sizeForItemAtIndexPath:(NSIndexPath*)indexPath
+ sizeForItemAtIndexPath:(NSIndexPath*)ip
 {
     return CGSizeMake(98,136);
 }
