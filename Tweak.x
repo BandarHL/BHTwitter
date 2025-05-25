@@ -5773,3 +5773,26 @@ static GeminiTranslator *_sharedInstance;
 }
 
 %end
+
+// Hook TAEColorLoader to clear color cache for custom colors 7-8
+%hook TAEColorLoader
+
+- (id)colorForPropertyName:(id)propertyName {
+    // Check if we have custom colors 7-8 active
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        
+        if (customOption == 7 || customOption == 8) {
+            // Clear the color cache to force fresh color lookup
+            NSMutableDictionary *colorCache = [self valueForKey:@"_colorCache"];
+            if (colorCache) {
+                [colorCache removeAllObjects];
+            }
+        }
+    }
+    
+    return %orig;
+}
+
+%end
