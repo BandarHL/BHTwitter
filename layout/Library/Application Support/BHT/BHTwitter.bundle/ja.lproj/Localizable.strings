@@ -1,5 +1,5 @@
 /*
-  Language: ja
+  Language: en
   NeoFreeBird
 */
 
@@ -14,7 +14,7 @@
 "CANCEL_BUTTON_TITLE" = "キャンセル";
 
 /* Restart Now Button */
-"RESTART_NOW_BUTTON_TITLE" = "今すぐアプリを再起動";
+"RESTART_NOW_BUTTON_TITLE" = "再起動";
 
 
 /*Main menu start*/
@@ -31,11 +31,11 @@
 "HIDE_TOPICS_OPTION_TITLE" = "トピックツイートを非表示";
 "HIDE_TOPICS_OPTION_DETAIL_TITLE" = "「おすすめトピック」に関連付けられたツイートを非表示にします。";
 
-"HIDE_TOPICS_TO_FOLLOW_OPTION" = "「トピックをフォロー」を非表示";
+"HIDE_TOPICS_TO_FOLLOW_OPTION" = "トピックを非表示";
 "HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "「おすすめトピック」を非表示にします。";
 
 "PADLOCK_OPTION_TITLE" = "Twitterをロック";
-"PADLOCK_OPTION_DETAIL_TITLE" = "Face IDまたはパスコード認証を有効化";
+"PADLOCK_OPTION_DETAIL_TITLE" = "Twitterを開くためにFace IDまたはパスコード認証を必要とします。";
 
 "ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "外部ブラウザを使用";
 "ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "Safariまたはデフォルトのブラウザでリンクを開きます。";
@@ -48,8 +48,8 @@
 /*Tweets*/
 "TWEETS_SECTION_HEADER_TITLE" = "ツイート";
 
-"ORIG_TWEET_STYLE_OPTION_TITLE" = "コンパクトなツイートスタイルを無効化";
-"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "いいね/リツイート/返信ボタンを同じ行に表示するのではなく、別の行に表示します。";
+"ORIG_TWEET_STYLE_OPTION_TITLE" = "コンパクトスタイルを無効化";
+"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "ツイートの詳細表示で、いいね/リツイート/返信ボタンを同じ行に表示するのではなく別の行に表示します。";
 
 "TWEET_TO_IMAGE_OPTION_TITLE" = "ツイートを画像として保存";
 "TWEET_TO_IMAGE_OPTION_DETAIL_TITLE" = "[共有] を長押しすると、ツイートを画像としてエクスポートできます。";
@@ -57,7 +57,7 @@
 "ENABLE_TWEET_LABELS_OPTION_TITLE" = "ツイートのソースラベルを表示 (ベータ版)";
 "ENABLE_TWEET_LABELS_OPTION_DETAIL_TITLE" = "ツイートがどのクライアントから作成されたかを表示します。 (@nyaathea)";
 
-"LIKE_CONFIRM_OPTION_TITLE" = "いいねを確認";
+"LIKE_CONFIRM_OPTION_TITLE" = "いいねの確認";
 "LIKE_CONFIRM_OPTION_DETAIL_TITLE" = "ツイートに「いいね」する前に確認ダイアログを表示します。";
 
 "TWEET_CONFIRM_OPTION_TITLE" = "ツイートの確認";
@@ -76,6 +76,13 @@
 
 "SQUARE_AVATARS_TITLE" = "正方形のアバター";
 "SQUARE_AVATARS_DETAIL_TITLE" = "アプリの再起動が必要です。";
+
+"ENABLE_TRANSLATE_OPTION_TITLE" = "翻訳ボタンを有効化";
+"ENABLE_TRANSLATE_OPTION_DETAIL_TITLE" = "ツイートに新しい翻訳ボタンを追加し、AIによる翻訳ができるようにします。";
+
+"TRANSLATE_ENDPOINT_OPTION_TITLE" = "APIエンドポイント";
+"TRANSLATE_API_KEY_OPTION_TITLE" = "APIキー";
+"TRANSLATE_MODEL_OPTION_TITLE" = "モデル";
 
 
 /*Profiles*/
@@ -129,8 +136,8 @@
 
 "FORCE_TWEET_FULL_FRAME_TITLE" = "大きな画像";
 
-"RESTORE_VIDEO_TIMESTAMP_TITLE" = "動画のタイムスタンプを復元";
-"RESTORE_VIDEO_TIMESTAMP_DETAIL_TITLE" = "一部のビューでは非表示になっている可能性のある動画のタイムスタンプを復活させます。";
+"RESTORE_VIDEO_TIMESTAMP_TITLE" = "動画のタイムスタンプ";
+"RESTORE_VIDEO_TIMESTAMP_DETAIL_TITLE" = "没入型プレーヤーでタイムスタンプを表示します。";
 
 
 /*Twitter Blue*/
@@ -174,13 +181,13 @@
 "HIDE_SPACE_OPTION_TITLE" = "スペースバーを非表示";
 
 "STOP_HIDING_TAB_BAR_TITLE" = "タブバーを常に表示";
-"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "スクロールするときにタブバーを非表示にしません (問題が発生する可能性があります)。";
+"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "スクロール時にタブバーを非表示にしない";
 
 "DM_AVATARS_TITLE" = "DMのアバター";
 "DM_AVATARS_DETAIL_TITLE" = "同じ送信者からのグループ内の最後のメッセージにのみアバターを表示します。";
 
 "CLASSIC_TAB_BAR_SETTINGS_TITLE" = "タブアイコンを置換";
-"CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "以前のTwitterのように、現在選択されているタブにアクセントカラーを適用します。アプリの再起動が必要です。";
+"CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "現在選択されているタブにアクセントカラーを適用します。アプリの再起動が必要です。";
 
 "DISABLE_RTL_OPTION_TITLE" = "左から右へのレイアウトを使用";
 "DISABLE_RTL_OPTION_DETAIL_TITLE" = "RTL言語の場合でもLTRレイアウトを強制します。";
@@ -196,7 +203,7 @@
 
 
 /*Legal*/
-"LEGAL_SECTION_HEADER_TITLE" = "法的";
+"LEGAL_SECTION_HEADER_TITLE" = "法的情報";
 
 "LEGAL_BUTTON_TITLE" = "法的情報";
 "ACKNOWLEDGEMENTS_SETTINGS_NAVIGATION_TITLE" = "法的情報";
@@ -208,11 +215,11 @@
 "FLEX_OPTION_TITLE" = "FLEXデバッグモード";
 "FLEX_OPTION_DETAIL_TITLE" = "FLEXを使用してTwitterをデバッグします。";
 
-"CLEAR_SOURCE_LABEL_CACHE_TITLE" = "ソースラベルキャッシュを削除";
-"CLEAR_SOURCE_LABEL_CACHE_DETAIL_TITLE" = "すべてのツイートのソースラベルを強制的に再取得します。";
-"CLEAR_CACHE_BUTTON_TITLE" = "キャッシュを消去";
+"CLEAR_SOURCE_LABEL_CACHE_TITLE" = "ソースラベルクッキーを削除";
+"CLEAR_SOURCE_LABEL_CACHE_DETAIL_TITLE" = "すべてのソースラベルクッキーの再取得を強制します。";
+"CLEAR_CACHE_BUTTON_TITLE" = "消去";
 "CACHE_CLEARED_TITLE" = "キャッシュが消去されました";
-"CACHE_CLEARED_MESSAGE" = "ソースラベルのキャッシュを削除しました。ラベルが正しく表示されない場合に有効な可能性があります。";
+"CACHE_CLEARED_MESSAGE" = "ソースラベルのクッキーを削除しました。ラベルが正しく表示されない場合に有効な可能性があります。";
 
 
 /*Developers*/
@@ -247,12 +254,12 @@ Custom fonts*/
 
 /*Theme*/
 "THEME_SETTINGS_NAVIGATION_TITLE" = "テーマを変更";
-"THEME_OPTION_1" = "青";
-"THEME_OPTION_2" = "黄色";
-"THEME_OPTION_3" = "赤";
-"THEME_OPTION_4" = "紫";
+"THEME_OPTION_1" = "ブルー";
+"THEME_OPTION_2" = "イエロー";
+"THEME_OPTION_3" = "レッド";
+"THEME_OPTION_4" = "パープル";
 "THEME_OPTION_5" = "オレンジ";
-"THEME_OPTION_6" = "緑";
+"THEME_OPTION_6" = "グリーン";
 
 /*Tab bar*/
 "CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE" = "タブバーを編集";
@@ -292,8 +299,6 @@ Custom fonts*/
 
 
 /* Classic Tab Bar */
-"CLASSIC_TAB_BAR_SETTINGS_TITLE" = "タブアイコンを置換";
-"CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "以前のTwitterのように、現在選択されているタブにアクセントカラーを適用します。アプリの再起動が必要です。";
 "RESTART_REQUIRED_ALERT_TITLE" = "アプリの再起動が必要です";
 "RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_ON" = "この変更を反映するには、Twitterを再起動する必要があります。";
 "RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_OFF" = "デフォルトアイコンを無効にして元に戻すには、Twitterを再起動してください。";
