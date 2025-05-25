@@ -3853,7 +3853,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 - (void)viewDidAppear:(BOOL)animated {
     %orig(animated);
     T1ImmersiveFullScreenViewController *activePlayerVC = self;
-    NSLog(@"[BHTwitter Timestamp] VC %@: viewDidAppear.", activePlayerVC);
 
     if ([BHTManager restoreVideoTimestamp]) {
         if (!playerToTimestampMap) { 
@@ -3872,70 +3871,43 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.75 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
                 if (self && self.view.window) {
                     objc_setAssociatedObject(self, "BHT_FirstLoadDone", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-                    NSLog(@"[BHTwitter Timestamp] VC %@: First load completed", activePlayerVC);
                 }
             });
         }
-        
-        // Let the label visibility be managed by the player controls
-        // Just ensure we have the label identified and styled
     }
 }
 
 - (void)playerViewController:(id)playerViewController playerStateDidChange:(NSInteger)state {
     %orig(playerViewController, state);
     T1ImmersiveFullScreenViewController *activePlayerVC = self;
-    NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange: %ld", activePlayerVC, (long)state);
 
     if (![BHTManager restoreVideoTimestamp] || !playerToTimestampMap) {
-        NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Bailing early (feature off or map nil)", activePlayerVC);
         return;
     }
 
     // Always try to find/prepare the label for the current video content.
     // This is crucial if the VC is reused and new video content has loaded.
     BOOL labelFoundAndPrepared = [self BHT_findAndPrepareTimestampLabelForVC:activePlayerVC];
-    NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - labelFoundAndPrepared: %d", activePlayerVC, labelFoundAndPrepared);
 
     if (labelFoundAndPrepared) {
         UILabel *timestampLabel = [playerToTimestampMap objectForKey:activePlayerVC];
         if (timestampLabel && timestampLabel.superview && [timestampLabel isDescendantOfView:activePlayerVC.view]) {
             // Determine current intended visibility of controls.
-            // This relies on the main showHideNavigationButtons method being the source of truth for user-initiated toggles.
-            // Here, we primarily react to player state changes that might imply controls should appear/disappear.
             BOOL controlsShouldBeVisible = NO;
             UIView *playerControls = nil;
             if ([activePlayerVC respondsToSelector:@selector(playerControlsView)]) { 
                 playerControls = [activePlayerVC valueForKey:@"playerControlsView"];
                 if (playerControls && [playerControls respondsToSelector:@selector(alpha)]) {
                     controlsShouldBeVisible = playerControls.alpha > 0.0f;
-                    NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - current playerControls.alpha: %f", activePlayerVC, playerControls.alpha);
                 }
             }
-
-            // If player state implies controls *should* be visible (e.g., paused, ready and controls were already up),
-            // ensure our timestamp is visible. The primary toggling is done by showHideNavigationButtons.
-            // This is more about reacting to player-induced control visibility changes.
-            // For example, if the video pauses and Twitter automatically shows controls.
-            
-            // More direct: Mirror the state set by showHideNavigationButtons, which should be the authority.
-            // The key is that showHideNavigationButtons should have ALREADY run if controls became visible due to player state.
-            // So, if our label is hidden but controls are visible, something is out of sync OR this state change *caused* controls to show.
 
             // Only fix visibility if there's a clear mismatch
             if (controlsShouldBeVisible && timestampLabel.hidden) {
                 // Controls visible but label hidden - fix it
-                NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Fixing label visibility to match controls", activePlayerVC);
                 timestampLabel.hidden = NO;
-            } else if (!controlsShouldBeVisible && !timestampLabel.hidden && playerControls && playerControls.alpha == 0.0) {
-                // Controls definitely hidden but label still showing - let player hide it
-                NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Label visibility mismatch noted", activePlayerVC);
             }
-        } else {
-            NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Label was prepared but map/superview check failed.", activePlayerVC);
         }
-    } else {
-        NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Label not found/prepared.", activePlayerVC);
     }
 }
 
@@ -4099,9 +4071,8 @@ static void PlayRefreshSound(int soundType) {
             NSURL *soundURL = [[BHTBundle sharedBundle] pathForFile:soundFile];
             if (soundURL) {
                 OSStatus status = AudioServicesCreateSystemSoundID((__bridge CFURLRef)soundURL, &sounds[soundType]);
-                if (status == 0) {
+                if (status == kAudioServicesNoError) {
                     soundsInitialized[soundType] = YES;
-                    NSLog(@"[BHTwitter] Successfully initialized sound %@ (type %d)", soundFile, soundType);
                 } else {
                     NSLog(@"[BHTwitter] Failed to initialize sound %@ (type %d), status: %d", soundFile, soundType, (int)status);
                 }
@@ -4132,32 +4103,27 @@ static char kManualRefreshInProgressKey;
 
 // Hook the simple loading property setter
 - (void)setLoading:(_Bool)loading {
-    NSLog(@"[BHTwitter] setLoading: called with loading=%d", loading);
+    static BOOL previousLoading = NO;
+    static BOOL manualRefresh = NO;
     
-    // Get previous loading state
-    NSNumber *previousLoadingState = objc_getAssociatedObject(self, &kPreviousLoadingStateKey);
-    BOOL wasLoading = previousLoadingState ? [previousLoadingState boolValue] : NO;
-    
-    %orig;
-    
-    // Store the new state AFTER calling original
-    objc_setAssociatedObject(self, &kPreviousLoadingStateKey, @(loading), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    
-    // If loading went from YES to NO, refresh is complete - play pop sound
-    if (wasLoading && !loading) {
-        NSLog(@"[BHTwitter] Loading changed from YES to NO - playing pop sound");
+    if (!loading && previousLoading && manualRefresh) {
         PlayRefreshSound(1);
+        manualRefresh = NO;
     }
     
-    if (!wasLoading && loading) {
-        NSLog(@"[BHTwitter] Loading changed from NO to YES - refresh started");
+    if (!loading && previousLoading) {
+        manualRefresh = NO;
+    } else if (loading && !previousLoading) {
+        // This is likely a manual refresh
+        manualRefresh = YES;
     }
+    
+    previousLoading = loading;
+    %orig;
 }
 
 // Hook the completion-based loading setter
 - (void)setLoading:(_Bool)loading completion:(void(^)(void))completion {
-    NSLog(@"[BHTwitter] setLoading:completion: called with loading=%d", loading);
-    
     // Get previous loading state
     NSNumber *previousLoadingState = objc_getAssociatedObject(self, &kPreviousLoadingStateKey);
     BOOL wasLoading = previousLoadingState ? [previousLoadingState boolValue] : NO;
@@ -4173,7 +4139,6 @@ static char kManualRefreshInProgressKey;
     
     // If loading went from YES to NO AND we're in a manual refresh, play pop sound
     if (wasLoading && !loading && isManualRefresh) {
-        NSLog(@"[BHTwitter] Manual refresh completed (completion) - playing pop sound");
         PlayRefreshSound(1);
         // Clear the manual refresh flag
         objc_setAssociatedObject(self, &kManualRefreshInProgressKey, @NO, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
@@ -4186,18 +4151,15 @@ static char kManualRefreshInProgressKey;
 
 // Detect manual pull-to-refresh and play pull sound
 - (void)_setStatus:(unsigned long long)status fromScrolling:(_Bool)fromScrolling {
-    NSLog(@"[BHTwitter] _setStatus:%llu fromScrolling:%d", status, fromScrolling);
     %orig;
     
     if (status == 1 && fromScrolling) {
-        NSLog(@"[BHTwitter] Manual pull detected - playing pull sound");
         PlayRefreshSound(0);
         
         // Mark that we're in a manual refresh
         objc_setAssociatedObject(self, &kManualRefreshInProgressKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         // Mark that loading started (even though setLoading: might not be called with loading=1)
         objc_setAssociatedObject(self, &kPreviousLoadingStateKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        NSLog(@"[BHTwitter] Set manual refresh flag and previous loading state to YES");
     }
 }
 
@@ -4858,160 +4820,99 @@ static char kTranslateButtonKey;
 
 %new
 - (void)BHT_addTranslateButtonIfNeeded {
-    // Check if translate feature is enabled
     if (![BHTManager enableTranslate]) {
-        // Remove existing button if feature is disabled
-        UIButton *existingButton = objc_getAssociatedObject(self, &kTranslateButtonKey);
-        if (existingButton) {
-            [existingButton removeFromSuperview];
-            objc_setAssociatedObject(self, &kTranslateButtonKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        }
         return;
     }
     
-    NSLog(@"[BHTwitter Translate] Attempting to add button in BHT_addTranslateButtonIfNeeded for view: %@", self);
     UIViewController *parentVCFromResponder = nil;
     UIResponder *responder = self;
-    while (responder && ![responder isKindOfClass:[UIViewController class]]) {
-        responder = [responder nextResponder];
+    while ((responder = [responder nextResponder])) {
+        if ([responder isKindOfClass:[UIViewController class]]) {
+            parentVCFromResponder = (UIViewController *)responder;
+            break;
+        }
     }
-    if (responder && [responder isKindOfClass:[UIViewController class]]) {
-        parentVCFromResponder = (UIViewController *)responder;
-    }
-
+    
     UIViewController *actualContentVC = nil;
     if (parentVCFromResponder) {
-        NSLog(@"[BHTwitter Translate] Found parentVCFromResponder: %@", NSStringFromClass([parentVCFromResponder class]));
         if ([parentVCFromResponder isKindOfClass:[UINavigationController class]]) {
             actualContentVC = [(UINavigationController *)parentVCFromResponder topViewController];
-            NSLog(@"[BHTwitter Translate] parentVCFromResponder is a UINavigationController. ActualContentVC is topViewController: %@", NSStringFromClass([actualContentVC class]));
         } else {
             actualContentVC = parentVCFromResponder;
-            NSLog(@"[BHTwitter Translate] parentVCFromResponder is not a UINavigationController. ActualContentVC is parentVCFromResponder: %@", NSStringFromClass([actualContentVC class]));
-        }
-    } else {
-        NSLog(@"[BHTwitter Translate] Could not find parentVCFromResponder for _UINavigationBarContentView: %@", self);
-        // Attempt to get VC from window if direct responder fails (existing fallback)
-        UIWindow *keyWindow = self.window;
-        if (keyWindow && keyWindow.rootViewController) {
-            UIViewController *rootVC = keyWindow.rootViewController;
-            UIViewController *topVC = rootVC;
-            while (topVC.presentedViewController) {
-                topVC = topVC.presentedViewController;
-            }
-            if ([topVC isKindOfClass:[UINavigationController class]]) {
-                 actualContentVC = [(UINavigationController*)topVC topViewController];
-                 NSLog(@"[BHTwitter Translate] Fallback: Found actualContentVC from window->topVC (UINav): %@", NSStringFromClass([actualContentVC class]));
-            } else {
-                 actualContentVC = topVC;
-                 NSLog(@"[BHTwitter Translate] Fallback: Found actualContentVC from window->topVC: %@", NSStringFromClass([actualContentVC class]));
-            }
-        } else {
-            NSLog(@"[BHTwitter Translate] Fallback: Could not get actualContentVC from window either.");
-            return; // Can't proceed without a VC
         }
     }
     
-    // Check if this is a conversation/tweet view by examining both title and controller class
-    BOOL isTweetView = NO;
-    UILabel *titleLabel = nil;
+    if (!actualContentVC) {
+        // Fallback: get from window
+        UIWindow *window = [UIApplication sharedApplication].keyWindow;
+        if (!window) {
+            window = [UIApplication sharedApplication].windows.firstObject;
+        }
+        
+        UIViewController *topVC = window.rootViewController;
+        while (topVC.presentedViewController) {
+            topVC = topVC.presentedViewController;
+        }
+        
+        if ([topVC isKindOfClass:[UINavigationController class]]) {
+            actualContentVC = [(UINavigationController *)topVC topViewController];
+        } else {
+            actualContentVC = topVC;
+        }
+    }
     
-    NSLog(@"[BHTwitter Translate] Subviews of %@: %@", self, self.subviews);
+    UILabel *titleLabel = nil;
     for (UIView *subview in self.subviews) {
-        if ([subview isKindOfClass:%c(UILabel)]) {
+        if ([subview isKindOfClass:[UILabel class]]) {
             UILabel *label = (UILabel *)subview;
-            NSLog(@"[BHTwitter Translate] Found UILabel with text: ' %@ '", label.text);
-            if ([label.text isEqualToString:@"Post"] || [label.text isEqualToString:@"Tweet"]) {
+            if ([label.text containsString:@"Post"] || [label.text containsString:@"Tweet"]) {
                 titleLabel = label;
-                NSLog(@"[BHTwitter Translate] Matched titleLabel: %@", titleLabel.text);
                 break;
             }
         }
     }
     
-    if (!titleLabel) {
-        NSLog(@"[BHTwitter Translate] Did not find titleLabel with 'Post' or 'Tweet'.");
-    }
-    
-    if (titleLabel && actualContentVC) {
+    BOOL isTweetView = NO;
+    if (actualContentVC) {
         NSString *vcClassName = NSStringFromClass([actualContentVC class]);
-        NSLog(@"[BHTwitter Translate] Checking actualContentVC className: %@", vcClassName);
-        if ([vcClassName containsString:@"Conversation"] || 
-            [vcClassName containsString:@"Tweet"] || 
+        if ([vcClassName containsString:@"Tweet"] || 
             [vcClassName containsString:@"Status"] || 
-            [vcClassName containsString:@"Detail"]) {
+            [vcClassName containsString:@"URT"]) {
             isTweetView = YES;
-            NSLog(@"[BHTwitter Translate] actualContentVC className matched. isTweetView = YES.");
-        } else {
-            NSLog(@"[BHTwitter Translate] actualContentVC className ('%@') did NOT match expected keywords.", vcClassName);
         }
-    } else {
-        if (!titleLabel) NSLog(@"[BHTwitter Translate] Condition failed for isTweetView: titleLabel is nil.");
-        if (!actualContentVC) NSLog(@"[BHTwitter Translate] Condition failed for isTweetView: actualContentVC is nil.");
     }
     
-    // Only proceed if this is a valid tweet view
-    if (isTweetView) {
-        NSLog(@"[BHTwitter Translate] isTweetView is YES. Proceeding to check/add button.");
+    if (isTweetView && titleLabel && actualContentVC) {
         // Check if button already exists
-        UIButton *existingButton = objc_getAssociatedObject(self, &kTranslateButtonKey);
-        if (existingButton) {
-            NSLog(@"[BHTwitter Translate] Translate button already exists: %@", existingButton);
-            // Ensure it's visible and properly placed if it exists
-            existingButton.hidden = NO;
-            [self bringSubviewToFront:existingButton]; 
-            return;
-        }
-        
-        // If button doesn't exist, create it
-        NSLog(@"[BHTwitter Translate] Creating new translate button.");
-        UIButton *translateButton = [UIButton buttonWithType:UIButtonTypeSystem];
-        if (@available(iOS 13.0, *)) {
-            // Use a proper translation SF symbol
-            [translateButton setImage:[UIImage systemImageNamed:@"text.bubble.fill"] forState:UIControlStateNormal];
-            
-            // Set proper tint color based on appearance
-            if (@available(iOS 12.0, *)) {
-                if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
-                    translateButton.tintColor = [UIColor whiteColor];
-                } else {
-                    translateButton.tintColor = [UIColor blackColor];
+        UIButton *existingButton = nil;
+        for (UIView *subview in self.subviews) {
+            if ([subview isKindOfClass:[UIButton class]]) {
+                UIButton *button = (UIButton *)subview;
+                if ([button.titleLabel.text isEqualToString:@"Translate"] || 
+                    button.tag == 99999) {
+                    existingButton = button;
+                    break;
                 }
-                
-                // Add trait collection observer for dark/light mode changes
-                [translateButton addObserver:self forKeyPath:@"traitCollection" options:NSKeyValueObservingOptionNew context:NULL];
             }
-        } else {
-            [translateButton setTitle:@"Translate" forState:UIControlStateNormal]; // Fallback for older iOS
         }
-        [translateButton addTarget:self action:@selector(BHT_translateCurrentTweetAction:) forControlEvents:UIControlEventTouchUpInside];
-        translateButton.tag = 12345; // Unique tag
         
-        // Add button with higher z-index
-        [self insertSubview:translateButton aboveSubview:titleLabel];
-        translateButton.translatesAutoresizingMaskIntoConstraints = NO;
-        
-        // Store button reference in associated object
-        objc_setAssociatedObject(self, &kTranslateButtonKey, translateButton, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        
-        // Place the button on the right with a moderate offset to avoid collisions
-        NSArray *constraints = @[
-            [translateButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
-            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-55], // Move slightly more to the right
-            [translateButton.widthAnchor constraintEqualToConstant:44],
-            [translateButton.heightAnchor constraintEqualToConstant:44]
-        ];
-        
-        // Store constraints reference to prevent deallocation
-        objc_setAssociatedObject(translateButton, "translateButtonConstraints", constraints, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        
-        [NSLayoutConstraint activateConstraints:constraints];
-    } else {
-        // If this is not a tweet view but we have a button, remove it
-        UIButton *existingButton = objc_getAssociatedObject(self, &kTranslateButtonKey);
-        if (existingButton) {
-            [existingButton removeFromSuperview];
-            objc_setAssociatedObject(self, &kTranslateButtonKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        if (!existingButton) {
+            // Create translate button
+            UIButton *translateButton = [UIButton buttonWithType:UIButtonTypeSystem];
+            [translateButton setTitle:@"Translate" forState:UIControlStateNormal];
+            [translateButton setTitleColor:[UIColor systemBlueColor] forState:UIControlStateNormal];
+            translateButton.titleLabel.font = [UIFont systemFontOfSize:16];
+            translateButton.tag = 99999; // Unique identifier
+            
+            // Position button
+            CGRect buttonFrame = CGRectMake(self.bounds.size.width - 80, 0, 75, self.bounds.size.height);
+            translateButton.frame = buttonFrame;
+            translateButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleHeight;
+            
+            // Add action
+            [translateButton addTarget:self action:@selector(BHT_translateButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
+            
+            [self addSubview:translateButton];
         }
     }
 }
@@ -5113,8 +5014,6 @@ static char kTranslateButtonKey;
     NSString *textToTranslate = [self BHT_extractTextFromStatusObjectInController:targetController];
 
     if (!textToTranslate || textToTranslate.length == 0) {
-        NSLog(@"[BHTwitter Translate] No tweet text found for VC: %@. Displaying fallback message.", NSStringFromClass([targetController class]));
-        
         UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
                                                                        message:@"Could not find tweet text to translate." 
                                                                 preferredStyle:UIAlertControllerStyleAlert];
