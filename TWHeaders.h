@@ -531,31 +531,19 @@ static void BH_changeTwitterColor(NSInteger colorID) {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];
     
-    // Check if we're switching between custom colors
-    NSInteger previousCustom = [defaults objectForKey:@"bh_color_theme_selectedColor"] ? [defaults integerForKey:@"bh_color_theme_selectedColor"] : 0;
-    BOOL isCustomToCustomSwitch = (previousCustom == 7 || previousCustom == 8) && (colorID == 7 || colorID == 8) && (previousCustom != colorID);
-    
     if (colorID == 7 || colorID == 8) {
-        // For custom colors, set a base Twitter color (like blue) internally
-        // but keep track of our custom selection separately
-        [defaults setObject:@(1) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+        // For custom colors, set a base Twitter color internally but track our custom selection
         [defaults setObject:@(colorID) forKey:@"bh_color_theme_selectedColor"];
+        [defaults setObject:@(1) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
         [colorSettings setPrimaryColorOption:1];
-        
-        if (isCustomToCustomSwitch) {
-            // Force Twitter to recreate its color palette object
-            if ([colorSettings respondsToSelector:@selector(setCurrentColorPalette:)]) {
-                [colorSettings setCurrentColorPalette:nil];
-            }
-        }
     } else {
-        // For standard Twitter colors (1-6), clear custom selection and use Twitter's system
+        // For standard Twitter colors, completely clear custom selection
         [defaults removeObjectForKey:@"bh_color_theme_selectedColor"];
         [defaults setObject:@(colorID) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
         [colorSettings setPrimaryColorOption:colorID];
     }
     
-    // Single notification for all cases
+    // Use Twitter's internal notification system
     dispatch_async(dispatch_get_main_queue(), ^{
         [objc_getClass("TAEColorSettings") _tae_postNotificationForDefaultsChange];
     });

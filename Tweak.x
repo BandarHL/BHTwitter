@@ -5642,9 +5642,11 @@ static GeminiTranslator *_sharedInstance;
 %hook TAEStandardColorPalette
 
 - (UIColor *)primaryColorForOption:(long long)colorOption {
-    // Check if we have a custom theme active
+    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    
+    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
         // Return our custom colors when we have an active custom theme
@@ -5660,9 +5662,11 @@ static GeminiTranslator *_sharedInstance;
 }
 
 - (UIColor *)primaryColor {
-    // Check if we have a custom theme active
+    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    
+    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
         // Return our custom colors when we have an active custom theme
@@ -5678,9 +5682,11 @@ static GeminiTranslator *_sharedInstance;
 }
 
 - (UIColor *)primaryColorOptionBlueColor {
-    // Check if we have a custom theme active
+    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    
+    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
         // Return our custom colors when we have an active custom theme
@@ -5697,9 +5703,11 @@ static GeminiTranslator *_sharedInstance;
 
 // Hook additional color methods that Twitter might call
 - (UIColor *)brandColor {
-    // Check if we have a custom theme active
+    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    
+    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
         // Return our custom colors when we have an active custom theme
@@ -5715,9 +5723,11 @@ static GeminiTranslator *_sharedInstance;
 }
 
 - (UIColor *)tintColor {
-    // Check if we have a custom theme active
+    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    
+    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
         // Return our custom colors when we have an active custom theme
@@ -5738,9 +5748,11 @@ static GeminiTranslator *_sharedInstance;
 %hook TAEDarkerColorPalette
 
 - (UIColor *)primaryColorForOption:(long long)colorOption {
-    // Check if we have a custom theme active
+    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    
+    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
         // Return our custom colors when we have an active custom theme
@@ -5756,9 +5768,11 @@ static GeminiTranslator *_sharedInstance;
 }
 
 - (UIColor *)primaryColor {
-    // Check if we have a custom theme active
+    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    
+    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
         // Return our custom colors when we have an active custom theme
@@ -5774,9 +5788,11 @@ static GeminiTranslator *_sharedInstance;
 }
 
 - (UIColor *)primaryColorOptionBlueColor {
-    // Check if we have a custom theme active
+    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    
+    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
         // Return our custom colors when we have an active custom theme
@@ -5792,9 +5808,11 @@ static GeminiTranslator *_sharedInstance;
 }
 
 - (UIColor *)accentColor {
-    // Check if we have a custom theme active
+    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    
+    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
         // Return our custom colors when we have an active custom theme
@@ -5810,9 +5828,11 @@ static GeminiTranslator *_sharedInstance;
 }
 
 - (UIColor *)linkColor {
-    // Check if we have a custom theme active
+    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    
+    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
         // Return our custom colors when we have an active custom theme
@@ -5832,9 +5852,11 @@ static GeminiTranslator *_sharedInstance;
 %hook TAEDarkColorPalette
 
 - (UIColor *)primaryColorForOption:(long long)colorOption {
-    // Check if we have a custom theme active
+    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    
+    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
         // Return our custom colors when we have an active custom theme
@@ -5850,9 +5872,11 @@ static GeminiTranslator *_sharedInstance;
 }
 
 - (UIColor *)primaryColor {
-    // Check if we have a custom theme active
+    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    
+    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
         // Return our custom colors when we have an active custom theme
@@ -5868,9 +5892,11 @@ static GeminiTranslator *_sharedInstance;
 }
 
 - (UIColor *)primaryColorOptionBlueColor {
-    // Check if we have a custom theme active
+    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    
+    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
         // Return our custom colors when we have an active custom theme
@@ -5886,9 +5912,11 @@ static GeminiTranslator *_sharedInstance;
 }
 
 - (UIColor *)accentColor {
-    // Check if we have a custom theme active
+    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    
+    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
         // Return our custom colors when we have an active custom theme
@@ -5904,9 +5932,11 @@ static GeminiTranslator *_sharedInstance;
 }
 
 - (UIColor *)linkColor {
-    // Check if we have a custom theme active
+    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    
+    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
         // Return our custom colors when we have an active custom theme
