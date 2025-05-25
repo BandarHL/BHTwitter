@@ -531,25 +531,66 @@ static void BH_changeTwitterColor(NSInteger colorID) {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];
     
-    if (colorID == 7 || colorID == 8) {
-        // For custom colors, set a base Twitter color (like blue) internally
-        // but keep track of our custom selection separately
+    // Get the previous color selection to determine transition type
+    NSInteger previousSelection = -1;
+    if ([defaults objectForKey:@"bh_color_theme_selectedColor"]) {
+        previousSelection = [defaults integerForKey:@"bh_color_theme_selectedColor"];
+    } else if ([defaults objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
+        previousSelection = [defaults integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    }
+    
+    BOOL previousWasCustom = (previousSelection == 7 || previousSelection == 8);
+    BOOL newIsCustom = (colorID == 7 || colorID == 8);
+    
+    if (newIsCustom) {
+        // Switching TO a custom color (7 or 8)
+        
+        // Set Twitter's internal color to blue (1) as base
         [defaults setObject:@(1) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
         [colorSettings setPrimaryColorOption:1];
         
-        // Use Twitter's internal notification method to force ALL elements to refresh
+        // Store our custom selection
+        [defaults setObject:@(colorID) forKey:@"bh_color_theme_selectedColor"];
+        
+        // Force comprehensive refresh for custom colors
         dispatch_async(dispatch_get_main_queue(), ^{
+            // First, trigger Twitter's notification to clear any cached values
             [objc_getClass("TAEColorSettings") _tae_postNotificationForDefaultsChange];
+            
+            // Then force a secondary refresh to ensure our custom colors take effect
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                [objc_getClass("TAEColorSettings") _tae_postNotificationForDefaultsChange];
+            });
         });
+        
     } else {
-        // For standard Twitter colors (1-6), use them directly
+        // Switching TO a Twitter color (1-6)
+        
+        if (previousWasCustom) {
+            // Clear our custom selection since we're going back to Twitter colors
+            [defaults removeObjectForKey:@"bh_color_theme_selectedColor"];
+        }
+        
+        // Set Twitter's color directly
         [defaults setObject:@(colorID) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
         [colorSettings setPrimaryColorOption:colorID];
         
-        // Also trigger the notification for consistency
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [objc_getClass("TAEColorSettings") _tae_postNotificationForDefaultsChange];
-        });
+        if (previousWasCustom) {
+            // Force refresh when transitioning FROM custom colors to ensure clean state
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [objc_getClass("TAEColorSettings") _tae_postNotificationForDefaultsChange];
+                
+                // Extra refresh to make sure custom color artifacts are cleared
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                    [objc_getClass("TAEColorSettings") _tae_postNotificationForDefaultsChange];
+                });
+            });
+        } else {
+            // Standard Twitter-to-Twitter transition, single notification is sufficient
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [objc_getClass("TAEColorSettings") _tae_postNotificationForDefaultsChange];
+            });
+        }
     }
 }
 static UIImage *BH_imageFromView(UIView *view) {

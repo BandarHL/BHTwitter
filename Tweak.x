@@ -234,40 +234,22 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     %orig;
     
     // Signal UI to refresh after Twitter applies its palette
-    if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"]) {
-        // Force a more comprehensive refresh for custom color changes
+    if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"] && !BHT_isInThemeChangeOperation) {
+        // This call happens after Twitter has applied its color changes,
+        // so we need to force refresh our special UI elements
         dispatch_async(dispatch_get_main_queue(), ^{
-            // First, trigger Twitter's own internal color change notification
-            [objc_getClass("TAEColorSettings") _tae_postNotificationForDefaultsChange];
-            
-            // Update our custom themed elements
             BHT_UpdateAllTabBarIcons();
             
-            // Force refresh all windows and their view hierarchies
+            // Refresh our navigation bar bird logos
             for (UIWindow *window in UIApplication.sharedApplication.windows) {
                 if (window.isHidden || !window.isOpaque) continue;
                 
                 if (window.rootViewController && window.rootViewController.isViewLoaded) {
-                    // Refresh navigation bar bird logos
                     BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
                         if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
                             [(TFNNavigationBar *)currentView updateLogoTheme];
                         }
-                        
-                        // Force tintColorDidChange on all views to refresh cached colors
-                        if ([currentView respondsToSelector:@selector(tintColorDidChange)]) {
-                            [currentView tintColorDidChange];
-                        }
-                        
-                        // Force redraw of views that might be caching colors
-                        if ([currentView respondsToSelector:@selector(setNeedsDisplay)]) {
-                            [currentView setNeedsDisplay];
-                        }
                     });
-                    
-                    // Force layout update on the root view controller
-                    [window.rootViewController.view setNeedsLayout];
-                    [window.rootViewController.view layoutIfNeeded];
                 }
             }
         });
@@ -5665,7 +5647,7 @@ static GeminiTranslator *_sharedInstance;
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
-        // Return our custom colors for options 7 and 8
+        // Return our custom colors when we have an active custom theme
         if (customOption == 7) {
             return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
         } else if (customOption == 8) {
@@ -5683,7 +5665,7 @@ static GeminiTranslator *_sharedInstance;
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
-        // Return our custom colors for options 7 and 8
+        // Return our custom colors when we have an active custom theme
         if (customOption == 7) {
             return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
         } else if (customOption == 8) {
@@ -5701,7 +5683,7 @@ static GeminiTranslator *_sharedInstance;
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
-        // Return our custom colors for options 7 and 8
+        // Return our custom colors when we have an active custom theme
         if (customOption == 7) {
             return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
         } else if (customOption == 8) {
@@ -5720,7 +5702,7 @@ static GeminiTranslator *_sharedInstance;
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
-        // Return our custom colors for options 7 and 8
+        // Return our custom colors when we have an active custom theme
         if (customOption == 7) {
             return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
         } else if (customOption == 8) {
@@ -5738,7 +5720,7 @@ static GeminiTranslator *_sharedInstance;
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
-        // Return our custom colors for options 7 and 8
+        // Return our custom colors when we have an active custom theme
         if (customOption == 7) {
             return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
         } else if (customOption == 8) {
@@ -5761,7 +5743,7 @@ static GeminiTranslator *_sharedInstance;
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
-        // Return our custom colors for options 7 and 8
+        // Return our custom colors when we have an active custom theme
         if (customOption == 7) {
             return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
         } else if (customOption == 8) {
@@ -5779,7 +5761,7 @@ static GeminiTranslator *_sharedInstance;
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
-        // Return our custom colors for options 7 and 8
+        // Return our custom colors when we have an active custom theme
         if (customOption == 7) {
             return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
         } else if (customOption == 8) {
@@ -5797,7 +5779,7 @@ static GeminiTranslator *_sharedInstance;
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
-        // Return our custom colors for options 7 and 8
+        // Return our custom colors when we have an active custom theme
         if (customOption == 7) {
             return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
         } else if (customOption == 8) {
@@ -5819,7 +5801,7 @@ static GeminiTranslator *_sharedInstance;
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
-        // Return our custom colors for options 7 and 8
+        // Return our custom colors when we have an active custom theme
         if (customOption == 7) {
             return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
         } else if (customOption == 8) {
@@ -5837,7 +5819,7 @@ static GeminiTranslator *_sharedInstance;
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
-        // Return our custom colors for options 7 and 8
+        // Return our custom colors when we have an active custom theme
         if (customOption == 7) {
             return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
         } else if (customOption == 8) {
@@ -5855,7 +5837,7 @@ static GeminiTranslator *_sharedInstance;
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
-        // Return our custom colors for options 7 and 8
+        // Return our custom colors when we have an active custom theme
         if (customOption == 7) {
             return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
         } else if (customOption == 8) {
