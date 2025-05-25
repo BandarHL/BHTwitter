@@ -20,6 +20,10 @@
 - (BOOL)BHT_isShowingTranslatedText;
 @end
 
+// Forward declare T1StandardStatusTranslateView
+@interface T1StandardStatusTranslateView : UIView
+@end
+
 // Block type definitions for compatibility
 typedef void (^VoidBlock)(void);
 typedef id (^UnknownBlock)(void);
@@ -5468,6 +5472,35 @@ static char kTranslatedTextKey;
 %new - (BOOL)BHT_isShowingTranslatedText {
     NSNumber *isTranslated = objc_getAssociatedObject(self, &kIsTranslatedKey);
     return isTranslated && [isTranslated boolValue];
+}
+
+%end
+
+// Hook to hide Twitter's default translate button
+%hook T1StandardStatusTranslateView
+
+- (void)setHidden:(BOOL)hidden {
+    // Always keep Twitter's translate button hidden when our translate feature is enabled
+    if ([BHTManager enableTranslate]) {
+        %orig(YES);
+    } else {
+        %orig(hidden);
+    }
+}
+
+- (instancetype)initWithFrame:(CGRect)frame {
+    id instance = %orig;
+    if (instance && [BHTManager enableTranslate]) {
+        [instance setHidden:YES];
+    }
+    return instance;
+}
+
+- (void)layoutSubviews {
+    %orig;
+    if ([BHTManager enableTranslate]) {
+        self.hidden = YES;
+    }
 }
 
 %end
