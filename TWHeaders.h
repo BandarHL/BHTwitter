@@ -538,15 +538,16 @@ static void BH_changeTwitterColor(NSInteger colorID) {
     if (colorID == 7 || colorID == 8) {
         // For custom colors, set a base Twitter color (like blue) internally
         // but keep track of our custom selection separately
-        if (isCustomToCustomSwitch) {
-            // For custom-to-custom transitions, briefly toggle Twitter's color to force refresh
-            [colorSettings setPrimaryColorOption:2]; // Yellow first
-            [defaults setObject:@(2) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-        }
-        
         [defaults setObject:@(1) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
         [defaults setObject:@(colorID) forKey:@"bh_color_theme_selectedColor"];
         [colorSettings setPrimaryColorOption:1];
+        
+        if (isCustomToCustomSwitch) {
+            // Force Twitter to recreate its color palette object
+            if ([colorSettings respondsToSelector:@selector(setCurrentColorPalette:)]) {
+                [colorSettings setCurrentColorPalette:nil];
+            }
+        }
     } else {
         // For standard Twitter colors (1-6), clear custom selection and use Twitter's system
         [defaults removeObjectForKey:@"bh_color_theme_selectedColor"];
