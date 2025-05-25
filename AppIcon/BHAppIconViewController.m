@@ -3,7 +3,8 @@
 //  BHTwitter
 //
 //  Created by Bandar Alruwaili on 10/12/2023.
-//  Revised to prefer “-settings” asset, then asset catalog, then bundle files.
+//  Revised to prefer “-settings” assets, then catalog icons,
+//  then highest-dimension root files via imageNamed:.
 //
 
 #import "BHAppIconViewController.h"
@@ -26,21 +27,21 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
 
-    // Header label
+    // Header
     self.headerLabel = [[UILabel alloc] init];
     self.headerLabel.text = [[BHTBundle sharedBundle]
         localizedStringForKey:@"APP_ICON_HEADER_TITLE"];
     self.headerLabel.textColor    = [UIColor secondaryLabelColor];
     self.headerLabel.numberOfLines = 0;
-    self.headerLabel.font         = [UIFont systemFontOfSize:15];
+    self.headerLabel.font        = [UIFont systemFontOfSize:15];
     self.headerLabel.textAlignment = NSTextAlignmentJustified;
     self.headerLabel.translatesAutoresizingMaskIntoConstraints = NO;
 
-    // Collection view setup
-    UICollectionViewFlowLayout *flowLayout = [[UICollectionViewFlowLayout alloc] init];
+    // Collection
+    UICollectionViewFlowLayout *flow = [UICollectionViewFlowLayout new];
     self.appIconCollectionView = [[UICollectionView alloc]
         initWithFrame:CGRectZero
-        collectionViewLayout:flowLayout];
+        collectionViewLayout:flow];
     self.appIconCollectionView.contentInsetAdjustmentBehavior =
         UIScrollViewContentInsetAdjustmentAlways;
     [self.appIconCollectionView
@@ -78,27 +79,26 @@
 }
 
 - (void)setupAppIcons {
-    NSBundle *appBundle = [NSBundle mainBundle];
     NSDictionary *iconsDict =
-        [appBundle objectForInfoDictionaryKey:@"CFBundleIcons"];
+        [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIcons"];
 
-    // Primary icon
-    NSDictionary *primaryDict = iconsDict[@"CFBundlePrimaryIcon"];
-    NSString   *primaryName  = primaryDict[@"CFBundleIconName"];
-    NSArray<NSString*> *primaryFiles = primaryDict[@"CFBundleIconFiles"];
+    // Primary
+    NSDictionary *pri = iconsDict[@"CFBundlePrimaryIcon"];
+    NSString   *priName  = pri[@"CFBundleIconName"];
+    NSArray<NSString*> *priFiles = pri[@"CFBundleIconFiles"];
     [self.icons addObject:
         [[BHAppIconItem alloc]
-            initWithBundleIconName:primaryName
-                     iconFileNames:primaryFiles
+            initWithBundleIconName:priName
+                     iconFileNames:priFiles
                       isPrimaryIcon:YES]];
 
-    // Alternate icons
+    // Alternates
     NSDictionary *alts = iconsDict[@"CFBundleAlternateIcons"];
     [alts enumerateKeysAndObjectsUsingBlock:^(NSString *key,
-                                              NSDictionary *altDict,
+                                              NSDictionary *alt,
                                               BOOL *stop) {
-        NSString   *altName  = altDict[@"CFBundleIconName"];
-        NSArray<NSString*> *altFiles = altDict[@"CFBundleIconFiles"];
+        NSString   *altName  = alt[@"CFBundleIconName"];
+        NSArray<NSString*> *altFiles = alt[@"CFBundleIconFiles"];
         [self.icons addObject:
             [[BHAppIconItem alloc]
                 initWithBundleIconName:altName
@@ -112,52 +112,49 @@
 #pragma mark – UICollectionViewDataSource
 
 - (NSInteger)collectionView:(UICollectionView *)collectionView
-     numberOfItemsInSection:(NSInteger)section
-{
+     numberOfItemsInSection:(NSInteger)section {
     return self.icons.count;
 }
 
 - (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView
-                  cellForItemAtIndexPath:(NSIndexPath *)indexPath
-{
+                  cellForItemAtIndexPath:(NSIndexPath *)indexPath {
     BHAppIconCell *cell = [collectionView
         dequeueReusableCellWithReuseIdentifier:[BHAppIconCell reuseIdentifier]
                                   forIndexPath:indexPath];
     BHAppIconItem *item = self.icons[indexPath.row];
 
-    // 1) Try “-settings” asset
-    NSString *settingsName = [item.bundleIconName stringByAppendingString:@"-settings"];
-    UIImage *iconImg = [UIImage imageNamed:settingsName];
+    UIImage *img = nil;
 
-    // 2) Fallback: asset catalog icon
-    if (!iconImg) {
-        iconImg = [UIImage imageNamed:item.bundleIconName];
+    // 1) “-settings” asset
+    NSString *settingsAsset = [item.bundleIconName stringByAppendingString:@"-settings"];
+    img = [UIImage imageNamed:settingsAsset];
+
+    // 2) Plain asset catalog
+    if (!img) {
+        img = [UIImage imageNamed:item.bundleIconName];
     }
 
-    // 3) Fallback: loose bundle files
-    if (!iconImg) {
-        NSString *fileBase = item.bundleIconFiles.lastObject;
-        iconImg = [UIImage imageNamed:fileBase];
-        if (!iconImg) {
-            NSString *path = [[NSBundle mainBundle] pathForResource:fileBase
-                                                              ofType:@"png"];
-            iconImg = [UIImage imageWithContentsOfFile:path];
+    // 3) Root‐bundle files (highest-dimension first)
+    if (!img && item.bundleIconFiles.count) {
+        // reverse order: largest dimension last in Info.plist → first here
+        for (NSString *base in item.bundleIconFiles.reverseObjectEnumerator) {
+            img = [UIImage imageNamed:base];
+            if (img) break;
         }
     }
 
-    cell.imageView.image = iconImg;
+    cell.imageView.image = img;
 
-    // Checkmark logic
+    // Checkmark
     NSString *currentAlt = [UIApplication sharedApplication].alternateIconName;
     BOOL isActive = currentAlt
                   ? [currentAlt isEqualToString:item.bundleIconName]
                   : item.isPrimaryIcon;
 
-    // Clear all
     [collectionView.visibleCells
-      enumerateObjectsUsingBlock:^(__kindof UICollectionViewCell *obj,
+      enumerateObjectsUsingBlock:^(__kindof UICollectionViewCell *c,
                                    NSUInteger idx, BOOL *stop) {
-        ((BHAppIconCell*)obj).checkIMG.image =
+        ((BHAppIconCell*)c).checkIMG.image =
             [UIImage systemImageNamed:@"circle"];
     }];
     if (isActive) {
@@ -170,23 +167,19 @@
 #pragma mark – UICollectionViewDelegate
 
 - (void)collectionView:(UICollectionView *)collectionView
-didSelectItemAtIndexPath:(NSIndexPath *)indexPath
-{
+didSelectItemAtIndexPath:(NSIndexPath *)indexPath {
     BHAppIconItem *item = self.icons[indexPath.row];
 
-    // Clear
     [collectionView.visibleCells
-      enumerateObjectsUsingBlock:^(__kindof UICollectionViewCell *obj,
+      enumerateObjectsUsingBlock:^(__kindof UICollectionViewCell *c,
                                    NSUInteger idx, BOOL *stop) {
-        ((BHAppIconCell*)obj).checkIMG.image =
+        ((BHAppIconCell*)c).checkIMG.image =
             [UIImage systemImageNamed:@"circle"];
     }];
 
     BHAppIconCell *cell = (BHAppIconCell*)
         [collectionView cellForItemAtIndexPath:indexPath];
-    NSString *toSet = item.isPrimaryIcon
-                    ? nil
-                    : item.bundleIconName;
+    NSString *toSet = item.isPrimaryIcon ? nil : item.bundleIconName;
     [[UIApplication sharedApplication]
         setAlternateIconName:toSet
              completionHandler:^(NSError * _Nullable error) {
@@ -197,33 +190,29 @@ didSelectItemAtIndexPath:(NSIndexPath *)indexPath
     }];
 }
 
-#pragma mark – UICollectionViewDelegateFlowLayout
+#pragma mark – FlowLayout
 
 - (UIEdgeInsets)collectionView:(UICollectionView *)collectionView
                         layout:(UICollectionViewLayout *)collectionViewLayout
-        insetForSectionAtIndex:(NSInteger)section
-{
+        insetForSectionAtIndex:(NSInteger)section {
     return UIEdgeInsetsMake(16, 16, 16, 16);
 }
 
 - (CGFloat)collectionView:(UICollectionView *)collectionView
                    layout:(UICollectionViewLayout *)collectionViewLayout
-minimumLineSpacingForSectionAtIndex:(NSInteger)section
-{
+minimumLineSpacingForSectionAtIndex:(NSInteger)section {
     return 10;
 }
 
 - (CGFloat)collectionView:(UICollectionView *)collectionView
                    layout:(UICollectionViewLayout *)collectionViewLayout
-minimumInteritemSpacingForSectionAtIndex:(NSInteger)section
-{
+minimumInteritemSpacingForSectionAtIndex:(NSInteger)section {
     return 10;
 }
 
 - (CGSize)collectionView:(UICollectionView *)collectionView
                   layout:(UICollectionViewLayout *)collectionViewLayout
-  sizeForItemAtIndexPath:(NSIndexPath *)indexPath
-{
+  sizeForItemAtIndexPath:(NSIndexPath *)indexPath {
     return CGSizeMake(98, 136);
 }
 
