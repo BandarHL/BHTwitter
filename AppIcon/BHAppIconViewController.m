@@ -3,7 +3,8 @@
 //  BHTwitter
 //
 //  Created by Bandar Alruwaili on 10/12/2023.
-//  Revised: added localized detail subtitles under category headers.
+//  Revised: moved APP_ICON_HEADER_TITLE into section-0 header so it scrolls,
+//           removed sticky headerLabel from the main view.
 //
 
 #import "BHAppIconViewController.h"
@@ -17,7 +18,6 @@
     UICollectionViewDelegateFlowLayout
 >
 @property (nonatomic, strong) UICollectionView     *appIconCollectionView;
-@property (nonatomic, strong) UILabel              *headerLabel;
 @property (nonatomic, copy)   NSArray<NSString *>  *sectionTitles;
 @property (nonatomic, copy)   NSArray<NSArray<BHAppIconItem *> *> *sectionedIcons;
 @end
@@ -31,22 +31,13 @@
     self.navigationItem.title =
       [[BHTBundle sharedBundle] localizedStringForKey:@"APP_ICON_NAV_TITLE"];
 
-    // Description label
-    self.headerLabel = [UILabel new];
-    self.headerLabel.text =
-      [[BHTBundle sharedBundle] localizedStringForKey:@"APP_ICON_HEADER_TITLE"];
-    self.headerLabel.textColor    = [UIColor secondaryLabelColor];
-    self.headerLabel.numberOfLines = 0;
-    self.headerLabel.font         = [UIFont systemFontOfSize:15];
-    self.headerLabel.textAlignment = NSTextAlignmentLeft;
-    self.headerLabel.translatesAutoresizingMaskIntoConstraints = NO;
-
-    // Collection view setup
+    // Collection view layout
     UICollectionViewFlowLayout *flow = [UICollectionViewFlowLayout new];
     flow.sectionInset            = UIEdgeInsetsMake(16,16,16,16);
     flow.minimumLineSpacing      = 10;
     flow.minimumInteritemSpacing = 10;
 
+    // Collection view
     self.appIconCollectionView = [[UICollectionView alloc]
         initWithFrame:CGRectZero
   collectionViewLayout:flow];
@@ -64,19 +55,11 @@
     self.appIconCollectionView.translatesAutoresizingMaskIntoConstraints = NO;
 
     self.view.backgroundColor = [UIColor systemBackgroundColor];
-    [self.view addSubview:self.headerLabel];
     [self.view addSubview:self.appIconCollectionView];
 
     [NSLayoutConstraint activateConstraints:@[
-      [self.headerLabel.topAnchor
-         constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor constant:16],
-      [self.headerLabel.leadingAnchor
-         constraintEqualToAnchor:self.view.leadingAnchor constant:16],
-      [self.headerLabel.trailingAnchor
-         constraintEqualToAnchor:self.view.trailingAnchor constant:-16],
-
       [self.appIconCollectionView.topAnchor
-         constraintEqualToAnchor:self.headerLabel.bottomAnchor constant:8],
+         constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor],
       [self.appIconCollectionView.leadingAnchor
          constraintEqualToAnchor:self.view.leadingAnchor],
       [self.appIconCollectionView.trailingAnchor
@@ -92,7 +75,7 @@
     NSDictionary *iconsDict =
       [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIcons"];
 
-    // Build flat list
+    // 1) flat list
     NSMutableArray<BHAppIconItem*> *flat = [NSMutableArray new];
     NSDictionary *pri = iconsDict[@"CFBundlePrimaryIcon"];
     [flat addObject:
@@ -110,11 +93,16 @@
                        isPrimaryIcon:NO]];
     }];
 
-    // Categories
+    // 2) buckets
     NSArray<NSString*> *allCats = @[
-      @"Icons", @"Seasonal Icons", @"Holidays", @"Sports", @"Pride", @"Other"
+      @"Icons",
+      @"Seasonal Icons",
+      @"Holidays",
+      @"Sports",
+      @"Pride",
+      @"Other"
     ];
-    NSMutableDictionary *buckets = [NSMutableDictionary new];
+    NSMutableDictionary<NSString*,NSMutableArray*> *buckets = [NSMutableDictionary new];
     for (NSString *c in allCats) buckets[c] = [NSMutableArray new];
 
     NSSet *seasonKeys = [NSSet setWithArray:@[@"Autumn",@"Summer",@"Winter",@"Spring",@"Fall"]];
@@ -126,6 +114,7 @@
       @"BeijingOlympics",@"FormulaOne",@"Daytona",@"Nba",@"Ncaa"
     ]];
 
+    // 3) distribute
     for (BHAppIconItem *item in flat) {
       if (item.isPrimaryIcon ||
           [item.bundleIconName hasPrefix:@"Custom-Icon"]) {
@@ -135,19 +124,22 @@
       BOOL placed = NO;
       for (NSString *k in seasonKeys) {
         if ([item.bundleIconName containsString:k]) {
-          [buckets[@"Seasonal Icons"] addObject:item]; placed=YES; break;
+          [buckets[@"Seasonal Icons"] addObject:item];
+          placed = YES; break;
         }
       }
       if (placed) continue;
       for (NSString *k in holidayKeys) {
         if ([item.bundleIconName containsString:k]) {
-          [buckets[@"Holidays"] addObject:item]; placed=YES; break;
+          [buckets[@"Holidays"] addObject:item];
+          placed = YES; break;
         }
       }
       if (placed) continue;
       for (NSString *k in sportKeys) {
         if ([item.bundleIconName containsString:k]) {
-          [buckets[@"Sports"] addObject:item]; placed=YES; break;
+          [buckets[@"Sports"] addObject:item];
+          placed = YES; break;
         }
       }
       if (placed) continue;
@@ -158,8 +150,9 @@
       }
     }
 
-    NSMutableArray *titles   = [NSMutableArray new];
-    NSMutableArray *sections = [NSMutableArray new];
+    // 4) build section arrays
+    NSMutableArray<NSString*> *titles   = [NSMutableArray new];
+    NSMutableArray<NSArray*>   *sections = [NSMutableArray new];
     for (NSString *cat in allCats) {
       NSArray *arr = buckets[cat];
       if (arr.count > 0) {
@@ -187,7 +180,7 @@
         [BHAppIconCell reuseIdentifier] forIndexPath:ip];
     BHAppIconItem *item = self.sectionedIcons[ip.section][ip.row];
 
-    // image loading (settings → catalog → bundle)
+    // Load image (settings→catalog→bundle)
     NSString *settings;
     if (item.isPrimaryIcon) {
       NSString *nm = item.bundleIconName;
@@ -207,7 +200,7 @@
     }
     cell.imageView.image = img;
 
-    // checkmark
+    // Checkmark
     NSString *curr = [UIApplication sharedApplication].alternateIconName;
     BOOL active = curr ? [curr isEqualToString:item.bundleIconName] : item.isPrimaryIcon;
     [cv.visibleCells enumerateObjectsUsingBlock:
@@ -250,16 +243,32 @@ didSelectItemAtIndexPath:(NSIndexPath*)ip {
       [cv dequeueReusableSupplementaryViewOfKind:kind
                              withReuseIdentifier:@"HeaderView"
                                     forIndexPath:ip];
-    // remove any old subviews
+    // clear any old subviews
     [header.subviews makeObjectsPerformSelector:@selector(removeFromSuperview)];
 
-    // First section ("Icons") has no header
-    if (ip.section == 0) return header;
+    // Section 0: use APP_ICON_HEADER_TITLE as a detail header
+    if (ip.section == 0) {
+        UILabel *detail = [UILabel new];
+        detail.translatesAutoresizingMaskIntoConstraints = NO;
+        detail.font          = [UIFont systemFontOfSize:15];
+        detail.textColor     = [UIColor secondaryLabelColor];
+        detail.numberOfLines = 0;
+        detail.textAlignment = NSTextAlignmentLeft;
+        detail.text = [[BHTBundle sharedBundle]
+            localizedStringForKey:@"APP_ICON_HEADER_TITLE"];
+        [header addSubview:detail];
+        [NSLayoutConstraint activateConstraints:@[
+          [detail.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16],
+          [detail.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-16],
+          [detail.topAnchor constraintEqualToAnchor:header.topAnchor constant:8],
+          [detail.bottomAnchor constraintEqualToAnchor:header.bottomAnchor constant:-8]
+        ]];
+        return header;
+    }
 
-    // Determine localization keys for title & detail
+    // Other sections: title + optional detail
     NSString *cat   = self.sectionTitles[ip.section];
-    NSString *titleKey;
-    NSString *detailKey;
+    NSString *titleKey, *detailKey;
     if ([cat isEqualToString:@"Seasonal Icons"]) {
       titleKey  = @"APP_ICON_SEASONS_HEADER_TITLE";
       detailKey = @"APP_ICON_SEASONS_HEADER_DETAIL";
@@ -275,9 +284,10 @@ didSelectItemAtIndexPath:(NSIndexPath*)ip {
     } else if ([cat isEqualToString:@"Other"]) {
       titleKey  = @"APP_ICON_OTHER_HEADER_TITLE";
       detailKey = nil;
+    } else {
+      titleKey = detailKey = nil;
     }
 
-    // Title label
     UILabel *titleLabel = [UILabel new];
     titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
     titleLabel.font      = [UIFont boldSystemFontOfSize:16];
@@ -285,7 +295,6 @@ didSelectItemAtIndexPath:(NSIndexPath*)ip {
     titleLabel.text      = [[BHTBundle sharedBundle] localizedStringForKey:titleKey];
     [header addSubview:titleLabel];
 
-    // Detail label (if provided)
     UILabel *detailLabel = nil;
     if (detailKey) {
       detailLabel = [UILabel new];
@@ -298,22 +307,20 @@ didSelectItemAtIndexPath:(NSIndexPath*)ip {
       [header addSubview:detailLabel];
     }
 
-    // Constraints
-    NSMutableArray<NSLayoutConstraint*> *cons = [NSMutableArray new];
+    NSMutableArray *cons = [NSMutableArray new];
     [cons addObjectsFromArray:@[
-      [titleLabel.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16],
-      [titleLabel.topAnchor constraintEqualToAnchor:header.topAnchor constant:8],
+      [titleLabel.leadingAnchor  constraintEqualToAnchor:header.leadingAnchor constant:16],
       [titleLabel.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-16],
+      [titleLabel.topAnchor      constraintEqualToAnchor:header.topAnchor constant:8],
     ]];
     if (detailLabel) {
       [cons addObjectsFromArray:@[
         [detailLabel.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16],
-        [detailLabel.topAnchor constraintEqualToAnchor:titleLabel.bottomAnchor constant:4],
         [detailLabel.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-16],
+        [detailLabel.topAnchor     constraintEqualToAnchor:titleLabel.bottomAnchor constant:4],
       ]];
     }
     [NSLayoutConstraint activateConstraints:cons];
-
     return header;
 }
 
@@ -321,24 +328,23 @@ didSelectItemAtIndexPath:(NSIndexPath*)ip {
                   layout:(UICollectionViewLayout*)layout
 referenceSizeForHeaderInSection:(NSInteger)section
 {
-    // Section 0: no header
-    if (section == 0) return CGSizeZero;
-
-    // If detail exists (sections 1–4), taller header; Other no detail → shorter
+    if (section == 0) {
+        // estimate height for description text (~2 lines)
+        return CGSizeMake(cv.bounds.size.width, 60);
+    }
     NSString *cat = self.sectionTitles[section];
     BOOL hasDetail = [cat isEqualToString:@"Seasonal Icons"]
                   || [cat isEqualToString:@"Holidays"]
                   || [cat isEqualToString:@"Sports"]
                   || [cat isEqualToString:@"Pride"];
-    CGFloat height = hasDetail ? 60 : 30;
-    return CGSizeMake(cv.bounds.size.width, height);
+    return CGSizeMake(cv.bounds.size.width, hasDetail ? 60 : 30);
 }
 
 #pragma mark - FlowLayout sizing
 
 - (CGSize)collectionView:(UICollectionView*)cv
                   layout:(UICollectionViewLayout*)layout
- sizeForItemAtIndexPath:(NSIndexPath*)ip
+ sizeForItemAtIndexPath:(NSIndexPath*)indexPath
 {
     return CGSizeMake(98,136);
 }
