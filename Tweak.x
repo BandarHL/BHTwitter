@@ -5520,6 +5520,30 @@ static char kTranslatedTextKey;
 // Hook T1ConversationFocalStatusView to prevent translate view creation
 %hook T1ConversationFocalStatusView
 
++ (id)_t1_viewAdapterSet {
+    id result = %orig;
+    
+    if ([BHTManager enableTranslate] && result) {
+        // Filter out translate-related adapters from the set
+        if ([result respondsToSelector:@selector(allObjects)]) {
+            NSSet *originalSet = (NSSet *)result;
+            NSMutableSet *filteredSet = [NSMutableSet set];
+            
+            for (id adapter in originalSet) {
+                // Check if this adapter is translate-related by examining its class name
+                NSString *className = NSStringFromClass([adapter class]);
+                if (![className containsString:@"Translate"]) {
+                    [filteredSet addObject:adapter];
+                }
+            }
+            
+            return [filteredSet copy];
+        }
+    }
+    
+    return result;
+}
+
 - (id)translateActionView {
     if ([BHTManager enableTranslate]) {
         return nil;
