@@ -5431,7 +5431,7 @@ static void findTextView(UIView *view, UITextView **tweetTextView) {
     return NO;
 }
 
-@end
+%end
 
 @implementation GeminiTranslator
 
