@@ -11,6 +11,10 @@
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
 
+// Forward declare TTAStatusBodySelectableContentTextView
+@interface TTAStatusBodySelectableContentTextView : UITextView
+@end
+
 // Block type definitions for compatibility
 typedef void (^VoidBlock)(void);
 typedef id (^UnknownBlock)(void);
@@ -4808,6 +4812,7 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 @interface _UINavigationBarContentView (BHTwitter)
 - (void)BHT_addTranslateButtonIfNeeded;
 - (TFNTwitterStatus *)BHT_findStatusObjectInController:(UIViewController *)controller;
+- (UITextView *)BHT_findTweetTextViewInController:(UIViewController *)controller;
 - (NSString *)BHT_extractTextFromStatusObjectInController:(UIViewController *)controller;
 - (void)BHT_translateCurrentTweetAction:(UIButton *)sender;
 @end
@@ -5046,7 +5051,9 @@ static char kTranslateButtonKey;
         return;
     }
 
-    NSString *textToTranslate = [self BHT_extractTextFromStatusObjectInController:targetController];
+    // Find the TTAStatusBodySelectableContentTextView
+    UITextView *tweetTextView = [self BHT_findTweetTextViewInController:targetController];
+    NSString *textToTranslate = tweetTextView.text;
 
     if (!textToTranslate || textToTranslate.length == 0) {
         UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
@@ -5055,76 +5062,37 @@ static char kTranslateButtonKey;
         [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
         [targetController presentViewController:alert animated:YES completion:nil];
     } else {
-        // Store original text for potential restoration
-        objc_setAssociatedObject(sender, "originalText", textToTranslate, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        
-        // Change button appearance to indicate translation is in progress
-        if (@available(iOS 13.0, *)) {
-            [sender setImage:[UIImage systemImageNamed:@"clock.fill"] forState:UIControlStateNormal];
-        } else {
-            [sender setTitle:@"..." forState:UIControlStateNormal];
-        }
-        sender.enabled = NO;
-        
         // Call the GeminiTranslator with the extracted text
         [[GeminiTranslator sharedInstance] translateText:textToTranslate 
                                            fromLanguage:@"auto" 
                                              toLanguage:@"en" 
                                              completion:^(NSString *translatedText, NSError *error) {
-            // Re-enable button
-            sender.enabled = YES;
-            
-            if (error || !translatedText) {
-                // Restore original button appearance on error
-                if (@available(iOS 13.0, *)) {
-                    [sender setImage:[UIImage systemImageNamed:@"text.bubble.fill"] forState:UIControlStateNormal];
-                } else {
-                    [sender setTitle:@"Translate" forState:UIControlStateNormal];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (error || !translatedText) {
+                    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
+                                                                                   message:error ? error.localizedDescription : @"Failed to translate text." 
+                                                                            preferredStyle:UIAlertControllerStyleAlert];
+                    [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+                    [targetController presentViewController:alert animated:YES completion:nil];
+                    return;
                 }
                 
-                UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
-                                                                               message:error ? error.localizedDescription : @"Failed to translate text." 
-                                                                        preferredStyle:UIAlertControllerStyleAlert];
-                [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-                [targetController presentViewController:alert animated:YES completion:nil];
-                return;
-            }
-            
-            // Find and replace the text in the UI
-            BOOL textReplaced = [self BHT_replaceTextInController:targetController withTranslation:translatedText];
-            
-            if (textReplaced) {
-                // Change button to indicate text has been translated and allow restoration
-                if (@available(iOS 13.0, *)) {
-                    [sender setImage:[UIImage systemImageNamed:@"arrow.counterclockwise"] forState:UIControlStateNormal];
-                } else {
-                    [sender setTitle:@"Restore" forState:UIControlStateNormal];
+                // Replace the text in-place
+                if (tweetTextView && [tweetTextView isKindOfClass:%c(TTAStatusBodySelectableContentTextView)]) {
+                    // Create new attributed string with the translated text
+                    NSAttributedString *originalAttributedText = tweetTextView.attributedText;
+                    NSMutableAttributedString *translatedAttributedText = [[NSMutableAttributedString alloc] initWithString:translatedText];
+                    
+                    // Preserve the original text attributes
+                    if (originalAttributedText.length > 0) {
+                        NSDictionary *attributes = [originalAttributedText attributesAtIndex:0 effectiveRange:NULL];
+                        [translatedAttributedText addAttributes:attributes range:NSMakeRange(0, translatedText.length)];
+                    }
+                    
+                    // Set the translated text
+                    [tweetTextView setAttributedText:translatedAttributedText];
                 }
-                
-                // Change the button action to restore original text
-                [sender removeTarget:self action:@selector(BHT_translateCurrentTweetAction:) forControlEvents:UIControlEventTouchUpInside];
-                [sender addTarget:self action:@selector(BHT_restoreOriginalTextAction:) forControlEvents:UIControlEventTouchUpInside];
-            } else {
-                // Restore original button appearance if replacement failed
-                if (@available(iOS 13.0, *)) {
-                    [sender setImage:[UIImage systemImageNamed:@"text.bubble.fill"] forState:UIControlStateNormal];
-                } else {
-                    [sender setTitle:@"Translate" forState:UIControlStateNormal];
-                }
-                
-                // Fall back to showing the translation in an alert
-                UIAlertController *resultAlert = [UIAlertController alertControllerWithTitle:@"Translation" 
-                                                                                     message:translatedText 
-                                                                              preferredStyle:UIAlertControllerStyleAlert];
-                
-                [resultAlert addAction:[UIAlertAction actionWithTitle:@"Copy" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-                    UIPasteboard.generalPasteboard.string = translatedText;
-                }]];
-                
-                [resultAlert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
-                
-                [targetController presentViewController:resultAlert animated:YES completion:nil];
-            }
+            });
         }];
     }
 }
@@ -5220,7 +5188,23 @@ static char kTranslateButtonKey;
     return nil;
 }
 
-// Helper function for finding the text view
+// Helper function for finding the TTAStatusBodySelectableContentTextView
+static void findTweetTextView(UIView *view, UITextView **tweetTextView) {
+    // Check specifically for TTAStatusBodySelectableContentTextView
+    if ([NSStringFromClass([view class]) isEqualToString:@"TTAStatusBodySelectableContentTextView"]) {
+        *tweetTextView = (UITextView *)view;
+        return;
+    }
+    
+    // Recurse into subviews
+    for (UIView *subview in view.subviews) {
+        if (!*tweetTextView) {
+            findTweetTextView(subview, tweetTextView);
+        }
+    }
+}
+
+// Helper function for finding the text view (legacy)
 static void findTextView(UIView *view, UITextView **tweetTextView) {
     // Check for TTAStatusBodySelectableContextTextView or any UITextView in T1URTViewController
     if ([NSStringFromClass([view class]) isEqualToString:@"TTAStatusBodySelectableContextTextView"] ||
@@ -5235,6 +5219,78 @@ static void findTextView(UIView *view, UITextView **tweetTextView) {
             findTextView(subview, tweetTextView);
         }
     }
+}
+
+%new - (UITextView *)BHT_findTweetTextViewInController:(UIViewController *)controller {
+    if (!controller || !controller.isViewLoaded) {
+        return nil;
+    }
+    
+    UITextView *tweetTextView = nil;
+    
+    // First, try to find T1URTViewController
+    UIViewController *urtViewController = nil;
+    
+    // Check if the current controller is a T1URTViewController
+    if ([NSStringFromClass([controller class]) isEqualToString:@"T1URTViewController"]) {
+        urtViewController = controller;
+    }
+    
+    // If not found, look through the view hierarchy for a T1URTViewController
+    if (!urtViewController) {
+        UIViewController *currentVC = controller;
+        
+        // First check child view controllers
+        NSArray *childVCs = [currentVC childViewControllers];
+        for (UIViewController *childVC in childVCs) {
+            if ([NSStringFromClass([childVC class]) isEqualToString:@"T1URTViewController"]) {
+                urtViewController = childVC;
+                break;
+            }
+        }
+        
+        // Then check parent view controllers if not found
+        if (!urtViewController) {
+            while (currentVC.parentViewController) {
+                currentVC = currentVC.parentViewController;
+                
+                if ([NSStringFromClass([currentVC class]) isEqualToString:@"T1URTViewController"]) {
+                    urtViewController = currentVC;
+                    break;
+                }
+                
+                // Also check siblings
+                for (UIViewController *childVC in [currentVC childViewControllers]) {
+                    if ([NSStringFromClass([childVC class]) isEqualToString:@"T1URTViewController"]) {
+                        urtViewController = childVC;
+                        break;
+                    }
+                }
+                
+                if (urtViewController) break;
+            }
+        }
+    }
+    
+    // If we found T1URTViewController, search for TTAStatusBodySelectableContentTextView
+    if (urtViewController && urtViewController.isViewLoaded) {
+        findTweetTextView(urtViewController.view, &tweetTextView);
+        if (tweetTextView) {
+            return tweetTextView;
+        }
+    }
+    
+    // Fallback: Search the entire view hierarchy
+    UIViewController *rootVC = controller;
+    while (rootVC.parentViewController) {
+        rootVC = rootVC.parentViewController;
+    }
+    
+    if (rootVC.isViewLoaded) {
+        findTweetTextView(rootVC.view, &tweetTextView);
+    }
+    
+    return tweetTextView;
 }
 
 %new - (NSString *)BHT_extractTextFromStatusObjectInController:(UIViewController *)controller {
@@ -5340,130 +5396,7 @@ static void findTextView(UIView *view, UITextView **tweetTextView) {
     return nil;
 }
 
-// Helper function for finding TTAStatusBodySelectableContentTextView
-static void findTTATextView(UIView *view, UITextView **tweetTextView) {
-    if ([NSStringFromClass([view class]) isEqualToString:@"TTAStatusBodySelectableContentTextView"]) {
-        *tweetTextView = (UITextView *)view;
-        return;
-    }
-    
-    // Recurse into subviews
-    for (UIView *subview in view.subviews) {
-        if (!*tweetTextView) {
-            findTTATextView(subview, tweetTextView);
-        }
-    }
-}
 
-%new - (BOOL)BHT_replaceTextInController:(UIViewController *)controller withTranslation:(NSString *)translatedText {
-    // Find TTAStatusBodySelectableContentTextView specifically
-    UIViewController *urtViewController = nil;
-    
-    // Check if the current controller is a T1URTViewController
-    if ([NSStringFromClass([controller class]) isEqualToString:@"T1URTViewController"]) {
-        urtViewController = controller;
-    }
-    
-    // If not found, look through the view hierarchy for a T1URTViewController
-    if (!urtViewController) {
-        UIViewController *currentVC = controller;
-        
-        // First check child view controllers
-        NSArray *childVCs = [currentVC childViewControllers];
-        for (UIViewController *childVC in childVCs) {
-            if ([NSStringFromClass([childVC class]) isEqualToString:@"T1URTViewController"]) {
-                urtViewController = childVC;
-                break;
-            }
-        }
-        
-        // Then check parent view controllers if not found
-        if (!urtViewController) {
-            while (currentVC.parentViewController) {
-                currentVC = currentVC.parentViewController;
-                
-                if ([NSStringFromClass([currentVC class]) isEqualToString:@"T1URTViewController"]) {
-                    urtViewController = currentVC;
-                    break;
-                }
-                
-                // Also check siblings
-                for (UIViewController *childVC in [currentVC childViewControllers]) {
-                    if ([NSStringFromClass([childVC class]) isEqualToString:@"T1URTViewController"]) {
-                        urtViewController = childVC;
-                        break;
-                    }
-                }
-                
-                if (urtViewController) break;
-            }
-        }
-    }
-    
-    UITextView *tweetTextView = nil;
-    
-    // If we found T1URTViewController, try to replace text in it
-    if (urtViewController && urtViewController.isViewLoaded) {
-        findTTATextView(urtViewController.view, &tweetTextView);
-        
-        if (tweetTextView) {
-            // Use the specific method for this text view
-            if ([tweetTextView respondsToSelector:@selector(setAb_text:)]) {
-                [tweetTextView performSelector:@selector(setAb_text:) withObject:translatedText];
-                return YES;
-            } else {
-                // Fallback to regular text property
-                tweetTextView.text = translatedText;
-                return YES;
-            }
-        }
-    }
-    
-    // Fallback: Search the entire view hierarchy
-    UIViewController *rootVC = controller;
-    while (rootVC.parentViewController) {
-        rootVC = rootVC.parentViewController;
-    }
-    
-    // Start search from root view controller's view
-    if (rootVC.isViewLoaded) {
-        findTTATextView(rootVC.view, &tweetTextView);
-    }
-    
-    if (tweetTextView) {
-        // Use the specific method for this text view
-        if ([tweetTextView respondsToSelector:@selector(setAb_text:)]) {
-            [tweetTextView performSelector:@selector(setAb_text:) withObject:translatedText];
-            return YES;
-        } else {
-            // Fallback to regular text property
-            tweetTextView.text = translatedText;
-            return YES;
-        }
-    }
-    
-    // As a backup, search child view controllers explicitly
-    if (!tweetTextView && [rootVC respondsToSelector:@selector(childViewControllers)]) {
-        for (UIViewController *childVC in rootVC.childViewControllers) {
-            if (childVC.isViewLoaded) {
-                findTTATextView(childVC.view, &tweetTextView);
-                if (tweetTextView) {
-                    // Use the specific method for this text view
-                    if ([tweetTextView respondsToSelector:@selector(setAb_text:)]) {
-                        [tweetTextView performSelector:@selector(setAb_text:) withObject:translatedText];
-                        return YES;
-                    } else {
-                        // Fallback to regular text property
-                        tweetTextView.text = translatedText;
-                        return YES;
-                    }
-                }
-            }
-        }
-    }
-    
-    return NO;
-}
 
 %end
 
@@ -5685,7 +5618,7 @@ static GeminiTranslator *_sharedInstance;
     }];
 }
 
-%end
+@end
 
 // MARK: Restore Launch Animation
 
@@ -5697,77 +5630,4 @@ static GeminiTranslator *_sharedInstance;
     }
     return nil;
 }
-%end
-
-%new - (void)BHT_restoreOriginalTextAction:(UIButton *)sender {
-    // Get the stored original text
-    NSString *originalText = objc_getAssociatedObject(sender, "originalText");
-    
-    if (!originalText) {
-        return;
-    }
-    
-    // Find the target controller the same way as before
-    UIViewController *targetController = nil;
-    UIResponder *responder = self;
-    
-    while (responder && ![responder isKindOfClass:[UIViewController class]]) {
-        responder = [responder nextResponder];
-    }
-    if (responder && [responder isKindOfClass:[UIViewController class]]) {
-        targetController = (UIViewController *)responder;
-        if ([targetController isKindOfClass:[UINavigationController class]]) {
-            targetController = [(UINavigationController *)targetController topViewController];
-        }
-    } else {
-        UIWindow *keyWindow = nil;
-        if (@available(iOS 13.0, *)) {
-            NSSet *connectedScenes = UIApplication.sharedApplication.connectedScenes;
-            for (UIScene *scene in connectedScenes) {
-                if (scene.activationState == UISceneActivationStateForegroundActive && [scene isKindOfClass:[UIWindowScene class]]) {
-                    UIWindowScene *windowScene = (UIWindowScene *)scene;
-                    for (UIWindow *window in windowScene.windows) {
-                        if (window.isKeyWindow) {
-                            keyWindow = window;
-                            break;
-                        }
-                    }
-                    if (keyWindow) break;
-                }
-            }
-        } else {
-            keyWindow = UIApplication.sharedApplication.keyWindow;
-        }
-        if (keyWindow) {
-            targetController = keyWindow.rootViewController;
-            while (targetController.presentedViewController) {
-                targetController = targetController.presentedViewController;
-            }
-        }
-    }
-    
-    if (!targetController) {
-        return;
-    }
-    
-    // Replace the text with the original text
-    BOOL textRestored = [self BHT_replaceTextInController:targetController withTranslation:originalText];
-    
-    if (textRestored) {
-        // Reset button to original translate functionality
-        if (@available(iOS 13.0, *)) {
-            [sender setImage:[UIImage systemImageNamed:@"text.bubble.fill"] forState:UIControlStateNormal];
-        } else {
-            [sender setTitle:@"Translate" forState:UIControlStateNormal];
-        }
-        
-        // Change the button action back to translate
-        [sender removeTarget:self action:@selector(BHT_restoreOriginalTextAction:) forControlEvents:UIControlEventTouchUpInside];
-        [sender addTarget:self action:@selector(BHT_translateCurrentTweetAction:) forControlEvents:UIControlEventTouchUpInside];
-        
-        // Clear the stored original text
-        objc_setAssociatedObject(sender, "originalText", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    }
-}
-
 %end
