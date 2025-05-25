@@ -5712,4 +5712,55 @@ static GeminiTranslator *_sharedInstance;
     return %orig;
 }
 
+- (UIColor *)textLinkColor {
+    NSLog(@"[BHTwitter] textLinkColor called");
+    
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        
+        if (customOption == 7) {
+            return [UIColor colorFromHexString:@"#FFB6C1"];
+        } else if (customOption == 8) {
+            return [UIColor colorFromHexString:@"#8B0000"];
+        }
+    }
+    
+    return %orig;
+}
+
+- (UIColor *)primaryButtonBackgroundColor {
+    NSLog(@"[BHTwitter] primaryButtonBackgroundColor called");
+    
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        
+        if (customOption == 7) {
+            return [UIColor colorFromHexString:@"#FFB6C1"];
+        } else if (customOption == 8) {
+            return [UIColor colorFromHexString:@"#8B0000"];
+        }
+    }
+    
+    return %orig;
+}
+
+- (UIColor *)tabBarItemColor {
+    NSLog(@"[BHTwitter] tabBarItemColor called");
+    
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        
+        if (customOption == 7) {
+            return [UIColor colorFromHexString:@"#FFB6C1"];
+        } else if (customOption == 8) {
+            return [UIColor colorFromHexString:@"#8B0000"];
+        }
+    }
+    
+    return %orig;
+}
+
 %end
