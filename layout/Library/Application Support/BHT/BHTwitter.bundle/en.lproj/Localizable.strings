@@ -260,8 +260,6 @@
 "THEME_OPTION_4" = "Purple";
 "THEME_OPTION_5" = "Orange";
 "THEME_OPTION_6" = "Green";
-"THEME_OPTION_7" = "Pink";
-"THEME_OPTION_8" = "Dark Red";
 
 /*Tab bar*/
 "CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE" = "Edit tab bar";

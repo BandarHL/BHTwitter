@@ -524,29 +524,14 @@ typedef FLEXAlertAction * _Nonnull (^FLEXAlertActionHandler)(void(^handler)(NSAr
 @property(retain, nonatomic) TAETwitterColorPaletteSettingInfo *currentColorPalette;
 - (void)setPrimaryColorOption:(NSInteger)colorOption;
 + (instancetype)sharedSettings;
-+ (void)_tae_postNotificationForDefaultsChange;
 @end
 
 static void BH_changeTwitterColor(NSInteger colorID) {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];
     
-    if (colorID == 7 || colorID == 8) {
-        // For custom colors, set a base Twitter color internally but track our custom selection
-        [defaults setObject:@(colorID) forKey:@"bh_color_theme_selectedColor"];
-        [defaults setObject:@(1) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-        [colorSettings setPrimaryColorOption:1];
-    } else {
-        // For standard Twitter colors, completely clear custom selection
-        [defaults removeObjectForKey:@"bh_color_theme_selectedColor"];
-        [defaults setObject:@(colorID) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-        [colorSettings setPrimaryColorOption:colorID];
-    }
-    
-    // Use Twitter's internal notification system
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [objc_getClass("TAEColorSettings") _tae_postNotificationForDefaultsChange];
-    });
+    [defaults setObject:@(colorID) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
+    [colorSettings setPrimaryColorOption:colorID];
 }
 static UIImage *BH_imageFromView(UIView *view) {
     TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];

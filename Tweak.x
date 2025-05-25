@@ -108,27 +108,11 @@ UIColor *BHTCurrentAccentColor(void) {
 
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
         NSInteger opt = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        
-        // Handle our custom colors directly
-        if (opt == 7) {
-            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
-        } else if (opt == 8) {
-            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
-        }
-        
         return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
     }
 
     if ([defs objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
         NSInteger opt = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-        
-        // Handle our custom colors directly
-        if (opt == 7) {
-            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
-        } else if (opt == 8) {
-            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
-        }
-        
         return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
     }
 
@@ -1815,15 +1799,15 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
         }
         
         if (cookiesStillValid) {
-        // We have valid cookies from cache
-        // Make them immediately available for pending tweets
-        dispatch_async(dispatch_get_main_queue(), ^{
-            // Direct notification - more reliable than delayed polling
-            [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
-        });
-        
-        isInitializingCookies = NO;
-        return;
+            // We have valid cookies from cache
+            // Make them immediately available for pending tweets
+            dispatch_async(dispatch_get_main_queue(), ^{
+                // Direct notification - more reliable than delayed polling
+                [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
+            });
+            
+            isInitializingCookies = NO;
+            return;
         }
     }
     
@@ -2270,9 +2254,9 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
                     
                     // Mark this tweet as "Fetching..." instead of unavailable
                     tweetSources[tweetID] = @"Fetching...";
-                fetchPending[tweetID] = @(NO);
-                [fetchTimeouts removeObjectForKey:tweetID];
-                [timeoutTimer invalidate];
+                    fetchPending[tweetID] = @(NO);
+                    [fetchTimeouts removeObjectForKey:tweetID];
+                    [timeoutTimer invalidate];
                     
                     // Notify UI that we're waiting for login
                     dispatch_async(dispatch_get_main_queue(), ^{
@@ -5628,335 +5612,10 @@ static GeminiTranslator *_sharedInstance;
 
 %hook T1AppDelegate
 + (id)launchTransitionProvider {
-        Class T1AppLaunchTransitionClass = NSClassFromString(@"T1AppLaunchTransition");
-        if (T1AppLaunchTransitionClass) {
+    Class T1AppLaunchTransitionClass = NSClassFromString(@"T1AppLaunchTransition");
+    if (T1AppLaunchTransitionClass) {
         return [[T1AppLaunchTransitionClass alloc] init];
     }
     return nil;
 }
-%end
-
-// MARK: Custom Color Palette Support
-
-// Hook the color palette to return our custom colors
-%hook TAEStandardColorPalette
-
-- (UIColor *)primaryColorForOption:(long long)colorOption {
-    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-    NSObject *customColorObj = [defs objectForKey:@"bh_color_theme_selectedColor"];
-    
-    // When we're in custom color mode (Twitter set to blue but we have custom selection)
-    if (twitterColorOption == 1 && customColorObj != nil) {
-        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        
-        NSLog(@"BHTwitter: primaryColorForOption called with option %lld, Twitter setting: %ld, Custom: %ld", 
-              colorOption, (long)twitterColorOption, (long)customOption);
-        
-        // Return our custom colors regardless of what colorOption Twitter asks for
-        if (customOption == 7) {
-            NSLog(@"BHTwitter: Returning Hot Pink");
-            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
-        } else if (customOption == 8) {
-            NSLog(@"BHTwitter: Returning Crimson");
-            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
-        }
-    }
-    
-    // For all other cases, use Twitter's original implementation
-    return %orig;
-}
-
-- (UIColor *)primaryColor {
-    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-    
-    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        
-        // Return our custom colors when we have an active custom theme
-        if (customOption == 7) {
-            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
-        } else if (customOption == 8) {
-            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
-        }
-    }
-    
-    // For all other cases, use Twitter's original implementation
-    return %orig;
-}
-
-- (UIColor *)primaryColorOptionBlueColor {
-    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-    
-    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        
-        // Return our custom colors when we have an active custom theme
-        if (customOption == 7) {
-            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
-        } else if (customOption == 8) {
-            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
-        }
-    }
-    
-    // For all other cases, use Twitter's original implementation
-    return %orig;
-}
-
-// Hook additional color methods that Twitter might call
-- (UIColor *)brandColor {
-    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-    
-    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        
-        // Return our custom colors when we have an active custom theme
-        if (customOption == 7) {
-            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
-        } else if (customOption == 8) {
-            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
-        }
-    }
-    
-    // For all other cases, use Twitter's original implementation
-    return %orig;
-}
-
-- (UIColor *)tintColor {
-    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-    
-    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        
-        // Return our custom colors when we have an active custom theme
-        if (customOption == 7) {
-            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
-        } else if (customOption == 8) {
-            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
-        }
-    }
-    
-    // For all other cases, use Twitter's original implementation
-    return %orig;
-}
-
-%end
-
-// Hook TAEDarkerColorPalette for dark mode support
-%hook TAEDarkerColorPalette
-
-- (UIColor *)primaryColorForOption:(long long)colorOption {
-    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-    
-    // When we're in custom color mode (Twitter set to blue but we have custom selection)
-    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        
-        // Return our custom colors regardless of what colorOption Twitter asks for
-        if (customOption == 7) {
-            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
-        } else if (customOption == 8) {
-            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
-        }
-    }
-    
-    // For all other cases, use Twitter's original implementation
-    return %orig;
-}
-
-- (UIColor *)primaryColor {
-    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-    
-    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        
-        // Return our custom colors when we have an active custom theme
-        if (customOption == 7) {
-            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
-        } else if (customOption == 8) {
-            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
-        }
-    }
-    
-    // For all other cases, use Twitter's original implementation
-    return %orig;
-}
-
-- (UIColor *)primaryColorOptionBlueColor {
-    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-    
-    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        
-        // Return our custom colors when we have an active custom theme
-        if (customOption == 7) {
-            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
-        } else if (customOption == 8) {
-            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
-        }
-    }
-    
-    // For all other cases, use Twitter's original implementation
-    return %orig;
-}
-
-- (UIColor *)accentColor {
-    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-    
-    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        
-        // Return our custom colors when we have an active custom theme
-        if (customOption == 7) {
-            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
-        } else if (customOption == 8) {
-            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
-        }
-    }
-    
-    // For all other cases, use Twitter's original implementation
-    return %orig;
-}
-
-- (UIColor *)linkColor {
-    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-    
-    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        
-        // Return our custom colors when we have an active custom theme
-        if (customOption == 7) {
-            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
-        } else if (customOption == 8) {
-            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
-        }
-    }
-    
-    // For all other cases, use Twitter's original implementation
-    return %orig;
-}
-
-%end
-
-%hook TAEDarkColorPalette
-
-- (UIColor *)primaryColorForOption:(long long)colorOption {
-    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-    
-    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        
-        // Return our custom colors when we have an active custom theme
-        if (customOption == 7) {
-            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
-        } else if (customOption == 8) {
-            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
-        }
-    }
-    
-    // For all other cases, use Twitter's original implementation
-    return %orig;
-}
-
-- (UIColor *)primaryColor {
-    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-    
-    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        
-        // Return our custom colors when we have an active custom theme
-        if (customOption == 7) {
-            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
-        } else if (customOption == 8) {
-            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
-        }
-    }
-    
-    // For all other cases, use Twitter's original implementation
-    return %orig;
-}
-
-- (UIColor *)primaryColorOptionBlueColor {
-    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-    
-    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        
-        // Return our custom colors when we have an active custom theme
-        if (customOption == 7) {
-            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
-        } else if (customOption == 8) {
-            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
-        }
-    }
-    
-    // For all other cases, use Twitter's original implementation
-    return %orig;
-}
-
-- (UIColor *)accentColor {
-    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-    
-    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        
-        // Return our custom colors when we have an active custom theme
-        if (customOption == 7) {
-            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
-        } else if (customOption == 8) {
-            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
-        }
-    }
-    
-    // For all other cases, use Twitter's original implementation
-    return %orig;
-}
-
-- (UIColor *)linkColor {
-    // Only return custom colors if we have a custom theme AND Twitter is set to use option 1 (blue)
-    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
-    NSInteger twitterColorOption = [defs integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"];
-    
-    if (twitterColorOption == 1 && [defs objectForKey:@"bh_color_theme_selectedColor"]) {
-        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
-        
-        // Return our custom colors when we have an active custom theme
-        if (customOption == 7) {
-            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
-        } else if (customOption == 8) {
-            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
-        }
-    }
-    
-    // For all other cases, use Twitter's original implementation
-    return %orig;
-}
-
 %end

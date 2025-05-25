@@ -45,8 +45,6 @@
     [self.colors addObject:[[BHColorThemeItem alloc] initWithColorID:4 name:[[BHTBundle sharedBundle] localizedStringForKey:@"THEME_OPTION_4"] color:[UIColor colorFromHexString:@"#7856FF"]]];
     [self.colors addObject:[[BHColorThemeItem alloc] initWithColorID:5 name:[[BHTBundle sharedBundle] localizedStringForKey:@"THEME_OPTION_5"] color:[UIColor colorFromHexString:@"#FF7A00"]]];
     [self.colors addObject:[[BHColorThemeItem alloc] initWithColorID:6 name:[[BHTBundle sharedBundle] localizedStringForKey:@"THEME_OPTION_6"] color:[UIColor colorFromHexString:@"#00BA7C"]]];
-    [self.colors addObject:[[BHColorThemeItem alloc] initWithColorID:7 name:[[BHTBundle sharedBundle] localizedStringForKey:@"THEME_OPTION_7"] color:[UIColor colorFromHexString:@"#FF69B4"]]];
-    [self.colors addObject:[[BHColorThemeItem alloc] initWithColorID:8 name:[[BHTBundle sharedBundle] localizedStringForKey:@"THEME_OPTION_8"] color:[UIColor colorFromHexString:@"#DC143C"]]];
     
     self.navigationController.navigationBar.prefersLargeTitles = NO;
     self.view.backgroundColor = [UIColor systemBackgroundColor];
@@ -121,22 +119,6 @@
                     cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
                 }
             case 6:
-                if (currCell.colorID == selectedColor) {
-                    [collectionView.visibleCells enumerateObjectsUsingBlock:^(__kindof UICollectionViewCell * _Nonnull colorCell, NSUInteger idx, BOOL * _Nonnull stop) {
-                        BHColorThemeCell *cCell = (BHColorThemeCell *)colorCell;
-                        cCell.checkIMG.image = [UIImage systemImageNamed:@"circle"];
-                    }];
-                    cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
-                }
-            case 7:
-                if (currCell.colorID == selectedColor) {
-                    [collectionView.visibleCells enumerateObjectsUsingBlock:^(__kindof UICollectionViewCell * _Nonnull colorCell, NSUInteger idx, BOOL * _Nonnull stop) {
-                        BHColorThemeCell *cCell = (BHColorThemeCell *)colorCell;
-                        cCell.checkIMG.image = [UIImage systemImageNamed:@"circle"];
-                    }];
-                    cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
-                }
-            case 8:
                 if (currCell.colorID == selectedColor) {
                     [collectionView.visibleCells enumerateObjectsUsingBlock:^(__kindof UICollectionViewCell * _Nonnull colorCell, NSUInteger idx, BOOL * _Nonnull stop) {
                         BHColorThemeCell *cCell = (BHColorThemeCell *)colorCell;
