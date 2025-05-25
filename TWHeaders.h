@@ -526,44 +526,12 @@ typedef FLEXAlertAction * _Nonnull (^FLEXAlertActionHandler)(void(^handler)(NSAr
 + (instancetype)sharedSettings;
 @end
 
-@interface TAEColorLoader : NSObject
-{
-    NSObject *_palette;
-    NSMutableDictionary *_colorCache;
-}
-- (id)colorForPropertyName:(id)propertyName;
-- (id)initWithPalette:(id)palette;
-@end
-
-@interface TAEDarkerColorPalette : NSObject
-+ (id)sharedPalette;
-- (UIColor *)primaryColorForOption:(long long)colorOption;
-- (UIColor *)primaryColor;
-- (UIColor *)primaryColorOptionBlueColor;
-- (UIColor *)textLinkColor;
-- (UIColor *)primaryButtonBackgroundColor;
-- (UIColor *)tabBarItemColor;
-@end
-
 static void BH_changeTwitterColor(NSInteger colorID) {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];
     
     [defaults setObject:@(colorID) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
     [colorSettings setPrimaryColorOption:colorID];
-    
-    // Force Twitter's UI refresh by calling _t1_applyPrimaryColorOption via runtime
-    Class T1ColorSettingsClass = objc_getClass("T1ColorSettings");
-    if (T1ColorSettingsClass) {
-        SEL refreshSelector = NSSelectorFromString(@"_t1_applyPrimaryColorOption");
-        if ([T1ColorSettingsClass respondsToSelector:refreshSelector]) {
-            NSMethodSignature *signature = [T1ColorSettingsClass methodSignatureForSelector:refreshSelector];
-            NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
-            [invocation setTarget:T1ColorSettingsClass];
-            [invocation setSelector:refreshSelector];
-            [invocation invoke];
-        }
-    }
 }
 static UIImage *BH_imageFromView(UIView *view) {
     TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];
