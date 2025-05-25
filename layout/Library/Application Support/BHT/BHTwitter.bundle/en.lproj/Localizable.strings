@@ -262,7 +262,8 @@
 "COPY_PROFILE_INFO_MENU_OPTION_5" = "Copy location";
 
 /*Theme*/
-"THEME_SETTINGS_NAVIGATION_TITLE" = "Change theme";
+"THEME_SETTINGS_NAVIGATION_TITLE" = "Theme";
+"THEME_SETTINGS_NAVIGATION_DETAIL" = "Choose a theme for your Twitter experience that can only be seen by you.";
 "THEME_OPTION_1" = "Blue";
 "THEME_OPTION_2" = "Yellow";
 "THEME_OPTION_3" = "Red";
