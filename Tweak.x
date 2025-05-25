@@ -5340,8 +5340,23 @@ static void findTextView(UIView *view, UITextView **tweetTextView) {
     return nil;
 }
 
+// Helper function for finding TTAStatusBodySelectableContentTextView
+static void findTTATextView(UIView *view, UITextView **tweetTextView) {
+    if ([NSStringFromClass([view class]) isEqualToString:@"TTAStatusBodySelectableContentTextView"]) {
+        *tweetTextView = (UITextView *)view;
+        return;
+    }
+    
+    // Recurse into subviews
+    for (UIView *subview in view.subviews) {
+        if (!*tweetTextView) {
+            findTTATextView(subview, tweetTextView);
+        }
+    }
+}
+
 %new - (BOOL)BHT_replaceTextInController:(UIViewController *)controller withTranslation:(NSString *)translatedText {
-    // Find the same text view we used to extract text from
+    // Find TTAStatusBodySelectableContentTextView specifically
     UIViewController *urtViewController = nil;
     
     // Check if the current controller is a T1URTViewController
@@ -5385,44 +5400,63 @@ static void findTextView(UIView *view, UITextView **tweetTextView) {
         }
     }
     
+    UITextView *tweetTextView = nil;
+    
     // If we found T1URTViewController, try to replace text in it
     if (urtViewController && urtViewController.isViewLoaded) {
-        UITextView *tweetTextView = nil;
-        findTextView(urtViewController.view, &tweetTextView);
+        findTTATextView(urtViewController.view, &tweetTextView);
         
         if (tweetTextView) {
-            tweetTextView.text = translatedText;
-            return YES;
+            // Use the specific method for this text view
+            if ([tweetTextView respondsToSelector:@selector(setAb_text:)]) {
+                [tweetTextView performSelector:@selector(setAb_text:) withObject:translatedText];
+                return YES;
+            } else {
+                // Fallback to regular text property
+                tweetTextView.text = translatedText;
+                return YES;
+            }
         }
     }
     
-    // Fallback: Get the root view controller to search the entire hierarchy
+    // Fallback: Search the entire view hierarchy
     UIViewController *rootVC = controller;
     while (rootVC.parentViewController) {
         rootVC = rootVC.parentViewController;
     }
     
-    // Find text view in the entire view hierarchy
-    UITextView *tweetTextView = nil;
-    
     // Start search from root view controller's view
     if (rootVC.isViewLoaded) {
-        findTextView(rootVC.view, &tweetTextView);
+        findTTATextView(rootVC.view, &tweetTextView);
     }
     
     if (tweetTextView) {
-        tweetTextView.text = translatedText;
-        return YES;
+        // Use the specific method for this text view
+        if ([tweetTextView respondsToSelector:@selector(setAb_text:)]) {
+            [tweetTextView performSelector:@selector(setAb_text:) withObject:translatedText];
+            return YES;
+        } else {
+            // Fallback to regular text property
+            tweetTextView.text = translatedText;
+            return YES;
+        }
     }
     
     // As a backup, search child view controllers explicitly
     if (!tweetTextView && [rootVC respondsToSelector:@selector(childViewControllers)]) {
         for (UIViewController *childVC in rootVC.childViewControllers) {
             if (childVC.isViewLoaded) {
-                findTextView(childVC.view, &tweetTextView);
+                findTTATextView(childVC.view, &tweetTextView);
                 if (tweetTextView) {
-                    tweetTextView.text = translatedText;
-                    return YES;
+                    // Use the specific method for this text view
+                    if ([tweetTextView respondsToSelector:@selector(setAb_text:)]) {
+                        [tweetTextView performSelector:@selector(setAb_text:) withObject:translatedText];
+                        return YES;
+                    } else {
+                        // Fallback to regular text property
+                        tweetTextView.text = translatedText;
+                        return YES;
+                    }
                 }
             }
         }
