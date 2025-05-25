@@ -5791,6 +5791,42 @@ static GeminiTranslator *_sharedInstance;
     return %orig;
 }
 
+- (UIColor *)accentColor {
+    // Check if we have a custom theme active
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        
+        // Return our custom colors when we have an active custom theme
+        if (customOption == 7) {
+            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
+        } else if (customOption == 8) {
+            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
+        }
+    }
+    
+    // For all other cases, use Twitter's original implementation
+    return %orig;
+}
+
+- (UIColor *)linkColor {
+    // Check if we have a custom theme active
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        
+        // Return our custom colors when we have an active custom theme
+        if (customOption == 7) {
+            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
+        } else if (customOption == 8) {
+            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
+        }
+    }
+    
+    // For all other cases, use Twitter's original implementation
+    return %orig;
+}
+
 %end
 
 %hook TAEDarkColorPalette
@@ -5832,6 +5868,42 @@ static GeminiTranslator *_sharedInstance;
 }
 
 - (UIColor *)primaryColorOptionBlueColor {
+    // Check if we have a custom theme active
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        
+        // Return our custom colors when we have an active custom theme
+        if (customOption == 7) {
+            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
+        } else if (customOption == 8) {
+            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
+        }
+    }
+    
+    // For all other cases, use Twitter's original implementation
+    return %orig;
+}
+
+- (UIColor *)accentColor {
+    // Check if we have a custom theme active
+    NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
+    if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
+        
+        // Return our custom colors when we have an active custom theme
+        if (customOption == 7) {
+            return [UIColor colorFromHexString:@"#FF69B4"]; // Hot Pink
+        } else if (customOption == 8) {
+            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
+        }
+    }
+    
+    // For all other cases, use Twitter's original implementation
+    return %orig;
+}
+
+- (UIColor *)linkColor {
     // Check if we have a custom theme active
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
     if ([defs objectForKey:@"bh_color_theme_selectedColor"]) {
