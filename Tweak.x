@@ -1811,15 +1811,15 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
         }
         
         if (cookiesStillValid) {
-            // We have valid cookies from cache
-            // Make them immediately available for pending tweets
-            dispatch_async(dispatch_get_main_queue(), ^{
-                // Direct notification - more reliable than delayed polling
-                [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
-            });
-            
-            isInitializingCookies = NO;
-            return;
+        // We have valid cookies from cache
+        // Make them immediately available for pending tweets
+        dispatch_async(dispatch_get_main_queue(), ^{
+            // Direct notification - more reliable than delayed polling
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
+        });
+        
+        isInitializingCookies = NO;
+        return;
         }
     }
     
@@ -2266,9 +2266,9 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
                     
                     // Mark this tweet as "Fetching..." instead of unavailable
                     tweetSources[tweetID] = @"Fetching...";
-                    fetchPending[tweetID] = @(NO);
-                    [fetchTimeouts removeObjectForKey:tweetID];
-                    [timeoutTimer invalidate];
+                fetchPending[tweetID] = @(NO);
+                [fetchTimeouts removeObjectForKey:tweetID];
+                [timeoutTimer invalidate];
                     
                     // Notify UI that we're waiting for login
                     dispatch_async(dispatch_get_main_queue(), ^{
@@ -5631,8 +5631,8 @@ static GeminiTranslator *_sharedInstance;
 
 %hook T1AppDelegate
 + (id)launchTransitionProvider {
-    Class T1AppLaunchTransitionClass = NSClassFromString(@"T1AppLaunchTransition");
-    if (T1AppLaunchTransitionClass) {
+        Class T1AppLaunchTransitionClass = NSClassFromString(@"T1AppLaunchTransition");
+        if (T1AppLaunchTransitionClass) {
         return [[T1AppLaunchTransitionClass alloc] init];
     }
     return nil;

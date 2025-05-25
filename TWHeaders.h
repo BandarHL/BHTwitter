@@ -532,6 +532,19 @@ static void BH_changeTwitterColor(NSInteger colorID) {
     
     [defaults setObject:@(colorID) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
     [colorSettings setPrimaryColorOption:colorID];
+    
+    // Force Twitter's UI refresh by calling _t1_applyPrimaryColorOption via runtime
+    Class T1ColorSettingsClass = objc_getClass("T1ColorSettings");
+    if (T1ColorSettingsClass) {
+        SEL refreshSelector = NSSelectorFromString(@"_t1_applyPrimaryColorOption");
+        if ([T1ColorSettingsClass respondsToSelector:refreshSelector]) {
+            NSMethodSignature *signature = [T1ColorSettingsClass methodSignatureForSelector:refreshSelector];
+            NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+            [invocation setTarget:T1ColorSettingsClass];
+            [invocation setSelector:refreshSelector];
+            [invocation invoke];
+        }
+    }
 }
 static UIImage *BH_imageFromView(UIView *view) {
     TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];
