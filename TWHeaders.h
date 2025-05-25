@@ -535,6 +535,16 @@ typedef FLEXAlertAction * _Nonnull (^FLEXAlertActionHandler)(void(^handler)(NSAr
 - (id)initWithPalette:(id)palette;
 @end
 
+@interface TAEDarkerColorPalette : NSObject
++ (id)sharedPalette;
+- (UIColor *)primaryColorForOption:(long long)colorOption;
+- (UIColor *)primaryColor;
+- (UIColor *)primaryColorOptionBlueColor;
+- (UIColor *)textLinkColor;
+- (UIColor *)primaryButtonBackgroundColor;
+- (UIColor *)tabBarItemColor;
+@end
+
 static void BH_changeTwitterColor(NSInteger colorID) {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];
