@@ -1,9 +1,11 @@
 //
 //  BHAppIconViewController.m
-//  NeoFreeBird
+//  BHTwitter
 //
 //  Created by Bandar Alruwaili on 10/12/2023.
-//  Modified by actuallyaridan on 25/05/2025.
+//  Revised: merged Default+Custom into “Icons” (no header),
+//           special headers driven by your localization keys,
+//           including "Other" section.
 //
 
 #import "BHAppIconViewController.h"
@@ -27,42 +29,43 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
 
-    // --- Header label ---
+    // Navigation title
+    self.navigationItem.title =
+      [[BHTBundle sharedBundle] localizedStringForKey:@"APP_ICON_NAV_TITLE"];
+
+    // Header label
     self.headerLabel = [UILabel new];
-    self.headerLabel.text = [[BHTBundle sharedBundle]
-        localizedStringForKey:@"APP_ICON_HEADER_TITLE"];
+    self.headerLabel.text =
+      [[BHTBundle sharedBundle] localizedStringForKey:@"APP_ICON_HEADER_TITLE"];
     self.headerLabel.textColor    = [UIColor secondaryLabelColor];
     self.headerLabel.numberOfLines = 0;
     self.headerLabel.font         = [UIFont systemFontOfSize:15];
     self.headerLabel.textAlignment = NSTextAlignmentJustified;
     self.headerLabel.translatesAutoresizingMaskIntoConstraints = NO;
 
-    // --- Collection view ---
+    // Collection view layout
     UICollectionViewFlowLayout *flow = [UICollectionViewFlowLayout new];
-    flow.sectionInset        = UIEdgeInsetsMake(16,16,16,16);
-    flow.minimumLineSpacing  = 10;
+    flow.sectionInset            = UIEdgeInsetsMake(16,16,16,16);
+    flow.minimumLineSpacing      = 10;
     flow.minimumInteritemSpacing = 10;
 
+    // Collection view
     self.appIconCollectionView = [[UICollectionView alloc]
         initWithFrame:CGRectZero
   collectionViewLayout:flow];
     self.appIconCollectionView.contentInsetAdjustmentBehavior =
-        UIScrollViewContentInsetAdjustmentAlways;
-
+      UIScrollViewContentInsetAdjustmentAlways;
     [self.appIconCollectionView
       registerClass:[BHAppIconCell class]
- forCellWithReuseIdentifier:[BHAppIconCell reuseIdentifier]];
-
+      forCellWithReuseIdentifier:[BHAppIconCell reuseIdentifier]];
     [self.appIconCollectionView
       registerClass:[UICollectionReusableView class]
-forSupplementaryViewOfKind:UICollectionElementKindSectionHeader
-     withReuseIdentifier:@"HeaderView"];
-
+      forSupplementaryViewOfKind:UICollectionElementKindSectionHeader
+      withReuseIdentifier:@"HeaderView"];
     self.appIconCollectionView.delegate   = self;
     self.appIconCollectionView.dataSource = self;
     self.appIconCollectionView.translatesAutoresizingMaskIntoConstraints = NO;
 
-    self.navigationController.navigationBar.prefersLargeTitles = NO;
     self.view.backgroundColor = [UIColor systemBackgroundColor];
     [self.view addSubview:self.headerLabel];
     [self.view addSubview:self.appIconCollectionView];
@@ -82,7 +85,7 @@ forSupplementaryViewOfKind:UICollectionElementKindSectionHeader
       [self.appIconCollectionView.trailingAnchor
          constraintEqualToAnchor:self.view.trailingAnchor],
       [self.appIconCollectionView.bottomAnchor
-         constraintEqualToAnchor:self.view.bottomAnchor]
+         constraintEqualToAnchor:self.view.bottomAnchor],
     ]];
 
     [self setupAppIcons];
@@ -95,7 +98,7 @@ forSupplementaryViewOfKind:UICollectionElementKindSectionHeader
     // 1) Flat list of all icons
     NSMutableArray<BHAppIconItem*> *flat = [NSMutableArray new];
 
-    // Primary
+    // Primary icon
     NSDictionary *pri = iconsDict[@"CFBundlePrimaryIcon"];
     [flat addObject:
       [[BHAppIconItem alloc]
@@ -103,7 +106,7 @@ forSupplementaryViewOfKind:UICollectionElementKindSectionHeader
                   iconFileNames:pri[@"CFBundleIconFiles"]
                    isPrimaryIcon:YES]];
 
-    // Alternates
+    // Alternate icons
     NSDictionary *alts = iconsDict[@"CFBundleAlternateIcons"];
     [alts enumerateKeysAndObjectsUsingBlock:
       ^(NSString *key, NSDictionary *alt, BOOL *stop) {
@@ -116,7 +119,7 @@ forSupplementaryViewOfKind:UICollectionElementKindSectionHeader
 
     // 2) Prepare buckets
     NSArray<NSString*> *allCats = @[
-      @"Icons",          // default+custom
+      @"Icons",
       @"Seasonal Icons",
       @"Holidays",
       @"Sports",
@@ -124,7 +127,7 @@ forSupplementaryViewOfKind:UICollectionElementKindSectionHeader
       @"Other"
     ];
     NSMutableDictionary<NSString*,NSMutableArray*> *buckets = [NSMutableDictionary new];
-    for (NSString *cat in allCats) buckets[cat] = [NSMutableArray new];
+    for (NSString *c in allCats) buckets[c] = [NSMutableArray new];
 
     NSSet *seasonKeys = [NSSet setWithArray:@[@"Autumn",@"Summer",@"Winter",@"Spring",@"Fall"]];
     NSSet *holidayKeys = [NSSet setWithArray:@[
@@ -136,7 +139,7 @@ forSupplementaryViewOfKind:UICollectionElementKindSectionHeader
       @"BeijingOlympics",@"FormulaOne",@"Daytona",@"Nba",@"Ncaa"
     ]];
 
-    // 3) Distribute
+    // 3) Distribute into buckets
     for (BHAppIconItem *item in flat) {
       if (item.isPrimaryIcon ||
           [item.bundleIconName hasPrefix:@"Custom-Icon"]) {
@@ -172,7 +175,7 @@ forSupplementaryViewOfKind:UICollectionElementKindSectionHeader
       }
     }
 
-    // 4) Build section lists, dropping empty
+    // 4) Build section arrays, dropping empty
     NSMutableArray<NSString*> *titles   = [NSMutableArray new];
     NSMutableArray<NSArray*>   *sections = [NSMutableArray new];
     for (NSString *cat in allCats) {
@@ -187,22 +190,24 @@ forSupplementaryViewOfKind:UICollectionElementKindSectionHeader
     [self.appIconCollectionView reloadData];
 }
 
-#pragma mark – UICollectionViewDataSource
+#pragma mark - UICollectionViewDataSource
 
-- (NSInteger)numberOfSectionsInCollectionView:(UICollectionView*)cv {
+- (NSInteger)numberOfSectionsInCollectionView:(UICollectionView*)collectionView {
     return self.sectionedIcons.count;
 }
-- (NSInteger)collectionView:(UICollectionView*)cv
+
+- (NSInteger)collectionView:(UICollectionView*)collectionView
      numberOfItemsInSection:(NSInteger)section {
     return self.sectionedIcons[section].count;
 }
-- (UICollectionViewCell*)collectionView:(UICollectionView*)cv
-              cellForItemAtIndexPath:(NSIndexPath*)ip {
-    BHAppIconCell *cell = [cv dequeueReusableCellWithReuseIdentifier:
-        [BHAppIconCell reuseIdentifier] forIndexPath:ip];
-    BHAppIconItem *item = self.sectionedIcons[ip.section][ip.row];
 
-    // load image (settings→catalog→bundle highest-res)
+- (UICollectionViewCell*)collectionView:(UICollectionView*)collectionView
+              cellForItemAtIndexPath:(NSIndexPath*)indexPath {
+    BHAppIconCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:
+        [BHAppIconCell reuseIdentifier] forIndexPath:indexPath];
+    BHAppIconItem *item = self.sectionedIcons[indexPath.section][indexPath.row];
+
+    // Load icon image (settings → catalog → bundle highest-res)
     NSString *settings;
     if (item.isPrimaryIcon) {
       NSString *nm = item.bundleIconName;
@@ -222,82 +227,105 @@ forSupplementaryViewOfKind:UICollectionElementKindSectionHeader
     }
     cell.imageView.image = img;
 
-    // checkmark
+    // Checkmark
     NSString *curr = [UIApplication sharedApplication].alternateIconName;
     BOOL active = curr ? [curr isEqualToString:item.bundleIconName] : item.isPrimaryIcon;
-    [cv.visibleCells enumerateObjectsUsingBlock:
+    [collectionView.visibleCells enumerateObjectsUsingBlock:
       ^(__kindof UICollectionViewCell *c, NSUInteger idx, BOOL *stop) {
         ((BHAppIconCell*)c).checkIMG.image =
           [UIImage systemImageNamed:@"circle"];
     }];
     if (active) cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
+
     return cell;
 }
 
-#pragma mark – UICollectionViewDelegate
+#pragma mark - UICollectionViewDelegate
 
-- (void)collectionView:(UICollectionView*)cv
-didSelectItemAtIndexPath:(NSIndexPath*)ip {
-    BHAppIconItem *item = self.sectionedIcons[ip.section][ip.row];
-    [cv.visibleCells enumerateObjectsUsingBlock:
+- (void)collectionView:(UICollectionView*)collectionView
+didSelectItemAtIndexPath:(NSIndexPath*)indexPath {
+    BHAppIconItem *item = self.sectionedIcons[indexPath.section][indexPath.row];
+    [collectionView.visibleCells enumerateObjectsUsingBlock:
       ^(__kindof UICollectionViewCell *c, NSUInteger idx, BOOL *stop) {
         ((BHAppIconCell*)c).checkIMG.image =
           [UIImage systemImageNamed:@"circle"];
     }];
-    BHAppIconCell *cell = (BHAppIconCell*)[cv cellForItemAtIndexPath:ip];
+    BHAppIconCell *cell = (BHAppIconCell*)[collectionView cellForItemAtIndexPath:indexPath];
     NSString *toSet = item.isPrimaryIcon ? nil : item.bundleIconName;
     [[UIApplication sharedApplication]
        setAlternateIconName:toSet
-            completionHandler:^(NSError *error) {
+            completionHandler:^(NSError *_Nullable error) {
       if (!error) {
         cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
       }
     }];
 }
 
-#pragma mark – Section Headers
+#pragma mark - Section Headers
 
-- (UICollectionReusableView*)collectionView:(UICollectionView*)cv
-viewForSupplementaryElementOfKind:(NSString*)kind
-           atIndexPath:(NSIndexPath*)ip
+- (UICollectionReusableView*)collectionView:(UICollectionView*)collectionView
+               viewForSupplementaryElementOfKind:(NSString*)kind
+                                     atIndexPath:(NSIndexPath*)indexPath
 {
-    UICollectionReusableView *header = [cv dequeueReusableSupplementaryViewOfKind:kind
-                                                              withReuseIdentifier:@"HeaderView"
-                                                                     forIndexPath:ip];
-    // always clear out old
+    UICollectionReusableView *header =
+      [collectionView dequeueReusableSupplementaryViewOfKind:kind
+                                         withReuseIdentifier:@"HeaderView"
+                                                forIndexPath:indexPath];
     [header.subviews makeObjectsPerformSelector:@selector(removeFromSuperview)];
 
-    // only sections > 0 get a title
-    if (ip.section == 0) {
-      return header;
+    // First section ("Icons") has no header
+    if (indexPath.section == 0) return header;
+
+    // Determine localization key
+    NSString *cat   = self.sectionTitles[indexPath.section];
+    NSString *locKey;
+    if ([cat isEqualToString:@"Seasonal Icons"]) {
+      locKey = @"APP_ICON_SEASONS_HEADER_TITLE";
+    } else if ([cat isEqualToString:@"Holidays"]) {
+      locKey = @"APP_ICON_HOLIDAYS_HEADER_TITLE";
+    } else if ([cat isEqualToString:@"Sports"]) {
+      locKey = @"APP_ICON_SPORTS_HEADER_TITLE";
+    } else if ([cat isEqualToString:@"Pride"]) {
+      locKey = @"APP_ICON_PRIDE_HEADER_TITLE";
+    } else if ([cat isEqualToString:@"Other"]) {
+      locKey = @"APP_ICON_OTHER_HEADER_TITLE";
+    } else {
+      locKey = nil;
     }
+
     UILabel *lbl = [UILabel new];
     lbl.translatesAutoresizingMaskIntoConstraints = NO;
-    lbl.font  = [UIFont boldSystemFontOfSize:16];
+    lbl.font      = [UIFont boldSystemFontOfSize:16];
     lbl.textColor = [UIColor labelColor];
-    lbl.text = self.sectionTitles[ip.section];
+
+    if (locKey) {
+      lbl.text = [[BHTBundle sharedBundle] localizedStringForKey:locKey];
+    } else {
+      lbl.text = cat;
+    }
+
     [header addSubview:lbl];
     [NSLayoutConstraint activateConstraints:@[
-      [lbl.leadingAnchor  constraintEqualToAnchor:header.leadingAnchor constant:16],
-      [lbl.centerYAnchor  constraintEqualToAnchor:header.centerYAnchor]
+      [lbl.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16],
+      [lbl.centerYAnchor constraintEqualToAnchor:header.centerYAnchor]
     ]];
     return header;
 }
 
-- (CGSize)collectionView:(UICollectionView*)cv
+- (CGSize)collectionView:(UICollectionView*)collectionView
                   layout:(UICollectionViewLayout*)layout
 referenceSizeForHeaderInSection:(NSInteger)section
 {
     return (section == 0)
       ? CGSizeZero
-      : CGSizeMake(cv.bounds.size.width, 30);
+      : CGSizeMake(collectionView.bounds.size.width, 30);
 }
 
-#pragma mark – FlowLayout sizing
+#pragma mark - FlowLayout sizing
 
-- (CGSize)collectionView:(UICollectionView*)cv
+- (CGSize)collectionView:(UICollectionView*)collectionView
                   layout:(UICollectionViewLayout*)layout
- sizeForItemAtIndexPath:(NSIndexPath*)ip
+ sizeForItemAtIndexPath:(NSIndexPath*)indexPath
 {
     return CGSizeMake(98,136);
 }
