@@ -4,18 +4,19 @@
 */
 
 "BHTWITTER_SETTINGS_TITLE" = "NeoFreeBird";
-"BHTWITTER_SETTINGS_DETAIL" = "Tweak your Twitter. Hide ads, enable Blue features, and more.";
-"SETTINGS_HEADER_TITLE" = "Customize your Twitter experience with these settings";
+"BHTWITTER_SETTINGS_DETAIL" = "Tweak your Twitter. Hide ads, enable Blue features, and much more.";
+
+/*Alerts and popups*/
+"RESTART_REQUIRED_ALERT_TITLE" = "Restart required";
+"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC" = "You need to restart Twitter for this change to take effect.";
+"RESTART_REQUIRED_ALERT_MESSAGE_SQUARE_AVATARS" = "You need to restart Twitter for square profile pictures to take effect.";
+"RESTART_NOW_BUTTON_TITLE" = "Restart";
 
 "CONFIRM_ALERT_MESSAGE" = "Sure you meant to do that?";
 "YES_BUTTON_TITLE" = "Yes";
 "NO_BUTTON_TITLE" = "No";
 "OK_BUTTON_TITLE" = "OK";
 "CANCEL_BUTTON_TITLE" = "Cancel";
-
-/* Restart Now Button */
-"RESTART_NOW_BUTTON_TITLE" = "Restart";
-
 
 /*Main menu start*/
 
@@ -74,14 +75,14 @@
 "HIDE_GROK_ANALYZE_BUTTON_TITLE" = "Hide Grok analyze buttons";
 "HIDE_GROK_ANALYZE_BUTTON_DETAIL_TITLE" = "Hides the Grok Analyze button in tweets.";
 
-"SQUARE_AVATARS_TITLE" = "Square avatars";
-"SQUARE_AVATARS_DETAIL_TITLE" = "Requires app restart.";
+"SQUARE_AVATARS_TITLE" = "Square profile pictures";
+"SQUARE_AVATARS_DETAIL_TITLE" = "Give everyone square profile pictures like branded accounts, just like the old days.";
 
-"ENABLE_TRANSLATE_OPTION_TITLE" = "Enable translate button";
-"ENABLE_TRANSLATE_OPTION_DETAIL_TITLE" = "Add a new translate button to tweets that you can configure with an AI.";
+"ENABLE_TRANSLATE_OPTION_TITLE" = "AI translate button";
+"ENABLE_TRANSLATE_OPTION_DETAIL_TITLE" = "Adds an AI translate button to Tweets that are not in your language. Requires a translation API key.";
 
-"TRANSLATE_ENDPOINT_OPTION_TITLE" = "API Endpoint";
-"TRANSLATE_API_KEY_OPTION_TITLE" = "API Key";
+"TRANSLATE_ENDPOINT_OPTION_TITLE" = "API endpoint";
+"TRANSLATE_API_KEY_OPTION_TITLE" = "API key";
 "TRANSLATE_MODEL_OPTION_TITLE" = "Model";
 
 
@@ -109,11 +110,11 @@
 "DISABLE_HIGHLIGHTS_OPTION_TITLE" = "No Highlights tab";
 "DISABLE_HIGHLIGHTS_OPTION_DETAIL_TITLE" = "Hide the Highlights tab in profiles.";
 
-"HIDE_FOLLOW_BUTTON_TITLE" = "Hide Follow Button";
-"HIDE_FOLLOW_BUTTON_DETAIL_TITLE" = "Hides the Follow button in conversation view.";
+"HIDE_FOLLOW_BUTTON_TITLE" = "No Follow button on Tweets";
+"HIDE_FOLLOW_BUTTON_DETAIL_TITLE" = "Hides the Follow button on Tweets.";
 
-"RESTORE_FOLLOW_BUTTON_TITLE" = "Restore Follow Button";
-"RESTORE_FOLLOW_BUTTON_DETAIL_TITLE" = "Restores the normal Follow button instead of Subscribe (also hides Subscribe button).";
+"RESTORE_FOLLOW_BUTTON_TITLE" = "No Subscribe button";
+"RESTORE_FOLLOW_BUTTON_DETAIL_TITLE" = "Hides the Subscribe button on Tweets and in profiles.";
 
 
 /*Search*/
@@ -215,11 +216,11 @@
 "FLEX_OPTION_TITLE" = "FLEX debug mode";
 "FLEX_OPTION_DETAIL_TITLE" = "Use FLEX to debug Twitter.";
 
-"CLEAR_SOURCE_LABEL_CACHE_TITLE" = "Clear Source Label Cookies";
-"CLEAR_SOURCE_LABEL_CACHE_DETAIL_TITLE" = "Forces refetching of all source label cookies.";
+"CLEAR_SOURCE_LABEL_CACHE_TITLE" = "Clear cookies";
+"CLEAR_SOURCE_LABEL_CACHE_DETAIL_TITLE" = "Clears the source label cookies and forces them to refresh.";
 "CLEAR_CACHE_BUTTON_TITLE" = "Clear";
-"CACHE_CLEARED_TITLE" = "Cache Cleared";
-"CACHE_CLEARED_MESSAGE" = "Source label cookies has been cleared. This may help if labels were not showing correctly.";
+"CACHE_CLEARED_TITLE" = "Cookies cleared";
+"CACHE_CLEARED_MESSAGE" = "Source label cookies were cleared. If soruce labels werenä't showing, they should now.";
 
 
 /*Developers*/
@@ -242,8 +243,17 @@
 "FFMPEG_DOWNLOAD_OPTION_TITLE" = "Download using FFmpeg";
 
 /*App icon*/
-"APP_ICON_NAV_TITLE" = "Change app icon";
-"APP_ICON_HEADER_TITLE" = "Choose a new icon or theme for Twitter.";
+"APP_ICON_NAV_TITLE" = "App icon";
+"APP_ICON_HEADER_TITLE" = "Choose a custom app icon for your device's home screen. Change it any time.";
+"APP_ICON_SEASONS_HEADER_TITLE" = "Seasons";
+"APP_ICON_SEASONS_HEADER_DETAIL" = "Make Twitter's app icon match the current season.";
+"APP_ICON_HOLIDAYS_HEADER_TITLE" = "Holidays";
+"APP_ICON_HOLIDAYS_HEADER_DETAIL" = "Celebrete the holidays with a custom app icon.";
+"APP_ICON_SPORTS_HEADER_TITLE" = "Sports";
+"APP_ICON_SPORTS_HEADER_DETAIL" = "Show off your favourite sport with a custom app icon.";
+"APP_ICON_PRIDE_HEADER_TITLE" = "Pride";
+"APP_ICON_PRIDE_HEADER_DETAIL" = "Express who you are using a pride-themed app icon.";
+"APP_ICON_OTHER_HEADER_TITLE" = "Other";
 
 /*Copy profile info*/
 "COPY_PROFILE_INFO_MENU_OPTION_1" = "Copy bio";
@@ -253,7 +263,8 @@
 "COPY_PROFILE_INFO_MENU_OPTION_5" = "Copy location";
 
 /*Theme*/
-"THEME_SETTINGS_NAVIGATION_TITLE" = "Change theme";
+"THEME_SETTINGS_NAVIGATION_TITLE" = "Theme";
+"THEME_SETTINGS_NAVIGATION_DETAIL" = "Choose a theme color for your Twitter experience that can only be seen by you.";
 "THEME_OPTION_1" = "Blue";
 "THEME_OPTION_2" = "Yellow";
 "THEME_OPTION_3" = "Red";
@@ -274,6 +285,11 @@
 "CUSTOM_TAB_BAR_OPTION_6" = "Messages";
 "CUSTOM_TAB_BAR_OPTION_7" = "Grok";
 "CUSTOM_TAB_BAR_OPTION_8" = "Video";
+
+/* Classic tab bar */
+"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_ON" = "You will need to restart Twitter for this to take effect.";
+"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_OFF" = "To disable and restore default icons, please restart Twitter.";
+"CLASSIC_TAB_BAR_DISABLED_NOTIFICATION_NAME" = "BHTClassicTabBarSettingChangedNotification";
 
 /*Message customization*/
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_1" = "Use an image";
@@ -296,16 +312,3 @@
 
 "VIDEO_ZOOM_OPTION_TITLE" = "Zoom on videos";
 "VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "Double-tap to zoom in and out.";
-
-
-/* Classic Tab Bar */
-"RESTART_REQUIRED_ALERT_TITLE" = "Restart Required";
-"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_ON" = "You will need to restart Twitter for this to take effect.";
-"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_OFF" = "To disable and restore default icons, please restart Twitter.";
-"CLASSIC_TAB_BAR_DISABLED_NOTIFICATION_NAME" = "BHTClassicTabBarSettingChangedNotification";
-
-/* Generic Restart Message for Classic Tab Bar */
-"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC" = "Changing this requires restarting Twitter.";
-
-/* Square Avatars */
-"RESTART_REQUIRED_ALERT_MESSAGE_SQUARE_AVATARS" = "Changing the avatar style requires restarting the app.";

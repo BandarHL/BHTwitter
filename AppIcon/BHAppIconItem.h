@@ -1,16 +1,29 @@
+// BHAppIconItem.h
+// BHTwitter
 //
-//  BHAppIconItem.h
-//  BHTwitter
-//
-//  Created by Bandar Alruwaili on 10/12/2023.
+// Revised to hold Info.plist icon key & file list
 //
 
 #import <Foundation/Foundation.h>
-#import <UIKit/UIKit.h>
+
+NS_ASSUME_NONNULL_BEGIN
 
 @interface BHAppIconItem : NSObject
-@property (nonatomic, strong) NSString *imageName;
-@property (nonatomic, strong) NSString *settingsImageName;
-@property(nonatomic, assign) BOOL isPrimaryIcon;
-- (instancetype)initWithImageName:(NSString *)imageName settingsImageName:(NSString *)settingsImageName isPrimaryIcon:(bool)isPrimaryIcon;
+
+/// the key used in Info.plist (and passed to setAlternateIconName:)
+@property (nonatomic, copy, readonly) NSString *bundleIconName;
+
+/// the array of filenames (without “.png”) from CFBundleIconFiles
+@property (nonatomic, copy, readonly) NSArray<NSString*> *bundleIconFiles;
+
+/// is this the primary (default) icon?
+@property (nonatomic, assign, readonly) BOOL isPrimaryIcon;
+
+/// Designated initializer
+- (instancetype)initWithBundleIconName:(NSString *)iconName
+                        iconFileNames:(NSArray<NSString*>*)files
+                         isPrimaryIcon:(BOOL)isPrimary;
+
 @end
+
+NS_ASSUME_NONNULL_END
