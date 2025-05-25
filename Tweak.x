@@ -13,6 +13,11 @@
 
 // Forward declare TTAStatusBodySelectableContentTextView
 @interface TTAStatusBodySelectableContentTextView : UITextView
+@property(retain, nonatomic) NSAttributedString *originalAttributedText;
+- (void)setAttributedText:(NSAttributedString *)attributedText;
+- (void)BHT_setTranslatedText:(NSAttributedString *)translatedText;
+- (void)BHT_restoreOriginalText;
+- (BOOL)BHT_isShowingTranslatedText;
 @end
 
 // Block type definitions for compatibility
@@ -5053,48 +5058,63 @@ static char kTranslateButtonKey;
 
     // Find the TTAStatusBodySelectableContentTextView
     UITextView *tweetTextView = [self BHT_findTweetTextViewInController:targetController];
-    NSString *textToTranslate = tweetTextView.text;
-
-    if (!textToTranslate || textToTranslate.length == 0) {
+    
+    if (!tweetTextView || ![tweetTextView isKindOfClass:%c(TTAStatusBodySelectableContentTextView)]) {
         UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
                                                                        message:@"Could not find tweet text to translate." 
                                                                 preferredStyle:UIAlertControllerStyleAlert];
         [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
         [targetController presentViewController:alert animated:YES completion:nil];
-    } else {
-        // Call the GeminiTranslator with the extracted text
-        [[GeminiTranslator sharedInstance] translateText:textToTranslate 
-                                           fromLanguage:@"auto" 
-                                             toLanguage:@"en" 
-                                             completion:^(NSString *translatedText, NSError *error) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                if (error || !translatedText) {
-                    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
-                                                                                   message:error ? error.localizedDescription : @"Failed to translate text." 
-                                                                            preferredStyle:UIAlertControllerStyleAlert];
-                    [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-                    [targetController presentViewController:alert animated:YES completion:nil];
-                    return;
-                }
-                
-                // Replace the text in-place
-                if (tweetTextView && [tweetTextView isKindOfClass:%c(TTAStatusBodySelectableContentTextView)]) {
-                    // Create new attributed string with the translated text
-                    NSAttributedString *originalAttributedText = tweetTextView.attributedText;
-                    NSMutableAttributedString *translatedAttributedText = [[NSMutableAttributedString alloc] initWithString:translatedText];
-                    
-                    // Preserve the original text attributes
-                    if (originalAttributedText.length > 0) {
-                        NSDictionary *attributes = [originalAttributedText attributesAtIndex:0 effectiveRange:NULL];
-                        [translatedAttributedText addAttributes:attributes range:NSMakeRange(0, translatedText.length)];
-                    }
-                    
-                    // Set the translated text
-                    [tweetTextView setAttributedText:translatedAttributedText];
-                }
-            });
-        }];
+        return;
     }
+    
+    TTAStatusBodySelectableContentTextView *selectableTextView = (TTAStatusBodySelectableContentTextView *)tweetTextView;
+    
+    // Check if already translated - if so, toggle back to original
+    if ([selectableTextView BHT_isShowingTranslatedText]) {
+        [selectableTextView BHT_restoreOriginalText];
+        return;
+    }
+    
+    NSString *textToTranslate = tweetTextView.text;
+    if (!textToTranslate || textToTranslate.length == 0) {
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
+                                                                       message:@"No text found to translate." 
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+        [targetController presentViewController:alert animated:YES completion:nil];
+        return;
+    }
+    
+    // Call the GeminiTranslator with the extracted text
+    [[GeminiTranslator sharedInstance] translateText:textToTranslate 
+                                       fromLanguage:@"auto" 
+                                         toLanguage:@"en" 
+                                         completion:^(NSString *translatedText, NSError *error) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (error || !translatedText) {
+                UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
+                                                                               message:error ? error.localizedDescription : @"Failed to translate text." 
+                                                                        preferredStyle:UIAlertControllerStyleAlert];
+                [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+                [targetController presentViewController:alert animated:YES completion:nil];
+                return;
+            }
+            
+            // Create new attributed string with the translated text
+            NSAttributedString *originalAttributedText = selectableTextView.attributedText;
+            NSMutableAttributedString *translatedAttributedText = [[NSMutableAttributedString alloc] initWithString:translatedText];
+            
+            // Preserve the original text attributes
+            if (originalAttributedText.length > 0) {
+                NSDictionary *attributes = [originalAttributedText attributesAtIndex:0 effectiveRange:NULL];
+                [translatedAttributedText addAttributes:attributes range:NSMakeRange(0, translatedText.length)];
+            }
+            
+            // Use our custom method to set the translated text
+            [selectableTextView BHT_setTranslatedText:translatedAttributedText];
+        });
+    }];
 }
 
 %new - (TFNTwitterStatus *)BHT_findStatusObjectInController:(UIViewController *)controller {
@@ -5397,6 +5417,58 @@ static void findTextView(UIView *view, UITextView **tweetTextView) {
 }
 
 
+
+%end
+
+// Hook TTAStatusBodySelectableContentTextView to prevent text reversion
+%hook TTAStatusBodySelectableContentTextView
+
+static char kIsTranslatedKey;
+static char kOriginalTextKey;
+static char kTranslatedTextKey;
+
+- (void)setAttributedText:(NSAttributedString *)attributedText {
+    // Check if we're currently showing translated text
+    NSNumber *isTranslated = objc_getAssociatedObject(self, &kIsTranslatedKey);
+    
+    if (isTranslated && [isTranslated boolValue]) {
+        // If we're in translated mode, don't allow external updates to override our translation
+        NSAttributedString *currentTranslatedText = objc_getAssociatedObject(self, &kTranslatedTextKey);
+        if (currentTranslatedText && ![attributedText.string isEqualToString:currentTranslatedText.string]) {
+            // External code is trying to revert our translation, ignore it
+            return;
+        }
+    }
+    
+    // Store original text if this is the first time setting text (not translated)
+    if (!isTranslated || ![isTranslated boolValue]) {
+        objc_setAssociatedObject(self, &kOriginalTextKey, attributedText, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    
+    %orig(attributedText);
+}
+
+%new - (void)BHT_setTranslatedText:(NSAttributedString *)translatedText {
+    // Store the translated text and mark as translated
+    objc_setAssociatedObject(self, &kTranslatedTextKey, translatedText, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    objc_setAssociatedObject(self, &kIsTranslatedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    
+    // Set the text directly
+    [self setAttributedText:translatedText];
+}
+
+%new - (void)BHT_restoreOriginalText {
+    NSAttributedString *originalText = objc_getAssociatedObject(self, &kOriginalTextKey);
+    if (originalText) {
+        objc_setAssociatedObject(self, &kIsTranslatedKey, @NO, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        [self setAttributedText:originalText];
+    }
+}
+
+%new - (BOOL)BHT_isShowingTranslatedText {
+    NSNumber *isTranslated = objc_getAssociatedObject(self, &kIsTranslatedKey);
+    return isTranslated && [isTranslated boolValue];
+}
 
 %end
 
