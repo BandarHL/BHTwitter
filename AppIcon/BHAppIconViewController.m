@@ -3,8 +3,8 @@
 //  BHTwitter
 //
 //  Created by Bandar Alruwaili on 10/12/2023.
-//  Revised to prefer “-settings” assets, then catalog icons,
-//  then highest-dimension root files via imageNamed:.
+//  Revised to prefer “-settings” assets (including primary), then catalog icons,
+//  then highest-res bundle files for all icons.
 //
 
 #import "BHAppIconViewController.h"
@@ -27,17 +27,17 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
 
-    // Header
+    // Header label
     self.headerLabel = [[UILabel alloc] init];
     self.headerLabel.text = [[BHTBundle sharedBundle]
         localizedStringForKey:@"APP_ICON_HEADER_TITLE"];
     self.headerLabel.textColor    = [UIColor secondaryLabelColor];
     self.headerLabel.numberOfLines = 0;
-    self.headerLabel.font        = [UIFont systemFontOfSize:15];
+    self.headerLabel.font         = [UIFont systemFontOfSize:15];
     self.headerLabel.textAlignment = NSTextAlignmentJustified;
     self.headerLabel.translatesAutoresizingMaskIntoConstraints = NO;
 
-    // Collection
+    // Collection view setup
     UICollectionViewFlowLayout *flow = [UICollectionViewFlowLayout new];
     self.appIconCollectionView = [[UICollectionView alloc]
         initWithFrame:CGRectZero
@@ -82,23 +82,23 @@
     NSDictionary *iconsDict =
         [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIcons"];
 
-    // Primary
-    NSDictionary *pri = iconsDict[@"CFBundlePrimaryIcon"];
-    NSString   *priName  = pri[@"CFBundleIconName"];
-    NSArray<NSString*> *priFiles = pri[@"CFBundleIconFiles"];
+    // Primary icon entry
+    NSDictionary *priDict = iconsDict[@"CFBundlePrimaryIcon"];
+    NSString   *priName  = priDict[@"CFBundleIconName"];
+    NSArray<NSString*> *priFiles = priDict[@"CFBundleIconFiles"];
     [self.icons addObject:
         [[BHAppIconItem alloc]
             initWithBundleIconName:priName
                      iconFileNames:priFiles
                       isPrimaryIcon:YES]];
 
-    // Alternates
+    // Alternate icons
     NSDictionary *alts = iconsDict[@"CFBundleAlternateIcons"];
     [alts enumerateKeysAndObjectsUsingBlock:^(NSString *key,
-                                              NSDictionary *alt,
+                                              NSDictionary *altDict,
                                               BOOL *stop) {
-        NSString   *altName  = alt[@"CFBundleIconName"];
-        NSArray<NSString*> *altFiles = alt[@"CFBundleIconFiles"];
+        NSString   *altName  = altDict[@"CFBundleIconName"];
+        NSArray<NSString*> *altFiles = altDict[@"CFBundleIconFiles"];
         [self.icons addObject:
             [[BHAppIconItem alloc]
                 initWithBundleIconName:altName
@@ -123,38 +123,48 @@
                                   forIndexPath:indexPath];
     BHAppIconItem *item = self.icons[indexPath.row];
 
-    UIImage *img = nil;
+    UIImage *iconImg = nil;
 
-    // 1) “-settings” asset
-    NSString *settingsAsset = [item.bundleIconName stringByAppendingString:@"-settings"];
-    img = [UIImage imageNamed:settingsAsset];
+    // 1) Primary or alternate “-settings” asset
+    NSString *settingsAsset;
+    if (item.isPrimaryIcon) {
+        // strip “AppIcon” suffix then prefix “Icon-…-settings”
+        NSString *name = item.bundleIconName;
+        if ([name hasSuffix:@"AppIcon"]) {
+            name = [name substringToIndex:name.length - @"AppIcon".length];
+        }
+        settingsAsset = [NSString stringWithFormat:@"Icon-%@-settings", name];
+    } else {
+        // e.g. "Custom-Icon-001-settings", "Seasonal-Icon-...-settings"
+        settingsAsset = [item.bundleIconName stringByAppendingString:@"-settings"];
+    }
+    iconImg = [UIImage imageNamed:settingsAsset];
 
-    // 2) Plain asset catalog
-    if (!img) {
-        img = [UIImage imageNamed:item.bundleIconName];
+    // 2) Fallback: plain asset catalog name
+    if (!iconImg) {
+        iconImg = [UIImage imageNamed:item.bundleIconName];
     }
 
-    // 3) Root‐bundle files (highest-dimension first)
-    if (!img && item.bundleIconFiles.count) {
-        // reverse order: largest dimension last in Info.plist → first here
+    // 3) Fallback: highest-res bundle files via imageNamed:
+    if (!iconImg && item.bundleIconFiles.count > 0) {
+        // reverse the Info.plist order (largest last → first here)
         for (NSString *base in item.bundleIconFiles.reverseObjectEnumerator) {
-            img = [UIImage imageNamed:base];
-            if (img) break;
+            iconImg = [UIImage imageNamed:base];
+            if (iconImg) break;
         }
     }
 
-    cell.imageView.image = img;
+    cell.imageView.image = iconImg;
 
-    // Checkmark
+    // Checkmark logic
     NSString *currentAlt = [UIApplication sharedApplication].alternateIconName;
     BOOL isActive = currentAlt
                   ? [currentAlt isEqualToString:item.bundleIconName]
                   : item.isPrimaryIcon;
-
     [collectionView.visibleCells
-      enumerateObjectsUsingBlock:^(__kindof UICollectionViewCell *c,
+      enumerateObjectsUsingBlock:^(__kindof UICollectionViewCell *obj,
                                    NSUInteger idx, BOOL *stop) {
-        ((BHAppIconCell*)c).checkIMG.image =
+        ((BHAppIconCell*)obj).checkIMG.image =
             [UIImage systemImageNamed:@"circle"];
     }];
     if (isActive) {
@@ -169,11 +179,10 @@
 - (void)collectionView:(UICollectionView *)collectionView
 didSelectItemAtIndexPath:(NSIndexPath *)indexPath {
     BHAppIconItem *item = self.icons[indexPath.row];
-
     [collectionView.visibleCells
-      enumerateObjectsUsingBlock:^(__kindof UICollectionViewCell *c,
+      enumerateObjectsUsingBlock:^(__kindof UICollectionViewCell *obj,
                                    NSUInteger idx, BOOL *stop) {
-        ((BHAppIconCell*)c).checkIMG.image =
+        ((BHAppIconCell*)obj).checkIMG.image =
             [UIImage systemImageNamed:@"circle"];
     }];
 
@@ -190,7 +199,7 @@ didSelectItemAtIndexPath:(NSIndexPath *)indexPath {
     }];
 }
 
-#pragma mark – FlowLayout
+#pragma mark – UICollectionViewDelegateFlowLayout
 
 - (UIEdgeInsets)collectionView:(UICollectionView *)collectionView
                         layout:(UICollectionViewLayout *)collectionViewLayout
