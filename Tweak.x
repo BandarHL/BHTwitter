@@ -5541,6 +5541,45 @@ static char kTranslatedTextKey;
     return %orig;
 }
 
+- (void)_t1_applyViewModelUpdate:(id)arg1 {
+    %orig;
+    
+    if ([BHTManager enableTranslate]) {
+        // Remove any translate views that might have been added during view model update
+        NSArray *subviews = [self.subviews copy];
+        for (UIView *subview in subviews) {
+            if ([subview isKindOfClass:%c(T1StandardStatusTranslateView)]) {
+                [subview removeFromSuperview];
+            }
+        }
+    }
+}
+
+- (id)_t1_viewSetUpdatesWithInfo:(id)arg1 {
+    id result = %orig;
+    
+    if ([BHTManager enableTranslate] && [result isKindOfClass:[NSArray class]]) {
+        NSArray *originalArray = (NSArray *)result;
+        NSMutableArray *filteredArray = [NSMutableArray array];
+        
+        for (id item in originalArray) {
+            // Filter out any translate-related views from the array
+            if ([item isKindOfClass:[UIView class]]) {
+                UIView *view = (UIView *)item;
+                if (![view isKindOfClass:%c(T1StandardStatusTranslateView)]) {
+                    [filteredArray addObject:item];
+                }
+            } else {
+                [filteredArray addObject:item];
+            }
+        }
+        
+        return [filteredArray copy];
+    }
+    
+    return result;
+}
+
 %end
 
 @implementation GeminiTranslator
