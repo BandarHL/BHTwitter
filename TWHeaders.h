@@ -524,6 +524,7 @@ typedef FLEXAlertAction * _Nonnull (^FLEXAlertActionHandler)(void(^handler)(NSAr
 @property(retain, nonatomic) TAETwitterColorPaletteSettingInfo *currentColorPalette;
 - (void)setPrimaryColorOption:(NSInteger)colorOption;
 + (instancetype)sharedSettings;
++ (void)_tae_postNotificationForDefaultsChange;
 @end
 
 static void BH_changeTwitterColor(NSInteger colorID) {
@@ -536,9 +537,9 @@ static void BH_changeTwitterColor(NSInteger colorID) {
         [defaults setObject:@(1) forKey:@"T1ColorSettingsPrimaryColorOptionKey"];
         [colorSettings setPrimaryColorOption:1];
         
-        // Simple notification only
+        // Use Twitter's internal notification method to force ALL elements to refresh
         dispatch_async(dispatch_get_main_queue(), ^{
-            [[NSNotificationCenter defaultCenter] postNotificationName:@"TAEColorSettingsDidChangeNotification" object:colorSettings];
+            [objc_getClass("TAEColorSettings") _tae_postNotificationForDefaultsChange];
         });
     } else {
         // For standard Twitter colors (1-6), use them directly
