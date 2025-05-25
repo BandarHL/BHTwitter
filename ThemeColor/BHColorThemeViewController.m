@@ -45,8 +45,8 @@
     [self.colors addObject:[[BHColorThemeItem alloc] initWithColorID:4 name:[[BHTBundle sharedBundle] localizedStringForKey:@"THEME_OPTION_4"] color:[UIColor colorFromHexString:@"#7856FF"]]];
     [self.colors addObject:[[BHColorThemeItem alloc] initWithColorID:5 name:[[BHTBundle sharedBundle] localizedStringForKey:@"THEME_OPTION_5"] color:[UIColor colorFromHexString:@"#FF7A00"]]];
     [self.colors addObject:[[BHColorThemeItem alloc] initWithColorID:6 name:[[BHTBundle sharedBundle] localizedStringForKey:@"THEME_OPTION_6"] color:[UIColor colorFromHexString:@"#00BA7C"]]];
-    [self.colors addObject:[[BHColorThemeItem alloc] initWithColorID:7 name:[[BHTBundle sharedBundle] localizedStringForKey:@"THEME_OPTION_7"] color:[UIColor colorFromHexString:@"#FFB6C1"]]];
-    [self.colors addObject:[[BHColorThemeItem alloc] initWithColorID:8 name:[[BHTBundle sharedBundle] localizedStringForKey:@"THEME_OPTION_8"] color:[UIColor colorFromHexString:@"#8B0000"]]];
+    [self.colors addObject:[[BHColorThemeItem alloc] initWithColorID:7 name:[[BHTBundle sharedBundle] localizedStringForKey:@"THEME_OPTION_7"] color:[UIColor colorFromHexString:@"#FF69B4"]]];
+    [self.colors addObject:[[BHColorThemeItem alloc] initWithColorID:8 name:[[BHTBundle sharedBundle] localizedStringForKey:@"THEME_OPTION_8"] color:[UIColor colorFromHexString:@"#DC143C"]]];
     
     self.navigationController.navigationBar.prefersLargeTitles = NO;
     self.view.backgroundColor = [UIColor systemBackgroundColor];
