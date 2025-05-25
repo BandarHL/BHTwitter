@@ -111,9 +111,9 @@ UIColor *BHTCurrentAccentColor(void) {
         
         // Handle our custom colors directly
         if (opt == 7) {
-            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
+            return [UIColor colorFromHexString:@"#FF1493"]; // Neon Pink
         } else if (opt == 8) {
-            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
+            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
         }
         
         return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
@@ -124,9 +124,9 @@ UIColor *BHTCurrentAccentColor(void) {
         
         // Handle our custom colors directly
         if (opt == 7) {
-            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
+            return [UIColor colorFromHexString:@"#FF1493"]; // Neon Pink
         } else if (opt == 8) {
-            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
+            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
         }
         
         return [palette primaryColorForOption:opt] ?: [UIColor systemBlueColor];
@@ -5649,9 +5649,9 @@ static GeminiTranslator *_sharedInstance;
         
         // Return our custom colors for options 7 and 8
         if (customOption == 7 && colorOption == 7) {
-            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
+            return [UIColor colorFromHexString:@"#FF1493"]; // Neon Pink
         } else if (customOption == 8 && colorOption == 8) {
-            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
+            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
         }
     }
     
@@ -5666,9 +5666,9 @@ static GeminiTranslator *_sharedInstance;
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
         if (customOption == 7) {
-            return [UIColor colorFromHexString:@"#FFB6C1"];
+            return [UIColor colorFromHexString:@"#FF1493"];
         } else if (customOption == 8) {
-            return [UIColor colorFromHexString:@"#8B0000"];
+            return [UIColor colorFromHexString:@"#DC143C"];
         }
     }
     
@@ -5682,9 +5682,9 @@ static GeminiTranslator *_sharedInstance;
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
         if (customOption == 7) {
-            return [UIColor colorFromHexString:@"#FFB6C1"];
+            return [UIColor colorFromHexString:@"#FF1493"];
         } else if (customOption == 8) {
-            return [UIColor colorFromHexString:@"#8B0000"];
+            return [UIColor colorFromHexString:@"#DC143C"];
         }
     }
     
@@ -5704,9 +5704,9 @@ static GeminiTranslator *_sharedInstance;
         
         // Return our custom colors for options 7 and 8
         if (customOption == 7 && colorOption == 7) {
-            return [UIColor colorFromHexString:@"#FFB6C1"]; // Pastel Pink
+            return [UIColor colorFromHexString:@"#FF1493"]; // Neon Pink
         } else if (customOption == 8 && colorOption == 8) {
-            return [UIColor colorFromHexString:@"#8B0000"]; // Dark Red
+            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
         }
     }
     
@@ -5721,9 +5721,9 @@ static GeminiTranslator *_sharedInstance;
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
         if (customOption == 7) {
-            return [UIColor colorFromHexString:@"#FFB6C1"];
+            return [UIColor colorFromHexString:@"#FF1493"]; // Neon Pink
         } else if (customOption == 8) {
-            return [UIColor colorFromHexString:@"#8B0000"];
+            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
         }
     }
     
@@ -5737,9 +5737,9 @@ static GeminiTranslator *_sharedInstance;
         NSInteger customOption = [defs integerForKey:@"bh_color_theme_selectedColor"];
         
         if (customOption == 7) {
-            return [UIColor colorFromHexString:@"#FFB6C1"];
+            return [UIColor colorFromHexString:@"#FF1493"]; // Neon Pink
         } else if (customOption == 8) {
-            return [UIColor colorFromHexString:@"#8B0000"];
+            return [UIColor colorFromHexString:@"#DC143C"]; // Lighter Red (Crimson)
         }
     }
     
