@@ -5682,4 +5682,4 @@ static GeminiTranslator *_sharedInstance;
     return %orig;
 }
 
-@end
+%end
