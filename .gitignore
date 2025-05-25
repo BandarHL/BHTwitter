@@ -3,3 +3,4 @@
 .cursor/
 classdump/
 autopush.sh
+*.ipa

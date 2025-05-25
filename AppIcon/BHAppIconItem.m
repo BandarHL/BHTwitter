@@ -1,20 +1,23 @@
+// BHAppIconItem.m
+// BHTwitter
 //
-//  BHAppIconItem.m
-//  BHTwitter
-//
-//  Created by Bandar Alruwaili on 10/12/2023.
+// Revised to hold Info.plist icon key & file list
 //
 
 #import "BHAppIconItem.h"
 
 @implementation BHAppIconItem
-- (instancetype)initWithImageName:(NSString *)imageName settingsImageName:(NSString *)settingsImageName isPrimaryIcon:(bool)isPrimaryIcon {
-    self = [super init];
-    if (self) {
-        _imageName = imageName;
-        _settingsImageName = settingsImageName;
-        _isPrimaryIcon = isPrimaryIcon;
+
+- (instancetype)initWithBundleIconName:(NSString *)iconName
+                        iconFileNames:(NSArray<NSString*>*)files
+                         isPrimaryIcon:(BOOL)isPrimary
+{
+    if (self = [super init]) {
+        _bundleIconName  = [iconName copy];
+        _bundleIconFiles = [files copy];
+        _isPrimaryIcon   = isPrimary;
     }
     return self;
 }
+
 @end
