@@ -59,7 +59,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     self.headerLabel.numberOfLines = 0;
     // use Chirp regular font at size 15
     self.headerLabel.font =
-      [TwitterChirpFont(TwitterFontStyleRegular) fontWithSize:15];
+      [TwitterChirpFont(TwitterFontStyleRegular) fontWithSize:13];
     // left-aligned, wrap words
     self.headerLabel.textAlignment = NSTextAlignmentLeft;
     self.headerLabel.lineBreakMode = NSLineBreakByWordWrapping;

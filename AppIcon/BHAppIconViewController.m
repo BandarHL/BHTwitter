@@ -256,7 +256,7 @@ didSelectItemAtIndexPath:(NSIndexPath*)ip {
     if (ip.section == 0) {
         UILabel *detail = [UILabel new];
         detail.translatesAutoresizingMaskIntoConstraints = NO;
-        detail.font          = [TwitterChirpFont(TwitterFontStyleRegular) fontWithSize:15];
+        detail.font          = [TwitterChirpFont(TwitterFontStyleRegular) fontWithSize:13];
         detail.textColor     = [UIColor secondaryLabelColor];
         detail.numberOfLines = 0;
         detail.textAlignment = NSTextAlignmentLeft;
