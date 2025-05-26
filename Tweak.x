@@ -5822,4 +5822,50 @@ static GeminiTranslator *_sharedInstance;
     return %orig;
 }
 
+- (WKNavigation *)loadHTMLString:(NSString *)string baseURL:(NSURL *)baseURL {
+    // Check if baseURL is help.x.com/en and redirect
+    if (baseURL && [baseURL.absoluteString hasPrefix:@"https://help.x.com/en"]) {
+        NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird"];
+        NSURLRequest *redirectRequest = [NSURLRequest requestWithURL:redirectURL];
+        return [self loadRequest:redirectRequest];
+    }
+    
+    return %orig;
+}
+
+- (WKNavigation *)loadFileURL:(NSURL *)URL allowingReadAccessToURL:(NSURL *)readAccessURL {
+    // Check if URL is help.x.com/en and redirect
+    if (URL && [URL.absoluteString hasPrefix:@"https://help.x.com/en"]) {
+        NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird"];
+        NSURLRequest *redirectRequest = [NSURLRequest requestWithURL:redirectURL];
+        return [self loadRequest:redirectRequest];
+    }
+    
+    return %orig;
+}
+
+%end
+
+// Hook WKNavigationDelegate to catch navigation decisions
+%hook NSObject
+
+- (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
+    // Check if this object responds to the original method
+    if ([self respondsToSelector:@selector(webView:decidePolicyForNavigationAction:decisionHandler:)]) {
+        // Check if the URL is help.x.com/en and redirect
+        if (navigationAction.request.URL && [navigationAction.request.URL.absoluteString hasPrefix:@"https://help.x.com/en"]) {
+            // Cancel the original navigation
+            decisionHandler(WKNavigationActionPolicyCancel);
+            
+            // Load the GitHub URL instead
+            NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird"];
+            NSURLRequest *redirectRequest = [NSURLRequest requestWithURL:redirectURL];
+            [webView loadRequest:redirectRequest];
+            return;
+        }
+    }
+    
+    %orig;
+}
+
 %end
