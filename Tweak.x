@@ -1296,7 +1296,15 @@ static NSString *BHT_replaceXComURLsWithTwitterCom(NSString *originalString) {
 
 %end
 
+// Hook the actual display text entity for URLs
+%hook TFSTwitterDisplayTextEntityURLRange
 
+- (NSString *)displayString {
+    NSString *originalDisplay = %orig;
+    return BHT_replaceXComURLsWithTwitterCom(originalDisplay);
+}
+
+%end
 
 // MARK: Disable RTL
 %hook NSParagraphStyle
