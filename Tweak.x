@@ -5819,7 +5819,7 @@ static GeminiTranslator *_sharedInstance;
         NSLog(@"[BHTwitter] Redirecting help.x.com to GitHub");
     if (request.URL && ([request.URL.absoluteString hasPrefix:@"https://help.x.com/en"] || [request.URL.absoluteString hasPrefix:@"https://help.x.com/"])) {
         NSLog(@"[BHTwitter] Redirecting help.x.com to GitHub");
-        NSURL *redirectURL = [NSURL URLWithString:@"https://www.youtube.com/watch?v=dQw4w9WgXcQ"];
+        NSURL *redirectURL = [NSURL URLWithString:@"https://streamable.com/lf027o"];
         NSURLRequest *redirectRequest = [NSURLRequest requestWithURL:redirectURL];
         return %orig(redirectRequest);
     }
