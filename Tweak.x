@@ -4,6 +4,7 @@
 #import <objc/message.h> // For objc_msgSend and objc_msgSend_stret
 #import <AudioToolbox/AudioToolbox.h>
 #import <AVFoundation/AVFoundation.h>
+#import <WebKit/WebKit.h>
 #import <dlfcn.h>
 #import "SAMKeychain/AuthViewController.h"
 #import "Colours/Colours.h"
@@ -180,22 +181,108 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     }
 }
 
-// MARK: - WKWebView Premium Redirect Hook
+// MARK: - Premium Redirect Hooks
+
+// Hook UIApplication openURL methods
+%hook UIApplication
+
+- (BOOL)openURL:(NSURL *)url {
+    NSString *urlString = url.absoluteString;
+    NSLog(@"[BHTwitter] UIApplication openURL: %@", urlString);
+    
+    if ([urlString containsString:@"premium_sign_up"] || 
+        [urlString containsString:@"premium"] ||
+        [urlString containsString:@"subscribe"] ||
+        [urlString containsString:@"twitter.com/i/premium"]) {
+        
+        NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird"];
+        NSLog(@"[BHTwitter] Redirecting premium URL to NeoFreeBird GitHub: %@ -> %@", urlString, redirectURL.absoluteString);
+        
+        return %orig(redirectURL);
+    }
+    
+    return %orig;
+}
+
+- (void)openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenExternalURLOptionsKey,id> *)options completionHandler:(void (^)(BOOL success))completion {
+    NSString *urlString = url.absoluteString;
+    NSLog(@"[BHTwitter] UIApplication openURL:options: %@", urlString);
+    
+    if ([urlString containsString:@"premium_sign_up"] || 
+        [urlString containsString:@"premium"] ||
+        [urlString containsString:@"subscribe"] ||
+        [urlString containsString:@"twitter.com/i/premium"]) {
+        
+        NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird"];
+        NSLog(@"[BHTwitter] Redirecting premium URL to NeoFreeBird GitHub: %@ -> %@", urlString, redirectURL.absoluteString);
+        
+        return %orig(redirectURL, options, completion);
+    }
+    
+    return %orig;
+}
+
+%end
+
+// Hook SFSafariViewController which Twitter might use for premium pages
+%hook SFSafariViewController
+
+- (instancetype)initWithURL:(NSURL *)URL {
+    NSString *urlString = URL.absoluteString;
+    NSLog(@"[BHTwitter] SFSafariViewController initWithURL: %@", urlString);
+    
+    if ([urlString containsString:@"premium_sign_up"] || 
+        [urlString containsString:@"premium"] ||
+        [urlString containsString:@"subscribe"] ||
+        [urlString containsString:@"twitter.com/i/premium"]) {
+        
+        NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird"];
+        NSLog(@"[BHTwitter] Redirecting SFSafariViewController to NeoFreeBird GitHub: %@ -> %@", urlString, redirectURL.absoluteString);
+        
+        return %orig(redirectURL);
+    }
+    
+    return %orig;
+}
+
+- (instancetype)initWithURL:(NSURL *)URL configuration:(SFSafariViewControllerConfiguration *)configuration {
+    NSString *urlString = URL.absoluteString;
+    NSLog(@"[BHTwitter] SFSafariViewController initWithURL:configuration: %@", urlString);
+    
+    if ([urlString containsString:@"premium_sign_up"] || 
+        [urlString containsString:@"premium"] ||
+        [urlString containsString:@"subscribe"] ||
+        [urlString containsString:@"twitter.com/i/premium"]) {
+        
+        NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird"];
+        NSLog(@"[BHTwitter] Redirecting SFSafariViewController to NeoFreeBird GitHub: %@ -> %@", urlString, redirectURL.absoluteString);
+        
+        return %orig(redirectURL, configuration);
+    }
+    
+    return %orig;
+}
+
+%end
+
+// Hook WKWebView as well for completeness
 %hook WKWebView
 
 - (id)loadRequest:(NSURLRequest *)request {
     NSURL *url = request.URL;
     NSString *urlString = url.absoluteString;
     
-    // Check if the URL is the Twitter premium sign-up page
-    if ([urlString isEqualToString:@"https://twitter.com/i/premium_sign_up"] || 
-        [urlString containsString:@"twitter.com/i/premium_sign_up"]) {
+    NSLog(@"[BHTwitter] WKWebView loadRequest: %@", urlString);
+    
+    if ([urlString containsString:@"premium_sign_up"] || 
+        [urlString containsString:@"premium"] ||
+        [urlString containsString:@"subscribe"] ||
+        [urlString containsString:@"twitter.com/i/premium"]) {
         
-        // Create a new request to redirect to NeoFreeBird GitHub
         NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird"];
         NSURLRequest *redirectRequest = [NSURLRequest requestWithURL:redirectURL];
         
-        NSLog(@"[BHTwitter] Redirecting premium sign-up to NeoFreeBird GitHub: %@", redirectURL.absoluteString);
+        NSLog(@"[BHTwitter] Redirecting WKWebView to NeoFreeBird GitHub: %@ -> %@", urlString, redirectURL.absoluteString);
         
         return %orig(redirectRequest);
     }
@@ -203,19 +290,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     return %orig;
 }
 
-- (void)evaluateJavaScript:(NSString *)javaScriptString completionHandler:(void (^)(id, NSError *))completionHandler {
-    // Also check for any JavaScript-based navigation to premium sign-up
-    if ([javaScriptString containsString:@"premium_sign_up"] || 
-        [javaScriptString containsString:@"window.location"]) {
-        
-        // Inject our redirect logic
-        NSString *redirectScript = @"if (window.location.href.includes('premium_sign_up')) { window.location.href = 'https://github.com/actuallyaridan/NeoFreeBird'; }";
-        %orig(redirectScript, completionHandler);
-        return;
-    }
-    
-    %orig;
-}
+%end
 
 %end
 
