@@ -180,6 +180,45 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     }
 }
 
+// MARK: - WKWebView Premium Redirect Hook
+%hook WKWebView
+
+- (id)loadRequest:(NSURLRequest *)request {
+    NSURL *url = request.URL;
+    NSString *urlString = url.absoluteString;
+    
+    // Check if the URL is the Twitter premium sign-up page
+    if ([urlString isEqualToString:@"https://twitter.com/i/premium_sign_up"] || 
+        [urlString containsString:@"twitter.com/i/premium_sign_up"]) {
+        
+        // Create a new request to redirect to NeoFreeBird GitHub
+        NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird"];
+        NSURLRequest *redirectRequest = [NSURLRequest requestWithURL:redirectURL];
+        
+        NSLog(@"[BHTwitter] Redirecting premium sign-up to NeoFreeBird GitHub: %@", redirectURL.absoluteString);
+        
+        return %orig(redirectRequest);
+    }
+    
+    return %orig;
+}
+
+- (void)evaluateJavaScript:(NSString *)javaScriptString completionHandler:(void (^)(id, NSError *))completionHandler {
+    // Also check for any JavaScript-based navigation to premium sign-up
+    if ([javaScriptString containsString:@"premium_sign_up"] || 
+        [javaScriptString containsString:@"window.location"]) {
+        
+        // Inject our redirect logic
+        NSString *redirectScript = @"if (window.location.href.includes('premium_sign_up')) { window.location.href = 'https://github.com/actuallyaridan/NeoFreeBird'; }";
+        %orig(redirectScript, completionHandler);
+        return;
+    }
+    
+    %orig;
+}
+
+%end
+
 // MARK: Clean cache and Padlock
 // MARK: - Core Theme Engine Hooks
 %hook TAEColorSettings
@@ -1406,11 +1445,11 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (_Bool)areSmallerVideoThumbnailsEnabled {
     return false;
 }
-- (_Bool)mediaAllowDownloadSettingAvaliable {
+- (_Bool)isDownloadVideoEnabled {
     return false;
 }
-- (_Bool)hasGraduatedAccess {
-    return true;
+- (_Bool)isVideoSettingsPlaybackRateEnabled {
+    return false;
 }
 - (_Bool)continueWatchingEnabled {
     return false;
