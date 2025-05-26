@@ -611,6 +611,8 @@ static UIViewController * _Nonnull topMostController() {
 
 @interface T1ConversationFooterTextView : TFNAttributedTextView
 @property(nonatomic, readonly) id viewModel;
+- (void)updateFooterTextView;
+- (void)BHT_appendSourceToFooter:(NSString *)sourceText;
 @end
 
 @interface TFNBarButtonItemButtonV1 : UIView

@@ -85,6 +85,7 @@ static void BHT_ensureThemingEngineSynchronized(BOOL forceSynchronize);
 + (void)logDebugInfo:(NSString *)message;
 + (void)initializeCookiesWithRetry;
 + (void)retryFetchCookies;
++ (void)updateFooterTextViewsForTweetID:(NSString *)tweetID;
 @end
 
 // Forward declaration for WKWebView
@@ -2464,20 +2465,14 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
                     // Reset retries on success
                     fetchRetries[tweetID] = @(0);
                     
-                    // Notify that source is available
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                    [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
-                    [self performSelector:@selector(retryUpdateForTweetID:) withObject:tweetID afterDelay:0.3];
-                    });
+                    // Update footer text views directly instead of using notifications
+                    [self updateFooterTextViewsForTweetID:tweetID];
                 } else {
                     [self logDebugInfo:[NSString stringWithFormat:@"No source field in tweet %@", tweetID]];
                     tweetSources[tweetID] = @"Unknown Source";
                     
-                    // Notify that source is available (even if it's "Unknown")
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                    [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
-                    [self performSelector:@selector(retryUpdateForTweetID:) withObject:tweetID afterDelay:0.3];
-                    });
+                    // Update footer text views directly instead of using notifications
+                    [self updateFooterTextViewsForTweetID:tweetID];
                 }
             } @catch (NSException *e) {
                 [self logDebugInfo:[NSString stringWithFormat:@"Exception in fetch completion for tweet %@: %@", tweetID, e]];
@@ -2785,6 +2780,76 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
     // Restart polling
     [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:0.5];
 }
+
++ (void)updateFooterTextViewsForTweetID:(NSString *)tweetID {
+    @try {
+        // Find all T1ConversationFooterTextView instances and update them
+        dispatch_async(dispatch_get_main_queue(), ^{
+            // Get all windows and search for footer text views
+            NSArray *windows = [UIApplication sharedApplication].windows;
+            for (UIWindow *window in windows) {
+                [self searchAndUpdateFooterTextViewsInView:window forTweetID:tweetID];
+            }
+        });
+    } @catch (NSException *e) {
+        NSLog(@"[BHTwitter] Exception in updateFooterTextViewsForTweetID: %@", e);
+    }
+}
+
++ (void)searchAndUpdateFooterTextViewsInView:(UIView *)view forTweetID:(NSString *)tweetID {
+    @try {
+        // Check if this view is a T1ConversationFooterTextView
+        if ([view isKindOfClass:%c(T1ConversationFooterTextView)]) {
+            T1ConversationFooterTextView *footerView = (T1ConversationFooterTextView *)view;
+            
+            // Check if this footer view is for the tweet we're updating
+            if (footerView.viewModel) {
+                id tweetObject = nil;
+                if ([footerView.viewModel respondsToSelector:@selector(tweet)]) {
+                    tweetObject = [footerView.viewModel performSelector:@selector(tweet)];
+                } else if ([footerView.viewModel respondsToSelector:@selector(status)]) {
+                    tweetObject = [footerView.viewModel performSelector:@selector(status)];
+                }
+                
+                if (tweetObject) {
+                    NSString *viewTweetID = nil;
+                    @try {
+                        id statusIDVal = [tweetObject valueForKey:@"statusID"];
+                        if (statusIDVal && [statusIDVal respondsToSelector:@selector(longLongValue)] && [statusIDVal longLongValue] > 0) {
+                            viewTweetID = [statusIDVal stringValue];
+                        }
+                    } @catch (NSException *e) {}
+                    
+                    if (!viewTweetID || viewTweetID.length == 0) {
+                        @try {
+                            viewTweetID = [tweetObject valueForKey:@"rest_id"];
+                            if (!viewTweetID || viewTweetID.length == 0) {
+                                viewTweetID = [tweetObject valueForKey:@"id_str"];
+                            }
+                            if (!viewTweetID || viewTweetID.length == 0) {
+                                id genericID = [tweetObject valueForKey:@"id"];
+                                if (genericID) viewTweetID = [genericID description];
+                            }
+                        } @catch (NSException *e) {}
+                    }
+                    
+                    // If this footer view is for the tweet we're updating, refresh it
+                    if (viewTweetID && [viewTweetID isEqualToString:tweetID]) {
+                        [footerView updateFooterTextView];
+                    }
+                }
+            }
+        }
+        
+        // Recursively search subviews
+        for (UIView *subview in view.subviews) {
+            [self searchAndUpdateFooterTextViewsInView:subview forTweetID:tweetID];
+        }
+    } @catch (NSException *e) {
+        NSLog(@"[BHTwitter] Exception in searchAndUpdateFooterTextViewsInView: %@", e);
+    }
+}
+
 @end
 // --- End Helper Implementation ---
 
@@ -5805,6 +5870,119 @@ static GeminiTranslator *_sharedInstance;
     }
     return nil;
 }
+%end
+
+// MARK: Source Label using T1ConversationFooterTextView
+
+%hook T1ConversationFooterTextView
+
+- (void)updateFooterTextView {
+    %orig;
+    
+    // Add source label to footer text view
+    if ([BHTManager RestoreTweetLabels] && self.viewModel) {
+        @try {
+            // Get the tweet object from the view model
+            id tweetObject = nil;
+            if ([self.viewModel respondsToSelector:@selector(tweet)]) {
+                tweetObject = [self.viewModel performSelector:@selector(tweet)];
+            } else if ([self.viewModel respondsToSelector:@selector(status)]) {
+                tweetObject = [self.viewModel performSelector:@selector(status)];
+            }
+            
+            if (tweetObject) {
+                // Get tweet ID
+                NSString *tweetIDStr = nil;
+                @try {
+                    id statusIDVal = [tweetObject valueForKey:@"statusID"];
+                    if (statusIDVal && [statusIDVal respondsToSelector:@selector(longLongValue)] && [statusIDVal longLongValue] > 0) {
+                        tweetIDStr = [statusIDVal stringValue];
+                    }
+                } @catch (NSException *e) {}
+                
+                if (!tweetIDStr || tweetIDStr.length == 0) {
+                    @try {
+                        tweetIDStr = [tweetObject valueForKey:@"rest_id"];
+                        if (!tweetIDStr || tweetIDStr.length == 0) {
+                            tweetIDStr = [tweetObject valueForKey:@"id_str"];
+                        }
+                        if (!tweetIDStr || tweetIDStr.length == 0) {
+                            id genericID = [tweetObject valueForKey:@"id"];
+                            if (genericID) tweetIDStr = [genericID description];
+                        }
+                    } @catch (NSException *e) {}
+                }
+                
+                if (tweetIDStr && tweetIDStr.length > 0) {
+                    // Initialize source tracking if needed
+                    if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
+                    
+                    // Fetch source if not already available
+                    if (!tweetSources[tweetIDStr]) {
+                        tweetSources[tweetIDStr] = @""; // Placeholder
+                        [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
+                    }
+                    
+                    // Add source to footer if available
+                    NSString *sourceText = tweetSources[tweetIDStr];
+                    if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@"Source Unavailable"] && ![sourceText isEqualToString:@""]) {
+                        [self BHT_appendSourceToFooter:sourceText];
+                    }
+                }
+            }
+        } @catch (NSException *e) {
+            NSLog(@"[BHTwitter] Exception in T1ConversationFooterTextView updateFooterTextView: %@", e);
+        }
+    }
+}
+
+%new - (void)BHT_appendSourceToFooter:(NSString *)sourceText {
+    @try {
+        // Get current text model
+        TFNAttributedTextModel *currentModel = [self valueForKey:@"_textModel"];
+        if (!currentModel || !currentModel.attributedString) {
+            return;
+        }
+        
+        NSString *currentText = currentModel.attributedString.string;
+        NSString *separator = @" · ";
+        NSString *fullSourceStringWithSeparator = [separator stringByAppendingString:sourceText];
+        
+        // Check if source is already present
+        if ([currentText rangeOfString:fullSourceStringWithSeparator].location != NSNotFound) {
+            return;
+        }
+        
+        // Create new attributed string with source appended
+        NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:currentModel.attributedString];
+        
+        // Get base attributes from existing text
+        NSDictionary *baseAttributes;
+        if (currentModel.attributedString.length > 0) {
+            baseAttributes = [currentModel.attributedString attributesAtIndex:0 effectiveRange:NULL];
+        } else {
+            baseAttributes = @{NSFontAttributeName: [UIFont systemFontOfSize:12], NSForegroundColorAttributeName: [UIColor grayColor]};
+        }
+        
+        // Create source suffix with accent color
+        NSMutableAttributedString *sourceSuffix = [[NSMutableAttributedString alloc] init];
+        [sourceSuffix appendAttributedString:[[NSAttributedString alloc] initWithString:separator attributes:baseAttributes]];
+        
+        NSMutableDictionary *sourceAttributes = [baseAttributes mutableCopy];
+        [sourceAttributes setObject:BHTCurrentAccentColor() forKey:NSForegroundColorAttributeName];
+        [sourceSuffix appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttributes]];
+        
+        [newString appendAttributedString:sourceSuffix];
+        
+        // Create new text model and update
+        TFNAttributedTextModel *newModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newString];
+        [self setTextModel:newModel];
+        
+    } @catch (NSException *e) {
+        NSLog(@"[BHTwitter] Exception in BHT_appendSourceToFooter: %@", e);
+    }
+}
+
 %end
 
 // MARK: WKWebView URL Redirection
