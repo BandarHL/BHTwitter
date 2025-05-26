@@ -1403,14 +1403,14 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %end
 
 %hook TFNTwitterAccount
-- (_Bool)isXChatEnabled {
-    return true;
-}
-- (_Bool)mediaDownloadVideoEnabled {
+- (_Bool)areSmallerVideoThumbnailsEnabled {
     return false;
 }
 - (_Bool)mediaAllowDownloadSettingAvaliable {
     return false;
+}
+- (_Bool)hasGraduatedAccess {
+    return true;
 }
 - (_Bool)continueWatchingEnabled {
     return false;
