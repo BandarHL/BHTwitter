@@ -1296,12 +1296,21 @@ static NSString *BHT_replaceXComURLsWithTwitterCom(NSString *originalString) {
 
 %end
 
-// Hook the actual display text entity for URLs
-%hook TFSTwitterDisplayTextEntityURLRange
+// Hook NSString stringWithFormat for URL display formatting
+%hook NSString
 
-- (NSString *)displayString {
-    NSString *originalDisplay = %orig;
-    return BHT_replaceXComURLsWithTwitterCom(originalDisplay);
++ (instancetype)stringWithFormat:(NSString *)format, ... {
+    va_list args;
+    va_start(args, format);
+    NSString *result = [[NSString alloc] initWithFormat:format arguments:args];
+    va_end(args);
+    
+    // Only replace x.com in strings that look like URLs
+    if ([result containsString:@"x.com"] && ([result containsString:@"://"] || [result hasPrefix:@"x.com"])) {
+        result = BHT_replaceXComURLsWithTwitterCom(result);
+    }
+    
+    return result;
 }
 
 %end
