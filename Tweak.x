@@ -5621,7 +5621,7 @@ static GeminiTranslator *_sharedInstance;
         [request setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
         
         // Simplified prompt for translation only
-        NSString *prompt = [NSString stringWithFormat:@"Translate this text from %@ to %@: \"%@\" \n\nOnly return the translated text without any explanation or notes.", 
+        NSString *prompt = [NSString stringWithFormat:@"Translate this text from %@ to %@: \"%@\" \n\nOnly return the translated text without any explanation or notes. Do not include hashtags but include emojis if in original text.", 
                             [sourceLanguage isEqualToString:@"auto"] ? @"the original language" : sourceLanguage, 
                             targetLanguage, 
                             text];
