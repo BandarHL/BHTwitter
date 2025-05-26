@@ -6020,7 +6020,7 @@ static GeminiTranslator *_sharedInstance;
 %end
 
 %hook TFNPillControl
-- (void)setText:(id) {
+- (id)text {
     return @"Tweeted";
 }
 %end
