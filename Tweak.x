@@ -5816,7 +5816,7 @@ static GeminiTranslator *_sharedInstance;
     NSLog(@"[BHTwitter] WKWebView loadRequest: %@", request.URL.absoluteString);
     
     // Check if the URL is help.x.com and redirect to GitHub
-    if (request.URL && ([request.URL.absoluteString hasPrefix:@"https://twitter.com/i/webview-preload"] || [request.URL.absoluteString hasPrefix:@"https://help.x.com/"])) {
+    if (request.URL && ([request.URL.absoluteString hasPrefix:@"https://twitter.com/account/authenticate_web_view?redirect_url=https%3A%2F%2Ftwitter.com%2Fi%2Fwebview-preload"] || [request.URL.absoluteString hasPrefix:@"https://help.x.com/"])) {
         NSLog(@"[BHTwitter] Redirecting help.x.com to GitHub");
         NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird"];
         NSURLRequest *redirectRequest = [NSURLRequest requestWithURL:redirectURL];
