@@ -30,6 +30,12 @@
 - (void)_tfn_addView:(id)arg1 toHostViewWithViewAdapter:(id)arg2;
 @end
 
+// Forward declare TFNComposableViewAdapterSet
+@interface TFNComposableViewAdapterSet : NSObject
+@property(readonly, nonatomic) NSDictionary *viewAdaptersByIdentifier;
+- (id)initWithViewAdaptersByIdentifier:(id)arg1;
+@end
+
 // Block type definitions for compatibility
 typedef void (^VoidBlock)(void);
 typedef id (^UnknownBlock)(void);
@@ -5608,6 +5614,33 @@ static char kTranslatedTextKey;
     }
     
     return result;
+}
+
+%end
+
+// Hook TFNComposableViewAdapterSet to filter out translate adapters
+%hook TFNComposableViewAdapterSet
+
+- (id)initWithViewAdaptersByIdentifier:(id)arg1 {
+    if ([BHTManager enableTranslate] && [arg1 isKindOfClass:[NSDictionary class]]) {
+        NSDictionary *originalDict = (NSDictionary *)arg1;
+        NSMutableDictionary *filteredDict = [NSMutableDictionary dictionary];
+        
+        for (id key in originalDict) {
+            id adapter = originalDict[key];
+            NSString *adapterClassName = NSStringFromClass([adapter class]);
+            
+            // Filter out translate-related adapters
+            if (![adapterClassName containsString:@"Translate"] && 
+                ![adapterClassName containsString:@"Translation"]) {
+                filteredDict[key] = adapter;
+            }
+        }
+        
+        return %orig([filteredDict copy]);
+    }
+    
+    return %orig(arg1);
 }
 
 %end
