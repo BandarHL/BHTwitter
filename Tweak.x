@@ -5807,24 +5807,57 @@ static GeminiTranslator *_sharedInstance;
 }
 %end
 
-// Hook NSURL creation to catch at the lowest level
-%hook NSURL
+// MARK: WKWebView URL Redirection
 
-+ (instancetype)URLWithString:(NSString *)URLString {
-    // Check if the URL string is help.x.com and redirect to GitHub
-    if (URLString && ([URLString hasPrefix:@"https://help.x.com/en"] || [URLString hasPrefix:@"https://help.x.com/"])) {
-        NSLog(@"[BHTwitter] Redirecting NSURL URLWithString help.x.com to GitHub");
-        return %orig(@"https://github.com/actuallyaridan/NeoFreeBird");
+%hook WKWebView
+
+- (WKNavigation *)loadRequest:(NSURLRequest *)request {
+    // Debug logging
+    NSLog(@"[BHTwitter] WKWebView loadRequest: %@", request.URL.absoluteString);
+    
+    // Check if the URL is help.x.com and redirect to GitHub
+    if (request.URL && ([request.URL.absoluteString hasPrefix:@"https://help.x.com/en"] || [request.URL.absoluteString hasPrefix:@"https://help.x.com/"])) {
+        NSLog(@"[BHTwitter] Redirecting help.x.com to GitHub");
+        NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird"];
+        NSURLRequest *redirectRequest = [NSURLRequest requestWithURL:redirectURL];
+        return %orig(redirectRequest);
     }
     
     return %orig;
 }
 
-+ (instancetype)URLWithString:(NSString *)URLString relativeToURL:(NSURL *)baseURL {
-    // Check if the URL string is help.x.com and redirect to GitHub
-    if (URLString && ([URLString hasPrefix:@"https://help.x.com/en"] || [URLString hasPrefix:@"https://help.x.com/"])) {
-        NSLog(@"[BHTwitter] Redirecting NSURL URLWithString:relativeToURL help.x.com to GitHub");
-        return %orig(@"https://github.com/actuallyaridan/NeoFreeBird", baseURL);
+%end
+
+// Hook NSURLRequest creation to catch URL requests at a lower level
+%hook NSURLRequest
+
++ (instancetype)requestWithURL:(NSURL *)URL {
+    // Debug logging
+    if (URL && [URL.absoluteString containsString:@"help.x.com"]) {
+        NSLog(@"[BHTwitter] NSURLRequest requestWithURL: %@", URL.absoluteString);
+    }
+    
+    // Check if the URL is help.x.com and redirect to GitHub
+    if (URL && ([URL.absoluteString hasPrefix:@"https://help.x.com/en"] || [URL.absoluteString hasPrefix:@"https://help.x.com/"])) {
+        NSLog(@"[BHTwitter] Redirecting NSURLRequest help.x.com to GitHub");
+        NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird"];
+        return %orig(redirectURL);
+    }
+    
+    return %orig;
+}
+
++ (instancetype)requestWithURL:(NSURL *)URL cachePolicy:(NSURLRequestCachePolicy)cachePolicy timeoutInterval:(NSTimeInterval)timeoutInterval {
+    // Debug logging
+    if (URL && [URL.absoluteString containsString:@"help.x.com"]) {
+        NSLog(@"[BHTwitter] NSURLRequest requestWithURL:cachePolicy:timeoutInterval: %@", URL.absoluteString);
+    }
+    
+    // Check if the URL is help.x.com and redirect to GitHub
+    if (URL && ([URL.absoluteString hasPrefix:@"https://help.x.com/en"] || [URL.absoluteString hasPrefix:@"https://help.x.com/"])) {
+        NSLog(@"[BHTwitter] Redirecting NSURLRequest (with cache policy) help.x.com to GitHub");
+        NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird"];
+        return %orig(redirectURL, cachePolicy, timeoutInterval);
     }
     
     return %orig;
