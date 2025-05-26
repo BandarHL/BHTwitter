@@ -298,6 +298,9 @@
 
 
 
+/*Pill Text*/
+"TFN_PILL_TEXT" = "Tweeted";
+
 /*Deprecated*/
 "TRUSTED_FRIENSS_OPTION_TITLE" = "Twitter Circles";
 

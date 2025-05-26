@@ -6023,9 +6023,20 @@ static GeminiTranslator *_sharedInstance;
 
 %hook TFNPillControl
 - (id)text {
-    return @"Tweeted";
+    NSString *localizedText = [[BHTBundle sharedBundle] localizedStringForKey:@"TFN_PILL_TEXT"];
+    return localizedText ?: @"Tweeted";
 }
 - (void)setText:(id)arg1 {
-    %orig(@"Tweeted");
+    NSString *localizedText = [[BHTBundle sharedBundle] localizedStringForKey:@"TFN_PILL_TEXT"];
+    %orig(localizedText ?: @"Tweeted");
+}
+%end
+
+%hook TwitterHomeFeatures
+- (BOOL)isTimelineAvatarDiscoveryExperimentEnabled {
+    return false;
+}
+- (BOOL)isHomeTimelinePinnedTimelinesSortingEnabled {
+    return false;
 }
 %end
