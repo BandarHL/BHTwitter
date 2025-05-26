@@ -187,20 +187,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 
 // MARK: Clean cache and Padlock
-// MARK: - X.com to Twitter.com URL Replacement Utility
-
-static NSString *BHT_replaceXComURLsWithTwitterCom(NSString *originalString) {
-    if (!originalString || originalString.length == 0) {
-        return originalString;
-    }
-    
-    // Only replace actual URL patterns, not just any occurrence of x.com
-    NSString *modifiedString = [originalString stringByReplacingOccurrencesOfString:@"https://x.com" withString:@"https://twitter.com"];
-    modifiedString = [modifiedString stringByReplacingOccurrencesOfString:@"http://x.com" withString:@"http://twitter.com"];
-    
-    return modifiedString;
-}
-
 // MARK: - Core Theme Engine Hooks
 %hook TAEColorSettings
 
@@ -1277,42 +1263,6 @@ static NSString *BHT_replaceXComURLsWithTwitterCom(NSString *originalString) {
     // https://github.com/haoict/twitter-no-ads/blob/master/Tweak.xm#L195
     return self.expandedURL;
 }
-
-// Hook the display-related properties to change visual appearance
-- (NSString *)displayString {
-    NSString *originalDisplay = %orig;
-    return BHT_replaceXComURLsWithTwitterCom(originalDisplay);
-}
-
-- (NSString *)displayURL {
-    NSString *originalDisplay = %orig;
-    return BHT_replaceXComURLsWithTwitterCom(originalDisplay);
-}
-
-- (NSString *)originalDisplayURL {
-    NSString *originalDisplay = %orig;
-    return BHT_replaceXComURLsWithTwitterCom(originalDisplay);
-}
-
-%end
-
-// Hook NSString stringWithFormat for URL display formatting
-%hook NSString
-
-+ (instancetype)stringWithFormat:(NSString *)format, ... {
-    va_list args;
-    va_start(args, format);
-    NSString *result = [[NSString alloc] initWithFormat:format arguments:args];
-    va_end(args);
-    
-    // Only replace x.com in strings that look like URLs
-    if ([result containsString:@"x.com"] && ([result containsString:@"://"] || [result hasPrefix:@"x.com"])) {
-        result = BHT_replaceXComURLsWithTwitterCom(result);
-    }
-    
-    return result;
-}
-
 %end
 
 // MARK: Disable RTL
@@ -4928,71 +4878,6 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 
 %end
 
-
-
-// Hook web view loading to replace URLs
-%hook WKWebView
-
-- (WKNavigation *)loadRequest:(NSURLRequest *)request {
-    // Replace x.com URLs in web requests with twitter.com
-    if (request.URL && [request.URL.absoluteString containsString:@"x.com"]) {
-        NSString *originalURLString = request.URL.absoluteString;
-        NSString *modifiedURLString = BHT_replaceXComURLsWithTwitterCom(originalURLString);
-        
-        if (![originalURLString isEqualToString:modifiedURLString]) {
-            NSURL *modifiedURL = [NSURL URLWithString:modifiedURLString];
-            if (modifiedURL) {
-                NSMutableURLRequest *modifiedRequest = [request mutableCopy];
-                modifiedRequest.URL = modifiedURL;
-                request = [modifiedRequest copy];
-            }
-        }
-    }
-    
-    // Debug logging
-    NSLog(@"[BHTwitter] WKWebView loadRequest: %@", request.URL.absoluteString);
-    
-    // Check if the URL is help.x.com and redirect to GitHub
-        NSLog(@"[BHTwitter] Redirecting help.x.com to GitHub");
-    if (request.URL && ([request.URL.absoluteString hasPrefix:@"https://help.x.com/en"] || [request.URL.absoluteString hasPrefix:@"https://help.x.com/"])) {
-        NSLog(@"[BHTwitter] Redirecting help.x.com to GitHub");
-        NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird/issues"];
-        NSURLRequest *redirectRequest = [NSURLRequest requestWithURL:redirectURL];
-        return %orig(redirectRequest);
-    }
-    
-    return %orig;
-}
-
-%end
-
-// Hook for URL scheme handling
-%hook UIApplication
-
-- (BOOL)openURL:(NSURL *)url {
-    if (url && [url.absoluteString containsString:@"x.com"]) {
-        NSString *modifiedURLString = BHT_replaceXComURLsWithTwitterCom(url.absoluteString);
-        NSURL *modifiedURL = [NSURL URLWithString:modifiedURLString];
-        if (modifiedURL) {
-            return %orig(modifiedURL);
-        }
-    }
-    return %orig(url);
-}
-
-- (void)openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenExternalURLOptionsKey,id> *)options completionHandler:(void (^)(BOOL success))completion {
-    if (url && [url.absoluteString containsString:@"x.com"]) {
-        NSString *modifiedURLString = BHT_replaceXComURLsWithTwitterCom(url.absoluteString);
-        NSURL *modifiedURL = [NSURL URLWithString:modifiedURLString];
-        if (modifiedURL) {
-            return %orig(modifiedURL, options, completion);
-        }
-    }
-    %orig(url, options, completion);
-}
-
-%end
-
 // MARK: - Gemini AI Translation Integration
 
 // Helper class to communicate with Gemini AI API
@@ -6112,7 +5997,27 @@ static GeminiTranslator *_sharedInstance;
 
 %end
 
+// MARK: WKWebView URL Redirection
 
+%hook WKWebView
+
+- (WKNavigation *)loadRequest:(NSURLRequest *)request {
+    // Debug logging
+    NSLog(@"[BHTwitter] WKWebView loadRequest: %@", request.URL.absoluteString);
+    
+    // Check if the URL is help.x.com and redirect to GitHub
+        NSLog(@"[BHTwitter] Redirecting help.x.com to GitHub");
+    if (request.URL && ([request.URL.absoluteString hasPrefix:@"https://help.x.com/en"] || [request.URL.absoluteString hasPrefix:@"https://help.x.com/"])) {
+        NSLog(@"[BHTwitter] Redirecting help.x.com to GitHub");
+        NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird/issues"];
+        NSURLRequest *redirectRequest = [NSURLRequest requestWithURL:redirectURL];
+        return %orig(redirectRequest);
+    }
+    
+    return %orig;
+}
+
+%end
 
 // MARK: Change Pill text.
 
@@ -6126,15 +6031,3 @@ static GeminiTranslator *_sharedInstance;
     %orig(localizedText ?: @"Tweeted");
 }
 %end
-
-// MARK: - X.com to Twitter.com URL Display Replacement
-// 
-// Note: Current approach isn't working for visual URL display.
-// The x.com URLs are still showing visually even though navigation is redirected.
-// Need to find the specific class that controls URL entity display text.
-//
-// Do you have headers for URL entity display classes that control the visual 
-// rendering of URLs in tweets? Looking for classes that handle URL display text
-// rather than the actual URL values.
-
-// MARK: - X.com to Twitter.com URL Replacement Utility
