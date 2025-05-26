@@ -220,17 +220,49 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     return %orig;
 }
 
-- (void)evaluateJavaScript:(NSString *)javaScriptString completionHandler:(void (^)(id, NSError *))completionHandler {
-    // Inject a simple redirect script that runs after page load
-    NSString *redirectScript = [NSString stringWithFormat:@"%@; setTimeout(function() { \
-        if (window.location.href.includes('webview-preload') || \
-            window.location.href.includes('premium_sign_up') || \
-            window.location.href.includes('twitter.com/i/premium')) { \
-            window.location.replace('https://github.com/actuallyaridan/NeoFreeBird'); \
-        } \
-    }, 500);", javaScriptString ?: @""];
+%end
+
+// Declare WKContentView interface
+@interface WKContentView : UIView
+@property (nonatomic, readonly) WKWebView *webView;
+- (void)_didCommitLoadForMainFrame;
+@end
+
+// Hook into WKContentView which is the actual content view
+%hook WKContentView
+
+- (void)_didCommitLoadForMainFrame {
+    %orig;
     
-    %orig(redirectScript, completionHandler);
+    // Try to find the parent WKWebView
+    UIView *parentView = self.superview;
+    WKWebView *webView = nil;
+    
+    // Walk up the view hierarchy to find WKWebView
+    while (parentView && !webView) {
+        if ([parentView isKindOfClass:[WKWebView class]]) {
+            webView = (WKWebView *)parentView;
+            break;
+        }
+        parentView = parentView.superview;
+    }
+    
+    if (webView) {
+        [webView evaluateJavaScript:@"(function() { \
+            console.log('[BHTwitter] Checking URL: ' + window.location.href); \
+            if (window.location.href.includes('webview-preload') || \
+                window.location.href.includes('premium_sign_up') || \
+                window.location.href.includes('twitter.com/i/premium') || \
+                window.location.href.includes('subscribe')) { \
+                console.log('[BHTwitter] Redirecting to GitHub'); \
+                window.location.replace('https://github.com/actuallyaridan/NeoFreeBird'); \
+            } \
+        })();" completionHandler:^(id result, NSError *error) {
+            if (error) {
+                NSLog(@"[BHTwitter] JavaScript error: %@", error.localizedDescription);
+            }
+        }];
+    }
 }
 
 %end
