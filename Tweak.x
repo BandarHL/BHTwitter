@@ -1277,6 +1277,11 @@ static NSString *BHT_replaceXComURLsWithTwitterCom(NSString *originalString) {
     // https://github.com/haoict/twitter-no-ads/blob/master/Tweak.xm#L195
     return self.expandedURL;
 }
+
+- (NSString *)expandedURL {
+    NSString *originalURL = %orig;
+    return BHT_replaceXComURLsWithTwitterCom(originalURL);
+}
 %end
 
 // MARK: Disable RTL
