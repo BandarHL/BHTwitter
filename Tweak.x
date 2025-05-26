@@ -739,6 +739,12 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             }
         }
 
+        if ([BHTManager hideWhoToFollow]) {
+            if ([class_name isEqualToString:@"T1URTTimelineUserItemViewModel"] || [class_name isEqualToString:@"T1TwitterSwift.URTTimelineCarouselViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"]) {
+                [_orig setHidden:true];
+            }
+        }
+
         if ([BHTManager hidePremiumOffer]) {
             if ([class_name isEqualToString:@"T1URTTimelineMessageItemViewModel"]) {
                 [_orig setHidden:true];
@@ -810,6 +816,12 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         
         if ([BHTManager HideTopics]) {
             if ([tweet isKindOfClass:%c(_TtC10TwitterURT26URTTimelinePromptViewModel)]) {
+                return 0;
+            }
+        }
+
+        if ([BHTManager hideWhoToFollow]) {
+            if ([class_name isEqualToString:@"T1URTTimelineUserItemViewModel"] || [class_name isEqualToString:@"T1TwitterSwift.URTTimelineCarouselViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"]) {
                 return 0;
             }
         }
