@@ -1277,11 +1277,49 @@ static NSString *BHT_replaceXComURLsWithTwitterCom(NSString *originalString) {
     // https://github.com/haoict/twitter-no-ads/blob/master/Tweak.xm#L195
     return self.expandedURL;
 }
+%end
 
-- (NSString *)expandedURL {
-    NSString *originalURL = %orig;
-    return BHT_replaceXComURLsWithTwitterCom(originalURL);
+// Hook TFNAttributedTextModel to replace x.com display in attributed strings
+%hook TFNAttributedTextModel
+
+- (instancetype)initWithAttributedString:(NSAttributedString *)attributedString {
+    // Check if the attributed string contains x.com URLs and replace them for display
+    if (attributedString && attributedString.string) {
+        NSString *originalText = attributedString.string;
+        NSString *modifiedText = BHT_replaceXComURLsWithTwitterCom(originalText);
+        
+        if (![originalText isEqualToString:modifiedText]) {
+            // Create new attributed string with modified text while preserving attributes
+            NSMutableAttributedString *mutableAttributedString = [[NSMutableAttributedString alloc] initWithString:modifiedText];
+            
+            // Copy attributes from original string, adjusting for length differences
+            [originalText enumerateSubstringsInRange:NSMakeRange(0, originalText.length) 
+                                            options:NSStringEnumerationByComposedCharacterSequences 
+                                         usingBlock:^(NSString *substring, NSRange substringRange, NSRange enclosingRange, BOOL *stop) {
+                if (substringRange.location < attributedString.length) {
+                    NSRange attributeRange = substringRange;
+                    if (attributeRange.location + attributeRange.length > attributedString.length) {
+                        attributeRange.length = attributedString.length - attributeRange.location;
+                    }
+                    
+                    NSDictionary *attributes = [attributedString attributesAtIndex:attributeRange.location effectiveRange:NULL];
+                    
+                    // Calculate corresponding position in modified text
+                    NSRange newRange = substringRange;
+                    if (newRange.location < mutableAttributedString.length && 
+                        newRange.location + newRange.length <= mutableAttributedString.length) {
+                        [mutableAttributedString addAttributes:attributes range:newRange];
+                    }
+                }
+            }];
+            
+            return %orig([mutableAttributedString copy]);
+        }
+    }
+    
+    return %orig(attributedString);
 }
+
 %end
 
 // MARK: Disable RTL
