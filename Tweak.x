@@ -6019,8 +6019,13 @@ static GeminiTranslator *_sharedInstance;
 
 %end
 
+// MARK: Change Pill text.
+
 %hook TFNPillControl
 - (id)text {
     return @"Tweeted";
+}
+- (void)setText:(id)arg1 {
+    %orig(@"Tweeted");
 }
 %end
