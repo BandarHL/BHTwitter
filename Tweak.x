@@ -197,24 +197,23 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         [urlString containsString:@"twitter.com/i/premium"] ||
         [urlString containsString:@"subscribe"]) {
         
-        NSLog(@"[BHTwitter] Detected premium URL, redirecting to GitHub");
+        NSLog(@"[BHTwitter] Detected premium URL, redirecting to GitHub in WebView");
         
-        // Instead of loading in the same webview, open in Safari
+        // Load GitHub in the same webview
         NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird"];
-        [[UIApplication sharedApplication] openURL:redirectURL options:@{} completionHandler:nil];
+        NSURLRequest *redirectRequest = [NSURLRequest requestWithURL:redirectURL];
         
-        // Return nil to prevent the original request from loading
-        return nil;
+        return %orig(redirectRequest);
     }
     
     // Check for the webview-preload URL which indicates our redirect worked
     if ([urlString containsString:@"webview-preload"]) {
-        NSLog(@"[BHTwitter] Detected webview-preload, opening GitHub in Safari");
+        NSLog(@"[BHTwitter] Detected webview-preload, loading GitHub in WebView");
         
         NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird"];
-        [[UIApplication sharedApplication] openURL:redirectURL options:@{} completionHandler:nil];
+        NSURLRequest *redirectRequest = [NSURLRequest requestWithURL:redirectURL];
         
-        return nil;
+        return %orig(redirectRequest);
     }
     
     return %orig;
