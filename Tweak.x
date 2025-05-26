@@ -208,8 +208,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     
     // Check for the webview-preload URL which indicates our redirect worked
     if ([urlString containsString:@"webview-preload"]) {
-        NSLog(@"[BHTwitter] Detected webview-preload, loading GitHub in WebView");
+        NSLog(@"[BHTwitter] Detected webview-preload, redirecting to GitHub");
         
+        // Load GitHub directly
         NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird"];
         NSURLRequest *redirectRequest = [NSURLRequest requestWithURL:redirectURL];
         
@@ -217,6 +218,19 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     }
     
     return %orig;
+}
+
+- (void)evaluateJavaScript:(NSString *)javaScriptString completionHandler:(void (^)(id, NSError *))completionHandler {
+    // Inject a simple redirect script that runs after page load
+    NSString *redirectScript = [NSString stringWithFormat:@"%@; setTimeout(function() { \
+        if (window.location.href.includes('webview-preload') || \
+            window.location.href.includes('premium_sign_up') || \
+            window.location.href.includes('twitter.com/i/premium')) { \
+            window.location.replace('https://github.com/actuallyaridan/NeoFreeBird'); \
+        } \
+    }, 500);", javaScriptString ?: @""];
+    
+    %orig(redirectScript, completionHandler);
 }
 
 %end
