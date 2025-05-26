@@ -87,6 +87,10 @@ static void BHT_ensureThemingEngineSynchronized(BOOL forceSynchronize);
 + (void)retryFetchCookies;
 @end
 
+// Forward declaration for WKWebView
+@interface WKWebView (BHTwitter)
+@end
+
 // Theme state tracking
 static BOOL BHT_themeManagerInitialized = NO;
 static BOOL BHT_isInThemeChangeOperation = NO;
@@ -180,93 +184,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         }
     }
 }
-
-// MARK: - Premium Redirect Hooks
-
-// Hook into WKWebView's navigation methods
-%hook WKWebView
-
-- (id)loadRequest:(NSURLRequest *)request {
-    NSURL *url = request.URL;
-    NSString *urlString = url.absoluteString;
-    
-    NSLog(@"[BHTwitter] WKWebView loadRequest: %@", urlString);
-    
-    // Check for premium URLs and redirect
-    if ([urlString containsString:@"premium_sign_up"] || 
-        [urlString containsString:@"twitter.com/i/premium"] ||
-        [urlString containsString:@"subscribe"]) {
-        
-        NSLog(@"[BHTwitter] Detected premium URL, redirecting to GitHub in WebView");
-        
-        // Load GitHub in the same webview
-        NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird"];
-        NSURLRequest *redirectRequest = [NSURLRequest requestWithURL:redirectURL];
-        
-        return %orig(redirectRequest);
-    }
-    
-    // Check for the webview-preload URL which indicates our redirect worked
-    if ([urlString containsString:@"webview-preload"]) {
-        NSLog(@"[BHTwitter] Detected webview-preload, redirecting to GitHub");
-        
-        // Load GitHub directly
-        NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird"];
-        NSURLRequest *redirectRequest = [NSURLRequest requestWithURL:redirectURL];
-        
-        return %orig(redirectRequest);
-    }
-    
-    return %orig;
-}
-
-%end
-
-// Declare WKContentView interface
-@interface WKContentView : UIView
-@property (nonatomic, readonly) WKWebView *webView;
-- (void)_didCommitLoadForMainFrame;
-@end
-
-// Hook into WKContentView which is the actual content view
-%hook WKContentView
-
-- (void)_didCommitLoadForMainFrame {
-    %orig;
-    
-    // Try to find the parent WKWebView
-    UIView *parentView = self.superview;
-    WKWebView *webView = nil;
-    
-    // Walk up the view hierarchy to find WKWebView
-    while (parentView && !webView) {
-        if ([parentView isKindOfClass:[WKWebView class]]) {
-            webView = (WKWebView *)parentView;
-            break;
-        }
-        parentView = parentView.superview;
-    }
-    
-    if (webView) {
-        [webView evaluateJavaScript:@"(function() { \
-            console.log('[BHTwitter] Checking URL: ' + window.location.href); \
-            if (window.location.href.includes('webview-preload') || \
-                window.location.href.includes('premium_sign_up') || \
-                window.location.href.includes('twitter.com/i/premium') || \
-                window.location.href.includes('subscribe')) { \
-                console.log('[BHTwitter] Redirecting to GitHub'); \
-                window.location.replace('https://github.com/actuallyaridan/NeoFreeBird'); \
-            } \
-        })();" completionHandler:^(id result, NSError *error) {
-            if (error) {
-                NSLog(@"[BHTwitter] JavaScript error: %@", error.localizedDescription);
-            }
-        }];
-    }
-}
-
-%end
-
 
 // MARK: Clean cache and Padlock
 // MARK: - Core Theme Engine Hooks
@@ -5888,4 +5805,21 @@ static GeminiTranslator *_sharedInstance;
     }
     return nil;
 }
+%end
+
+// MARK: WKWebView URL Redirection
+
+%hook WKWebView
+
+- (WKNavigation *)loadRequest:(NSURLRequest *)request {
+    // Check if the URL is help.x.com/en and redirect to GitHub
+    if (request.URL && [request.URL.absoluteString hasPrefix:@"https://help.x.com/en"]) {
+        NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird"];
+        NSURLRequest *redirectRequest = [NSURLRequest requestWithURL:redirectURL];
+        return %orig(redirectRequest);
+    }
+    
+    return %orig;
+}
+
 %end
