@@ -6018,3 +6018,9 @@ static GeminiTranslator *_sharedInstance;
 }
 
 %end
+
+%hook TFNPillControl
+- (void)setText:(id) {
+    return @"Tweeted";
+}
+%end
