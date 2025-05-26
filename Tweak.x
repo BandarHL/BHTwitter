@@ -24,6 +24,12 @@
 @interface T1StandardStatusTranslateView : UIView
 @end
 
+// Forward declare TFNComposableViewSet
+@interface TFNComposableViewSet : NSObject
+@property(retain, nonatomic) NSMutableArray *views;
+- (void)_tfn_addView:(id)arg1 toHostViewWithViewAdapter:(id)arg2;
+@end
+
 // Block type definitions for compatibility
 typedef void (^VoidBlock)(void);
 typedef id (^UnknownBlock)(void);
@@ -5602,6 +5608,21 @@ static char kTranslatedTextKey;
     }
     
     return result;
+}
+
+%end
+
+// Hook TFNComposableViewSet to prevent translate views from being added to the views array
+%hook TFNComposableViewSet
+
+- (void)_tfn_addView:(id)arg1 toHostViewWithViewAdapter:(id)arg2 {
+    // Check if this is a translate view and our feature is enabled
+    if ([BHTManager enableTranslate] && [arg1 isKindOfClass:%c(T1StandardStatusTranslateView)]) {
+        // Don't add translate views to the view set
+        return;
+    }
+    
+    %orig(arg1, arg2);
 }
 
 %end
