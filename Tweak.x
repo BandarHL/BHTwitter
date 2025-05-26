@@ -187,59 +187,18 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 
 // MARK: Clean cache and Padlock
-// MARK: - X.com to Twitter.com Replacement Utility
+// MARK: - X.com to Twitter.com URL Replacement Utility
 
-static NSString *BHT_replaceXComWithTwitterCom(NSString *originalString) {
+static NSString *BHT_replaceXComURLsWithTwitterCom(NSString *originalString) {
     if (!originalString || originalString.length == 0) {
         return originalString;
     }
     
-    // Replace both http:// and https:// versions
+    // Only replace actual URL patterns, not just any occurrence of x.com
     NSString *modifiedString = [originalString stringByReplacingOccurrencesOfString:@"https://x.com" withString:@"https://twitter.com"];
     modifiedString = [modifiedString stringByReplacingOccurrencesOfString:@"http://x.com" withString:@"http://twitter.com"];
     
-    // Also replace bare x.com references
-    modifiedString = [modifiedString stringByReplacingOccurrencesOfString:@"x.com" withString:@"twitter.com"];
-    
     return modifiedString;
-}
-
-static NSAttributedString *BHT_replaceXComInAttributedString(NSAttributedString *originalAttributedString) {
-    if (!originalAttributedString || originalAttributedString.length == 0) {
-        return originalAttributedString;
-    }
-    
-    NSString *originalText = originalAttributedString.string;
-    NSString *modifiedText = BHT_replaceXComWithTwitterCom(originalText);
-    
-    // If no changes were made, return original
-    if ([originalText isEqualToString:modifiedText]) {
-        return originalAttributedString;
-    }
-    
-    // Create new attributed string with modified text and preserve attributes
-    NSMutableAttributedString *newAttributedString = [[NSMutableAttributedString alloc] initWithString:modifiedText];
-    
-    // Copy attributes from original string
-    [originalAttributedString enumerateAttributesInRange:NSMakeRange(0, originalAttributedString.length) 
-                                                 options:0 
-                                              usingBlock:^(NSDictionary<NSAttributedStringKey,id> * _Nonnull attrs, NSRange range, BOOL * _Nonnull stop) {
-        // Calculate corresponding range in new string (may be different due to text changes)
-        NSInteger lengthDiff = (NSInteger)modifiedText.length - (NSInteger)originalText.length;
-        NSRange newRange = range;
-        
-        // Adjust range if necessary, but keep it within bounds
-        if (lengthDiff != 0) {
-            newRange.length = MIN(newRange.length, newAttributedString.length - newRange.location);
-        }
-        
-        if (newRange.location < newAttributedString.length && 
-            newRange.location + newRange.length <= newAttributedString.length) {
-            [newAttributedString addAttributes:attrs range:newRange];
-        }
-    }];
-    
-    return [newAttributedString copy];
 }
 
 // MARK: - Core Theme Engine Hooks
@@ -4820,9 +4779,7 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 %hook UILabel
 
 - (void)setText:(NSString *)text {
-    // Replace x.com with twitter.com in text
-    NSString *modifiedText = BHT_replaceXComWithTwitterCom(text);
-    %orig(modifiedText);
+    %orig(text);
     
     // Skip processing if feature is disabled
     if (![BHTManager restoreVideoTimestamp]) {
@@ -4935,31 +4892,7 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 
 %end
 
-// MARK: - Additional Text View Hooks for X.com Replacement
 
-%hook UITextView
-
-- (void)setText:(NSString *)text {
-    NSString *modifiedText = BHT_replaceXComWithTwitterCom(text);
-    %orig(modifiedText);
-}
-
-- (void)setAttributedText:(NSAttributedString *)attributedText {
-    NSAttributedString *modifiedAttributedText = BHT_replaceXComInAttributedString(attributedText);
-    %orig(modifiedAttributedText);
-}
-
-%end
-
-// Hook any Twitter-specific text model classes
-%hook TFNAttributedTextModel
-
-- (instancetype)initWithAttributedString:(NSAttributedString *)attributedString {
-    NSAttributedString *modifiedAttributedString = BHT_replaceXComInAttributedString(attributedString);
-    return %orig(modifiedAttributedString);
-}
-
-%end
 
 // Hook web view loading to replace URLs
 %hook WKWebView
@@ -4968,7 +4901,7 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
     // Replace x.com URLs in web requests with twitter.com
     if (request.URL && [request.URL.absoluteString containsString:@"x.com"]) {
         NSString *originalURLString = request.URL.absoluteString;
-        NSString *modifiedURLString = BHT_replaceXComWithTwitterCom(originalURLString);
+        NSString *modifiedURLString = BHT_replaceXComURLsWithTwitterCom(originalURLString);
         
         if (![originalURLString isEqualToString:modifiedURLString]) {
             NSURL *modifiedURL = [NSURL URLWithString:modifiedURLString];
@@ -5002,7 +4935,7 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 
 - (BOOL)openURL:(NSURL *)url {
     if (url && [url.absoluteString containsString:@"x.com"]) {
-        NSString *modifiedURLString = BHT_replaceXComWithTwitterCom(url.absoluteString);
+        NSString *modifiedURLString = BHT_replaceXComURLsWithTwitterCom(url.absoluteString);
         NSURL *modifiedURL = [NSURL URLWithString:modifiedURLString];
         if (modifiedURL) {
             return %orig(modifiedURL);
@@ -5013,7 +4946,7 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 
 - (void)openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenExternalURLOptionsKey,id> *)options completionHandler:(void (^)(BOOL success))completion {
     if (url && [url.absoluteString containsString:@"x.com"]) {
-        NSString *modifiedURLString = BHT_replaceXComWithTwitterCom(url.absoluteString);
+        NSString *modifiedURLString = BHT_replaceXComURLsWithTwitterCom(url.absoluteString);
         NSURL *modifiedURL = [NSURL URLWithString:modifiedURLString];
         if (modifiedURL) {
             return %orig(modifiedURL, options, completion);
@@ -5671,16 +5604,13 @@ static char kOriginalTextKey;
 static char kTranslatedTextKey;
 
 - (void)setAttributedText:(NSAttributedString *)attributedText {
-    // Replace x.com with twitter.com in attributed text
-    NSAttributedString *modifiedAttributedText = BHT_replaceXComInAttributedString(attributedText);
-    
     // Check if we're currently showing translated text
     NSNumber *isTranslated = objc_getAssociatedObject(self, &kIsTranslatedKey);
     
     if (isTranslated && [isTranslated boolValue]) {
         // If we're in translated mode, don't allow external updates to override our translation
         NSAttributedString *currentTranslatedText = objc_getAssociatedObject(self, &kTranslatedTextKey);
-        if (currentTranslatedText && ![modifiedAttributedText.string isEqualToString:currentTranslatedText.string]) {
+        if (currentTranslatedText && ![attributedText.string isEqualToString:currentTranslatedText.string]) {
             // External code is trying to revert our translation, ignore it
             return;
         }
@@ -5688,10 +5618,10 @@ static char kTranslatedTextKey;
     
     // Store original text if this is the first time setting text (not translated)
     if (!isTranslated || ![isTranslated boolValue]) {
-        objc_setAssociatedObject(self, &kOriginalTextKey, modifiedAttributedText, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        objc_setAssociatedObject(self, &kOriginalTextKey, attributedText, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
     
-    %orig(modifiedAttributedText);
+    %orig(attributedText);
 }
 
 %new - (void)BHT_setTranslatedText:(NSAttributedString *)translatedText {
