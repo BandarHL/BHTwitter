@@ -183,58 +183,38 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 // MARK: - Premium Redirect Hooks
 
-// Hook into WKWebView's internal navigation methods
+// Hook into WKWebView's navigation methods
 %hook WKWebView
-
-- (void)evaluateJavaScript:(NSString *)javaScriptString completionHandler:(void (^)(id, NSError *))completionHandler {
-    // Inject our redirect script into every JavaScript execution
-    NSString *redirectScript = [NSString stringWithFormat:@"(function() { \
-        if (window.location.href.includes('premium_sign_up') || \
-            window.location.href.includes('twitter.com/i/premium') || \
-            window.location.href.includes('subscribe')) { \
-            console.log('[BHTwitter] Redirecting from: ' + window.location.href); \
-            window.location.href = 'https://github.com/actuallyaridan/NeoFreeBird'; \
-            return; \
-        } \
-        var originalOpen = window.open; \
-        window.open = function(url, name, specs) { \
-            if (url && (url.includes('premium_sign_up') || url.includes('twitter.com/i/premium') || url.includes('subscribe'))) { \
-                console.log('[BHTwitter] Redirecting window.open from: ' + url); \
-                return originalOpen.call(this, 'https://github.com/actuallyaridan/NeoFreeBird', name, specs); \
-            } \
-            return originalOpen.call(this, url, name, specs); \
-        }; \
-        var originalAssign = Object.getOwnPropertyDescriptor(Location.prototype, 'href').set; \
-        Object.defineProperty(Location.prototype, 'href', { \
-            set: function(url) { \
-                if (url && (url.includes('premium_sign_up') || url.includes('twitter.com/i/premium') || url.includes('subscribe'))) { \
-                    console.log('[BHTwitter] Redirecting location.href from: ' + url); \
-                    originalAssign.call(this, 'https://github.com/actuallyaridan/NeoFreeBird'); \
-                    return; \
-                } \
-                originalAssign.call(this, url); \
-            }, \
-            get: Object.getOwnPropertyDescriptor(Location.prototype, 'href').get \
-        }); \
-    })(); %@", javaScriptString ?: @""];
-    
-    %orig(redirectScript, completionHandler);
-}
 
 - (id)loadRequest:(NSURLRequest *)request {
     NSURL *url = request.URL;
     NSString *urlString = url.absoluteString;
     
+    NSLog(@"[BHTwitter] WKWebView loadRequest: %@", urlString);
+    
+    // Check for premium URLs and redirect
     if ([urlString containsString:@"premium_sign_up"] || 
         [urlString containsString:@"twitter.com/i/premium"] ||
         [urlString containsString:@"subscribe"]) {
         
+        NSLog(@"[BHTwitter] Detected premium URL, redirecting to GitHub");
+        
+        // Instead of loading in the same webview, open in Safari
         NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird"];
-        NSURLRequest *redirectRequest = [NSURLRequest requestWithURL:redirectURL];
+        [[UIApplication sharedApplication] openURL:redirectURL options:@{} completionHandler:nil];
         
-        NSLog(@"[BHTwitter] Redirecting WKWebView loadRequest: %@ -> %@", urlString, redirectURL.absoluteString);
+        // Return nil to prevent the original request from loading
+        return nil;
+    }
+    
+    // Check for the webview-preload URL which indicates our redirect worked
+    if ([urlString containsString:@"webview-preload"]) {
+        NSLog(@"[BHTwitter] Detected webview-preload, opening GitHub in Safari");
         
-        return %orig(redirectRequest);
+        NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird"];
+        [[UIApplication sharedApplication] openURL:redirectURL options:@{} completionHandler:nil];
+        
+        return nil;
     }
     
     return %orig;
