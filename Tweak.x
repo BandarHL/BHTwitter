@@ -607,7 +607,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         
         // Only show full numbers for counts under 10,000
         if ([number integerValue] >= 10000) {
-            NSLog(@"[BHTwitter] Count %@ is >= 10k, keeping original format", number);
             return originalResult;
         }
         
@@ -624,7 +623,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             // Use regex to find patterns like "1.7K", "6.7K", etc.
             NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"\\d+(\\.\\d+)?[KMB]" options:0 error:nil];
             NSString *result = [regex stringByReplacingMatchesInString:originalString options:0 range:NSMakeRange(0, originalString.length) withTemplate:formattedCount];
-            NSLog(@"[BHTwitter] Returning modified string result: %@", result);
             return result;
         }
         // If original result is an NSAttributedString, modify that
@@ -640,8 +638,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             for (NSTextCheckingResult *match in [matches reverseObjectEnumerator]) {
                 [mutableResult replaceCharactersInRange:match.range withString:formattedCount];
             }
-            
-            NSLog(@"[BHTwitter] Returning modified attributed result: %@", mutableResult.string);
             return [mutableResult copy];
         }
     }
@@ -1407,6 +1403,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %end
 
 %hook TFNTwitterAccount
+- (_Bool)isXChatEnabled {
+    return true;
+}
 - (_Bool)mediaDownloadVideoEnabled {
     return false;
 }
@@ -5621,7 +5620,7 @@ static GeminiTranslator *_sharedInstance;
         [request setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
         
         // Simplified prompt for translation only
-        NSString *prompt = [NSString stringWithFormat:@"Translate this text from %@ to %@: \"%@\" \n\nOnly return the translated text without any explanation or notes. Do not include hashtags but include emojis if in original text.", 
+        NSString *prompt = [NSString stringWithFormat:@"Translate this text from %@ to %@: \"%@\" \n\nOnly return the translated text without any explanation or notes. include emojis if in original text.", 
                             [sourceLanguage isEqualToString:@"auto"] ? @"the original language" : sourceLanguage, 
                             targetLanguage, 
                             text];
