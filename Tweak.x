@@ -6101,7 +6101,7 @@ static GeminiTranslator *_sharedInstance;
         }
         // Also scale any Lottie animations
         for (UIView *subview in self.subviews) {
-            if ([NSStringFromClass([subview class]) containsString:@"LottieSPM13AnimationView"]) {
+            if ([NSStringFromClass([subview class]) containsString:@"LottieSPM10LottieView"]) {
                 CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
                 subview.transform = transform;
                 subview.clipsToBounds = NO;
@@ -6114,7 +6114,7 @@ static GeminiTranslator *_sharedInstance;
 
 // MARK: Fix Lottie Animation Size for Action Buttons
 
-%hook _TtC9LottieSPM13AnimationView
+%hook _TtC9LottieSPM10LottieView
 
 - (void)setFrame:(CGRect)frame {
     %orig(frame);
