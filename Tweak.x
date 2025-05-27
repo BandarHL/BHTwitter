@@ -6035,6 +6035,7 @@ static GeminiTranslator *_sharedInstance;
 // MARK: Restore Action Button size
 
 %hook TFNAnimatableButton
+
 - (UIImageView *)imageView {
     UIImageView *imageView = %orig;
     if (imageView) {
@@ -6047,4 +6048,58 @@ static GeminiTranslator *_sharedInstance;
     }
     return imageView;
 }
+
+// Hook animation methods to maintain our transform
+- (void)_tfn_transitionFromState:(unsigned long long)fromState toState:(unsigned long long)toState animated:(BOOL)animated {
+    %orig;
+    // Reapply our transform after animation
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIImageView *imageView = self.imageView;
+        if (imageView) {
+            CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
+            imageView.transform = transform;
+            imageView.clipsToBounds = NO;
+        }
+    });
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
+    %orig;
+    // Reapply our transform after animation
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIImageView *imageView = self.imageView;
+        if (imageView) {
+            CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
+            imageView.transform = transform;
+            imageView.clipsToBounds = NO;
+        }
+    });
+}
+
+- (void)setHighlighted:(BOOL)highlighted animated:(BOOL)animated {
+    %orig;
+    // Reapply our transform after animation
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIImageView *imageView = self.imageView;
+        if (imageView) {
+            CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
+            imageView.transform = transform;
+            imageView.clipsToBounds = NO;
+        }
+    });
+}
+
+- (void)setEnabled:(BOOL)enabled animated:(BOOL)animated {
+    %orig;
+    // Reapply our transform after animation
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIImageView *imageView = self.imageView;
+        if (imageView) {
+            CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
+            imageView.transform = transform;
+            imageView.clipsToBounds = NO;
+        }
+    });
+}
+
 %end
