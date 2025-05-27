@@ -6031,3 +6031,9 @@ static GeminiTranslator *_sharedInstance;
     %orig(localizedText ?: @"Tweeted");
 }
 %end
+
+%hook TTAStatusInlineActionButton
+- (NSUInteger)buttonSize {
+    return 1;
+}
+%end
