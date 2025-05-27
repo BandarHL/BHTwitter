@@ -6056,14 +6056,25 @@ static GeminiTranslator *_sharedInstance;
 - (void)setFrame:(CGRect)frame {
     // Check if we're inside T1ImmersiveController - if so, move button up
     UIView *parentView = self.superview;
+    BOOL foundImmersive = NO;
+    
     while (parentView) {
+        NSString *className = NSStringFromClass([parentView class]);
+        NSLog(@"[BHTwitter] Button parent class: %@", className);
+        
         if ([parentView isKindOfClass:objc_getClass("T1ImmersiveViewController")] || 
-            [NSStringFromClass([parentView class]) containsString:@"T1Immersive"]) {
+            [className containsString:@"T1Immersive"]) {
             CGFloat upwardOffset = 30.0; // Move buttons up more in immersive view
             frame.origin.y -= upwardOffset;
+            foundImmersive = YES;
+            NSLog(@"[BHTwitter] Moving button up by %f in immersive view", upwardOffset);
             break;
         }
         parentView = parentView.superview;
+    }
+    
+    if (!foundImmersive) {
+        NSLog(@"[BHTwitter] No immersive parent found for button");
     }
     
     %orig(frame);
@@ -6097,7 +6108,7 @@ static GeminiTranslator *_sharedInstance;
             %orig(frame); // No adjustment for focal views
             return;
         }
-        if ([parentView isKindOfClass:objc_getClass("T1ImmersiveFullScreenViewController")] || 
+        if ([parentView isKindOfClass:objc_getClass("T1ImmersiveViewController")] || 
             [NSStringFromClass([parentView class]) containsString:@"T1Immersive"]) {
             %orig(frame); // No adjustment for immersive views (buttons will handle it)
             return;
