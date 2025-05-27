@@ -6110,25 +6110,21 @@ static GeminiTranslator *_sharedInstance;
 
 - (void)setFrame:(CGRect)frame {
     %orig(frame);
-    // Apply the same scale transform to Lottie animations
+    // Apply the same scale transform to all Lottie animations
     UIView *selfView = (UIView *)self;
-    if (selfView.superview && [NSStringFromClass([selfView.superview class]) containsString:@"TFNAnimatableButton"]) {
-        CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
-        selfView.transform = transform;
-        selfView.clipsToBounds = NO;
-    }
+    CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
+    selfView.transform = transform;
+    selfView.clipsToBounds = NO;
 }
 
 - (id)initWithFrame:(CGRect)frame {
     id result = %orig;
-    // Apply transform after initialization if this is in a TFNAnimatableButton
+    // Apply transform after initialization
     dispatch_async(dispatch_get_main_queue(), ^{
         UIView *selfView = (UIView *)self;
-        if (selfView.superview && [NSStringFromClass([selfView.superview class]) containsString:@"TFNAnimatableButton"]) {
-            CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
-            selfView.transform = transform;
-            selfView.clipsToBounds = NO;
-        }
+        CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
+        selfView.transform = transform;
+        selfView.clipsToBounds = NO;
     });
     return result;
 }
