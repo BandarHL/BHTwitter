@@ -103,19 +103,34 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 }
 
 
-// Add this method to configure the table view appearance
 - (void)viewDidLoad {
+
     if (self.twAccount != nil) {
-        self.navigationItem.titleView = [objc_getClass("TFNTitleView") titleViewWithTitle:@"Settings" subtitle:self.twAccount.displayUsername];
+        self.navigationItem.titleView = [objc_getClass("TFNTitleView") titleViewWithTitle:[[BHTBundle sharedBundle]
+                               localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"] subtitle:self.twAccount.displayUsername];
     } else {
-        self.title = @"Settings";
+        self.title = [[BHTBundle sharedBundle]
+                               localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"];
     }
 
     [super viewDidLoad];
 
+    UILabel *subtitleLabel = [[UILabel alloc] init];
+    subtitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    subtitleLabel.font = [TwitterChirpFont(TwitterFontStyleRegular) fontWithSize:13];
+    subtitleLabel.textColor = [UIColor secondaryLabelColor];
+    subtitleLabel.numberOfLines = 0;
+    subtitleLabel.textAlignment = NSTextAlignmentLeft;
+    subtitleLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"APP_ICON_HEADER_TITLE"];
+    [self.view addSubview:subtitleLabel];
 
-    
-    
+    [NSLayoutConstraint activateConstraints:@[
+        [subtitleLabel.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:16],
+        [subtitleLabel.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-16],
+        [subtitleLabel.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor constant:8],
+        [self.table.topAnchor constraintEqualToAnchor:subtitleLabel.bottomAnchor constant:8]
+    ]];
+
     // Set the background color to match system background
     self.view.backgroundColor = [UIColor systemBackgroundColor];
     
@@ -134,9 +149,8 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     // These ensure cells align with headers
     self.table.separatorInset = UIEdgeInsetsMake(0, 16, 0, 0);
     self.table.layoutMargins = UIEdgeInsetsMake(0, 16, 0, 16);
-
-
 }
+
 
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
     NSString *title = [self tableView:tableView titleForHeaderInSection:section];
