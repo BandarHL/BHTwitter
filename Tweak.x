@@ -6047,8 +6047,7 @@ static GeminiTranslator *_sharedInstance;
 
 // Adjust positioning by modifying the frame
 - (void)setFrame:(CGRect)frame {
-    // Move the button up by 3 points
-    frame.origin.y -= 7.0;
+    frame.origin.y -= 5.0;
     %orig(frame);
 }
 %end
