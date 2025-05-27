@@ -6159,6 +6159,26 @@ static GeminiTranslator *_sharedInstance;
 
 // MARK: Version Spoofer - Safe Implementation
 
+// Helper function to check if we should bypass version spoofing for current context
+static BOOL BHT_ShouldBypassVersionSpoofing(void) {
+    // Get the current stack trace to check calling classes
+    NSArray *callStack = [NSThread callStackSymbols];
+    
+    for (NSString *frame in callStack) {
+        // Check for onboarding/sign-out related classes that should see real version
+        if ([frame containsString:@"ONBSignedOutViewController"] ||
+            [frame containsString:@"ONB"] ||
+            [frame containsString:@"Onboarding"] ||
+            [frame containsString:@"SignedOut"] ||
+            [frame containsString:@"VersionCheck"] ||
+            [frame containsString:@"AppUpdate"]) {
+            return YES;
+        }
+    }
+    
+    return NO;
+}
+
 // Hook the main bundle specifically to avoid interfering with system bundles
 %hook NSBundle
 
@@ -6168,7 +6188,8 @@ static GeminiTranslator *_sharedInstance;
         NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
         BOOL versionSpoofingEnabled = [defaults boolForKey:@"BHT_VersionSpoofingEnabled"];
         
-        if (versionSpoofingEnabled && key) {
+        // Check if we should bypass version spoofing for this context
+        if (versionSpoofingEnabled && key && !BHT_ShouldBypassVersionSpoofing()) {
             NSString *spoofedVersion = [defaults stringForKey:@"BHT_SpoofedVersion"];
             
             if (spoofedVersion && spoofedVersion.length > 0) {
@@ -6194,7 +6215,8 @@ static GeminiTranslator *_sharedInstance;
         NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
         BOOL versionSpoofingEnabled = [defaults boolForKey:@"BHT_VersionSpoofingEnabled"];
         
-        if (versionSpoofingEnabled) {
+        // Check if we should bypass version spoofing for this context
+        if (versionSpoofingEnabled && !BHT_ShouldBypassVersionSpoofing()) {
             NSString *spoofedVersion = [defaults stringForKey:@"BHT_SpoofedVersion"];
             
             if (spoofedVersion && spoofedVersion.length > 0 && originalDict) {
