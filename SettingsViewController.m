@@ -51,6 +51,8 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 @end
 
 @implementation SettingsViewController
+
+#pragma mark - UITableView Setup
 - (instancetype)init {
     self = [super init];
     if (self) {
@@ -91,8 +93,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     HBAppearanceSettings *appearanceSettings = [[HBAppearanceSettings alloc] init];
     appearanceSettings.tintColor = primaryColor;
     appearanceSettings.largeTitleStyle = HBAppearanceSettingsLargeTitleStyleNever;
-    self.hb_appearanceSettings = appearanceSettings;
-}
+    }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
     if ([keyPath isEqualToString:@"bh_color_theme_selectedColor"] || [keyPath isEqualToString:@"T1ColorSettingsPrimaryColorOptionKey"]) {
@@ -104,6 +105,12 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
 // Add this method to configure the table view appearance
 - (void)viewDidLoad {
+    if (self.twAccount != nil) {
+        self.navigationItem.titleView = [objc_getClass("TFNTitleView") titleViewWithTitle:@"Settings" subtitle:self.twAccount.displayUsername];
+    } else {
+        self.title = @"Settings";
+    }
+
     [super viewDidLoad];
 
 
