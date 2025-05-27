@@ -6045,57 +6045,12 @@ static GeminiTranslator *_sharedInstance;
     UIView *parentView = self.superview;
     while (parentView) {
         if ([parentView isKindOfClass:objc_getClass("T1ConversationFocalStatusView")]) {
-            return 3; // Return original/default size
+            return %orig; // Return original/default size
         }
         parentView = parentView.superview;
     }
     
-    return 0; // Use modified size for other views
-}
-
-- (void)setFrame:(CGRect)frame {
-    // Check if we're inside T1ImmersiveController - if so, move button up
-    UIView *parentView = self.superview;
-    BOOL foundImmersive = NO;
-    
-    while (parentView) {
-        NSString *className = NSStringFromClass([parentView class]);
-        NSLog(@"[BHTwitter] Button parent class: %@", className);
-        
-        if ([className containsString:@"ImmersiveCardView"] || 
-            [className containsString:@"ImmersiveAccessibleContainerView"]) {
-            CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
-            frame.origin.y -= upwardOffset;
-            foundImmersive = YES;
-            NSLog(@"[BHTwitter] Moving button up by %f in immersive view (found: %@)", upwardOffset, className);
-            break;
-        }
-        parentView = parentView.superview;
-    }
-    
-    if (!foundImmersive) {
-        NSLog(@"[BHTwitter] No immersive parent found for button");
-    }
-    
-    %orig(frame);
-}
-
-- (instancetype)initWithFrame:(CGRect)frame {
-    // Check if we're inside T1ImmersiveController - if so, move button up
-    UIView *parentView = self.superview;
-    while (parentView) {
-        NSString *className = NSStringFromClass([parentView class]);
-        if ([className containsString:@"ImmersiveCardView"] || 
-            [className containsString:@"ImmersiveAccessibleContainerView"]) {
-            CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
-            frame.origin.y -= upwardOffset;
-            NSLog(@"[BHTwitter] Moving button up by %f in initWithFrame (found: %@)", upwardOffset, className);
-            break;
-        }
-        parentView = parentView.superview;
-    }
-    
-    return %orig(frame);
+    return 1; // Use modified size for other views
 }
 %end
 
