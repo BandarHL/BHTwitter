@@ -6059,7 +6059,7 @@ static GeminiTranslator *_sharedInstance;
     while (parentView) {
         if ([parentView isKindOfClass:objc_getClass("T1ImmersiveFullScreenViewController")] || 
             [NSStringFromClass([parentView class]) containsString:@"T1Immersive"]) {
-            CGFloat upwardOffset = 15.0; // Move buttons up in immersive view
+            CGFloat upwardOffset = 30.0; // Move buttons up more in immersive view
             frame.origin.y -= upwardOffset;
             break;
         }
@@ -6075,7 +6075,7 @@ static GeminiTranslator *_sharedInstance;
     while (parentView) {
         if ([parentView isKindOfClass:objc_getClass("T1ImmersiveFullScreenViewController")] || 
             [NSStringFromClass([parentView class]) containsString:@"T1Immersive"]) {
-            CGFloat upwardOffset = 15.0; // Move buttons up in immersive view
+            CGFloat upwardOffset = 30.0; // Move buttons up more in immersive view
             frame.origin.y -= upwardOffset;
             break;
         }
