@@ -103,45 +103,42 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 }
 
 
+// Add this method to configure the table view appearance
 - (void)viewDidLoad {
     if (self.twAccount != nil) {
         self.navigationItem.titleView = [objc_getClass("TFNTitleView") titleViewWithTitle:[[BHTBundle sharedBundle]
-            localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"] subtitle:self.twAccount.displayUsername];
+                               localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"] subtitle:self.twAccount.displayUsername];
     } else {
-        self.title = [[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"];
+        self.title = [[BHTBundle sharedBundle]
+                               localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"];
     }
 
     [super viewDidLoad];
 
-UILabel *subtitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 40)];
-subtitleLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightRegular]; // fallback font
-subtitleLabel.textColor = [UIColor labelColor]; // visible in all modes
-subtitleLabel.numberOfLines = 0;
-subtitleLabel.textAlignment = NSTextAlignmentLeft;
-subtitleLabel.backgroundColor = [UIColor yellowColor]; // visual debug
-subtitleLabel.text = @"DEBUG: Subtitle working!";
 
-UIView *headerContainer = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 52)];
-subtitleLabel.frame = CGRectInset(headerContainer.bounds, 16, 6);
-[headerContainer addSubview:subtitleLabel];
-self.table.tableHeaderView = headerContainer;
-
-
+    
+    
+    // Set the background color to match system background
     self.view.backgroundColor = [UIColor systemBackgroundColor];
+    
+    // Configure the table view to blend with background
     self.table.backgroundColor = [UIColor systemBackgroundColor];
     self.table.separatorColor = [UIColor separatorColor];
+    
+    // Remove extra separators below content
     self.table.tableFooterView = [UIView new];
     self.table.separatorStyle = UITableViewCellSeparatorStyleNone;
 
     if (@available(iOS 15.0, *)) {
-        self.table.sectionHeaderTopPadding = 8;
+        self.table.sectionHeaderTopPadding = 8; 
     }
-
+    
+    // These ensure cells align with headers
     self.table.separatorInset = UIEdgeInsetsMake(0, 16, 0, 0);
     self.table.layoutMargins = UIEdgeInsetsMake(0, 16, 0, 16);
+
+
 }
-
-
 
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
     NSString *title = [self tableView:tableView titleForHeaderInSection:section];
@@ -282,6 +279,11 @@ self.table.tableHeaderView = headerContainer;
 }
 - (NSArray *)specifiers {
     if (!_specifiers) {
+
+        PSSpecifier *subtitleSection = [self newSectionWithTitle:[[BHTBundle sharedBundle]
+                              localizedStringForKey:@"APP_ICON_HEADER_TITLE"]
+                              footer:nil];
+
         
 PSSpecifier *tweetsSection   = [self newSectionWithTitle:[[BHTBundle sharedBundle]
                                localizedStringForKey:@"TWEETS_SECTION_HEADER_TITLE"]
@@ -450,6 +452,8 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         PSSpecifier *bandarHL = [self newHBTwitterCellWithTitle:@"BandarHelal" twitterUsername:@"BandarHL" customAvatarURL:@"https://unavatar.io/twitter/BandarHL"];
         
         _specifiers = [NSMutableArray arrayWithArray:@[
+            subtitleSection,
+
             
             mainSection, // 0
             customVoice,
