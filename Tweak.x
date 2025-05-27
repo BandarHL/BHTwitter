@@ -6034,7 +6034,7 @@ static GeminiTranslator *_sharedInstance;
 
 // MARK: Restore Action Button size
 
-%hook TTAStatusInlineActionButton
+%hook TFNAnimatableButton
 - (UIImageView *)imageView {
     UIImageView *imageView = %orig;
     if (imageView) {
