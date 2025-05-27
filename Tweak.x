@@ -6076,7 +6076,7 @@ static GeminiTranslator *_sharedInstance;
         
         if ([className containsString:@"ImmersiveCardView"] || 
             [className containsString:@"ImmersiveAccessibleContainerView"]) {
-            CGFloat upwardOffset = -3.0; // Move buttons up more in immersive view
+            CGFloat upwardOffset = 1.0; // Move buttons up more in immersive view
             frame.origin.y -= upwardOffset;
             foundImmersive = YES;
             NSLog(@"[BHTwitter] Moving button up by %f in immersive view (found: %@)", upwardOffset, className);
@@ -6099,7 +6099,7 @@ static GeminiTranslator *_sharedInstance;
         NSString *className = NSStringFromClass([parentView class]);
         if ([className containsString:@"ImmersiveCardView"] || 
             [className containsString:@"ImmersiveAccessibleContainerView"]) {
-            CGFloat upwardOffset = -3.0; // Move buttons up more in immersive view
+            CGFloat upwardOffset = 1.0; // Move buttons up more in immersive view
             frame.origin.y -= upwardOffset;
             NSLog(@"[BHTwitter] Moving button up by %f in initWithFrame (found: %@)", upwardOffset, className);
             break;
@@ -6131,7 +6131,7 @@ static GeminiTranslator *_sharedInstance;
     }
     
     // Default offset for other views
-    CGFloat upwardOffset = -3.0;
+    CGFloat upwardOffset = 1.0;
     frame.origin.y -= upwardOffset;
     %orig(frame);
 }
@@ -6151,7 +6151,7 @@ static GeminiTranslator *_sharedInstance;
     }
     
     // Default offset for other views
-    CGFloat upwardOffset = -3.0;
+    CGFloat upwardOffset = 1.0;
     frame.origin.y -= upwardOffset;
     return %orig(frame);
 }
