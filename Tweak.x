@@ -6049,31 +6049,88 @@ static GeminiTranslator *_sharedInstance;
     return imageView;
 }
 
+// Hook animation methods to maintain our transform
+- (void)_tfn_transitionFromState:(unsigned long long)fromState toState:(unsigned long long)toState animated:(BOOL)animated {
+    %orig;
+    // Reapply our transform after animation
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIImageView *imageView = self.imageView;
+        if (imageView) {
+            CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
+            imageView.transform = transform;
+            imageView.clipsToBounds = NO;
+        }
+    });
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
+    %orig;
+    // Reapply our transform after animation
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIImageView *imageView = self.imageView;
+        if (imageView) {
+            CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
+            imageView.transform = transform;
+            imageView.clipsToBounds = NO;
+        }
+    });
+}
+
+- (void)setHighlighted:(BOOL)highlighted animated:(BOOL)animated {
+    %orig;
+    // Reapply our transform after animation
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIImageView *imageView = self.imageView;
+        if (imageView) {
+            CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
+            imageView.transform = transform;
+            imageView.clipsToBounds = NO;
+        }
+    });
+}
+
+- (void)setEnabled:(BOOL)enabled animated:(BOOL)animated {
+    %orig;
+    // Reapply our transform after animation
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIImageView *imageView = self.imageView;
+        if (imageView) {
+            CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
+            imageView.transform = transform;
+            imageView.clipsToBounds = NO;
+        }
+    });
+}
+
 %end
 
-// Hook the imageView class directly to maintain transform
-%hook UIImageView
+// MARK: Fix Lottie Animation Size for Action Buttons
 
-- (void)setTransform:(CGAffineTransform)transform {
-    // Check if this imageView is inside a TFNAnimatableButton
-    UIView *superview = self.superview;
-    BOOL isInAnimatableButton = NO;
-    while (superview) {
-        if ([superview isKindOfClass:objc_getClass("TFNAnimatableButton")]) {
-            isInAnimatableButton = YES;
-            break;
+%hook _TtC9LottieSPM13AnimationView
+
+- (void)setFrame:(CGRect)frame {
+    %orig(frame);
+    // Apply the same scale transform to Lottie animations
+    UIView *selfView = (UIView *)self;
+    if (selfView.superview && [NSStringFromClass([selfView.superview class]) containsString:@"TFNAnimatableButton"]) {
+        CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
+        selfView.transform = transform;
+        selfView.clipsToBounds = NO;
+    }
+}
+
+- (id)initWithFrame:(CGRect)frame {
+    id result = %orig;
+    // Apply transform after initialization if this is in a TFNAnimatableButton
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIView *selfView = (UIView *)self;
+        if (selfView.superview && [NSStringFromClass([selfView.superview class]) containsString:@"TFNAnimatableButton"]) {
+            CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
+            selfView.transform = transform;
+            selfView.clipsToBounds = NO;
         }
-        superview = superview.superview;
-    }
-    
-    if (isInAnimatableButton) {
-        // Always maintain our 1.2x scale regardless of what transform is being set
-        CGAffineTransform scaledTransform = CGAffineTransformScale(transform, 1.2, 1.2);
-        %orig(scaledTransform);
-        self.clipsToBounds = NO;
-    } else {
-        %orig(transform);
-    }
+    });
+    return result;
 }
 
 %end
