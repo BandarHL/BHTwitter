@@ -21,6 +21,11 @@
 - (BOOL)BHT_isShowingTranslatedText;
 @end
 
+// TTAStatusInlineActionButton - minimal interface for titleLabel property
+@interface TTAStatusInlineActionButton : UIView
+@property(readonly, nonatomic) UILabel *titleLabel;
+@end
+
 // Forward declare T1StandardStatusTranslateView
 @interface T1StandardStatusTranslateView : UIView
 @end
@@ -6034,107 +6039,37 @@ static GeminiTranslator *_sharedInstance;
 
 // MARK: Restore Action Button size
 
-%hook TFNAnimatableButton
+%hook TTAStatusInlineActionButton
+- (NSUInteger)buttonSize {
+    return 1;
+}
 
-- (UIImageView *)imageView {
-    UIImageView *imageView = %orig;
-    if (imageView) {
-        // Make the image view slightly bigger
-        CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
-        imageView.transform = transform;
-        
-        // Allow the image to extend beyond bounds
-        imageView.clipsToBounds = NO;
+// Prevent the button label from scaling with button size
+- (void)configureWithViewModel:(id)arg1 {
+    %orig;
+    
+    // Reset the title label font to prevent it from scaling with button size
+    if (self.titleLabel) {
+        CGFloat originalFontSize = 13.0; // Standard Twitter button font size
+        self.titleLabel.font = [UIFont systemFontOfSize:originalFontSize weight:UIFontWeightMedium];
     }
-    return imageView;
 }
-
-// Hook animation methods to maintain our transform
-- (void)_tfn_transitionFromState:(unsigned long long)fromState toState:(unsigned long long)toState animated:(BOOL)animated {
-    %orig;
-    // Reapply our transform after animation
-    dispatch_async(dispatch_get_main_queue(), ^{
-        UIImageView *imageView = self.imageView;
-        if (imageView) {
-            CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
-            imageView.transform = transform;
-            imageView.clipsToBounds = NO;
-        }
-    });
-}
-
-- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
-    %orig;
-    // Reapply our transform after animation
-    dispatch_async(dispatch_get_main_queue(), ^{
-        UIImageView *imageView = self.imageView;
-        if (imageView) {
-            CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
-            imageView.transform = transform;
-            imageView.clipsToBounds = NO;
-        }
-    });
-}
-
-- (void)setHighlighted:(BOOL)highlighted animated:(BOOL)animated {
-    %orig;
-    // Reapply our transform after animation
-    dispatch_async(dispatch_get_main_queue(), ^{
-        UIImageView *imageView = self.imageView;
-        if (imageView) {
-            CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
-            imageView.transform = transform;
-            imageView.clipsToBounds = NO;
-        }
-    });
-}
-
-- (void)setEnabled:(BOOL)enabled animated:(BOOL)animated {
-    %orig;
-    // Reapply our transform after animation
-    dispatch_async(dispatch_get_main_queue(), ^{
-        UIImageView *imageView = self.imageView;
-        if (imageView) {
-            CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
-            imageView.transform = transform;
-            imageView.clipsToBounds = NO;
-        }
-        // Also scale any Lottie animations
-        for (UIView *subview in self.subviews) {
-            if ([NSStringFromClass([subview class]) containsString:@"LottieSPM10LottieView"]) {
-                CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
-                subview.transform = transform;
-                subview.clipsToBounds = NO;
-            }
-        }
-    });
-}
-
 %end
 
-// MARK: Fix Lottie Animation Size for Action Buttons
+// MARK: Move TTAStatusInlineActionsView up
 
-%hook _TtC9LottieSPM10LottieView
-
+%hook TTAStatusInlineActionsView
 - (void)setFrame:(CGRect)frame {
+    // Adjust the frame before setting it
+    CGFloat upwardOffset = 8.0; // Adjust this value to move more or less
+    frame.origin.y -= upwardOffset;
     %orig(frame);
-    // Apply the same scale transform to all Lottie animations
-    UIView *selfView = (UIView *)self;
-    CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
-    selfView.transform = transform;
-    selfView.clipsToBounds = NO;
 }
 
-- (id)initWithFrame:(CGRect)frame {
-    id result = %orig;
-    // Apply transform after initialization
-    dispatch_async(dispatch_get_main_queue(), ^{
-        UIView *selfView = (UIView *)self;
-        CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
-        selfView.transform = transform;
-        selfView.clipsToBounds = NO;
-    });
-    return result;
+- (instancetype)initWithFrame:(CGRect)frame {
+    // Adjust frame during initialization
+    CGFloat upwardOffset = 8.0;
+    frame.origin.y -= upwardOffset;
+    return %orig(frame);
 }
-
 %end
