@@ -146,7 +146,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
         UILabel *detail = [UILabel new];
         detail.translatesAutoresizingMaskIntoConstraints = NO;
-        detail.font = [TwitterChirpFont(TwitterFontStyleRegular) fontWithSize:11];
+        detail.font = [TwitterChirpFont(TwitterFontStyleRegular) fontWithSize:12];
         detail.textColor = [UIColor secondaryLabelColor];
         detail.numberOfLines = 0;
         detail.textAlignment = NSTextAlignmentLeft;
