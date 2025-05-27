@@ -6039,17 +6039,11 @@ static GeminiTranslator *_sharedInstance;
     UIImageView *imageView = %orig;
     if (imageView) {
         // Make the image view slightly bigger
-        CGAffineTransform transform = CGAffineTransformMakeScale(1.3, 1.3);
+        CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
         imageView.transform = transform;
         
-        // Adjust the button's bounds to accommodate the larger image
-        CGRect currentBounds = self.bounds;
-        CGFloat scale = 1.3;
-        CGRect newBounds = CGRectMake(currentBounds.origin.x, 
-                                     currentBounds.origin.y, 
-                                     currentBounds.size.width * scale, 
-                                     currentBounds.size.height * scale);
-        self.bounds = newBounds;
+        // Allow the image to extend beyond bounds
+        imageView.clipsToBounds = NO;
     }
     return imageView;
 }
