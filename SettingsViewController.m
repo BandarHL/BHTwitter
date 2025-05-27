@@ -427,6 +427,13 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
                                                        dynamicRule:nil
                                                             action:@selector(clearSourceLabelCacheAction:)];
         
+        PSSpecifier *versionSpoof = [self newSwitchCellWithTitle:@"Version Spoofing" detailTitle:@"Enables spoofing of the app version" key:@"BHT_VersionSpoofingEnabled" defaultValue:false changeAction:nil];
+        
+        PSSpecifier *versionSpoofInput = [self newButtonCellWithTitle:@"Spoofed Version" 
+                                                          detailTitle:[[NSUserDefaults standardUserDefaults] objectForKey:@"BHT_SpoofedVersion"] ?: @"Not Set"
+                                                          dynamicRule:@"BHT_VersionSpoofingEnabled, ==, 0"
+                                                               action:@selector(showVersionSpoofInput:)];
+        
         // legal section
         PSSpecifier *acknowledgements = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"LEGAL_BUTTON_TITLE"] detailTitle:nil dynamicRule:nil action:@selector(showAcknowledgements:)];
         
@@ -513,6 +520,8 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             debug, // 8
             flex,
             clearSourceLabelCache,
+            versionSpoof,
+            versionSpoofInput,
             
             developer, // 9
             actuallyaridan,
@@ -913,6 +922,33 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         } else {
             [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"translate_model"];
             [specifier setProperty:@"gemini-1.5-flash" forKey:@"subtitle"];
+        }
+        [self reloadSpecifiers];
+    }]];
+    
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"] style:UIAlertActionStyleCancel handler:nil]];
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)showVersionSpoofInput:(PSSpecifier *)specifier {
+    NSString *currentValue = [[NSUserDefaults standardUserDefaults] stringForKey:@"BHT_SpoofedVersion"];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Version Spoofing"
+                                                                   message:@"Enter the version number you want to spoof"
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    
+    [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
+        textField.placeholder = @"e.g., 10.8.0";
+        textField.text = currentValue;
+    }];
+    
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"OK_BUTTON_TITLE"] style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        NSString *inputText = alert.textFields.firstObject.text;
+        if (inputText.length > 0) {
+            [[NSUserDefaults standardUserDefaults] setObject:inputText forKey:@"BHT_SpoofedVersion"];
+            [specifier setProperty:inputText forKey:@"subtitle"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"BHT_SpoofedVersion"];
+            [specifier setProperty:@"Not Set" forKey:@"subtitle"];
         }
         [self reloadSpecifiers];
     }]];

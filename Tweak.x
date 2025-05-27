@@ -6156,3 +6156,91 @@ static GeminiTranslator *_sharedInstance;
     return %orig(frame);
 }
 %end
+
+// MARK: Version Spoofer
+
+%hook NSBundle
+
+- (NSString *)bundleIdentifier {
+    NSString *identifier = %orig;
+    // Only spoof for the Twitter app bundle
+    if ([identifier isEqualToString:@"com.atebits.Tweetie2"]) {
+        return identifier; // Return original identifier
+    }
+    return %orig;
+}
+
+- (id)objectForInfoDictionaryKey:(NSString *)key {
+    NSString *bundleIdentifier = [self bundleIdentifier];
+    
+    // Only spoof version for the main Twitter app bundle
+    if ([bundleIdentifier isEqualToString:@"com.atebits.Tweetie2"]) {
+        // Check if version spoofing is enabled
+        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+        BOOL versionSpoofingEnabled = [defaults boolForKey:@"BHT_VersionSpoofingEnabled"];
+        
+        if (versionSpoofingEnabled) {
+            NSString *spoofedVersion = [defaults stringForKey:@"BHT_SpoofedVersion"];
+            
+            if (spoofedVersion && spoofedVersion.length > 0) {
+                if ([key isEqualToString:@"CFBundleShortVersionString"]) {
+                    NSLog(@"[BHTwitter] Spoofing CFBundleShortVersionString to: %@", spoofedVersion);
+                    return spoofedVersion;
+                } else if ([key isEqualToString:@"CFBundleVersion"]) {
+                    NSLog(@"[BHTwitter] Spoofing CFBundleVersion to: %@", spoofedVersion);
+                    return spoofedVersion;
+                }
+            }
+        }
+    }
+    
+    return %orig;
+}
+
+- (NSDictionary *)infoDictionary {
+    NSDictionary *originalDict = %orig;
+    NSString *bundleIdentifier = [self bundleIdentifier];
+    
+    // Only spoof version for the main Twitter app bundle
+    if ([bundleIdentifier isEqualToString:@"com.atebits.Tweetie2"]) {
+        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+        BOOL versionSpoofingEnabled = [defaults boolForKey:@"BHT_VersionSpoofingEnabled"];
+        
+        if (versionSpoofingEnabled) {
+            NSString *spoofedVersion = [defaults stringForKey:@"BHT_SpoofedVersion"];
+            
+            if (spoofedVersion && spoofedVersion.length > 0) {
+                NSMutableDictionary *mutableDict = [originalDict mutableCopy];
+                [mutableDict setObject:spoofedVersion forKey:@"CFBundleShortVersionString"];
+                [mutableDict setObject:spoofedVersion forKey:@"CFBundleVersion"];
+                NSLog(@"[BHTwitter] Spoofing infoDictionary versions to: %@", spoofedVersion);
+                return [mutableDict copy];
+            }
+        }
+    }
+    
+    return originalDict;
+}
+
+%end
+
+// MARK: Alternative version hooks for more complete spoofing
+
+%hook UIApplication
+
+- (NSString *)appVersion {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    BOOL versionSpoofingEnabled = [defaults boolForKey:@"BHT_VersionSpoofingEnabled"];
+    
+    if (versionSpoofingEnabled) {
+        NSString *spoofedVersion = [defaults stringForKey:@"BHT_SpoofedVersion"];
+        if (spoofedVersion && spoofedVersion.length > 0) {
+            NSLog(@"[BHTwitter] Spoofing UIApplication appVersion to: %@", spoofedVersion);
+            return spoofedVersion;
+        }
+    }
+    
+    return %orig;
+}
+
+%end
