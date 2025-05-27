@@ -6118,7 +6118,7 @@ static GeminiTranslator *_sharedInstance;
         if ([parentView isKindOfClass:objc_getClass("T1ConversationFocalStatusView")]) {
             return %orig(frame); // No adjustment for focal views
         }
-        if ([parentView isKindOfClass:objc_getClass("T1ImmersiveFullScreenViewController")] || 
+        if ([parentView isKindOfClass:objc_getClass("T1ImmersiveViewController")] || 
             [NSStringFromClass([parentView class]) containsString:@"T1Immersive"]) {
             return %orig(frame); // No adjustment for immersive views (buttons will handle it)
         }
