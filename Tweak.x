@@ -6032,8 +6032,23 @@ static GeminiTranslator *_sharedInstance;
 }
 %end
 
+// MARK: Restore Action Button size
+
 %hook TTAStatusInlineActionButton
 - (NSUInteger)buttonSize {
     return 1;
+}
+
+// Override font size to prevent label from getting bigger
++ (id)_t1_fontForButtonSize:(unsigned long long)buttonSize {
+    // Always return the font for normal size (2) regardless of our custom buttonSize
+    return %orig(2);
+}
+
+// Adjust positioning by modifying the frame
+- (void)setFrame:(CGRect)frame {
+    // Move the button up by 3 points
+    frame.origin.y -= 3.0;
+    %orig(frame);
 }
 %end
