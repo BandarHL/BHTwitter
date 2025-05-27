@@ -6034,14 +6034,14 @@ static GeminiTranslator *_sharedInstance;
 
 // MARK: Restore Action Button size
 
-%hook TTAStatusInlineActionButton
-- (NSUInteger)buttonSize {
-    return 1;
-}
-
-// Adjust positioning by modifying the frame
-- (void)setFrame:(CGRect)frame {
-    frame.origin.y -= 5.0;
-    %orig(frame);
+%hook TFNAnimatableButton
+- (UIImageView *)imageView {
+    UIImageView *imageView = %orig;
+    if (imageView) {
+        // Make the image view slightly bigger
+        CGAffineTransform transform = CGAffineTransformMakeScale(1.3, 1.3);
+        imageView.transform = transform;
+    }
+    return imageView;
 }
 %end
