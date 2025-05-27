@@ -113,17 +113,19 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
     [super viewDidLoad];
 
-    UILabel *subtitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 40)];
-    subtitleLabel.font = [TwitterChirpFont(TwitterFontStyleRegular) fontWithSize:13];
-    subtitleLabel.textColor = [UIColor secondaryLabelColor];
-    subtitleLabel.numberOfLines = 0;
-    subtitleLabel.textAlignment = NSTextAlignmentLeft;
-    subtitleLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"APP_ICON_HEADER_TITLE"];
+UILabel *subtitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 40)];
+subtitleLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightRegular]; // fallback font
+subtitleLabel.textColor = [UIColor labelColor]; // visible in all modes
+subtitleLabel.numberOfLines = 0;
+subtitleLabel.textAlignment = NSTextAlignmentLeft;
+subtitleLabel.backgroundColor = [UIColor yellowColor]; // visual debug
+subtitleLabel.text = @"DEBUG: Subtitle working!";
 
-    UIView *headerContainer = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 52)];
-    subtitleLabel.frame = CGRectInset(headerContainer.bounds, 16, 6);
-    [headerContainer addSubview:subtitleLabel];
-    self.table.tableHeaderView = headerContainer;
+UIView *headerContainer = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 52)];
+subtitleLabel.frame = CGRectInset(headerContainer.bounds, 16, 6);
+[headerContainer addSubview:subtitleLabel];
+self.table.tableHeaderView = headerContainer;
+
 
     self.view.backgroundColor = [UIColor systemBackgroundColor];
     self.table.backgroundColor = [UIColor systemBackgroundColor];
