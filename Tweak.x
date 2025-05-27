@@ -6061,14 +6061,14 @@ static GeminiTranslator *_sharedInstance;
 %hook TTAStatusInlineActionsView
 - (void)setFrame:(CGRect)frame {
     // Adjust the frame before setting it
-    CGFloat upwardOffset = 8.0; // Adjust this value to move more or less
+    CGFloat upwardOffset = 5.0; // Adjust this value to move more or less
     frame.origin.y -= upwardOffset;
     %orig(frame);
 }
 
 - (instancetype)initWithFrame:(CGRect)frame {
     // Adjust frame during initialization
-    CGFloat upwardOffset = 8.0;
+    CGFloat upwardOffset = 5.0;
     frame.origin.y -= upwardOffset;
     return %orig(frame);
 }
