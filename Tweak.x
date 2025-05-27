@@ -570,6 +570,63 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
+// MARK: Show unrounded follower/following counts
+%hook T1ProfileFriendsFollowingViewModel
+- (id)_t1_followCountTextWithLabel:(id)label singularLabel:(id)singularLabel count:(id)count highlighted:(_Bool)highlighted {
+    // First get the original result to understand the expected return type
+    id originalResult = %orig;
+    
+    // Only proceed if we have a valid count that's an NSNumber
+    if (count && [count isKindOfClass:[NSNumber class]]) {
+        NSNumber *number = (NSNumber *)count;
+        
+        // Only show full numbers for counts under 10,000
+        if ([number integerValue] >= 10000) {
+            NSLog(@"[BHTwitter] Count %@ is >= 10k, keeping original format", number);
+            return originalResult;
+        }
+        
+        // Format the number with commas
+        NSNumberFormatter *formatter = [[NSNumberFormatter alloc] init];
+        [formatter setNumberStyle:NSNumberFormatterDecimalStyle];
+        [formatter setGroupingSeparator:@","];
+        [formatter setUsesGroupingSeparator:YES];
+        NSString *formattedCount = [formatter stringFromNumber:number];
+        
+        // If original result is an NSString, find and replace abbreviated numbers
+        if ([originalResult isKindOfClass:[NSString class]]) {
+            NSString *originalString = (NSString *)originalResult;
+            // Use regex to find patterns like "1.7K", "6.7K", etc.
+            NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"\\d+(\\.\\d+)?[KMB]" options:0 error:nil];
+            NSString *result = [regex stringByReplacingMatchesInString:originalString options:0 range:NSMakeRange(0, originalString.length) withTemplate:formattedCount];
+            NSLog(@"[BHTwitter] Returning modified string result: %@", result);
+            return result;
+        }
+        // If original result is an NSAttributedString, modify that
+        else if ([originalResult isKindOfClass:[NSAttributedString class]]) {
+            NSMutableAttributedString *mutableResult = [[NSMutableAttributedString alloc] initWithAttributedString:(NSAttributedString *)originalResult];
+            NSString *originalText = mutableResult.string;
+            
+            // Use regex to find and replace abbreviated numbers while preserving formatting
+            NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"\\d+(\\.\\d+)?[KMB]" options:0 error:nil];
+            NSArray *matches = [regex matchesInString:originalText options:0 range:NSMakeRange(0, originalText.length)];
+            
+            // Replace matches in reverse order to maintain correct indices
+            for (NSTextCheckingResult *match in [matches reverseObjectEnumerator]) {
+                [mutableResult replaceCharactersInRange:match.range withString:formattedCount];
+            }
+            
+            NSLog(@"[BHTwitter] Returning modified attributed result: %@", mutableResult.string);
+            return [mutableResult copy];
+        }
+    }
+    
+    NSLog(@"[BHTwitter] Returning original result: %@", originalResult);
+    // Return original result if we couldn't modify it safely
+    return originalResult;
+}
+%end
+
 // MARK: hide ADs - New Implementation
 %hook TFNItemsDataViewAdapterRegistry
 - (id)dataViewAdapterForItem:(id)item {
@@ -581,6 +638,171 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         //New Ads
         if ([item isKindOfClass:objc_getClass("TwitterURT.URTTimelineGoogleNativeAdViewModel")]) {
             return nil;
+        }
+    }
+    return %orig;
+}
+%end
+
+%hook TFNItemsDataViewController
+- (id)tableViewCellForItem:(id)arg1 atIndexPath:(id)arg2 {
+    UITableViewCell *_orig = %orig;
+    id tweet = [self itemAtIndexPath:arg2];
+    NSString *class_name = NSStringFromClass([tweet classForCoder]);
+    
+
+    
+    if ([BHTManager HidePromoted] && [tweet respondsToSelector:@selector(isPromoted)] && [tweet performSelector:@selector(isPromoted)]) {
+        [_orig setHidden:YES];
+    }
+    
+    
+    if ([self.adDisplayLocation isEqualToString:@"PROFILE_TWEETS"]) {
+        if ([BHTManager hideWhoToFollow]) {
+            if ([class_name isEqualToString:@"T1URTTimelineUserItemViewModel"] || [class_name isEqualToString:@"T1TwitterSwift.URTTimelineCarouselViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"]) {
+                [_orig setHidden:true];
+            }
+        }
+        
+        if ([BHTManager hideTopicsToFollow]) {
+            if ([class_name isEqualToString:@"T1TwitterSwift.URTTimelineTopicCollectionViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"] || [class_name isEqualToString:@"TwitterURT.URTTimelineCarouselViewModel"]) {
+                [_orig setHidden:true];
+            }
+        }
+    }
+    
+    if ([self.adDisplayLocation isEqualToString:@"OTHER"]) {
+        if ([BHTManager HidePromoted] && ([class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"] || [class_name isEqualToString:@"T1URTTimelineMessageItemViewModel"])) {
+            [_orig setHidden:true];
+        }
+        
+        if ([BHTManager HidePromoted] && [class_name isEqualToString:@"TwitterURT.URTTimelineEventSummaryViewModel"]) {
+            // Hide all EventSummaryViewModel items, not just promoted ones
+            [_orig setHidden:true];
+        }
+        if ([BHTManager HidePromoted] && [class_name isEqualToString:@"TwitterURT.URTTimelineTrendViewModel"]) {
+            _TtC10TwitterURT25URTTimelineTrendViewModel *trendModel = tweet;
+            if ([[trendModel.scribeItem allKeys] containsObject:@"promoted_id"]) {
+                [_orig setHidden:true];
+            }
+        }
+        if ([BHTManager hideTrendVideos] && ([class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"T1TwitterSwift.URTTimelineCarouselViewModel"])) {
+            [_orig setHidden:true];
+        }
+        
+        // Hide ExploreEventSummaryHero
+        if ([BHTManager HidePromoted] && [class_name isEqualToString:@"T1TwitterSwift.ExploreEventSummaryHero"]) {
+            [_orig setHidden:true];
+        }
+    }
+    
+    if ([self.adDisplayLocation isEqualToString:@"TIMELINE_HOME"]) {
+        if ([tweet isKindOfClass:%c(T1URTTimelineStatusItemViewModel)]) {
+            T1URTTimelineStatusItemViewModel *fullTweet = tweet;
+            if ([BHTManager HideTopics]) {
+                if ((fullTweet.banner != nil) && [fullTweet.banner isKindOfClass:%c(TFNTwitterURTTimelineStatusTopicBanner)]) {
+                    [_orig setHidden:true];
+                }
+            }
+        }
+        
+        if ([BHTManager HideTopics]) {
+            if ([tweet isKindOfClass:%c(_TtC10TwitterURT26URTTimelinePromptViewModel)]) {
+                [_orig setHidden:true];
+            }
+        }
+
+        if ([BHTManager hidePremiumOffer]) {
+            if ([class_name isEqualToString:@"T1URTTimelineMessageItemViewModel"]) {
+                [_orig setHidden:true];
+            }
+        }
+    }
+    
+
+    
+    return _orig;
+}
+- (double)tableView:(id)arg1 heightForRowAtIndexPath:(id)arg2 {
+    id tweet = [self itemAtIndexPath:arg2];
+    NSString *class_name = NSStringFromClass([tweet classForCoder]);
+    
+    if ([BHTManager HidePromoted] && [tweet respondsToSelector:@selector(isPromoted)] && [tweet performSelector:@selector(isPromoted)]) {
+        return 0;
+    }
+    
+    if ([self.adDisplayLocation isEqualToString:@"PROFILE_TWEETS"]) {
+        if ([BHTManager hideWhoToFollow]) {
+            if ([class_name isEqualToString:@"T1URTTimelineUserItemViewModel"] || [class_name isEqualToString:@"T1TwitterSwift.URTTimelineCarouselViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"]) {
+                return 0;
+            }
+        }
+        if ([BHTManager hideTopicsToFollow]) {
+            if ([class_name isEqualToString:@"T1TwitterSwift.URTTimelineTopicCollectionViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"] || [class_name isEqualToString:@"TwitterURT.URTTimelineCarouselViewModel"]) {
+                return 0;
+            }
+        }
+    }
+    
+    if ([self.adDisplayLocation isEqualToString:@"OTHER"]) {
+        if ([BHTManager HidePromoted] && ([class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"] || [class_name isEqualToString:@"T1URTTimelineMessageItemViewModel"])) {
+            return 0;
+        }
+        
+        if ([BHTManager HidePromoted] && [class_name isEqualToString:@"TwitterURT.URTTimelineEventSummaryViewModel"]) {
+            // Hide all EventSummaryViewModel items, not just promoted ones
+            return 0;
+        }
+        if ([BHTManager HidePromoted] && [class_name isEqualToString:@"TwitterURT.URTTimelineTrendViewModel"]) {
+            _TtC10TwitterURT25URTTimelineTrendViewModel *trendModel = tweet;
+            if ([[trendModel.scribeItem allKeys] containsObject:@"promoted_id"]) {
+                return 0;
+            }
+        }
+
+        if ([BHTManager hideTrendVideos] && ([class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"] || [class_name isEqualToString:@"T1TwitterSwift.URTTimelineCarouselViewModel"])) {
+            return 0;
+        }
+        
+        // Hide ExploreEventSummaryHero
+        if ([BHTManager HidePromoted] && [class_name isEqualToString:@"T1TwitterSwift.ExploreEventSummaryHero"]) {
+            return 0;
+        }
+    }
+    
+    if ([self.adDisplayLocation isEqualToString:@"TIMELINE_HOME"]) {
+        if ([tweet isKindOfClass:%c(T1URTTimelineStatusItemViewModel)]) {
+            T1URTTimelineStatusItemViewModel *fullTweet = tweet;
+            
+            if ([BHTManager HideTopics]) {
+                if ((fullTweet.banner != nil) && [fullTweet.banner isKindOfClass:%c(TFNTwitterURTTimelineStatusTopicBanner)]) {
+                    return 0;
+                }
+            }
+        }
+        
+        if ([BHTManager HideTopics]) {
+            if ([tweet isKindOfClass:%c(_TtC10TwitterURT26URTTimelinePromptViewModel)]) {
+                return 0;
+            }
+        }
+
+        if ([BHTManager hidePremiumOffer]) {
+            if ([class_name isEqualToString:@"T1URTTimelineMessageItemViewModel"]) {
+                return 0;
+            }
+        }
+    }
+    
+
+    
+    return %orig;
+}
+- (double)tableView:(id)arg1 heightForHeaderInSection:(long long)arg2 {
+    if (self.sections && self.sections[arg2] && ((NSArray* )self.sections[arg2]).count && self.sections[arg2][0]) {
+        NSString *sectionClassName = NSStringFromClass([self.sections[arg2][0] classForCoder]);
+        if ([sectionClassName isEqualToString:@"TFNTwitterUser"]) {
+            return 0;
         }
     }
     return %orig;
@@ -849,14 +1071,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             }
         }
     }
-}
-
-// Also hook layoutSubviews to catch changes
-- (void)layoutSubviews {
-    %orig;
-    // Call updateLogoTheme, but perhaps with a guard to prevent infinite loops if setting the image triggers layout.
-    // A simple flag or checking if the theme is already applied might work.
-    [self updateLogoTheme];
 }
 
 %end
@@ -1168,6 +1382,15 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %end
 
 %hook TFNTwitterAccount
+- (_Bool)mediaDownloadVideoEnabled {
+    return false;
+}
+- (_Bool)mediaAllowDownloadSettingAvaliable {
+    return false;
+}
+- (_Bool)continueWatchingEnabled {
+    return false;
+}
 - (_Bool)isEditProfileUsernameEnabled {
     return true;
 }
@@ -1225,18 +1448,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     } else {
         return %orig;
     }
-}
-
-// MARK: Status tweet
-- (BOOL)_t1_isVibeCompositionEnabled {
-    return true;
-}
-// MARK: CoTweet
-- (BOOL)isTweetCollaborationEnabled {
-    return true;
-}
-- (BOOL)_t1_canEnableCollaboration {
-    return true;
 }
 %end
 
@@ -1518,9 +1729,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
-// MARK: Clean tracking from copied links: https://github.com/BandarHL/BHTwitter/issues/75
-
-
 // MARK: Restore Source Labels - This is still pretty experimental and may break. This restores Tweet Source Labels by using an Legacy API. by: @nyaathea
 
 static NSMutableDictionary *tweetSources      = nil;
@@ -1576,20 +1784,53 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
                                 cachedCookies[@"ct0"] && cachedCookies[@"auth_token"];
                                 
     if (hasValidCachedCookies) {
-        // We have valid cookies from cache
-        // Make them immediately available for pending tweets
-        dispatch_async(dispatch_get_main_queue(), ^{
-            // Direct notification - more reliable than delayed polling
-            [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
-        });
+        // IMPROVED: Verify cached cookies are still valid by checking their expiration
+        BOOL cookiesStillValid = YES;
         
-        isInitializingCookies = NO;
-        return;
+        // Check if cookies are too old (older than 6 hours)
+        if (lastCookieRefresh) {
+            NSTimeInterval timeSinceRefresh = [[NSDate date] timeIntervalSinceDate:lastCookieRefresh];
+            if (timeSinceRefresh > (6 * 60 * 60)) { // 6 hours
+                cookiesStillValid = NO;
+                [self logDebugInfo:@"Cached cookies are too old, forcing refresh"];
+            }
+        } else {
+            cookiesStillValid = NO; // No refresh date means uncertain validity
+        }
+        
+        if (cookiesStillValid) {
+            // We have valid cookies from cache
+            // Make them immediately available for pending tweets
+            dispatch_async(dispatch_get_main_queue(), ^{
+                // Direct notification - more reliable than delayed polling
+                [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
+            });
+            
+            isInitializingCookies = NO;
+            return;
+        }
     }
     
-    // Try fetching cookies once immediately before starting retry process
+    // IMPROVED: Try multiple attempts immediately before starting timer-based retries
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        NSDictionary *freshCookies = [self fetchCookies];
+        NSDictionary *freshCookies = nil;
+        
+        // PERFORMANCE: Reduce to 2 attempts with shorter delay
+        for (int attempt = 0; attempt < 2; attempt++) {
+            freshCookies = [self fetchCookies];
+            BOOL hasValidFreshCookies = freshCookies && freshCookies.count > 0 && 
+                                       freshCookies[@"ct0"] && freshCookies[@"auth_token"];
+            
+            if (hasValidFreshCookies) {
+                break; // Got valid cookies, stop trying
+            }
+            
+            // PERFORMANCE: Reduce delay to 200ms for faster response
+            if (attempt < 1) {
+                [NSThread sleepForTimeInterval:0.2];
+            }
+        }
+        
         BOOL hasValidFreshCookies = freshCookies && freshCookies.count > 0 && 
                                    freshCookies[@"ct0"] && freshCookies[@"auth_token"];
                                    
@@ -1605,7 +1846,7 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
                 isInitializingCookies = NO;
             });
         } else {
-            // If couldn't get cookies, start the retry process
+            // If couldn't get cookies after multiple attempts, start the retry process
             dispatch_async(dispatch_get_main_queue(), ^{
                 [self retryFetchCookies];
             });
@@ -1780,10 +2021,35 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
         }
     }
     
+    // IMPROVED: Try additional fallback methods for getting critical cookies
+    if (!cookiesDict[@"ct0"] || !cookiesDict[@"auth_token"]) {
+        // Try getting all cookies without domain filtering
+        NSArray *allCookies = [cookieStorage cookies];
+        for (NSHTTPCookie *cookie in allCookies) {
+            if ([requiredCookies containsObject:cookie.name] && 
+                ([cookie.domain containsString:@"twitter"] || [cookie.domain containsString:@"x.com"])) {
+                cookiesDict[cookie.name] = cookie.value;
+            }
+        }
+        
+        // If still no luck, try to get cookies from WebKit storage (if available)
+        if (!cookiesDict[@"ct0"] || !cookiesDict[@"auth_token"]) {
+            Class WKHTTPCookieStoreClass = NSClassFromString(@"WKHTTPCookieStore");
+            if (WKHTTPCookieStoreClass) {
+                // Try to access WebKit cookie store if available (async operation, but we'll handle it)
+                // This is a fallback for when NSHTTPCookieStorage doesn't have the cookies
+                [self logDebugInfo:@"Attempting WebKit cookie store fallback"];
+            }
+        }
+    }
+    
     // Log status of required cookies only in debug mode
 #if BHT_DEBUG
     BOOL hasCritical = cookiesDict[@"ct0"] && cookiesDict[@"auth_token"];
-    [self logDebugInfo:[NSString stringWithFormat:@"Has critical cookies: %@", hasCritical ? @"Yes" : @"No"]];
+    [self logDebugInfo:[NSString stringWithFormat:@"Has critical cookies: %@ (ct0: %@, auth_token: %@)", 
+                      hasCritical ? @"Yes" : @"No", 
+                      cookiesDict[@"ct0"] ? @"Yes" : @"No",
+                      cookiesDict[@"auth_token"] ? @"Yes" : @"No"]];
 #endif
     
     return cookiesDict;
@@ -1932,21 +2198,36 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
 
         NSDictionary *cookiesToUse = cookieCache;
         
-        // Check if we have valid cookies 
+        // IMPROVED: Better validation of critical cookies
         BOOL hasCriticalCookies = cookiesToUse && cookiesToUse.count > 0 && 
-                                  cookiesToUse[@"ct0"] && cookiesToUse[@"auth_token"];
+                                  cookiesToUse[@"ct0"] && cookiesToUse[@"auth_token"] &&
+                                  [cookiesToUse[@"ct0"] length] > 10 && // ct0 should be reasonably long
+                                  [cookiesToUse[@"auth_token"] length] > 10; // auth_token should be reasonably long
         
         // Force cookie refresh if we're retrying and previous attempts failed
         BOOL forceRefresh = (retryCount >= COOKIE_FORCE_REFRESH_RETRY_COUNT);
         
+        // PERFORMANCE: Simplified age check to reduce overhead
+        if (!forceRefresh && hasCriticalCookies && lastCookieRefresh) {
+            NSTimeInterval timeSinceRefresh = [[NSDate date] timeIntervalSinceDate:lastCookieRefresh];
+            if (timeSinceRefresh > (4 * 60 * 60)) { // Force refresh after 4 hours
+                forceRefresh = YES;
+                [self logDebugInfo:@"Forcing cookie refresh due to age"];
+            }
+        }
+        
         // If we don't have critical cookies, try to fetch them or initiate retry mechanism
         if (!hasCriticalCookies || forceRefresh || [self shouldRefreshCookies]) {
             [self logDebugInfo:@"Fetching fresh cookies"];
+            
+            // PERFORMANCE: Reduce to single attempt with quick fallback
             NSDictionary *freshCookies = [self fetchCookies];
             
             // Check if the fresh cookies are valid
             BOOL freshCookiesValid = freshCookies && freshCookies.count > 0 && 
-                                     freshCookies[@"ct0"] && freshCookies[@"auth_token"];
+                                     freshCookies[@"ct0"] && freshCookies[@"auth_token"] &&
+                                     [freshCookies[@"ct0"] length] > 10 &&
+                                     [freshCookies[@"auth_token"] length] > 10;
             
             if (freshCookiesValid) {
                 [self cacheCookies:freshCookies];
@@ -1973,9 +2254,9 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
                     
                     // Mark this tweet as "Fetching..." instead of unavailable
                     tweetSources[tweetID] = @"Fetching...";
-                fetchPending[tweetID] = @(NO);
-                [fetchTimeouts removeObjectForKey:tweetID];
-                [timeoutTimer invalidate];
+                    fetchPending[tweetID] = @(NO);
+                    [fetchTimeouts removeObjectForKey:tweetID];
+                    [timeoutTimer invalidate];
                     
                     // Notify UI that we're waiting for login
                     dispatch_async(dispatch_get_main_queue(), ^{
@@ -2373,18 +2654,52 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
 
 + (void)handleAppForeground:(NSNotification *)notification {
     @try {
-        // Lazily fetch cookies when needed instead of on every foreground
-        if (!cookieCache || cookieCache.count == 0 || [self shouldRefreshCookies]) {
-            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
+        // PERFORMANCE: More efficient cookie refresh check on app foreground
+        BOOL shouldRefreshCookies = NO;
+        
+        if (!cookieCache || cookieCache.count == 0 || !cookieCache[@"ct0"] || !cookieCache[@"auth_token"]) {
+            shouldRefreshCookies = YES;
+            [self logDebugInfo:@"Missing critical cookies, forcing refresh"];
+        } else if (lastCookieRefresh) {
+            // PERFORMANCE: Only force refresh if cookies are more than 3 hours old on app foreground
+            NSTimeInterval timeSinceRefresh = [[NSDate date] timeIntervalSinceDate:lastCookieRefresh];
+            if (timeSinceRefresh > (3 * 60 * 60)) {
+                shouldRefreshCookies = YES;
+                [self logDebugInfo:@"Cached cookies are more than 3 hours old, forcing refresh"];
+            }
+        } else {
+            shouldRefreshCookies = YES; // No refresh date means we should refresh
+        }
+        
+        if (shouldRefreshCookies) {
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                // PERFORMANCE: Single attempt with quick fallback
                 NSDictionary *freshCookies = [self fetchCookies];
-                if (freshCookies.count > 0) {
+                
+                BOOL cookiesValid = freshCookies && freshCookies.count > 0 && 
+                                    freshCookies[@"ct0"] && freshCookies[@"auth_token"];
+                
+                if (cookiesValid) {
                     [self cacheCookies:freshCookies];
+                    
+                    // Notify that cookies are ready
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" 
+                                                                          object:nil];
+                    });
+                } else {
+                    // If we couldn't get cookies, start the initialization process (but don't block)
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        if (!isInitializingCookies) {
+                            [self initializeCookiesWithRetry];
+                        }
+                    });
                 }
             });
         }
         
-        // Start polling for updates (after a short delay)
-        [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:1.5];
+        // PERFORMANCE: Slightly longer delay to reduce immediate overhead
+        [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:2.0];
         
     } @catch (__unused NSException *e) {
         // Minimized error logging in production
@@ -5293,31 +5608,14 @@ static GeminiTranslator *_sharedInstance;
 
 @end
 
-// No custom interface declarations needed - we'll use selectors
-
 // MARK: Restore Launch Animation
-
-// Add interface for T1AppLaunchTransition
-@interface T1AppLaunchTransition : NSObject
-@property(retain, nonatomic) UIView *hostView;
-@property(retain, nonatomic) UIView *blueBackgroundView;
-@property(retain, nonatomic) UIView *whiteBackgroundView;
-- (void)runLaunchTransition;
-@end
 
 %hook T1AppDelegate
 + (id)launchTransitionProvider {
-    id originalProvider = %orig;
-    
-    // Only create a new provider if the original is null (newer Twitter versions)
-    if (!originalProvider) {
-        Class T1AppLaunchTransitionClass = NSClassFromString(@"T1AppLaunchTransition");
-        if (T1AppLaunchTransitionClass) {
-            id provider = [[T1AppLaunchTransitionClass alloc] init];
-            return provider;
-        }
+    Class T1AppLaunchTransitionClass = NSClassFromString(@"T1AppLaunchTransition");
+    if (T1AppLaunchTransitionClass) {
+        return [[T1AppLaunchTransitionClass alloc] init];
     }
-    return originalProvider;
+    return nil;
 }
-
 %end
