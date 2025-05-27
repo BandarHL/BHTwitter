@@ -6159,25 +6159,8 @@ static GeminiTranslator *_sharedInstance;
 
 // MARK: Version Spoofer - Safe Implementation
 
-// Helper function to check if we should bypass version spoofing for current context
-static BOOL BHT_ShouldBypassVersionSpoofing(void) {
-    // Get the current stack trace to check calling classes
-    NSArray *callStack = [NSThread callStackSymbols];
-    
-    for (NSString *frame in callStack) {
-        // Check for onboarding/sign-out related classes that should see real version
-        if ([frame containsString:@"ONBSignedOutViewController"] ||
-            [frame containsString:@"ONB"] ||
-            [frame containsString:@"Onboarding"] ||
-            [frame containsString:@"SignedOut"] ||
-            [frame containsString:@"VersionCheck"] ||
-            [frame containsString:@"AppUpdate"]) {
-            return YES;
-        }
-    }
-    
-    return NO;
-}
+// Global flag to temporarily disable version spoofing
+static BOOL BHT_DisableVersionSpoofing = NO;
 
 // Hook the main bundle specifically to avoid interfering with system bundles
 %hook NSBundle
@@ -6188,8 +6171,8 @@ static BOOL BHT_ShouldBypassVersionSpoofing(void) {
         NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
         BOOL versionSpoofingEnabled = [defaults boolForKey:@"BHT_VersionSpoofingEnabled"];
         
-        // Check if we should bypass version spoofing for this context
-        if (versionSpoofingEnabled && key && !BHT_ShouldBypassVersionSpoofing()) {
+        // Check if version spoofing is enabled and not temporarily disabled
+        if (versionSpoofingEnabled && key && !BHT_DisableVersionSpoofing) {
             NSString *spoofedVersion = [defaults stringForKey:@"BHT_SpoofedVersion"];
             
             if (spoofedVersion && spoofedVersion.length > 0) {
@@ -6215,8 +6198,8 @@ static BOOL BHT_ShouldBypassVersionSpoofing(void) {
         NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
         BOOL versionSpoofingEnabled = [defaults boolForKey:@"BHT_VersionSpoofingEnabled"];
         
-        // Check if we should bypass version spoofing for this context
-        if (versionSpoofingEnabled && !BHT_ShouldBypassVersionSpoofing()) {
+        // Check if version spoofing is enabled and not temporarily disabled
+        if (versionSpoofingEnabled && !BHT_DisableVersionSpoofing) {
             NSString *spoofedVersion = [defaults stringForKey:@"BHT_SpoofedVersion"];
             
             if (spoofedVersion && spoofedVersion.length > 0 && originalDict) {
@@ -6232,6 +6215,33 @@ static BOOL BHT_ShouldBypassVersionSpoofing(void) {
     }
     
     return originalDict;
+}
+
+%end
+
+// Hook ONBSignedOutViewController to disable version spoofing during its lifecycle
+%hook ONBSignedOutViewController
+
+- (void)viewDidLoad {
+    BHT_DisableVersionSpoofing = YES;
+    NSLog(@"[BHTwitter] Disabling version spoofing for ONBSignedOutViewController");
+    %orig;
+}
+
+- (void)viewDidAppear:(BOOL)animated {
+    BHT_DisableVersionSpoofing = YES;
+    %orig;
+}
+
+- (void)viewWillDisappear:(BOOL)animated {
+    %orig;
+    BHT_DisableVersionSpoofing = NO;
+    NSLog(@"[BHTwitter] Re-enabling version spoofing after ONBSignedOutViewController");
+}
+
+- (void)dealloc {
+    BHT_DisableVersionSpoofing = NO;
+    %orig;
 }
 
 %end
