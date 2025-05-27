@@ -6099,6 +6099,14 @@ static GeminiTranslator *_sharedInstance;
             imageView.transform = transform;
             imageView.clipsToBounds = NO;
         }
+        // Also scale any Lottie animations
+        for (UIView *subview in self.subviews) {
+            if ([NSStringFromClass([subview class]) containsString:@"LottieSPM13AnimationView"]) {
+                CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
+                subview.transform = transform;
+                subview.clipsToBounds = NO;
+            }
+        }
     });
 }
 
