@@ -6052,43 +6052,81 @@ static GeminiTranslator *_sharedInstance;
     
     return 1; // Use modified size for other views
 }
+
+- (void)setFrame:(CGRect)frame {
+    // Check if we're inside T1ImmersiveController - if so, move button up
+    UIView *parentView = self.superview;
+    while (parentView) {
+        if ([parentView isKindOfClass:objc_getClass("T1ImmersiveFullScreenViewController")] || 
+            [NSStringFromClass([parentView class]) containsString:@"T1Immersive"]) {
+            CGFloat upwardOffset = 15.0; // Move buttons up in immersive view
+            frame.origin.y -= upwardOffset;
+            break;
+        }
+        parentView = parentView.superview;
+    }
+    
+    %orig(frame);
+}
+
+- (instancetype)initWithFrame:(CGRect)frame {
+    // Check if we're inside T1ImmersiveController - if so, move button up
+    UIView *parentView = self.superview;
+    while (parentView) {
+        if ([parentView isKindOfClass:objc_getClass("T1ImmersiveFullScreenViewController")] || 
+            [NSStringFromClass([parentView class]) containsString:@"T1Immersive"]) {
+            CGFloat upwardOffset = 15.0; // Move buttons up in immersive view
+            frame.origin.y -= upwardOffset;
+            break;
+        }
+        parentView = parentView.superview;
+    }
+    
+    return %orig(frame);
+}
 %end
 
 // MARK: Move TTAStatusInlineActionsView up
 
 %hook TTAStatusInlineActionsView
 - (void)setFrame:(CGRect)frame {
-    // Check if we're inside T1ImmersiveController for different offset
-    CGFloat upwardOffset = 5.0; // Default offset
-    
+    // Check if we're inside T1ConversationFocalStatusView - if so, don't adjust
     UIView *parentView = self.superview;
     while (parentView) {
+        if ([parentView isKindOfClass:objc_getClass("T1ConversationFocalStatusView")]) {
+            %orig(frame); // No adjustment for focal views
+            return;
+        }
         if ([parentView isKindOfClass:objc_getClass("T1ImmersiveFullScreenViewController")] || 
             [NSStringFromClass([parentView class]) containsString:@"T1Immersive"]) {
-            upwardOffset = 15.0; // Larger offset for immersive controller
-            break;
+            %orig(frame); // No adjustment for immersive views (buttons will handle it)
+            return;
         }
         parentView = parentView.superview;
     }
     
+    // Default offset for other views
+    CGFloat upwardOffset = 5.0;
     frame.origin.y -= upwardOffset;
     %orig(frame);
 }
 
 - (instancetype)initWithFrame:(CGRect)frame {
-    // Check if we're inside T1ImmersiveController for different offset  
-    CGFloat upwardOffset = 5.0; // Default offset
-    
+    // Check if we're inside T1ConversationFocalStatusView - if so, don't adjust
     UIView *parentView = self.superview;
     while (parentView) {
+        if ([parentView isKindOfClass:objc_getClass("T1ConversationFocalStatusView")]) {
+            return %orig(frame); // No adjustment for focal views
+        }
         if ([parentView isKindOfClass:objc_getClass("T1ImmersiveFullScreenViewController")] || 
             [NSStringFromClass([parentView class]) containsString:@"T1Immersive"]) {
-            upwardOffset = 15.0; // Larger offset for immersive controller
-            break;
+            return %orig(frame); // No adjustment for immersive views (buttons will handle it)
         }
         parentView = parentView.superview;
     }
     
+    // Default offset for other views
+    CGFloat upwardOffset = 5.0;
     frame.origin.y -= upwardOffset;
     return %orig(frame);
 }
