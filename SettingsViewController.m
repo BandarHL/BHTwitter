@@ -150,7 +150,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         detail.textColor = [UIColor secondaryLabelColor];
         detail.numberOfLines = 0;
         detail.textAlignment = NSTextAlignmentLeft;
-        detail.text = [[BHTBundle sharedBundle] localizedStringForKey:@"APP_ICON_HEADER_TITLE"];
+        detail.text = [[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_DETAIL"];
 
         [header addSubview:detail];
 [NSLayoutConstraint activateConstraints:@[
