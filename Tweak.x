@@ -6057,7 +6057,7 @@ static GeminiTranslator *_sharedInstance;
     // Check if we're inside T1ImmersiveController - if so, move button up
     UIView *parentView = self.superview;
     while (parentView) {
-        if ([parentView isKindOfClass:objc_getClass("T1ImmersiveFullScreenViewController")] || 
+        if ([parentView isKindOfClass:objc_getClass("T1ImmersiveViewController")] || 
             [NSStringFromClass([parentView class]) containsString:@"T1Immersive"]) {
             CGFloat upwardOffset = 30.0; // Move buttons up more in immersive view
             frame.origin.y -= upwardOffset;
@@ -6073,7 +6073,7 @@ static GeminiTranslator *_sharedInstance;
     // Check if we're inside T1ImmersiveController - if so, move button up
     UIView *parentView = self.superview;
     while (parentView) {
-        if ([parentView isKindOfClass:objc_getClass("T1ImmersiveFullScreenViewController")] || 
+        if ([parentView isKindOfClass:objc_getClass("T1ImmersiveViewController")] || 
             [NSStringFromClass([parentView class]) containsString:@"T1Immersive"]) {
             CGFloat upwardOffset = 30.0; // Move buttons up more in immersive view
             frame.origin.y -= upwardOffset;
