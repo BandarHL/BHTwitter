@@ -153,12 +153,13 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         detail.text = [[BHTBundle sharedBundle] localizedStringForKey:@"APP_ICON_HEADER_TITLE"];
 
         [header addSubview:detail];
-        [NSLayoutConstraint activateConstraints:@[
-            [detail.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16],
-            [detail.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-16],
-            [detail.topAnchor constraintEqualToAnchor:header.topAnchor constant:8],
-            [detail.bottomAnchor constraintEqualToAnchor:header.bottomAnchor constant:-8]
-        ]];
+[NSLayoutConstraint activateConstraints:@[
+    [detail.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16],
+    [detail.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-16],
+    [detail.topAnchor constraintEqualToAnchor:header.topAnchor constant:2],  // was 8
+    [detail.bottomAnchor constraintEqualToAnchor:header.bottomAnchor constant:-8]
+]];
+
 
         return header;
     }
