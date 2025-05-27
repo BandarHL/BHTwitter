@@ -6099,28 +6099,6 @@ static GeminiTranslator *_sharedInstance;
 }
 %end
 
-// MARK: Make button labels in TFNAnimatableButton smaller
-
-%hook UILabel
-- (void)setFont:(UIFont *)font {
-    // Check if this label is inside a TFNAnimatableButton and make it smaller
-    UIView *parentView = self.superview;
-    while (parentView) {
-        if ([parentView isKindOfClass:objc_getClass("TFNAnimatableButton")]) {
-            // Make the font smaller for labels in TFNAnimatableButton
-            CGFloat originalSize = font.pointSize;
-            CGFloat smallerSize = originalSize * 0.85; // 15% smaller
-            UIFont *smallerFont = [UIFont fontWithDescriptor:font.fontDescriptor size:smallerSize];
-            %orig(smallerFont);
-            return;
-        }
-        parentView = parentView.superview;
-    }
-    
-    %orig(font);
-}
-%end
-
 // MARK: Move TTAStatusInlineActionsView up
 
 %hook TTAStatusInlineActionsView
