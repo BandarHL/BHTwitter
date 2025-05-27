@@ -6045,12 +6045,12 @@ static GeminiTranslator *_sharedInstance;
     UIView *parentView = self.superview;
     while (parentView) {
         if ([parentView isKindOfClass:objc_getClass("T1ConversationFocalStatusView")]) {
-            return %orig; // Return original/default size
+            return 3; // Return original/default size
         }
         parentView = parentView.superview;
     }
     
-    return 1; // Use modified size for other views
+    return 0; // Use modified size for other views
 }
 
 - (void)setFrame:(CGRect)frame {
@@ -6064,7 +6064,7 @@ static GeminiTranslator *_sharedInstance;
         
         if ([className containsString:@"ImmersiveCardView"] || 
             [className containsString:@"ImmersiveAccessibleContainerView"]) {
-            CGFloat upwardOffset = 7.0; // Move buttons up more in immersive view
+            CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
             frame.origin.y -= upwardOffset;
             foundImmersive = YES;
             NSLog(@"[BHTwitter] Moving button up by %f in immersive view (found: %@)", upwardOffset, className);
@@ -6108,7 +6108,7 @@ static GeminiTranslator *_sharedInstance;
     while (parentView) {
         if ([parentView isKindOfClass:objc_getClass("TFNAnimatableButton")]) {
             // Make the font smaller for button labels
-            CGFloat smallerSize = font.pointSize * 0.85; // 15% smaller
+            CGFloat smallerSize = font.pointSize * 0.80; // 15% smaller
             UIFont *smallerFont = [UIFont fontWithDescriptor:font.fontDescriptor size:smallerSize];
             %orig(smallerFont);
             return;
