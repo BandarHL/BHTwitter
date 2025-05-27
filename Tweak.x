@@ -6052,6 +6052,18 @@ static GeminiTranslator *_sharedInstance;
     
     return 4; // Use modified size for other views
 }
+- (NSUInteger)_buttonSize {
+    // Check if button is inside T1ConversationFocalStatusView - if so, use default size
+    UIView *parentView = self.superview;
+    while (parentView) {
+        if ([parentView isKindOfClass:objc_getClass("T1ConversationFocalStatusView")]) {
+            return %orig; // Return original/default size
+        }
+        parentView = parentView.superview;
+    }
+    
+    return 1; // Use modified size for other views
+}
 
 - (void)setFrame:(CGRect)frame {
     // Check if we're inside T1ImmersiveController - if so, move button up
