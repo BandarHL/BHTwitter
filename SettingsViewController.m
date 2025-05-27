@@ -142,7 +142,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
     if (section == 0) {
-        UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 52)];
+        UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 40)];
 
         UILabel *detail = [UILabel new];
         detail.translatesAutoresizingMaskIntoConstraints = NO;
@@ -156,7 +156,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 [NSLayoutConstraint activateConstraints:@[
     [detail.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16],
     [detail.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-16],
-    [detail.topAnchor constraintEqualToAnchor:header.topAnchor constant:-8],  // was 8
+    [detail.topAnchor constraintEqualToAnchor:header.topAnchor constant:8],  // was 8
     [detail.bottomAnchor constraintEqualToAnchor:header.bottomAnchor constant:-8]
 ]];
 
