@@ -6052,18 +6052,64 @@ static GeminiTranslator *_sharedInstance;
     
     return 1; // Use modified size for other views
 }
+
+- (void)setFrame:(CGRect)frame {
+    // Check if we're inside T1ImmersiveController - if so, move button up
+    UIView *parentView = self.superview;
+    BOOL foundImmersive = NO;
+    
+    while (parentView) {
+        NSString *className = NSStringFromClass([parentView class]);
+        NSLog(@"[BHTwitter] Button parent class: %@", className);
+        
+        if ([className containsString:@"ImmersiveCardView"] || 
+            [className containsString:@"ImmersiveAccessibleContainerView"]) {
+            CGFloat upwardOffset = 7.0; // Move buttons up more in immersive view
+            frame.origin.y -= upwardOffset;
+            foundImmersive = YES;
+            NSLog(@"[BHTwitter] Moving button up by %f in immersive view (found: %@)", upwardOffset, className);
+            break;
+        }
+        parentView = parentView.superview;
+    }
+    
+    if (!foundImmersive) {
+        NSLog(@"[BHTwitter] No immersive parent found for button");
+    }
+    
+    %orig(frame);
+}
+
+- (instancetype)initWithFrame:(CGRect)frame {
+    // Check if we're inside T1ImmersiveController - if so, move button up
+    UIView *parentView = self.superview;
+    while (parentView) {
+        NSString *className = NSStringFromClass([parentView class]);
+        if ([className containsString:@"ImmersiveCardView"] || 
+            [className containsString:@"ImmersiveAccessibleContainerView"]) {
+            CGFloat upwardOffset = 7.0; // Move buttons up more in immersive view
+            frame.origin.y -= upwardOffset;
+            NSLog(@"[BHTwitter] Moving button up by %f in initWithFrame (found: %@)", upwardOffset, className);
+            break;
+        }
+        parentView = parentView.superview;
+    }
+    
+    return %orig(frame);
+}
 %end
 
-// MARK: Make UIButtonLabel smaller in TFNAnimatableButton
+// MARK: Make button labels in TFNAnimatableButton smaller
 
 %hook UILabel
 - (void)setFont:(UIFont *)font {
-    // Check if this label is inside a TFNAnimatableButton
+    // Check if this label is inside a TFNAnimatableButton and make it smaller
     UIView *parentView = self.superview;
     while (parentView) {
         if ([parentView isKindOfClass:objc_getClass("TFNAnimatableButton")]) {
-            // Make the font smaller for button labels
-            CGFloat smallerSize = font.pointSize * 0.80; // 15% smaller
+            // Make the font smaller for labels in TFNAnimatableButton
+            CGFloat originalSize = font.pointSize;
+            CGFloat smallerSize = originalSize * 0.85; // 15% smaller
             UIFont *smallerFont = [UIFont fontWithDescriptor:font.fontDescriptor size:smallerSize];
             %orig(smallerFont);
             return;
