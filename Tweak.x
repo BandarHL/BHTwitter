@@ -6050,7 +6050,7 @@ static GeminiTranslator *_sharedInstance;
         parentView = parentView.superview;
     }
     
-    return 3; // Use modified size for other views
+    return 2; // Use modified size for other views
 }
 
 - (void)setFrame:(CGRect)frame {
