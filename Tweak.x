@@ -6043,17 +6043,6 @@ static GeminiTranslator *_sharedInstance;
 - (NSUInteger)buttonSize {
     return 1;
 }
-
-// Prevent the button label from scaling with button size
-- (void)configureWithViewModel:(id)arg1 {
-    %orig;
-    
-    // Reset the title label font to prevent it from scaling with button size
-    if (self.titleLabel) {
-        CGFloat originalFontSize = 13.0; // Standard Twitter button font size
-        self.titleLabel.font = [UIFont systemFontOfSize:originalFontSize weight:UIFontWeightMedium];
-    }
-}
 %end
 
 // MARK: Move TTAStatusInlineActionsView up
