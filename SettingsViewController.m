@@ -170,10 +170,12 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     UIView *headerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 52)];
     
     // Top separator - modified to extend full width
+if (section != 1) {
     UIView *topSeparator = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 0.5)];
     topSeparator.backgroundColor = [UIColor separatorColor];
-    topSeparator.autoresizingMask = UIViewAutoresizingFlexibleWidth; // Ensure it stays full width
+    topSeparator.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     [headerView addSubview:topSeparator];
+}
     
     // Header label
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(16, 16, tableView.frame.size.width - 32, 28)];
