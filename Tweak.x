@@ -6062,12 +6062,12 @@ static GeminiTranslator *_sharedInstance;
         NSString *className = NSStringFromClass([parentView class]);
         NSLog(@"[BHTwitter] Button parent class: %@", className);
         
-        if ([parentView isKindOfClass:objc_getClass("T1ImmersiveViewController")] || 
-            [className containsString:@"T1Immersive"]) {
+        if ([className containsString:@"ImmersiveCardView"] || 
+            [className containsString:@"ImmersiveAccessibleContainerView"]) {
             CGFloat upwardOffset = 30.0; // Move buttons up more in immersive view
             frame.origin.y -= upwardOffset;
             foundImmersive = YES;
-            NSLog(@"[BHTwitter] Moving button up by %f in immersive view", upwardOffset);
+            NSLog(@"[BHTwitter] Moving button up by %f in immersive view (found: %@)", upwardOffset, className);
             break;
         }
         parentView = parentView.superview;
@@ -6084,10 +6084,12 @@ static GeminiTranslator *_sharedInstance;
     // Check if we're inside T1ImmersiveController - if so, move button up
     UIView *parentView = self.superview;
     while (parentView) {
-        if ([parentView isKindOfClass:objc_getClass("T1ImmersiveViewController")] || 
-            [NSStringFromClass([parentView class]) containsString:@"T1Immersive"]) {
+        NSString *className = NSStringFromClass([parentView class]);
+        if ([className containsString:@"ImmersiveCardView"] || 
+            [className containsString:@"ImmersiveAccessibleContainerView"]) {
             CGFloat upwardOffset = 30.0; // Move buttons up more in immersive view
             frame.origin.y -= upwardOffset;
+            NSLog(@"[BHTwitter] Moving button up by %f in initWithFrame (found: %@)", upwardOffset, className);
             break;
         }
         parentView = parentView.superview;
