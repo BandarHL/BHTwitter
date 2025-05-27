@@ -6050,7 +6050,7 @@ static GeminiTranslator *_sharedInstance;
         parentView = parentView.superview;
     }
     
-    return 1; // Use modified size for other views
+    return 3; // Use modified size for other views
 }
 
 - (void)setFrame:(CGRect)frame {
@@ -6087,7 +6087,7 @@ static GeminiTranslator *_sharedInstance;
         NSString *className = NSStringFromClass([parentView class]);
         if ([className containsString:@"ImmersiveCardView"] || 
             [className containsString:@"ImmersiveAccessibleContainerView"]) {
-            CGFloat upwardOffset = 7.0; // Move buttons up more in immersive view
+            CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
             frame.origin.y -= upwardOffset;
             NSLog(@"[BHTwitter] Moving button up by %f in initWithFrame (found: %@)", upwardOffset, className);
             break;
@@ -6096,6 +6096,27 @@ static GeminiTranslator *_sharedInstance;
     }
     
     return %orig(frame);
+}
+%end
+
+// MARK: Make UIButtonLabel smaller in TFNAnimatableButton
+
+%hook UILabel
+- (void)setFont:(UIFont *)font {
+    // Check if this label is inside a TFNAnimatableButton
+    UIView *parentView = self.superview;
+    while (parentView) {
+        if ([parentView isKindOfClass:objc_getClass("TFNAnimatableButton")]) {
+            // Make the font smaller for button labels
+            CGFloat smallerSize = font.pointSize * 0.85; // 15% smaller
+            UIFont *smallerFont = [UIFont fontWithDescriptor:font.fontDescriptor size:smallerSize];
+            %orig(smallerFont);
+            return;
+        }
+        parentView = parentView.superview;
+    }
+    
+    %orig(font);
 }
 %end
 
