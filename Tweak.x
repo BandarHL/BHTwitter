@@ -6049,57 +6049,31 @@ static GeminiTranslator *_sharedInstance;
     return imageView;
 }
 
-// Hook animation methods to maintain our transform
-- (void)_tfn_transitionFromState:(unsigned long long)fromState toState:(unsigned long long)toState animated:(BOOL)animated {
-    %orig;
-    // Reapply our transform after animation
-    dispatch_async(dispatch_get_main_queue(), ^{
-        UIImageView *imageView = self.imageView;
-        if (imageView) {
-            CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
-            imageView.transform = transform;
-            imageView.clipsToBounds = NO;
-        }
-    });
-}
+%end
 
-- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
-    %orig;
-    // Reapply our transform after animation
-    dispatch_async(dispatch_get_main_queue(), ^{
-        UIImageView *imageView = self.imageView;
-        if (imageView) {
-            CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
-            imageView.transform = transform;
-            imageView.clipsToBounds = NO;
-        }
-    });
-}
+// Hook the imageView class directly to maintain transform
+%hook UIImageView
 
-- (void)setHighlighted:(BOOL)highlighted animated:(BOOL)animated {
-    %orig;
-    // Reapply our transform after animation
-    dispatch_async(dispatch_get_main_queue(), ^{
-        UIImageView *imageView = self.imageView;
-        if (imageView) {
-            CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
-            imageView.transform = transform;
-            imageView.clipsToBounds = NO;
+- (void)setTransform:(CGAffineTransform)transform {
+    // Check if this imageView is inside a TFNAnimatableButton
+    UIView *superview = self.superview;
+    BOOL isInAnimatableButton = NO;
+    while (superview) {
+        if ([superview isKindOfClass:objc_getClass("TFNAnimatableButton")]) {
+            isInAnimatableButton = YES;
+            break;
         }
-    });
-}
-
-- (void)setEnabled:(BOOL)enabled animated:(BOOL)animated {
-    %orig;
-    // Reapply our transform after animation
-    dispatch_async(dispatch_get_main_queue(), ^{
-        UIImageView *imageView = self.imageView;
-        if (imageView) {
-            CGAffineTransform transform = CGAffineTransformMakeScale(1.2, 1.2);
-            imageView.transform = transform;
-            imageView.clipsToBounds = NO;
-        }
-    });
+        superview = superview.superview;
+    }
+    
+    if (isInAnimatableButton) {
+        // Always maintain our 1.2x scale regardless of what transform is being set
+        CGAffineTransform scaledTransform = CGAffineTransformScale(transform, 1.2, 1.2);
+        %orig(scaledTransform);
+        self.clipsToBounds = NO;
+    } else {
+        %orig(transform);
+    }
 }
 
 %end
