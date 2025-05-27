@@ -6041,7 +6041,16 @@ static GeminiTranslator *_sharedInstance;
 
 %hook TTAStatusInlineActionButton
 - (NSUInteger)buttonSize {
-    return 1;
+    // Check if button is inside T1ConversationFocalStatusView - if so, use default size
+    UIView *parentView = self.superview;
+    while (parentView) {
+        if ([parentView isKindOfClass:objc_getClass("T1ConversationFocalStatusView")]) {
+            return %orig; // Return original/default size
+        }
+        parentView = parentView.superview;
+    }
+    
+    return 1; // Use modified size for other views
 }
 %end
 
@@ -6049,15 +6058,37 @@ static GeminiTranslator *_sharedInstance;
 
 %hook TTAStatusInlineActionsView
 - (void)setFrame:(CGRect)frame {
-    // Adjust the frame before setting it
-    CGFloat upwardOffset = 5.0; // Adjust this value to move more or less
+    // Check if we're inside T1ImmersiveController for different offset
+    CGFloat upwardOffset = 5.0; // Default offset
+    
+    UIView *parentView = self.superview;
+    while (parentView) {
+        if ([parentView isKindOfClass:objc_getClass("T1ImmersiveFullScreenViewController")] || 
+            [NSStringFromClass([parentView class]) containsString:@"T1Immersive"]) {
+            upwardOffset = 15.0; // Larger offset for immersive controller
+            break;
+        }
+        parentView = parentView.superview;
+    }
+    
     frame.origin.y -= upwardOffset;
     %orig(frame);
 }
 
 - (instancetype)initWithFrame:(CGRect)frame {
-    // Adjust frame during initialization
-    CGFloat upwardOffset = 5.0;
+    // Check if we're inside T1ImmersiveController for different offset  
+    CGFloat upwardOffset = 5.0; // Default offset
+    
+    UIView *parentView = self.superview;
+    while (parentView) {
+        if ([parentView isKindOfClass:objc_getClass("T1ImmersiveFullScreenViewController")] || 
+            [NSStringFromClass([parentView class]) containsString:@"T1Immersive"]) {
+            upwardOffset = 15.0; // Larger offset for immersive controller
+            break;
+        }
+        parentView = parentView.superview;
+    }
+    
     frame.origin.y -= upwardOffset;
     return %orig(frame);
 }
