@@ -6202,22 +6202,30 @@ static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
 - (void)setSections:(NSArray *)sections {
     // Only filter if we're in the GuideContainerViewController hierarchy
     if (BHT_isInGuideContainerHierarchy(self)) {
-        // Keep only entry 3 (index 2) and clone its internal items
+        // Keep only entry 3 (index 2) and try to clone its internal items
         if (sections.count > 2) {
             id thirdEntry = sections[2];
             
-            // Try to clone items within the section if it has items/rows
-            if ([thirdEntry respondsToSelector:@selector(items)] && 
-                [thirdEntry respondsToSelector:@selector(setItems:)]) {
-                NSArray *originalItems = [thirdEntry performSelector:@selector(items)];
-                if (originalItems && originalItems.count > 0) {
-                    NSMutableArray *clonedItems = [NSMutableArray array];
-                    // Clone each item multiple times
-                    for (id item in originalItems) {
-                        [clonedItems addObject:item];
-                        [clonedItems addObject:item]; // Add duplicate
+            // Debug: Log the section object type and available methods
+            NSLog(@"[BHTwitter] Section class: %@", NSStringFromClass([thirdEntry class]));
+            NSLog(@"[BHTwitter] Section description: %@", thirdEntry);
+            
+            // Try different possible properties for items/rows
+            if ([thirdEntry respondsToSelector:@selector(numberOfRows)]) {
+                NSInteger rowCount = (NSInteger)[thirdEntry performSelector:@selector(numberOfRows)];
+                NSLog(@"[BHTwitter] Section has %ld rows", (long)rowCount);
+            }
+            
+            // Try to access backing store and clone its items
+            if ([self respondsToSelector:@selector(backingStore)]) {
+                id backingStore = [self performSelector:@selector(backingStore)];
+                NSLog(@"[BHTwitter] BackingStore class: %@", NSStringFromClass([backingStore class]));
+                
+                // Try to insert duplicate items into the backing store
+                for (int i = 0; i < 3; i++) { // Add 3 duplicates
+                    if ([backingStore respondsToSelector:@selector(insertSection:atIndex:)]) {
+                        [backingStore insertSection:0 atIndex:0];
                     }
-                    [thirdEntry performSelector:@selector(setItems:) withObject:[clonedItems copy]];
                 }
             }
             
