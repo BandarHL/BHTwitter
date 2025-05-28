@@ -6338,4 +6338,21 @@ static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
     return originalCells;
 }
 
+- (NSArray *)indexPathsForVisibleRows {
+    NSArray *originalIndexPaths = %orig;
+    
+    NSString *className = NSStringFromClass([self class]);
+    // Target the specific SwiftUI.UpdateCoalescingTableView class
+    if ([className isEqualToString:@"SwiftUI.UpdateCoalescingTableView"]) {
+        // Remove entry 1 (index 0) if it exists
+        if (originalIndexPaths.count > 0) {
+            NSMutableArray *filteredIndexPaths = [originalIndexPaths mutableCopy];
+            [filteredIndexPaths removeObjectAtIndex:0];
+            return [filteredIndexPaths copy];
+        }
+    }
+    
+    return originalIndexPaths;
+}
+
 %end
