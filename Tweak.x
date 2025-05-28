@@ -6202,18 +6202,9 @@ static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
 - (void)setSections:(NSArray *)sections {
     // Only filter if we're in the GuideContainerViewController hierarchy
     if (BHT_isInGuideContainerHierarchy(self)) {
-        NSMutableArray *filteredSections = [sections mutableCopy];
-        
-        // Remove entries 3-8 (indices 2-7 in 0-based indexing)
-        if (filteredSections.count > 7) {
-            NSRange rangeToRemove = NSMakeRange(2, 6); // Remove indices 2,3,4,5,6,7 (entries 3-8)
-            [filteredSections removeObjectsInRange:rangeToRemove];
-            sections = [filteredSections copy];
-        } else if (filteredSections.count > 2) {
-            // If there are fewer than 8 entries but more than 2, remove from index 2 onwards
-            NSRange rangeToRemove = NSMakeRange(2, filteredSections.count - 2);
-            [filteredSections removeObjectsInRange:rangeToRemove];
-            sections = [filteredSections copy];
+        // Keep only the first 3 entries, remove everything from entry 4 onwards
+        if (sections.count > 3) {
+            sections = [sections subarrayWithRange:NSMakeRange(0, 3)];
         }
     }
     
