@@ -6202,9 +6202,9 @@ static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
 - (void)setSections:(NSArray *)sections {
     // Only filter if we're in the GuideContainerViewController hierarchy
     if (BHT_isInGuideContainerHierarchy(self)) {
-        // Keep only the first 3 entries, remove everything from entry 4 onwards
-        if (sections.count > 3) {
-            sections = [sections subarrayWithRange:NSMakeRange(0, 3)];
+        // Keep only entry 3 (index 2), remove everything else
+        if (sections.count > 2) {
+            sections = @[sections[2]]; // Extract only the 3rd entry
         }
     }
     
