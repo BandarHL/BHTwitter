@@ -47,6 +47,9 @@
 @property(retain, nonatomic) UIViewController *modalContentViewController;
 - (void)viewDidLoad;
 - (void)viewDidAppear:(BOOL)animated;
+- (void)BHT_removePremiumUpsellContent;
+- (void)BHT_traverseViewHierarchy:(UIView *)view;
+- (BOOL)BHT_containsPremiumUpsellText:(UIView *)view;
 @end
 
 // Block type definitions for compatibility
