@@ -6211,8 +6211,8 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
     while (currentVC) {
         NSString *className = NSStringFromClass([currentVC class]);
         
-        // Check for T1ConversationContainerViewController (handles both naming variants)
-        if ([className containsString:@"T1ConversationContainerViewController"]) {
+        // Check for T1ConversationContainerViewController
+        if ([className isEqualToString:@"T1ConversationContainerViewController"]) {
             return YES;
         }
         
@@ -6231,59 +6231,21 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
     return NO;
 }
 
-// Hook TFNItemsDataViewControllerBackingStore to filter out entry 1 in conversation hierarchy
-%hook TFNItemsDataViewControllerBackingStore
+// Hook TFNURTViewController to remove entry 1 from sections when in conversation view
+%hook TFNURTViewController
 
-- (void)insertSection:(id)section atIndex:(NSUInteger)index {
-    // Find the associated view controller to check hierarchy
-    UIViewController *viewController = nil;
-    
-    // Try to find the view controller that owns this backing store
-    NSArray *allViewControllers = [[UIApplication sharedApplication] windows].firstObject.rootViewController.childViewControllers;
-    for (UIViewController *vc in allViewControllers) {
-        if ([vc respondsToSelector:@selector(backingStore)] && [vc valueForKey:@"backingStore"] == self) {
-            viewController = vc;
-            break;
+- (void)setSections:(NSArray *)sections {
+    // Only filter if we're in the T1ConversationContainerViewController hierarchy
+    if (BHT_isInConversationContainerHierarchy((UIViewController *)self)) {
+        // Remove entry 1 (index 1) from sections array
+        if (sections.count > 1) {
+            NSMutableArray *filteredSections = [NSMutableArray arrayWithArray:sections];
+            [filteredSections removeObjectAtIndex:1];
+            sections = [filteredSections copy];
         }
     }
     
-    // If we're in conversation hierarchy and this is entry 1 (index 1), skip it
-    if (BHT_isInConversationContainerHierarchy(viewController) && index == 1) {
-        return; // Don't insert entry 1
-    }
-    
-    // Adjust index if we're skipping entry 1 and inserting later entries
-    if (BHT_isInConversationContainerHierarchy(viewController) && index > 1) {
-        index--; // Shift down by 1 since we skipped entry 1
-    }
-    
-    %orig(section, index);
-}
-
-- (void)_tfn_insertSection:(id)section atIndex:(NSUInteger)index {
-    // Find the associated view controller to check hierarchy
-    UIViewController *viewController = nil;
-    
-    // Try to find the view controller that owns this backing store
-    NSArray *allViewControllers = [[UIApplication sharedApplication] windows].firstObject.rootViewController.childViewControllers;
-    for (UIViewController *vc in allViewControllers) {
-        if ([vc respondsToSelector:@selector(backingStore)] && [vc valueForKey:@"backingStore"] == self) {
-            viewController = vc;
-            break;
-        }
-    }
-    
-    // If we're in conversation hierarchy and this is entry 1 (index 1), skip it
-    if (BHT_isInConversationContainerHierarchy(viewController) && index == 1) {
-        return; // Don't insert entry 1
-    }
-    
-    // Adjust index if we're skipping entry 1 and inserting later entries
-    if (BHT_isInConversationContainerHierarchy(viewController) && index > 1) {
-        index--; // Shift down by 1 since we skipped entry 1
-    }
-    
-    %orig(section, index);
+    %orig(sections);
 }
 
 %end
