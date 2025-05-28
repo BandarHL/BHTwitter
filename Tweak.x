@@ -6010,28 +6010,6 @@ static GeminiTranslator *_sharedInstance;
 
 %end
 
-// MARK: WKWebView URL Redirection
-
-%hook WKWebView
-
-- (WKNavigation *)loadRequest:(NSURLRequest *)request {
-    // Debug logging
-    NSLog(@"[BHTwitter] WKWebView loadRequest: %@", request.URL.absoluteString);
-    
-    // Check if the URL is help.x.com and redirect to GitHub
-        NSLog(@"[BHTwitter] Redirecting help.x.com to GitHub");
-    if (request.URL && ([request.URL.absoluteString hasPrefix:@"https://help.x.com/en"] || [request.URL.absoluteString hasPrefix:@"https://help.x.com/"])) {
-        NSLog(@"[BHTwitter] Redirecting help.x.com to GitHub");
-        NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird/"];
-        NSURLRequest *redirectRequest = [NSURLRequest requestWithURL:redirectURL];
-        return %orig(redirectRequest);
-    }
-    
-    return %orig;
-}
-
-%end
-
 // MARK: Change Pill text.
 
 %hook TFNPillControl
@@ -6235,20 +6213,16 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 %hook T1URTViewController
 
 - (void)setSections:(NSArray *)sections {
-    NSLog(@"[BHTwitter] TFNURTViewController setSections called with %lu sections", (unsigned long)sections.count);
     
     // Only filter if we're in the T1ConversationContainerViewController hierarchy
     BOOL inConversationHierarchy = BHT_isInConversationContainerHierarchy((UIViewController *)self);
-    NSLog(@"[BHTwitter] In conversation hierarchy: %@", inConversationHierarchy ? @"YES" : @"NO");
     
     if (inConversationHierarchy) {
-        NSLog(@"[BHTwitter] Original sections count: %lu", (unsigned long)sections.count);
         // Remove entry 1 (index 1) from sections array
         if (sections.count > 1) {
             NSMutableArray *filteredSections = [NSMutableArray arrayWithArray:sections];
             [filteredSections removeObjectAtIndex:1];
             sections = [filteredSections copy];
-            NSLog(@"[BHTwitter] Filtered sections count: %lu", (unsigned long)sections.count);
         }
     }
     
