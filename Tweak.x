@@ -5942,11 +5942,11 @@ static GeminiTranslator *_sharedInstance;
 
 %hook TFNPillControl
 - (id)text {
-    NSString *localizedText = [[BHTBundle sharedBundle] localizedStringForKey:@"TFN_PILL_TEXT"];
+    NSString *localizedText = [[BHTBundle sharedBundle] localizedStringForKey:@"REFRESH_PILL_TEXT"];
     return localizedText ?: @"Tweeted";
 }
 - (void)setText:(id)arg1 {
-    NSString *localizedText = [[BHTBundle sharedBundle] localizedStringForKey:@"TFN_PILL_TEXT"];
+    NSString *localizedText = [[BHTBundle sharedBundle] localizedStringForKey:@"REFRESH_PILL_TEXT"];
     %orig(localizedText ?: @"Tweeted");
 }
 %end
@@ -5957,8 +5957,8 @@ static GeminiTranslator *_sharedInstance;
 - (NSUInteger)buttonSize {
     // Check if bigger action buttons is enabled
     BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
-    if (biggerButtons) {
-        return 0; // Biggest size when enabled
+    if (!biggerButtons) {
+        return %orig; // Use original size when disabled
     }
     
     // Check if button is inside T1ConversationFocalStatusView - if so, use default size
@@ -5975,8 +5975,8 @@ static GeminiTranslator *_sharedInstance;
 - (NSUInteger)_buttonSize {
     // Check if bigger action buttons is enabled
     BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
-    if (biggerButtons) {
-        return 0; // Biggest size when enabled
+    if (!biggerButtons) {
+        return %orig; // Use original size when disabled
     }
     
     // Check if button is inside T1ConversationFocalStatusView - if so, use default size
@@ -5994,23 +5994,24 @@ static GeminiTranslator *_sharedInstance;
 - (void)setFrame:(CGRect)frame {
     // Check if bigger action buttons is enabled
     BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
-    if (biggerButtons) {
-        // Move buttons up slightly when bigger buttons are enabled
-        CGFloat upwardOffset = 2.0;
-        frame.origin.y -= upwardOffset;
-    } else {
-        // Check if we're inside immersive view - if so, move button up more
-        UIView *parentView = self.superview;
-        while (parentView) {
-            NSString *className = NSStringFromClass([parentView class]);
-            if ([className containsString:@"ImmersiveCardView"] || 
-                [className containsString:@"ImmersiveAccessibleContainerView"]) {
-                CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
-                frame.origin.y -= upwardOffset;
-                break;
-            }
-            parentView = parentView.superview;
+    if (!biggerButtons) {
+        %orig(frame); // Use original frame when disabled
+        return;
+    }
+    
+    // Check if we're inside T1ImmersiveController - if so, move button up
+    UIView *parentView = self.superview;
+    
+    while (parentView) {
+        NSString *className = NSStringFromClass([parentView class]);
+        
+        if ([className containsString:@"ImmersiveCardView"] || 
+            [className containsString:@"ImmersiveAccessibleContainerView"]) {
+            CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
+            frame.origin.y -= upwardOffset;
+            break;
         }
+        parentView = parentView.superview;
     }
     
     %orig(frame);
@@ -6019,29 +6020,28 @@ static GeminiTranslator *_sharedInstance;
 - (instancetype)initWithFrame:(CGRect)frame {
     // Check if bigger action buttons is enabled
     BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
-    if (biggerButtons) {
-        // Move buttons up slightly when bigger buttons are enabled
-        CGFloat upwardOffset = 2.0;
-        frame.origin.y -= upwardOffset;
-    } else {
-        // Check if we're inside immersive view - if so, move button up more
-        UIView *parentView = self.superview;
-        while (parentView) {
-            NSString *className = NSStringFromClass([parentView class]);
-            if ([className containsString:@"ImmersiveCardView"] || 
-                [className containsString:@"ImmersiveAccessibleContainerView"]) {
-                CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
-                frame.origin.y -= upwardOffset;
-                break;
-            }
-            parentView = parentView.superview;
+    if (!biggerButtons) {
+        return %orig(frame); // Use original frame when disabled
+    }
+    
+    // Check if we're inside T1ImmersiveController - if so, move button up
+    UIView *parentView = self.superview;
+    while (parentView) {
+        NSString *className = NSStringFromClass([parentView class]);
+        if ([className containsString:@"ImmersiveCardView"] || 
+            [className containsString:@"ImmersiveAccessibleContainerView"]) {
+            CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
+            frame.origin.y -= upwardOffset;
+            break;
         }
+        parentView = parentView.superview;
     }
     
     return %orig(frame);
 }
 %end
 
+// MARK: Remove all sections from the Explore "for you" tab except the trending cells.
 // Helper function to check if we're in the GuideContainerViewController hierarchy
 static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
     if (!viewController) return NO;
@@ -6117,7 +6117,7 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
     return NO;
 }
 
-// Hook TFNURTViewController to remove entry 1 from sections when in conversation view
+// MARK : Remove "Discover More" section
 %hook T1URTViewController
 
 - (void)setSections:(NSArray *)sections {
@@ -6137,4 +6137,61 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
     %orig(sections);
 }
 
+%end
+
+%hook TTAStatusInlineActionsView
+- (void)setFrame:(CGRect)frame {
+    // Check if bigger action buttons is enabled
+    BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
+    if (!biggerButtons) {
+        %orig(frame); // Use original frame when disabled
+        return;
+    }
+    
+    // Check if we're inside T1ConversationFocalStatusView - if so, don't adjust
+    UIView *parentView = self.superview;
+    while (parentView) {
+        if ([parentView isKindOfClass:objc_getClass("T1ConversationFocalStatusView")]) {
+            %orig(frame); // No adjustment for focal views
+            return;
+        }
+        if ([parentView isKindOfClass:objc_getClass("T1ImmersiveViewController")] || 
+            [NSStringFromClass([parentView class]) containsString:@"T1Immersive"]) {
+            %orig(frame); // No adjustment for immersive views (buttons will handle it)
+            return;
+        }
+        parentView = parentView.superview;
+    }
+    
+    // Default offset for other views
+    CGFloat upwardOffset = 5.0;
+    frame.origin.y -= upwardOffset;
+    %orig(frame);
+}
+
+- (instancetype)initWithFrame:(CGRect)frame {
+    // Check if bigger action buttons is enabled
+    BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
+    if (!biggerButtons) {
+        return %orig(frame); // Use original frame when disabled
+    }
+    
+    // Check if we're inside T1ConversationFocalStatusView - if so, don't adjust
+    UIView *parentView = self.superview;
+    while (parentView) {
+        if ([parentView isKindOfClass:objc_getClass("T1ConversationFocalStatusView")]) {
+            return %orig(frame); // No adjustment for focal views
+        }
+        if ([parentView isKindOfClass:objc_getClass("T1ImmersiveViewController")] || 
+            [NSStringFromClass([parentView class]) containsString:@"T1Immersive"]) {
+            return %orig(frame); // No adjustment for immersive views (buttons will handle it)
+        }
+        parentView = parentView.superview;
+    }
+    
+    // Default offset for other views
+    CGFloat upwardOffset = 5.0;
+    frame.origin.y -= upwardOffset;
+    return %orig(frame);
+}
 %end

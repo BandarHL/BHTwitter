@@ -150,6 +150,7 @@
 "AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE" = "Upload and view media in the best quality available.";
 
 "DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "No video captions";
+"DISABLE_VIDEO_LAYER_CAPTION_DETAIL_TITLE" = "Removes the captions from videos."
 
 "FORCE_TWEET_FULL_FRAME_TITLE" = "Large images";
 
@@ -312,7 +313,7 @@
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_3" = "Reset to default";
 
 /*Refresh pill text*/
-"TFN_PILL_TEXT" = "Tweeted";
+"REFRESH_PILL_TEXT" = "Tweeted";
 
 /*Deprecated*/
 "TRUSTED_FRIENSS_OPTION_TITLE" = "Twitter Circles";
