@@ -6318,41 +6318,23 @@ static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
 %end
 
 %hook UITableView
-
-- (UITableViewCell *)cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+- (NSArray<NSIndexPath *> *)indexPathsForVisibleCells {
+    NSArray<NSIndexPath *> *originalIndexPaths = %orig;
+    
     NSString *className = NSStringFromClass([self class]);
     // Target the specific SwiftUI.UpdateCoalescingTableView class
     if ([className isEqualToString:@"SwiftUI.UpdateCoalescingTableView"]) {
-        // Return a completely empty cell for entry 1 (index 1)
-        if (indexPath.section == 0 && indexPath.row == 1) {
-            UITableViewCell *emptyCell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
-            emptyCell.backgroundColor = [UIColor clearColor];
-            emptyCell.contentView.backgroundColor = [UIColor clearColor];
-            emptyCell.selectionStyle = UITableViewCellSelectionStyleNone;
-            emptyCell.userInteractionEnabled = NO;
-            return emptyCell;
+        // Remove index path for row 1 in section 0
+        NSMutableArray<NSIndexPath *> *filteredIndexPaths = [NSMutableArray array];
+        for (NSIndexPath *indexPath in originalIndexPaths) {
+            if (!(indexPath.section == 0 && indexPath.row == 1)) {
+                [filteredIndexPaths addObject:indexPath];
+            }
         }
+        return [filteredIndexPaths copy];
     }
     
-    return %orig(indexPath);
-}
-
-- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
-    NSString *className = NSStringFromClass([tableView class]);
-    // Target the specific SwiftUI.UpdateCoalescingTableView class
-    if ([className isEqualToString:@"SwiftUI.UpdateCoalescingTableView"]) {
-        // Return 0 height for entry 1 (index 1) to make it invisible
-        if (indexPath.section == 0 && indexPath.row == 1) {
-            return 0.0;
-        }
-    }
-    
-    // Call original method if available
-    if ([self.delegate respondsToSelector:@selector(tableView:heightForRowAtIndexPath:)]) {
-        return [self.delegate tableView:tableView heightForRowAtIndexPath:indexPath];
-    }
-    
-    return self.rowHeight;
+    return originalIndexPaths;
 }
 
 %end
