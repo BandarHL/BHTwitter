@@ -6340,14 +6340,36 @@ static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
     NSString *className = NSStringFromClass([self class]);
     // Target the specific SwiftUI.UpdateCoalescingTableView class
     if ([className isEqualToString:@"SwiftUI.UpdateCoalescingTableView"]) {
-        // Shift index paths to skip entry 1 (index 1)
-        if (indexPath.section == 0 && indexPath.row >= 1) {
-            NSIndexPath *adjustedIndexPath = [NSIndexPath indexPathForRow:indexPath.row + 1 inSection:indexPath.section];
-            return %orig(adjustedIndexPath);
+        // Return a hidden/empty cell for entry 1 (index 1)
+        if (indexPath.section == 0 && indexPath.row == 1) {
+            UITableViewCell *hiddenCell = [[UITableViewCell alloc] init];
+            hiddenCell.hidden = YES;
+            hiddenCell.frame = CGRectZero;
+            return hiddenCell;
         }
     }
     
     return %orig(indexPath);
+}
+
+- (void)insertRowsAtIndexPaths:(NSArray<NSIndexPath *> *)indexPaths withRowAnimation:(UITableViewRowAnimation)animation {
+    NSString *className = NSStringFromClass([self class]);
+    // Target the specific SwiftUI.UpdateCoalescingTableView class
+    if ([className isEqualToString:@"SwiftUI.UpdateCoalescingTableView"]) {
+        // Filter out any insertion of row 1 in section 0
+        NSMutableArray *filteredIndexPaths = [NSMutableArray array];
+        for (NSIndexPath *indexPath in indexPaths) {
+            if (!(indexPath.section == 0 && indexPath.row == 1)) {
+                [filteredIndexPaths addObject:indexPath];
+            }
+        }
+        if (filteredIndexPaths.count > 0) {
+            %orig([filteredIndexPaths copy], animation);
+        }
+        return;
+    }
+    
+    %orig(indexPaths, animation);
 }
 
 %end
