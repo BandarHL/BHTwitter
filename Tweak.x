@@ -6204,7 +6204,53 @@ static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
     if (BHT_isInGuideContainerHierarchy(self)) {
         // Keep only entry 3 (index 2), remove everything else
         if (sections.count > 2) {
-            sections = @[sections[2]]; // Extract only the 3rd entry
+            id thirdSection = sections[2];
+            
+            // Try to find and modify trend view models in the section
+            // Common properties that might contain trend view models
+            NSArray *possibleArrayProperties = @[@"items", @"data", @"content", @"viewModels", @"trendViewModels"];
+            
+            for (NSString *propertyName in possibleArrayProperties) {
+                if ([thirdSection respondsToSelector:NSSelectorFromString(propertyName)]) {
+                    id propertyValue = [thirdSection valueForKey:propertyName];
+                    
+                    if ([propertyValue isKindOfClass:[NSArray class]]) {
+                        NSArray *currentArray = (NSArray *)propertyValue;
+                        
+                        // Count existing URTTimelineTrendViewModel objects
+                        NSInteger trendViewModelCount = 0;
+                        for (id item in currentArray) {
+                            if ([item isKindOfClass:%c(_TtC10TwitterURT25URTTimelineTrendViewModel)]) {
+                                trendViewModelCount++;
+                            }
+                        }
+                        
+                        NSLog(@"[BHTwitter] Found %ld trend view models in property '%@'", (long)trendViewModelCount, propertyName);
+                        
+                        // If we found trend view models and there are 5, add 3 more
+                        if (trendViewModelCount == 5) {
+                            NSMutableArray *modifiedArray = [currentArray mutableCopy];
+                            
+                            // Create 3 additional trend view model instances
+                            Class trendViewModelClass = %c(_TtC10TwitterURT25URTTimelineTrendViewModel);
+                            if (trendViewModelClass) {
+                                for (int i = 0; i < 3; i++) {
+                                    id newTrendViewModel = [[trendViewModelClass alloc] init];
+                                    if (newTrendViewModel) {
+                                        [modifiedArray addObject:newTrendViewModel];
+                                    }
+                                }
+                                
+                                // Update the section with the modified array
+                                [thirdSection setValue:modifiedArray forKey:propertyName];
+                                NSLog(@"[BHTwitter] Added 3 trend view models to property '%@'", propertyName);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            sections = @[thirdSection]; // Extract only the 3rd entry
         }
     }
     
