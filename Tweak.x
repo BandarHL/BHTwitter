@@ -6317,59 +6317,21 @@ static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
 
 %end
 
-// Hook SwiftUI UpdateCoalescingTableView to remove entry 1 from visibleCells
-%hook UpdateCoalescingTableView
 
-- (NSArray *)visibleCells {
-    NSArray *originalCells = %orig;
-    
-    // Remove entry 1 (index 0) if it exists
-    if (originalCells.count > 0) {
-        NSMutableArray *filteredCells = [originalCells mutableCopy];
-        [filteredCells removeObjectAtIndex:0]; // Remove entry 1 (index 0)
-        return [filteredCells copy];
-    }
-    
-    return originalCells;
-}
-
-%end
-
-// Try alternative SwiftUI class names
-%hook _TtC7SwiftUI24UpdateCoalescingTableView
-
-- (NSArray *)visibleCells {
-    NSArray *originalCells = %orig;
-    
-    // Remove entry 1 (index 0) if it exists
-    if (originalCells.count > 0) {
-        NSMutableArray *filteredCells = [originalCells mutableCopy];
-        [filteredCells removeObjectAtIndex:0]; // Remove entry 1 (index 0)
-        return [filteredCells copy];
-    }
-    
-    return originalCells;
-}
-
-%end
-
-// Temporary hook to find the correct SwiftUI class name
+// Hook the correct SwiftUI.UpdateCoalescingTableView class
 %hook UITableView
 
 - (NSArray *)visibleCells {
     NSArray *originalCells = %orig;
     
     NSString *className = NSStringFromClass([self class]);
-    if ([className containsString:@"UpdateCoalescing"] || [className containsString:@"SwiftUI"]) {
-        NSLog(@"[BHTwitter] Found table view class: %@", className);
-        
-        // If this is the right class, remove entry 1
-        if ([className containsString:@"UpdateCoalescing"]) {
-            if (originalCells.count > 0) {
-                NSMutableArray *filteredCells = [originalCells mutableCopy];
-                [filteredCells removeObjectAtIndex:0];
-                return [filteredCells copy];
-            }
+    // Target the specific SwiftUI.UpdateCoalescingTableView class
+    if ([className isEqualToString:@"SwiftUI.UpdateCoalescingTableView"]) {
+        // Remove entry 1 (index 0) if it exists
+        if (originalCells.count > 0) {
+            NSMutableArray *filteredCells = [originalCells mutableCopy];
+            [filteredCells removeObjectAtIndex:0];
+            return [filteredCells copy];
         }
     }
     
