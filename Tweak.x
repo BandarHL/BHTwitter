@@ -12,90 +12,12 @@
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
 
-// Forward declare TTAStatusBodySelectableContentTextView
-@interface TTAStatusBodySelectableContentTextView : UITextView
-@property(retain, nonatomic) NSAttributedString *originalAttributedText;
-- (void)setAttributedText:(NSAttributedString *)attributedText;
-- (void)BHT_setTranslatedText:(NSAttributedString *)translatedText;
-- (void)BHT_restoreOriginalText;
-- (BOOL)BHT_isShowingTranslatedText;
-@end
-
-// TTAStatusInlineActionButton - minimal interface for titleLabel property
-@interface TTAStatusInlineActionButton : UIView
-@property(readonly, nonatomic) UILabel *titleLabel;
-@end
-
-// Forward declare T1StandardStatusTranslateView
-@interface T1StandardStatusTranslateView : UIView
-@end
-
-// Forward declare TFNComposableViewSet
-@interface TFNComposableViewSet : NSObject
-@property(retain, nonatomic) NSMutableArray *views;
-- (void)_tfn_addView:(id)arg1 toHostViewWithViewAdapter:(id)arg2;
-@end
-
-// Forward declare TFNComposableViewAdapterSet
-@interface TFNComposableViewAdapterSet : NSObject
-@property(readonly, nonatomic) NSDictionary *viewAdaptersByIdentifier;
-- (id)initWithViewAdaptersByIdentifier:(id)arg1;
-@end
-
-// Block type definitions for compatibility
-typedef void (^VoidBlock)(void);
-typedef id (^UnknownBlock)(void);
-
-// Forward declare T1ColorSettings and its private method to satisfy the compiler
-@interface T1ColorSettings : NSObject
-+ (void)_t1_applyPrimaryColorOption;
-+ (void)_t1_updateOverrideUserInterfaceStyle;
-@end
-
-// We don't need to declare TAEColorSettings here as it's already defined in TWHeaders.h
-
-// Forward declaration for the immersive view controller
-@interface T1ImmersiveFullScreenViewController : UIViewController
-- (void)immersiveViewController:(id)immersiveViewController showHideNavigationButtons:(_Bool)showButtons;
-- (void)playerViewController:(id)playerViewController playerStateDidChange:(NSInteger)state;
-@end
-
-// Now declare the category, after the main interface is known
-@interface T1ImmersiveFullScreenViewController (BHTwitter)
-- (BOOL)BHT_findAndPrepareTimestampLabelForVC:(T1ImmersiveFullScreenViewController *)activePlayerVC;
-@end
-
-// TweetSourceHelper is forward-declared at the top of the file
-
 // Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
 static void BHT_applyThemeToWindow(UIWindow *window);
 static void BHT_ensureTheming(void);
 static void BHT_forceRefreshAllWindowAppearances(void);
 static void BHT_ensureThemingEngineSynchronized(BOOL forceSynchronize);
-
-// Forward declaration for TweetSourceHelper to be used in early hooks
-@interface TweetSourceHelper : NSObject
-+ (void)fetchSourceForTweetID:(NSString *)tweetID;
-+ (void)timeoutFetchForTweetID:(NSTimer *)timer;
-+ (void)retryUpdateForTweetID:(NSString *)tweetID;
-+ (void)pollForPendingUpdates;
-+ (void)handleAppForeground:(NSNotification *)notification;
-+ (NSDictionary *)fetchCookies;
-+ (void)cacheCookies:(NSDictionary *)cookies;
-+ (NSDictionary *)loadCachedCookies;
-+ (BOOL)shouldRefreshCookies;
-+ (void)handleClearCacheNotification:(NSNotification *)notification;
-+ (void)pruneSourceCachesIfNeeded;
-+ (void)logDebugInfo:(NSString *)message;
-+ (void)initializeCookiesWithRetry;
-+ (void)retryFetchCookies;
-+ (void)updateFooterTextViewsForTweetID:(NSString *)tweetID;
-@end
-
-// Forward declaration for WKWebView
-@interface WKWebView (BHTwitter)
-@end
 
 // Theme state tracking
 static BOOL BHT_themeManagerInitialized = NO;
@@ -721,11 +643,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         if ([BHTManager hideTrendVideos] && ([class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"T1TwitterSwift.URTTimelineCarouselViewModel"])) {
             [_orig setHidden:true];
         }
-        
-        // Hide ExploreEventSummaryHero
-        if ([BHTManager HidePromoted] && [class_name isEqualToString:@"T1TwitterSwift.ExploreEventSummaryHero"]) {
-            [_orig setHidden:true];
-        }
     }
     
     if ([self.adDisplayLocation isEqualToString:@"TIMELINE_HOME"]) {
@@ -801,11 +718,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         if ([BHTManager hideTrendVideos] && ([class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"] || [class_name isEqualToString:@"T1TwitterSwift.URTTimelineCarouselViewModel"])) {
             return 0;
         }
-        
-        // Hide ExploreEventSummaryHero
-        if ([BHTManager HidePromoted] && [class_name isEqualToString:@"T1TwitterSwift.ExploreEventSummaryHero"]) {
-            return 0;
-        }
     }
     
     if ([self.adDisplayLocation isEqualToString:@"TIMELINE_HOME"]) {
@@ -842,6 +754,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     
     return %orig;
 }
+
 - (double)tableView:(id)arg1 heightForHeaderInSection:(long long)arg2 {
     if (self.sections && self.sections[arg2] && ((NSArray* )self.sections[arg2]).count && self.sections[arg2][0]) {
         NSString *sectionClassName = NSStringFromClass([self.sections[arg2][0] classForCoder]);
@@ -6030,7 +5943,16 @@ static GeminiTranslator *_sharedInstance;
     // Check if bigger action buttons is enabled
     BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
     if (biggerButtons) {
-        return 0; // Biggest size
+        // Only apply bigger buttons in immersive views
+        UIView *parentView = self.superview;
+        while (parentView) {
+            NSString *className = NSStringFromClass([parentView class]);
+            if ([className containsString:@"ImmersiveCardView"] || 
+                [className containsString:@"ImmersiveAccessibleContainerView"]) {
+                return 0; // Biggest size for immersive views
+            }
+            parentView = parentView.superview;
+        }
     }
     
     // Check if button is inside T1ConversationFocalStatusView - if so, use default size
@@ -6048,7 +5970,16 @@ static GeminiTranslator *_sharedInstance;
     // Check if bigger action buttons is enabled
     BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
     if (biggerButtons) {
-        return 0; // Biggest size
+        // Only apply bigger buttons in immersive views
+        UIView *parentView = self.superview;
+        while (parentView) {
+            NSString *className = NSStringFromClass([parentView class]);
+            if ([className containsString:@"ImmersiveCardView"] || 
+                [className containsString:@"ImmersiveAccessibleContainerView"]) {
+                return 0; // Biggest size for immersive views
+            }
+            parentView = parentView.superview;
+        }
     }
     
     // Check if button is inside T1ConversationFocalStatusView - if so, use default size
@@ -6072,7 +6003,7 @@ static GeminiTranslator *_sharedInstance;
         
         if ([className containsString:@"ImmersiveCardView"] || 
             [className containsString:@"ImmersiveAccessibleContainerView"]) {
-            CGFloat upwardOffset = 5.0; // Move buttons up more in immersive view
+            CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
             frame.origin.y -= upwardOffset;
             break;
         }
@@ -6089,57 +6020,13 @@ static GeminiTranslator *_sharedInstance;
         NSString *className = NSStringFromClass([parentView class]);
         if ([className containsString:@"ImmersiveCardView"] || 
             [className containsString:@"ImmersiveAccessibleContainerView"]) {
-            CGFloat upwardOffset = 5.0; // Move buttons up more in immersive view
+            CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
             frame.origin.y -= upwardOffset;
             break;
         }
         parentView = parentView.superview;
     }
     
-    return %orig(frame);
-}
-%end
-
-%hook TTAStatusInlineActionsView
-- (void)setFrame:(CGRect)frame {
-    // Check if we're inside T1ConversationFocalStatusView - if so, don't adjust
-    UIView *parentView = self.superview;
-    while (parentView) {
-        if ([parentView isKindOfClass:objc_getClass("T1ConversationFocalStatusView")]) {
-            %orig(frame); // No adjustment for focal views
-            return;
-        }
-        if ([parentView isKindOfClass:objc_getClass("T1ImmersiveViewController")] || 
-            [NSStringFromClass([parentView class]) containsString:@"T1Immersive"]) {
-            %orig(frame); // No adjustment for immersive views (buttons will handle it)
-            return;
-        }
-        parentView = parentView.superview;
-    }
-    
-    // Default offset for other views
-    CGFloat upwardOffset = 5.0;
-    frame.origin.y -= upwardOffset;
-    %orig(frame);
-}
-
-- (instancetype)initWithFrame:(CGRect)frame {
-    // Check if we're inside T1ConversationFocalStatusView - if so, don't adjust
-    UIView *parentView = self.superview;
-    while (parentView) {
-        if ([parentView isKindOfClass:objc_getClass("T1ConversationFocalStatusView")]) {
-            return %orig(frame); // No adjustment for focal views
-        }
-        if ([parentView isKindOfClass:objc_getClass("T1ImmersiveViewController")] || 
-            [NSStringFromClass([parentView class]) containsString:@"T1Immersive"]) {
-            return %orig(frame); // No adjustment for immersive views (buttons will handle it)
-        }
-        parentView = parentView.superview;
-    }
-    
-    // Default offset for other views
-    CGFloat upwardOffset = 5.0;
-    frame.origin.y -= upwardOffset;
     return %orig(frame);
 }
 %end

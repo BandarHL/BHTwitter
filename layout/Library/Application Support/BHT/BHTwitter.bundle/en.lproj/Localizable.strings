@@ -82,7 +82,7 @@
 "SQUARE_AVATARS_DETAIL_TITLE" = "Give everyone square profile pictures like branded accounts, just like the old days.";
 
 "BIGGER_ACTION_BUTTONS_TITLE" = "Bigger action buttons";
-"BIGGER_ACTION_BUTTONS_DETAIL_TITLE" = "Makes like, retweet, and reply buttons bigger.";
+"BIGGER_ACTION_BUTTONS_DETAIL_TITLE" = "Makes action buttons bigger in the immersive player.";
 
 "ENABLE_TRANSLATE_OPTION_TITLE" = "AI translate button";
 "ENABLE_TRANSLATE_OPTION_DETAIL_TITLE" = "Adds an AI translate button to Tweets that are not in your language. Requires a translation API key.";
