@@ -51,6 +51,8 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 @end
 
 @implementation SettingsViewController
+
+#pragma mark - UITableView Setup
 - (instancetype)init {
     self = [super init];
     if (self) {
@@ -91,8 +93,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     HBAppearanceSettings *appearanceSettings = [[HBAppearanceSettings alloc] init];
     appearanceSettings.tintColor = primaryColor;
     appearanceSettings.largeTitleStyle = HBAppearanceSettingsLargeTitleStyleNever;
-    self.hb_appearanceSettings = appearanceSettings;
-}
+    }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
     if ([keyPath isEqualToString:@"bh_color_theme_selectedColor"] || [keyPath isEqualToString:@"T1ColorSettingsPrimaryColorOptionKey"]) {
@@ -104,6 +105,14 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
 // Add this method to configure the table view appearance
 - (void)viewDidLoad {
+    if (self.twAccount != nil) {
+        self.navigationItem.titleView = [objc_getClass("TFNTitleView") titleViewWithTitle:[[BHTBundle sharedBundle]
+                               localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"] subtitle:self.twAccount.displayUsername];
+    } else {
+        self.title = [[BHTBundle sharedBundle]
+                               localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"];
+    }
+
     [super viewDidLoad];
 
 
@@ -132,6 +141,28 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 }
 
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
+    if (section == 0) {
+        UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 40)];
+
+        UILabel *detail = [UILabel new];
+        detail.translatesAutoresizingMaskIntoConstraints = NO;
+        detail.font = [TwitterChirpFont(TwitterFontStyleRegular) fontWithSize:12];
+        detail.textColor = [UIColor secondaryLabelColor];
+        detail.numberOfLines = 0;
+        detail.textAlignment = NSTextAlignmentLeft;
+        detail.text = [[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_DETAIL"];
+
+        [header addSubview:detail];
+[NSLayoutConstraint activateConstraints:@[
+    [detail.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16],
+    [detail.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-16],
+    [detail.topAnchor constraintEqualToAnchor:header.topAnchor constant:-12],  // was 8
+    [detail.bottomAnchor constraintEqualToAnchor:header.bottomAnchor constant:-8]
+]];
+
+
+        return header;
+    }
     NSString *title = [self tableView:tableView titleForHeaderInSection:section];
     if (!title) {
         return nil;
@@ -140,10 +171,12 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     UIView *headerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 52)];
     
     // Top separator - modified to extend full width
+if (section != 1) {
     UIView *topSeparator = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 0.5)];
     topSeparator.backgroundColor = [UIColor separatorColor];
-    topSeparator.autoresizingMask = UIViewAutoresizingFlexibleWidth; // Ensure it stays full width
+    topSeparator.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     [headerView addSubview:topSeparator];
+}
     
     // Header label
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(16, 16, tableView.frame.size.width - 32, 28)];
@@ -155,8 +188,12 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     return headerView;
 }
 - (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
-    return 52; // Increased from 44 to accommodate larger text
+    if (section == 0) {
+        return 52; // or whatever height you prefer
+    }
+    return 52; // or your default
 }
+
 
 - (UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section {
     NSString *footerText = [self tableView:tableView titleForFooterInSection:section];
@@ -270,6 +307,11 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 }
 - (NSArray *)specifiers {
     if (!_specifiers) {
+
+        PSSpecifier *subtitleSection = [self newSectionWithTitle:[[BHTBundle sharedBundle]
+                              localizedStringForKey:@"APP_ICON_HEADER_TITLE"]
+                              footer:nil];
+
         
 PSSpecifier *tweetsSection   = [self newSectionWithTitle:[[BHTBundle sharedBundle]
                                localizedStringForKey:@"TWEETS_SECTION_HEADER_TITLE"]
@@ -438,6 +480,8 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         PSSpecifier *bandarHL = [self newHBTwitterCellWithTitle:@"BandarHelal" twitterUsername:@"BandarHL" customAvatarURL:@"https://unavatar.io/twitter/BandarHL"];
         
         _specifiers = [NSMutableArray arrayWithArray:@[
+            subtitleSection,
+
             
             mainSection, // 0
             customVoice,
