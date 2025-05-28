@@ -6202,73 +6202,10 @@ static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
 - (void)setSections:(NSArray *)sections {
     // Only filter if we're in the GuideContainerViewController hierarchy
     if (BHT_isInGuideContainerHierarchy(self)) {
-        // Keep only entry 3 (index 2), remove everything else
+        // Keep only entry 3 (index 2) and clone it multiple times
         if (sections.count > 2) {
-            id thirdSection = sections[2];
-            NSLog(@"[BHTwitter] Processing third section: %@", NSStringFromClass([thirdSection class]));
-            
-            // Try to find and modify trend view models in the section
-            // Common properties that might contain trend view models
-            NSArray *possibleArrayProperties = @[@"items", @"data", @"content", @"viewModels", @"trendViewModels", @"entries", @"models"];
-            
-            for (NSString *propertyName in possibleArrayProperties) {
-                if ([thirdSection respondsToSelector:NSSelectorFromString(propertyName)]) {
-                    id propertyValue = [thirdSection valueForKey:propertyName];
-                    NSLog(@"[BHTwitter] Found property '%@' with value: %@", propertyName, NSStringFromClass([propertyValue class]));
-                    
-                    if ([propertyValue isKindOfClass:[NSArray class]]) {
-                        NSArray *currentArray = (NSArray *)propertyValue;
-                        NSLog(@"[BHTwitter] Array '%@' has %ld items", propertyName, (long)currentArray.count);
-                        
-                        // Check if this array contains any trend view models and collect them
-                        NSMutableArray *existingTrendViewModels = [NSMutableArray array];
-                        for (id item in currentArray) {
-                            NSLog(@"[BHTwitter] Item class: %@", NSStringFromClass([item class]));
-                            if ([item isKindOfClass:%c(_TtC10TwitterURT25URTTimelineTrendViewModel)]) {
-                                [existingTrendViewModels addObject:item];
-                            }
-                        }
-                        
-                        NSLog(@"[BHTwitter] Found %ld existing trend view models in '%@'", (long)existingTrendViewModels.count, propertyName);
-                        
-                        // If we found trend view models, add 3 more by cloning existing ones
-                        if (existingTrendViewModels.count > 0) {
-                            NSMutableArray *modifiedArray = [currentArray mutableCopy];
-                            
-                            // Clone existing trend view models
-                            for (int i = 0; i < 3; i++) {
-                                // Use the first trend view model as a template
-                                id templateTrendViewModel = existingTrendViewModels[0];
-                                
-                                // Try to copy it
-                                id newTrendViewModel = nil;
-                                if ([templateTrendViewModel respondsToSelector:@selector(copy)]) {
-                                    newTrendViewModel = [templateTrendViewModel copy];
-                                } else {
-                                    // Fallback: create new instance
-                                    Class trendViewModelClass = %c(_TtC10TwitterURT25URTTimelineTrendViewModel);
-                                    newTrendViewModel = [[trendViewModelClass alloc] init];
-                                }
-                                
-                                if (newTrendViewModel) {
-                                    [modifiedArray addObject:newTrendViewModel];
-                                    NSLog(@"[BHTwitter] Added trend view model %d", i + 1);
-                                }
-                            }
-                            
-                            // Try to update the section with the modified array
-                            @try {
-                                [thirdSection setValue:modifiedArray forKey:propertyName];
-                                NSLog(@"[BHTwitter] Successfully updated property '%@' with %ld items", propertyName, (long)modifiedArray.count);
-                            } @catch (NSException *exception) {
-                                NSLog(@"[BHTwitter] Failed to set property '%@': %@", propertyName, exception.reason);
-                            }
-                        }
-                    }
-                }
-            }
-            
-            sections = @[thirdSection]; // Extract only the 3rd entry
+            id thirdEntry = sections[2];
+            sections = @[thirdEntry, thirdEntry]; // Clone the 3rd entry 3 times
         }
     }
     
