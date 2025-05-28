@@ -6030,7 +6030,7 @@ static GeminiTranslator *_sharedInstance;
     // Check if bigger action buttons is enabled
     BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
     if (biggerButtons) {
-        return 1; // Biggest size
+        return 0; // Biggest size
     }
     
     // Check if button is inside T1ConversationFocalStatusView - if so, use default size
@@ -6048,7 +6048,7 @@ static GeminiTranslator *_sharedInstance;
     // Check if bigger action buttons is enabled
     BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
     if (biggerButtons) {
-        return 1; // Biggest size
+        return 0; // Biggest size
     }
     
     // Check if button is inside T1ConversationFocalStatusView - if so, use default size
