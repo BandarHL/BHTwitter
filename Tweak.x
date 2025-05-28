@@ -6202,8 +6202,8 @@ static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
 
 %end
 
-// Helper function to check if we're in the T1ConversationControllerViewController hierarchy
-static BOOL BHT_isInConversationControllerHierarchy(UIViewController *viewController) {
+// Helper function to check if we're in the T1ConversationContainerViewController hierarchy
+static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewController) {
     if (!viewController) return NO;
     
     // Check all view controllers up the hierarchy
@@ -6211,8 +6211,8 @@ static BOOL BHT_isInConversationControllerHierarchy(UIViewController *viewContro
     while (currentVC) {
         NSString *className = NSStringFromClass([currentVC class]);
         
-        // Check for T1ConversationControllerViewController (handles both naming variants)
-        if ([className containsString:@"T1ConversationControllerViewController"]) {
+        // Check for T1ConversationContainerViewController (handles both naming variants)
+        if ([className containsString:@"T1ConversationContainerViewController"]) {
             return YES;
         }
         
@@ -6248,12 +6248,12 @@ static BOOL BHT_isInConversationControllerHierarchy(UIViewController *viewContro
     }
     
     // If we're in conversation hierarchy and this is entry 1 (index 1), skip it
-    if (BHT_isInConversationControllerHierarchy(viewController) && index == 1) {
+    if (BHT_isInConversationContainerHierarchy(viewController) && index == 1) {
         return; // Don't insert entry 1
     }
     
     // Adjust index if we're skipping entry 1 and inserting later entries
-    if (BHT_isInConversationControllerHierarchy(viewController) && index > 1) {
+    if (BHT_isInConversationContainerHierarchy(viewController) && index > 1) {
         index--; // Shift down by 1 since we skipped entry 1
     }
     
@@ -6274,12 +6274,12 @@ static BOOL BHT_isInConversationControllerHierarchy(UIViewController *viewContro
     }
     
     // If we're in conversation hierarchy and this is entry 1 (index 1), skip it
-    if (BHT_isInConversationControllerHierarchy(viewController) && index == 1) {
+    if (BHT_isInConversationContainerHierarchy(viewController) && index == 1) {
         return; // Don't insert entry 1
     }
     
     // Adjust index if we're skipping entry 1 and inserting later entries
-    if (BHT_isInConversationControllerHierarchy(viewController) && index > 1) {
+    if (BHT_isInConversationContainerHierarchy(viewController) && index > 1) {
         index--; // Shift down by 1 since we skipped entry 1
     }
     
