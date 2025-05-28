@@ -6232,16 +6232,23 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 }
 
 // Hook TFNURTViewController to remove entry 1 from sections when in conversation view
-%hook TFNURTViewController
+%hook T1URTViewController
 
 - (void)setSections:(NSArray *)sections {
+    NSLog(@"[BHTwitter] TFNURTViewController setSections called with %lu sections", (unsigned long)sections.count);
+    
     // Only filter if we're in the T1ConversationContainerViewController hierarchy
-    if (BHT_isInConversationContainerHierarchy((UIViewController *)self)) {
+    BOOL inConversationHierarchy = BHT_isInConversationContainerHierarchy((UIViewController *)self);
+    NSLog(@"[BHTwitter] In conversation hierarchy: %@", inConversationHierarchy ? @"YES" : @"NO");
+    
+    if (inConversationHierarchy) {
+        NSLog(@"[BHTwitter] Original sections count: %lu", (unsigned long)sections.count);
         // Remove entry 1 (index 1) from sections array
         if (sections.count > 1) {
             NSMutableArray *filteredSections = [NSMutableArray arrayWithArray:sections];
             [filteredSections removeObjectAtIndex:1];
             sections = [filteredSections copy];
+            NSLog(@"[BHTwitter] Filtered sections count: %lu", (unsigned long)sections.count);
         }
     }
     
