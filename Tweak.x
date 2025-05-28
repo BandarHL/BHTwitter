@@ -42,6 +42,13 @@
 - (id)initWithViewAdaptersByIdentifier:(id)arg1;
 @end
 
+// Forward declare TFNModalSheetViewController
+@interface TFNModalSheetViewController : UIViewController
+@property(retain, nonatomic) UIViewController *modalContentViewController;
+- (void)viewDidLoad;
+- (void)viewDidAppear:(BOOL)animated;
+@end
+
 // Block type definitions for compatibility
 typedef void (^VoidBlock)(void);
 typedef id (^UnknownBlock)(void);
@@ -6209,6 +6216,97 @@ static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
     }
     
     %orig(sections);
+}
+
+%end
+
+// Add after the other hooks
+
+// Hook to remove premium upsell modal about boosting replies
+%hook TFNModalSheetViewController
+
+- (void)viewDidLoad {
+    %orig;
+    
+    // Schedule a check to remove premium upsell content after the view loads
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self BHT_removePremiumUpsellContent];
+    });
+}
+
+- (void)viewDidAppear:(BOOL)animated {
+    %orig(animated);
+    
+    // Check again when view appears in case content was added later
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self BHT_removePremiumUpsellContent];
+    });
+}
+
+%new
+- (void)BHT_removePremiumUpsellContent {
+    [self BHT_traverseViewHierarchy:self.view];
+}
+
+%new
+- (void)BHT_traverseViewHierarchy:(UIView *)view {
+    if (!view) return;
+    
+    // Check if this is a TFNModalSheetContentView
+    NSString *className = NSStringFromClass([view class]);
+    if ([className isEqualToString:@"TFNModalSheetContentView"]) {
+        // Check if it contains the premium upsell text
+        if ([self BHT_containsPremiumUpsellText:view]) {
+            // Remove the entire modal sheet content view
+            [view removeFromSuperview];
+            return;
+        }
+    }
+    
+    // Recursively check subviews
+    for (UIView *subview in view.subviews) {
+        [self BHT_traverseViewHierarchy:subview];
+    }
+}
+
+%new
+- (BOOL)BHT_containsPremiumUpsellText:(UIView *)view {
+    // Check for TFNAttributedTextView with premium upsell text
+    for (UIView *subview in view.subviews) {
+        NSString *className = NSStringFromClass([subview class]);
+        
+        if ([className isEqualToString:@"TFNAttributedTextView"]) {
+            // Try to get the text content
+            NSString *text = nil;
+            
+            // Check if it has a textModel property
+            if ([subview respondsToSelector:@selector(textModel)]) {
+                id textModel = [subview performSelector:@selector(textModel)];
+                if ([textModel respondsToSelector:@selector(attributedString)]) {
+                    NSAttributedString *attributedString = [textModel performSelector:@selector(attributedString)];
+                    text = attributedString.string;
+                }
+            }
+            
+            // Also check if it's a UILabel or has a text property
+            if (!text && [subview respondsToSelector:@selector(text)]) {
+                text = [subview performSelector:@selector(text)];
+            }
+            
+            // Check for the premium upsell text
+            if (text && ([text containsString:@"Subscribe to Premium"] && 
+                        [text containsString:@"Replies boosted"])) {
+                return YES;
+            }
+        }
+        
+        // Recursively check subviews of this view
+        if ([self BHT_containsPremiumUpsellText:subview]) {
+            return YES;
+        }
+    }
+    
+    return NO;
 }
 
 %end
