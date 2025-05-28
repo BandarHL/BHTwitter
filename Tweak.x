@@ -6328,7 +6328,7 @@ static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
     // Target the specific SwiftUI.UpdateCoalescingTableView class
     if ([className isEqualToString:@"SwiftUI.UpdateCoalescingTableView"]) {
         // Remove entry 1 (index 0) if it exists
-        if (originalCells.count > 0) {
+        if (originalCells.count > 1) {
             NSMutableArray *filteredCells = [originalCells mutableCopy];
             [filteredCells removeObjectAtIndex:1];
             return [filteredCells copy];
@@ -6345,7 +6345,7 @@ static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
     // Target the specific SwiftUI.UpdateCoalescingTableView class
     if ([className isEqualToString:@"SwiftUI.UpdateCoalescingTableView"]) {
         // Remove entry 1 (index 0) if it exists
-        if (originalIndexPaths.count > 0) {
+        if (originalIndexPaths.count > 1) {
             NSMutableArray *filteredIndexPaths = [originalIndexPaths mutableCopy];
             [filteredIndexPaths removeObjectAtIndex:1];
             return [filteredIndexPaths copy];
