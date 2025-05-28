@@ -42,21 +42,6 @@
 - (id)initWithViewAdaptersByIdentifier:(id)arg1;
 @end
 
-// Forward declare TFNModalSheetViewController
-@interface TFNModalSheetViewController : UIViewController
-@property(retain, nonatomic) UIViewController *modalContentViewController;
-- (void)viewDidLoad;
-- (void)viewDidAppear:(BOOL)animated;
-- (void)BHT_removePremiumUpsellContent;
-- (void)BHT_traverseViewHierarchy:(UIView *)view;
-- (BOOL)BHT_containsPremiumUpsellText:(UIView *)view;
-@end
-
-// Forward declare SwiftUI UpdateCoalescingTableView
-@interface UpdateCoalescingTableView : UITableView
-@property(readonly, nonatomic) NSArray *visibleCells;
-@end
-
 // Block type definitions for compatibility
 typedef void (^VoidBlock)(void);
 typedef id (^UnknownBlock)(void);
@@ -6091,7 +6076,6 @@ static GeminiTranslator *_sharedInstance;
 - (void)setFrame:(CGRect)frame {
     // Check if we're inside T1ImmersiveController - if so, move button up
     UIView *parentView = self.superview;
-    BOOL foundImmersive = NO;
     
     while (parentView) {
         NSString *className = NSStringFromClass([parentView class]);
@@ -6100,14 +6084,9 @@ static GeminiTranslator *_sharedInstance;
             [className containsString:@"ImmersiveAccessibleContainerView"]) {
             CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
             frame.origin.y -= upwardOffset;
-            foundImmersive = YES;
-            NSLog(@"[BHTwitter] Moving button up by %f in immersive view (found: %@)", upwardOffset, className);
             break;
         }
         parentView = parentView.superview;
-    }
-    
-    if (!foundImmersive) {
     }
     
     %orig(frame);
@@ -6122,7 +6101,6 @@ static GeminiTranslator *_sharedInstance;
             [className containsString:@"ImmersiveAccessibleContainerView"]) {
             CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
             frame.origin.y -= upwardOffset;
-            NSLog(@"[BHTwitter] Moving button up by %f in initWithFrame (found: %@)", upwardOffset, className);
             break;
         }
         parentView = parentView.superview;
@@ -6176,165 +6154,4 @@ static GeminiTranslator *_sharedInstance;
     frame.origin.y -= upwardOffset;
     return %orig(frame);
 }
-%end
-
-// Add before the existing hooks, after the static helper functions
-
-// Helper function to check if we're in the GuideContainerViewController hierarchy
-static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
-    if (!viewController) return NO;
-    
-    // Check all view controllers up the hierarchy
-    UIViewController *currentVC = viewController;
-    while (currentVC) {
-        NSString *className = NSStringFromClass([currentVC class]);
-        
-        // Check for GuideContainerViewController (handles both naming variants)
-        if ([className containsString:@"GuideContainerViewController"]) {
-            return YES;
-        }
-        
-        // Move up the hierarchy
-        if (currentVC.parentViewController) {
-            currentVC = currentVC.parentViewController;
-        } else if (currentVC.navigationController) {
-            currentVC = currentVC.navigationController;
-        } else if (currentVC.presentingViewController) {
-            currentVC = currentVC.presentingViewController;
-        } else {
-            break;
-        }
-    }
-    
-    return NO;
-}
-
-// Hook TFNItemsDataViewController to filter sections array
-%hook TFNItemsDataViewController
-
-- (void)setSections:(NSArray *)sections {
-    // Only filter if we're in the GuideContainerViewController hierarchy
-    if (BHT_isInGuideContainerHierarchy(self)) {
-        // Keep only entry 3 (index 2), remove everything else
-        if (sections.count > 2) {
-            sections = @[sections[2]]; // Extract only the 3rd entry
-        }
-    }
-    
-    %orig(sections);
-}
-
-%end
-
-// Add after the other hooks
-
-// Hook to remove premium upsell modal about boosting replies
-%hook TFNModalSheetViewController
-
-- (void)viewDidLoad {
-    %orig;
-    
-    // Schedule a check to remove premium upsell content after the view loads
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [self BHT_removePremiumUpsellContent];
-    });
-}
-
-- (void)viewDidAppear:(BOOL)animated {
-    %orig(animated);
-    
-    // Check again when view appears in case content was added later
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [self BHT_removePremiumUpsellContent];
-    });
-}
-
-%new
-- (void)BHT_removePremiumUpsellContent {
-    [self BHT_traverseViewHierarchy:self.view];
-}
-
-%new
-- (void)BHT_traverseViewHierarchy:(UIView *)view {
-    if (!view) return;
-    
-    // Check if this is a TFNModalSheetContentView
-    NSString *className = NSStringFromClass([view class]);
-    if ([className isEqualToString:@"TFNModalSheetContentView"]) {
-        // Check if it contains the premium upsell text
-        if ([self BHT_containsPremiumUpsellText:view]) {
-            // Remove the entire modal sheet content view
-            [view removeFromSuperview];
-            return;
-        }
-    }
-    
-    // Recursively check subviews
-    for (UIView *subview in view.subviews) {
-        [self BHT_traverseViewHierarchy:subview];
-    }
-}
-
-%new
-- (BOOL)BHT_containsPremiumUpsellText:(UIView *)view {
-    // Check for TFNAttributedTextView with premium upsell text
-    for (UIView *subview in view.subviews) {
-        NSString *className = NSStringFromClass([subview class]);
-        
-        if ([className isEqualToString:@"TFNAttributedTextView"]) {
-            // Try to get the text content
-            NSString *text = nil;
-            
-            // Check if it has a textModel property
-            if ([subview respondsToSelector:@selector(textModel)]) {
-                id textModel = [subview performSelector:@selector(textModel)];
-                if ([textModel respondsToSelector:@selector(attributedString)]) {
-                    NSAttributedString *attributedString = [textModel performSelector:@selector(attributedString)];
-                    text = attributedString.string;
-                }
-            }
-            
-            // Also check if it's a UILabel or has a text property
-            if (!text && [subview respondsToSelector:@selector(text)]) {
-                text = [subview performSelector:@selector(text)];
-            }
-            
-            // Check for the premium upsell text
-            if (text && ([text containsString:@"Subscribe to Premium"] && 
-                        [text containsString:@"Replies boosted"])) {
-                return YES;
-            }
-        }
-        
-        // Recursively check subviews of this view
-        if ([self BHT_containsPremiumUpsellText:subview]) {
-            return YES;
-        }
-    }
-    
-    return NO;
-}
-
-%end
-
-%hook UITableView
-- (NSArray<NSIndexPath *> *)indexPathsForVisibleCells {
-    NSArray<NSIndexPath *> *originalIndexPaths = %orig;
-    
-    NSString *className = NSStringFromClass([self class]);
-    // Target the specific SwiftUI.UpdateCoalescingTableView class
-    if ([className isEqualToString:@"SwiftUI.UpdateCoalescingTableView"]) {
-        // Remove index path for row 1 in section 0
-        NSMutableArray<NSIndexPath *> *filteredIndexPaths = [NSMutableArray array];
-        for (NSIndexPath *indexPath in originalIndexPaths) {
-            if (!(indexPath.section == 0 && indexPath.row == 1)) {
-                [filteredIndexPaths addObject:indexPath];
-            }
-        }
-        return [filteredIndexPaths copy];
-    }
-    
-    return originalIndexPaths;
-}
-
 %end
