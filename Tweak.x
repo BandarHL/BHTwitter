@@ -6321,37 +6321,6 @@ static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
 // Hook the correct SwiftUI.UpdateCoalescingTableView class
 %hook UITableView
 
-- (NSInteger)numberOfRowsInSection:(NSInteger)section {
-    NSString *className = NSStringFromClass([self class]);
-    // Target the specific SwiftUI.UpdateCoalescingTableView class
-    if ([className isEqualToString:@"SwiftUI.UpdateCoalescingTableView"]) {
-        NSInteger originalCount = %orig(section);
-        // If we're in section 0 and there are rows, reduce by 1 to hide entry 1 (index 1)
-        if (section == 0 && originalCount > 1) {
-            return originalCount - 1;
-        }
-        return originalCount;
-    }
-    
-    return %orig(section);
-}
-
-- (UITableViewCell *)cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    NSString *className = NSStringFromClass([self class]);
-    // Target the specific SwiftUI.UpdateCoalescingTableView class
-    if ([className isEqualToString:@"SwiftUI.UpdateCoalescingTableView"]) {
-        // Return a hidden/empty cell for entry 1 (index 1)
-        if (indexPath.section == 0 && indexPath.row == 1) {
-            UITableViewCell *hiddenCell = [[UITableViewCell alloc] init];
-            hiddenCell.hidden = YES;
-            hiddenCell.frame = CGRectZero;
-            return hiddenCell;
-        }
-    }
-    
-    return %orig(indexPath);
-}
-
 - (void)insertRowsAtIndexPaths:(NSArray<NSIndexPath *> *)indexPaths withRowAnimation:(UITableViewRowAnimation)animation {
     NSString *className = NSStringFromClass([self class]);
     // Target the specific SwiftUI.UpdateCoalescingTableView class
