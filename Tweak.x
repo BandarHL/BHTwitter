@@ -6321,38 +6321,33 @@ static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
 // Hook the correct SwiftUI.UpdateCoalescingTableView class
 %hook UITableView
 
-- (NSArray *)visibleCells {
-    NSArray *originalCells = %orig;
-    
+- (NSInteger)numberOfRowsInSection:(NSInteger)section {
     NSString *className = NSStringFromClass([self class]);
     // Target the specific SwiftUI.UpdateCoalescingTableView class
     if ([className isEqualToString:@"SwiftUI.UpdateCoalescingTableView"]) {
-        // Remove entry 1 (index 0) if it exists
-        if (originalCells.count > 1) {
-            NSMutableArray *filteredCells = [originalCells mutableCopy];
-            [filteredCells removeObjectAtIndex:1];
-            return [filteredCells copy];
+        NSInteger originalCount = %orig(section);
+        // If we're in section 0 and there are rows, reduce by 1 to hide entry 1 (index 1)
+        if (section == 0 && originalCount > 1) {
+            return originalCount - 1;
         }
+        return originalCount;
     }
     
-    return originalCells;
+    return %orig(section);
 }
 
-- (NSArray *)indexPathsForVisibleRows {
-    NSArray *originalIndexPaths = %orig;
-    
+- (UITableViewCell *)cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     NSString *className = NSStringFromClass([self class]);
     // Target the specific SwiftUI.UpdateCoalescingTableView class
     if ([className isEqualToString:@"SwiftUI.UpdateCoalescingTableView"]) {
-        // Remove entry 1 (index 0) if it exists
-        if (originalIndexPaths.count > 1) {
-            NSMutableArray *filteredIndexPaths = [originalIndexPaths mutableCopy];
-            [filteredIndexPaths removeObjectAtIndex:1];
-            return [filteredIndexPaths copy];
+        // Shift index paths to skip entry 1 (index 1)
+        if (indexPath.section == 0 && indexPath.row >= 1) {
+            NSIndexPath *adjustedIndexPath = [NSIndexPath indexPathForRow:indexPath.row + 1 inSection:indexPath.section];
+            return %orig(adjustedIndexPath);
         }
     }
     
-    return originalIndexPaths;
+    return %orig(indexPath);
 }
 
 %end
