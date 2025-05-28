@@ -6155,3 +6155,49 @@ static GeminiTranslator *_sharedInstance;
     return %orig(frame);
 }
 %end
+
+// Helper function to check if we're in the GuideContainerViewController hierarchy
+static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
+    if (!viewController) return NO;
+    
+    // Check all view controllers up the hierarchy
+    UIViewController *currentVC = viewController;
+    while (currentVC) {
+        NSString *className = NSStringFromClass([currentVC class]);
+        
+        // Check for GuideContainerViewController (handles both naming variants)
+        if ([className containsString:@"GuideContainerViewController"]) {
+            return YES;
+        }
+        
+        // Move up the hierarchy
+        if (currentVC.parentViewController) {
+            currentVC = currentVC.parentViewController;
+        } else if (currentVC.navigationController) {
+            currentVC = currentVC.navigationController;
+        } else if (currentVC.presentingViewController) {
+            currentVC = currentVC.presentingViewController;
+        } else {
+            break;
+        }
+    }
+    
+    return NO;
+}
+
+// Hook TFNItemsDataViewController to filter sections array
+%hook TFNItemsDataViewController
+
+- (void)setSections:(NSArray *)sections {
+    // Only filter if we're in the GuideContainerViewController hierarchy
+    if (BHT_isInGuideContainerHierarchy(self)) {
+        // Keep only entry 3 (index 2), remove everything else
+        if (sections.count > 2) {
+            sections = @[sections[2]]; // Extract only the 3rd entry
+        }
+    }
+    
+    %orig(sections);
+}
+
+%end
