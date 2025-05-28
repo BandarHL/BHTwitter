@@ -6330,7 +6330,7 @@ static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
         // Remove entry 1 (index 0) if it exists
         if (originalCells.count > 0) {
             NSMutableArray *filteredCells = [originalCells mutableCopy];
-            [filteredCells removeObjectAtIndex:0];
+            [filteredCells removeObjectAtIndex:1];
             return [filteredCells copy];
         }
     }
@@ -6347,7 +6347,7 @@ static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
         // Remove entry 1 (index 0) if it exists
         if (originalIndexPaths.count > 0) {
             NSMutableArray *filteredIndexPaths = [originalIndexPaths mutableCopy];
-            [filteredIndexPaths removeObjectAtIndex:0];
+            [filteredIndexPaths removeObjectAtIndex:1];
             return [filteredIndexPaths copy];
         }
     }
