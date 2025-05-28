@@ -52,6 +52,11 @@
 - (BOOL)BHT_containsPremiumUpsellText:(UIView *)view;
 @end
 
+// Forward declare SwiftUI UpdateCoalescingTableView
+@interface UpdateCoalescingTableView : UITableView
+@property(readonly, nonatomic) NSArray *visibleCells;
+@end
+
 // Block type definitions for compatibility
 typedef void (^VoidBlock)(void);
 typedef id (^UnknownBlock)(void);
@@ -6308,6 +6313,24 @@ static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
     }
     
     return NO;
+}
+
+%end
+
+// Hook SwiftUI UpdateCoalescingTableView to remove entry 1 from visibleCells
+%hook UpdateCoalescingTableView
+
+- (NSArray *)visibleCells {
+    NSArray *originalCells = %orig;
+    
+    // Remove entry 1 (index 0) if it exists
+    if (originalCells.count > 0) {
+        NSMutableArray *filteredCells = [originalCells mutableCopy];
+        [filteredCells removeObjectAtIndex:0]; // Remove entry 1 (index 0)
+        return [filteredCells copy];
+    }
+    
+    return originalCells;
 }
 
 %end
