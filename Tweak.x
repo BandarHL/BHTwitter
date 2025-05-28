@@ -5615,26 +5615,51 @@ static char kTranslatedTextKey;
 
 %end
 
-// Hook TFNComposableViewAdapterSet to filter out translate adapters
+// Hook TFNComposableViewAdapterSet to filter out translate adapters and add custom adapters
 %hook TFNComposableViewAdapterSet
 
 - (id)initWithViewAdaptersByIdentifier:(id)arg1 {
-    if ([BHTManager enableTranslate] && [arg1 isKindOfClass:[NSDictionary class]]) {
+    if ([arg1 isKindOfClass:[NSDictionary class]]) {
         NSDictionary *originalDict = (NSDictionary *)arg1;
-        NSMutableDictionary *filteredDict = [NSMutableDictionary dictionary];
+        NSMutableDictionary *modifiedDict = [originalDict mutableCopy];
         
-        for (id key in originalDict) {
-            id adapter = originalDict[key];
-            NSString *adapterClassName = NSStringFromClass([adapter class]);
+        // Filter out translate-related adapters if translate feature is enabled
+        if ([BHTManager enableTranslate]) {
+            NSMutableDictionary *filteredDict = [NSMutableDictionary dictionary];
             
-            // Filter out translate-related adapters
-            if (![adapterClassName containsString:@"Translate"] && 
-                ![adapterClassName containsString:@"Translation"]) {
-                filteredDict[key] = adapter;
+            for (id key in originalDict) {
+                id adapter = originalDict[key];
+                NSString *adapterClassName = NSStringFromClass([adapter class]);
+                
+                // Filter out translate-related adapters
+                if (![adapterClassName containsString:@"Translate"] && 
+                    ![adapterClassName containsString:@"Translation"]) {
+                    filteredDict[key] = adapter;
+                }
+            }
+            
+            modifiedDict = filteredDict;
+        }
+        
+        // Add custom adapters
+        Class askGrokAdapter = %c(T1StandardStatusAskGrokButtonViewAdapter);
+        Class replySortingAdapter = %c(T1StandardStatusReplySortingViewAdapter);
+        
+        if (askGrokAdapter) {
+            id askGrokInstance = [[askGrokAdapter alloc] init];
+            if (askGrokInstance) {
+                modifiedDict[@"askGrok"] = askGrokInstance;
             }
         }
         
-        return %orig([filteredDict copy]);
+        if (replySortingAdapter) {
+            id replySortingInstance = [[replySortingAdapter alloc] init];
+            if (replySortingInstance) {
+                modifiedDict[@"replySorting"] = replySortingInstance;
+            }
+        }
+        
+        return %orig([modifiedDict copy]);
     }
     
     return %orig(arg1);
@@ -5642,7 +5667,6 @@ static char kTranslatedTextKey;
 
 %end
 
-// Hook TFNComposableViewSet to prevent translate views from being added to the views array
 %hook TFNComposableViewSet
 
 - (void)_tfn_addView:(id)arg1 toHostViewWithViewAdapter:(id)arg2 {
@@ -6014,7 +6038,7 @@ static GeminiTranslator *_sharedInstance;
         NSLog(@"[BHTwitter] Redirecting help.x.com to GitHub");
     if (request.URL && ([request.URL.absoluteString hasPrefix:@"https://help.x.com/en"] || [request.URL.absoluteString hasPrefix:@"https://help.x.com/"])) {
         NSLog(@"[BHTwitter] Redirecting help.x.com to GitHub");
-        NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird/issues"];
+        NSURL *redirectURL = [NSURL URLWithString:@"https://github.com/actuallyaridan/NeoFreeBird/"];
         NSURLRequest *redirectRequest = [NSURLRequest requestWithURL:redirectURL];
         return %orig(redirectRequest);
     }
@@ -6076,7 +6100,7 @@ static GeminiTranslator *_sharedInstance;
         
         if ([className containsString:@"ImmersiveCardView"] || 
             [className containsString:@"ImmersiveAccessibleContainerView"]) {
-            CGFloat upwardOffset = 1.0; // Move buttons up more in immersive view
+            CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
             frame.origin.y -= upwardOffset;
             foundImmersive = YES;
             NSLog(@"[BHTwitter] Moving button up by %f in immersive view (found: %@)", upwardOffset, className);
@@ -6099,7 +6123,7 @@ static GeminiTranslator *_sharedInstance;
         NSString *className = NSStringFromClass([parentView class]);
         if ([className containsString:@"ImmersiveCardView"] || 
             [className containsString:@"ImmersiveAccessibleContainerView"]) {
-            CGFloat upwardOffset = 1.0; // Move buttons up more in immersive view
+            CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
             frame.origin.y -= upwardOffset;
             NSLog(@"[BHTwitter] Moving button up by %f in initWithFrame (found: %@)", upwardOffset, className);
             break;
@@ -6131,7 +6155,7 @@ static GeminiTranslator *_sharedInstance;
     }
     
     // Default offset for other views
-    CGFloat upwardOffset = 1.0;
+    CGFloat upwardOffset = 5.0;
     frame.origin.y -= upwardOffset;
     %orig(frame);
 }
@@ -6151,7 +6175,7 @@ static GeminiTranslator *_sharedInstance;
     }
     
     // Default offset for other views
-    CGFloat upwardOffset = 1.0;
+    CGFloat upwardOffset = 5.0;
     frame.origin.y -= upwardOffset;
     return %orig(frame);
 }
