@@ -6103,7 +6103,6 @@ static GeminiTranslator *_sharedInstance;
     }
     
     if (!foundImmersive) {
-        NSLog(@"[BHTwitter] No immersive parent found for button");
     }
     
     %orig(frame);
