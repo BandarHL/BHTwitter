@@ -35,6 +35,9 @@
 "HIDE_TOPICS_TO_FOLLOW_OPTION" = "No 'Topics to follow'";
 "HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "Remove suggested topics.";
 
+"HIDE_WHO_FOLLOW_OPTION" = "No 'Who to follow'";
+"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE" = "Remove follow suggestions.";
+
 "PADLOCK_OPTION_TITLE" = "Lock Twitter";
 "PADLOCK_OPTION_DETAIL_TITLE" = "Require Face ID or a passcode to open Twitter.";
 
@@ -78,6 +81,9 @@
 "SQUARE_AVATARS_TITLE" = "Square profile pictures";
 "SQUARE_AVATARS_DETAIL_TITLE" = "Give everyone square profile pictures like branded accounts, just like the old days.";
 
+"BIGGER_ACTION_BUTTONS_TITLE" = "Bigger action buttons";
+"BIGGER_ACTION_BUTTONS_DETAIL_TITLE" = "Makes like, retweet, and reply buttons bigger.";
+
 "ENABLE_TRANSLATE_OPTION_TITLE" = "AI translate button";
 "ENABLE_TRANSLATE_OPTION_DETAIL_TITLE" = "Adds an AI translate button to Tweets that are not in your language. Requires a translation API key.";
 
@@ -97,9 +103,6 @@
 
 "BIO_TRANSALTE_OPTION_TITLE" = "Translate bios";
 "BIO_TRANSALTE_OPTION_DETAIL_TITLE" = "See bios in your language.";
-
-"HIDE_WHO_FOLLOW_OPTION" = "No 'Who to follow'";
-"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE" = "Remove follow suggestions from profiles.";
 
 "DISABLE_MEDIA_TAB_OPTION_TITLE" = "No separate Media tabs";
 "DISABLE_MEDIA_TAB_OPTION_DETAIL_TITLE" = "Merges the Photos and Videos tabs into one.";
@@ -297,8 +300,7 @@
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_3" = "Reset to default";
 
 
-
-/*Pill Text*/
+// For the refresh pill
 "TFN_PILL_TEXT" = "Tweeted";
 
 /*Deprecated*/

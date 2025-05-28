@@ -6027,6 +6027,12 @@ static GeminiTranslator *_sharedInstance;
 
 %hook TTAStatusInlineActionButton
 - (NSUInteger)buttonSize {
+    // Check if bigger action buttons is enabled
+    BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
+    if (biggerButtons) {
+        return 1; // Biggest size
+    }
+    
     // Check if button is inside T1ConversationFocalStatusView - if so, use default size
     UIView *parentView = self.superview;
     while (parentView) {
@@ -6039,6 +6045,12 @@ static GeminiTranslator *_sharedInstance;
     return 1; // Use modified size for other views
 }
 - (NSUInteger)_buttonSize {
+    // Check if bigger action buttons is enabled
+    BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
+    if (biggerButtons) {
+        return 1; // Biggest size
+    }
+    
     // Check if button is inside T1ConversationFocalStatusView - if so, use default size
     UIView *parentView = self.superview;
     while (parentView) {
@@ -6060,7 +6072,7 @@ static GeminiTranslator *_sharedInstance;
         
         if ([className containsString:@"ImmersiveCardView"] || 
             [className containsString:@"ImmersiveAccessibleContainerView"]) {
-            CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
+            CGFloat upwardOffset = 5.0; // Move buttons up more in immersive view
             frame.origin.y -= upwardOffset;
             break;
         }
@@ -6077,7 +6089,7 @@ static GeminiTranslator *_sharedInstance;
         NSString *className = NSStringFromClass([parentView class]);
         if ([className containsString:@"ImmersiveCardView"] || 
             [className containsString:@"ImmersiveAccessibleContainerView"]) {
-            CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
+            CGFloat upwardOffset = 5.0; // Move buttons up more in immersive view
             frame.origin.y -= upwardOffset;
             break;
         }
@@ -6087,8 +6099,6 @@ static GeminiTranslator *_sharedInstance;
     return %orig(frame);
 }
 %end
-
-// MARK: Move TTAStatusInlineActionsView up
 
 %hook TTAStatusInlineActionsView
 - (void)setFrame:(CGRect)frame {
