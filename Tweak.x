@@ -6090,7 +6090,6 @@ static GeminiTranslator *_sharedInstance;
     
     while (parentView) {
         NSString *className = NSStringFromClass([parentView class]);
-        NSLog(@"[BHTwitter] Button parent class: %@", className);
         
         if ([className containsString:@"ImmersiveCardView"] || 
             [className containsString:@"ImmersiveAccessibleContainerView"]) {
