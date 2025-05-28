@@ -6217,18 +6217,17 @@ static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
                     if ([propertyValue isKindOfClass:[NSArray class]]) {
                         NSArray *currentArray = (NSArray *)propertyValue;
                         
-                        // Count existing URTTimelineTrendViewModel objects
-                        NSInteger trendViewModelCount = 0;
+                        // Check if this array contains any trend view models
+                        BOOL hasTrendViewModels = NO;
                         for (id item in currentArray) {
                             if ([item isKindOfClass:%c(_TtC10TwitterURT25URTTimelineTrendViewModel)]) {
-                                trendViewModelCount++;
+                                hasTrendViewModels = YES;
+                                break;
                             }
                         }
                         
-                        NSLog(@"[BHTwitter] Found %ld trend view models in property '%@'", (long)trendViewModelCount, propertyName);
-                        
-                        // If we found trend view models and there are 5, add 3 more
-                        if (trendViewModelCount == 5) {
+                        // If we found trend view models, add 3 more
+                        if (hasTrendViewModels) {
                             NSMutableArray *modifiedArray = [currentArray mutableCopy];
                             
                             // Create 3 additional trend view model instances
