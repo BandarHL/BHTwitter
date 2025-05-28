@@ -6202,7 +6202,7 @@ static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
 - (void)setSections:(NSArray *)sections {
     // Only filter if we're in the GuideContainerViewController hierarchy
     if (BHT_isInGuideContainerHierarchy(self)) {
-        // Keep only entry 3 (index 2) and clone its trend view models
+        // Keep only entry 3 (index 2) and create new trend view models
         if (sections.count > 2) {
             id thirdEntry = sections[2];
             
@@ -6211,29 +6211,38 @@ static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
                 NSMutableArray *trendsArray = (NSMutableArray *)thirdEntry;
                 NSArray *originalTrends = [trendsArray copy]; // Save original trends
                 
-                // Add duplicates of each trend
-                for (id trendViewModel in originalTrends) {
-                    [trendsArray addObject:trendViewModel]; // Add duplicate
-                    [trendsArray addObject:trendViewModel]; // Add another duplicate
+                // Try to create new trend view models
+                Class trendClass = NSClassFromString(@"TwitterURT.URTTimelineTrendViewModel");
+                if (trendClass && originalTrends.count > 0) {
+                    // Get first trend as template
+                    id firstTrend = originalTrends[0];
+                    
+                    // Try to create new trend instances by copying and modifying
+                    for (int i = 0; i < 5; i++) {
+                        @try {
+                            // Try to copy the trend object
+                            id newTrend = nil;
+                            if ([firstTrend respondsToSelector:@selector(copy)]) {
+                                newTrend = [firstTrend copy];
+                            } else if ([firstTrend respondsToSelector:@selector(mutableCopy)]) {
+                                newTrend = [firstTrend mutableCopy];
+                            } else {
+                                // Try to create using alloc/init
+                                newTrend = [[trendClass alloc] init];
+                            }
+                            
+                            if (newTrend) {
+                                [trendsArray addObject:newTrend];
+                                NSLog(@"[BHTwitter] Created new trend %d", i);
+                            }
+                        } @catch (NSException *exception) {
+                            NSLog(@"[BHTwitter] Failed to create trend %d: %@", i, exception.reason);
+                        }
+                    }
                 }
                 
-                NSLog(@"[BHTwitter] Cloned trends: original count %lu, new count %lu", 
+                NSLog(@"[BHTwitter] New trends: original count %lu, new count %lu", 
                       (unsigned long)originalTrends.count, (unsigned long)trendsArray.count);
-            } else if ([thirdEntry isKindOfClass:[NSArray class]]) {
-                // If it's immutable, create a mutable copy with duplicates
-                NSArray *trendsArray = (NSArray *)thirdEntry;
-                NSMutableArray *clonedTrends = [NSMutableArray array];
-                
-                // Add original and duplicates
-                for (id trendViewModel in trendsArray) {
-                    [clonedTrends addObject:trendViewModel]; // Original
-                    [clonedTrends addObject:trendViewModel]; // Duplicate 1
-                    [clonedTrends addObject:trendViewModel]; // Duplicate 2
-                }
-                
-                thirdEntry = [clonedTrends copy];
-                NSLog(@"[BHTwitter] Created cloned array: original count %lu, new count %lu", 
-                      (unsigned long)trendsArray.count, (unsigned long)clonedTrends.count);
             }
             
             sections = @[thirdEntry];
