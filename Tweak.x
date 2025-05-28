@@ -6164,3 +6164,60 @@ static GeminiTranslator *_sharedInstance;
     return %orig(frame);
 }
 %end
+
+// Add before the existing hooks, after the static helper functions
+
+// Helper function to check if we're in the GuideContainerViewController hierarchy
+static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
+    if (!viewController) return NO;
+    
+    // Check all view controllers up the hierarchy
+    UIViewController *currentVC = viewController;
+    while (currentVC) {
+        NSString *className = NSStringFromClass([currentVC class]);
+        
+        // Check for GuideContainerViewController (handles both naming variants)
+        if ([className containsString:@"GuideContainerViewController"]) {
+            return YES;
+        }
+        
+        // Move up the hierarchy
+        if (currentVC.parentViewController) {
+            currentVC = currentVC.parentViewController;
+        } else if (currentVC.navigationController) {
+            currentVC = currentVC.navigationController;
+        } else if (currentVC.presentingViewController) {
+            currentVC = currentVC.presentingViewController;
+        } else {
+            break;
+        }
+    }
+    
+    return NO;
+}
+
+// Hook TFNItemsDataViewController to filter sections array
+%hook TFNItemsDataViewController
+
+- (void)setSections:(NSArray *)sections {
+    // Only filter if we're in the GuideContainerViewController hierarchy
+    if (BHT_isInGuideContainerHierarchy(self)) {
+        NSMutableArray *filteredSections = [sections mutableCopy];
+        
+        // Remove entries 3-8 (indices 2-7 in 0-based indexing)
+        if (filteredSections.count > 7) {
+            NSRange rangeToRemove = NSMakeRange(2, 6); // Remove indices 2,3,4,5,6,7 (entries 3-8)
+            [filteredSections removeObjectsInRange:rangeToRemove];
+            sections = [filteredSections copy];
+        } else if (filteredSections.count > 2) {
+            // If there are fewer than 8 entries but more than 2, remove from index 2 onwards
+            NSRange rangeToRemove = NSMakeRange(2, filteredSections.count - 2);
+            [filteredSections removeObjectsInRange:rangeToRemove];
+            sections = [filteredSections copy];
+        }
+    }
+    
+    %orig(sections);
+}
+
+%end
