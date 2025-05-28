@@ -191,7 +191,7 @@
 "CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "Applies accent color to the current selected tab. Restart required.";
 
 "DISABLE_RTL_OPTION_TITLE" = "Use left-to-right layout";
-"DISABLE_RTL_OPTION_DETAIL_TITLE" = "Force a LTR layout, even for RTL languages.";
+"DISABLE_RTL_OPTION_DETAIL_TITLE" = "Force a a left-to-right layout, even for languages that are read from right-to-left.";
 
 "SHOW_SCOLL_INDICATOR_OPTION_TITLE" = "Always show the scroll bar";
 
@@ -220,7 +220,7 @@
 "CLEAR_SOURCE_LABEL_CACHE_DETAIL_TITLE" = "Clears the source label cookies and forces them to refresh.";
 "CLEAR_CACHE_BUTTON_TITLE" = "Clear";
 "CACHE_CLEARED_TITLE" = "Cookies cleared";
-"CACHE_CLEARED_MESSAGE" = "Source label cookies were cleared. If soruce labels werenä't showing, they should now.";
+"CACHE_CLEARED_MESSAGE" = "Source label cookies were cleared. If source labels weren't showing, they should now.";
 
 
 /*Developers*/
@@ -248,7 +248,7 @@
 "APP_ICON_SEASONS_HEADER_TITLE" = "Seasons";
 "APP_ICON_SEASONS_HEADER_DETAIL" = "Make Twitter's app icon match the current season.";
 "APP_ICON_HOLIDAYS_HEADER_TITLE" = "Holidays";
-"APP_ICON_HOLIDAYS_HEADER_DETAIL" = "Celebrete the holidays with a custom app icon.";
+"APP_ICON_HOLIDAYS_HEADER_DETAIL" = "Celebrate the holidays with a custom app icon.";
 "APP_ICON_SPORTS_HEADER_TITLE" = "Sports";
 "APP_ICON_SPORTS_HEADER_DETAIL" = "Show off your favourite sport with a custom app icon.";
 "APP_ICON_PRIDE_HEADER_TITLE" = "Pride";
