@@ -563,7 +563,6 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             autoHighestLoad,
             forceFullFrame,
             restoreVideoTimestamp,
-            biggerActionButtons,
 
             twitterBlueSection, // 6
             undoTweet,
@@ -578,6 +577,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             layoutSection, // 7
             hideSpace,
             stopHidingTabBar,
+            biggerActionButtons,
             tabBarTheming,
             disableRTL,
             showScrollIndicator,

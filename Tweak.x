@@ -5958,16 +5958,7 @@ static GeminiTranslator *_sharedInstance;
     // Check if bigger action buttons is enabled
     BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
     if (biggerButtons) {
-        // Only apply bigger buttons in immersive views
-        UIView *parentView = self.superview;
-        while (parentView) {
-            NSString *className = NSStringFromClass([parentView class]);
-            if ([className containsString:@"ImmersiveCardView"] || 
-                [className containsString:@"ImmersiveAccessibleContainerView"]) {
-                return 0; // Biggest size for immersive views
-            }
-            parentView = parentView.superview;
-        }
+        return 0; // Biggest size when enabled
     }
     
     // Check if button is inside T1ConversationFocalStatusView - if so, use default size
@@ -5985,16 +5976,7 @@ static GeminiTranslator *_sharedInstance;
     // Check if bigger action buttons is enabled
     BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
     if (biggerButtons) {
-        // Only apply bigger buttons in immersive views
-        UIView *parentView = self.superview;
-        while (parentView) {
-            NSString *className = NSStringFromClass([parentView class]);
-            if ([className containsString:@"ImmersiveCardView"] || 
-                [className containsString:@"ImmersiveAccessibleContainerView"]) {
-                return 0; // Biggest size for immersive views
-            }
-            parentView = parentView.superview;
-        }
+        return 0; // Biggest size when enabled
     }
     
     // Check if button is inside T1ConversationFocalStatusView - if so, use default size
@@ -6010,36 +5992,50 @@ static GeminiTranslator *_sharedInstance;
 }
 
 - (void)setFrame:(CGRect)frame {
-    // Check if we're inside T1ImmersiveController - if so, move button up
-    UIView *parentView = self.superview;
-    
-    while (parentView) {
-        NSString *className = NSStringFromClass([parentView class]);
-        
-        if ([className containsString:@"ImmersiveCardView"] || 
-            [className containsString:@"ImmersiveAccessibleContainerView"]) {
-            CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
-            frame.origin.y -= upwardOffset;
-            break;
+    // Check if bigger action buttons is enabled
+    BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
+    if (biggerButtons) {
+        // Move buttons up slightly when bigger buttons are enabled
+        CGFloat upwardOffset = 2.0;
+        frame.origin.y -= upwardOffset;
+    } else {
+        // Check if we're inside immersive view - if so, move button up more
+        UIView *parentView = self.superview;
+        while (parentView) {
+            NSString *className = NSStringFromClass([parentView class]);
+            if ([className containsString:@"ImmersiveCardView"] || 
+                [className containsString:@"ImmersiveAccessibleContainerView"]) {
+                CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
+                frame.origin.y -= upwardOffset;
+                break;
+            }
+            parentView = parentView.superview;
         }
-        parentView = parentView.superview;
     }
     
     %orig(frame);
 }
 
 - (instancetype)initWithFrame:(CGRect)frame {
-    // Check if we're inside T1ImmersiveController - if so, move button up
-    UIView *parentView = self.superview;
-    while (parentView) {
-        NSString *className = NSStringFromClass([parentView class]);
-        if ([className containsString:@"ImmersiveCardView"] || 
-            [className containsString:@"ImmersiveAccessibleContainerView"]) {
-            CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
-            frame.origin.y -= upwardOffset;
-            break;
+    // Check if bigger action buttons is enabled
+    BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
+    if (biggerButtons) {
+        // Move buttons up slightly when bigger buttons are enabled
+        CGFloat upwardOffset = 2.0;
+        frame.origin.y -= upwardOffset;
+    } else {
+        // Check if we're inside immersive view - if so, move button up more
+        UIView *parentView = self.superview;
+        while (parentView) {
+            NSString *className = NSStringFromClass([parentView class]);
+            if ([className containsString:@"ImmersiveCardView"] || 
+                [className containsString:@"ImmersiveAccessibleContainerView"]) {
+                CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
+                frame.origin.y -= upwardOffset;
+                break;
+            }
+            parentView = parentView.superview;
         }
-        parentView = parentView.superview;
     }
     
     return %orig(frame);
