@@ -6202,31 +6202,38 @@ static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
 - (void)setSections:(NSArray *)sections {
     // Only filter if we're in the GuideContainerViewController hierarchy
     if (BHT_isInGuideContainerHierarchy(self)) {
-        // Keep only entry 3 (index 2) and try to clone its internal items
+        // Keep only entry 3 (index 2) and clone its trend view models
         if (sections.count > 2) {
             id thirdEntry = sections[2];
             
-            // Debug: Log the section object type and available methods
-            NSLog(@"[BHTwitter] Section class: %@", NSStringFromClass([thirdEntry class]));
-            NSLog(@"[BHTwitter] Section description: %@", thirdEntry);
-            
-            // Try different possible properties for items/rows
-            if ([thirdEntry respondsToSelector:@selector(numberOfRows)]) {
-                NSInteger rowCount = (NSInteger)[thirdEntry performSelector:@selector(numberOfRows)];
-                NSLog(@"[BHTwitter] Section has %ld rows", (long)rowCount);
-            }
-            
-            // Try to access backing store and clone its items
-            if ([self respondsToSelector:@selector(backingStore)]) {
-                id backingStore = [self performSelector:@selector(backingStore)];
-                NSLog(@"[BHTwitter] BackingStore class: %@", NSStringFromClass([backingStore class]));
+            // Since the section is a mutable array of URTTimelineTrendViewModel objects
+            if ([thirdEntry isKindOfClass:[NSMutableArray class]]) {
+                NSMutableArray *trendsArray = (NSMutableArray *)thirdEntry;
+                NSArray *originalTrends = [trendsArray copy]; // Save original trends
                 
-                // Try to insert duplicate items into the backing store
-                for (int i = 0; i < 3; i++) { // Add 3 duplicates
-                    if ([backingStore respondsToSelector:@selector(insertSection:atIndex:)]) {
-                        [backingStore insertSection:0 atIndex:0];
-                    }
+                // Add duplicates of each trend
+                for (id trendViewModel in originalTrends) {
+                    [trendsArray addObject:trendViewModel]; // Add duplicate
+                    [trendsArray addObject:trendViewModel]; // Add another duplicate
                 }
+                
+                NSLog(@"[BHTwitter] Cloned trends: original count %lu, new count %lu", 
+                      (unsigned long)originalTrends.count, (unsigned long)trendsArray.count);
+            } else if ([thirdEntry isKindOfClass:[NSArray class]]) {
+                // If it's immutable, create a mutable copy with duplicates
+                NSArray *trendsArray = (NSArray *)thirdEntry;
+                NSMutableArray *clonedTrends = [NSMutableArray array];
+                
+                // Add original and duplicates
+                for (id trendViewModel in trendsArray) {
+                    [clonedTrends addObject:trendViewModel]; // Original
+                    [clonedTrends addObject:trendViewModel]; // Duplicate 1
+                    [clonedTrends addObject:trendViewModel]; // Duplicate 2
+                }
+                
+                thirdEntry = [clonedTrends copy];
+                NSLog(@"[BHTwitter] Created cloned array: original count %lu, new count %lu", 
+                      (unsigned long)trendsArray.count, (unsigned long)clonedTrends.count);
             }
             
             sections = @[thirdEntry];
