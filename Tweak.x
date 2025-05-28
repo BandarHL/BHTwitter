@@ -5615,48 +5615,56 @@ static char kTranslatedTextKey;
 
 %end
 
-// Hook TFNComposableViewAdapterSet to filter out translate adapters and add custom adapters
+// Hook TFNComposableViewAdapterSet to filter out translate adapters
 %hook TFNComposableViewAdapterSet
 
 - (id)initWithViewAdaptersByIdentifier:(id)arg1 {
+    NSMutableDictionary *modifiedDict = nil;
+    
     if ([arg1 isKindOfClass:[NSDictionary class]]) {
         NSDictionary *originalDict = (NSDictionary *)arg1;
-        NSMutableDictionary *modifiedDict = [originalDict mutableCopy];
+        modifiedDict = [NSMutableDictionary dictionaryWithDictionary:originalDict];
         
-        // Filter out translate-related adapters if translate feature is enabled
+        // Add T1StandardStatusAskGrokButtonViewAdapter if it doesn't exist
+        BOOL hasGrokAdapter = NO;
+        for (id key in originalDict) {
+            id adapter = originalDict[key];
+            NSString *adapterClassName = NSStringFromClass([adapter class]);
+            if ([adapterClassName isEqualToString:@"T1StandardStatusAskGrokButtonViewAdapter"]) {
+                hasGrokAdapter = YES;
+                break;
+            }
+        }
+        
+        // If we don't have the Grok adapter, try to add it
+        if (!hasGrokAdapter) {
+            Class grokAdapterClass = objc_getClass("T1StandardStatusAskGrokButtonViewAdapter");
+            if (grokAdapterClass) {
+                id grokAdapter = [[grokAdapterClass alloc] init];
+                if (grokAdapter) {
+                    // Use a unique identifier for the Grok adapter
+                    NSString *grokIdentifier = @"T1StandardStatusAskGrokButtonViewAdapter";
+                    modifiedDict[grokIdentifier] = grokAdapter;
+                }
+            }
+        }
+        
+        // Handle translate adapter filtering if enabled
         if ([BHTManager enableTranslate]) {
             NSMutableDictionary *filteredDict = [NSMutableDictionary dictionary];
             
-            for (id key in originalDict) {
-                id adapter = originalDict[key];
+            for (id key in modifiedDict) {
+                id adapter = modifiedDict[key];
                 NSString *adapterClassName = NSStringFromClass([adapter class]);
                 
-                // Filter out translate-related adapters
+                // Filter out translate-related adapters but keep the Grok adapter
                 if (![adapterClassName containsString:@"Translate"] && 
                     ![adapterClassName containsString:@"Translation"]) {
                     filteredDict[key] = adapter;
                 }
             }
             
-            modifiedDict = filteredDict;
-        }
-        
-        // Add custom adapters
-        Class askGrokAdapter = %c(T1StandardStatusAskGrokButtonViewAdapter);
-        Class replySortingAdapter = %c(T1StandardStatusReplySortingViewAdapter);
-        
-        if (askGrokAdapter) {
-            id askGrokInstance = [[askGrokAdapter alloc] init];
-            if (askGrokInstance) {
-                modifiedDict[@"askGrok"] = askGrokInstance;
-            }
-        }
-        
-        if (replySortingAdapter) {
-            id replySortingInstance = [[replySortingAdapter alloc] init];
-            if (replySortingInstance) {
-                modifiedDict[@"replySorting"] = replySortingInstance;
-            }
+            return %orig([filteredDict copy]);
         }
         
         return %orig([modifiedDict copy]);
