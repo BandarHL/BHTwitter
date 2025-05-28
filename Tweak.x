@@ -4,12 +4,43 @@
 #import <objc/message.h> // For objc_msgSend and objc_msgSend_stret
 #import <AudioToolbox/AudioToolbox.h>
 #import <AVFoundation/AVFoundation.h>
+#import <WebKit/WebKit.h>
 #import <dlfcn.h>
 #import "SAMKeychain/AuthViewController.h"
 #import "Colours/Colours.h"
 #import "BHTManager.h"
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
+
+// Forward declare TTAStatusBodySelectableContentTextView
+@interface TTAStatusBodySelectableContentTextView : UITextView
+@property(retain, nonatomic) NSAttributedString *originalAttributedText;
+- (void)setAttributedText:(NSAttributedString *)attributedText;
+- (void)BHT_setTranslatedText:(NSAttributedString *)translatedText;
+- (void)BHT_restoreOriginalText;
+- (BOOL)BHT_isShowingTranslatedText;
+@end
+
+// TTAStatusInlineActionButton - minimal interface for titleLabel property
+@interface TTAStatusInlineActionButton : UIView
+@property(readonly, nonatomic) UILabel *titleLabel;
+@end
+
+// Forward declare T1StandardStatusTranslateView
+@interface T1StandardStatusTranslateView : UIView
+@end
+
+// Forward declare TFNComposableViewSet
+@interface TFNComposableViewSet : NSObject
+@property(retain, nonatomic) NSMutableArray *views;
+- (void)_tfn_addView:(id)arg1 toHostViewWithViewAdapter:(id)arg2;
+@end
+
+// Forward declare TFNComposableViewAdapterSet
+@interface TFNComposableViewAdapterSet : NSObject
+@property(readonly, nonatomic) NSDictionary *viewAdaptersByIdentifier;
+- (id)initWithViewAdaptersByIdentifier:(id)arg1;
+@end
 
 // Block type definitions for compatibility
 typedef void (^VoidBlock)(void);
@@ -59,6 +90,11 @@ static void BHT_ensureThemingEngineSynchronized(BOOL forceSynchronize);
 + (void)logDebugInfo:(NSString *)message;
 + (void)initializeCookiesWithRetry;
 + (void)retryFetchCookies;
++ (void)updateFooterTextViewsForTweetID:(NSString *)tweetID;
+@end
+
+// Forward declaration for WKWebView
+@interface WKWebView (BHTwitter)
 @end
 
 // Theme state tracking
@@ -582,7 +618,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         
         // Only show full numbers for counts under 10,000
         if ([number integerValue] >= 10000) {
-            NSLog(@"[BHTwitter] Count %@ is >= 10k, keeping original format", number);
             return originalResult;
         }
         
@@ -599,7 +634,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             // Use regex to find patterns like "1.7K", "6.7K", etc.
             NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"\\d+(\\.\\d+)?[KMB]" options:0 error:nil];
             NSString *result = [regex stringByReplacingMatchesInString:originalString options:0 range:NSMakeRange(0, originalString.length) withTemplate:formattedCount];
-            NSLog(@"[BHTwitter] Returning modified string result: %@", result);
             return result;
         }
         // If original result is an NSAttributedString, modify that
@@ -615,8 +649,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             for (NSTextCheckingResult *match in [matches reverseObjectEnumerator]) {
                 [mutableResult replaceCharactersInRange:match.range withString:formattedCount];
             }
-            
-            NSLog(@"[BHTwitter] Returning modified attributed result: %@", mutableResult.string);
             return [mutableResult copy];
         }
     }
@@ -712,6 +744,12 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             }
         }
 
+        if ([BHTManager hideWhoToFollow]) {
+            if ([class_name isEqualToString:@"T1URTTimelineUserItemViewModel"] || [class_name isEqualToString:@"T1TwitterSwift.URTTimelineCarouselViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"]) {
+                [_orig setHidden:true];
+            }
+        }
+
         if ([BHTManager hidePremiumOffer]) {
             if ([class_name isEqualToString:@"T1URTTimelineMessageItemViewModel"]) {
                 [_orig setHidden:true];
@@ -783,6 +821,12 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         
         if ([BHTManager HideTopics]) {
             if ([tweet isKindOfClass:%c(_TtC10TwitterURT26URTTimelinePromptViewModel)]) {
+                return 0;
+            }
+        }
+
+        if ([BHTManager hideWhoToFollow]) {
+            if ([class_name isEqualToString:@"T1URTTimelineUserItemViewModel"] || [class_name isEqualToString:@"T1TwitterSwift.URTTimelineCarouselViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"]) {
                 return 0;
             }
         }
@@ -1382,10 +1426,13 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %end
 
 %hook TFNTwitterAccount
-- (_Bool)mediaDownloadVideoEnabled {
+- (_Bool)areSmallerVideoThumbnailsEnabled {
     return false;
 }
-- (_Bool)mediaAllowDownloadSettingAvaliable {
+- (_Bool)isDownloadVideoEnabled {
+    return false;
+}
+- (_Bool)isVideoSettingsPlaybackRateEnabled {
     return false;
 }
 - (_Bool)continueWatchingEnabled {
@@ -2435,20 +2482,14 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
                     // Reset retries on success
                     fetchRetries[tweetID] = @(0);
                     
-                    // Notify that source is available
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                    [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
-                    [self performSelector:@selector(retryUpdateForTweetID:) withObject:tweetID afterDelay:0.3];
-                    });
+                    // Update footer text views directly instead of using notifications
+                    [self updateFooterTextViewsForTweetID:tweetID];
                 } else {
                     [self logDebugInfo:[NSString stringWithFormat:@"No source field in tweet %@", tweetID]];
                     tweetSources[tweetID] = @"Unknown Source";
                     
-                    // Notify that source is available (even if it's "Unknown")
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                    [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
-                    [self performSelector:@selector(retryUpdateForTweetID:) withObject:tweetID afterDelay:0.3];
-                    });
+                    // Update footer text views directly instead of using notifications
+                    [self updateFooterTextViewsForTweetID:tweetID];
                 }
             } @catch (NSException *e) {
                 [self logDebugInfo:[NSString stringWithFormat:@"Exception in fetch completion for tweet %@: %@", tweetID, e]];
@@ -2756,6 +2797,76 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
     // Restart polling
     [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:0.5];
 }
+
++ (void)updateFooterTextViewsForTweetID:(NSString *)tweetID {
+    @try {
+        // Find all T1ConversationFooterTextView instances and update them
+        dispatch_async(dispatch_get_main_queue(), ^{
+            // Get all windows and search for footer text views
+            NSArray *windows = [UIApplication sharedApplication].windows;
+            for (UIWindow *window in windows) {
+                [self searchAndUpdateFooterTextViewsInView:window forTweetID:tweetID];
+            }
+        });
+    } @catch (NSException *e) {
+        NSLog(@"[BHTwitter] Exception in updateFooterTextViewsForTweetID: %@", e);
+    }
+}
+
++ (void)searchAndUpdateFooterTextViewsInView:(UIView *)view forTweetID:(NSString *)tweetID {
+    @try {
+        // Check if this view is a T1ConversationFooterTextView
+        if ([view isKindOfClass:%c(T1ConversationFooterTextView)]) {
+            T1ConversationFooterTextView *footerView = (T1ConversationFooterTextView *)view;
+            
+            // Check if this footer view is for the tweet we're updating
+            if (footerView.viewModel) {
+                id tweetObject = nil;
+                if ([footerView.viewModel respondsToSelector:@selector(tweet)]) {
+                    tweetObject = [footerView.viewModel performSelector:@selector(tweet)];
+                } else if ([footerView.viewModel respondsToSelector:@selector(status)]) {
+                    tweetObject = [footerView.viewModel performSelector:@selector(status)];
+                }
+                
+                if (tweetObject) {
+                    NSString *viewTweetID = nil;
+                    @try {
+                        id statusIDVal = [tweetObject valueForKey:@"statusID"];
+                        if (statusIDVal && [statusIDVal respondsToSelector:@selector(longLongValue)] && [statusIDVal longLongValue] > 0) {
+                            viewTweetID = [statusIDVal stringValue];
+                        }
+                    } @catch (NSException *e) {}
+                    
+                    if (!viewTweetID || viewTweetID.length == 0) {
+                        @try {
+                            viewTweetID = [tweetObject valueForKey:@"rest_id"];
+                            if (!viewTweetID || viewTweetID.length == 0) {
+                                viewTweetID = [tweetObject valueForKey:@"id_str"];
+                            }
+                            if (!viewTweetID || viewTweetID.length == 0) {
+                                id genericID = [tweetObject valueForKey:@"id"];
+                                if (genericID) viewTweetID = [genericID description];
+                            }
+                        } @catch (NSException *e) {}
+                    }
+                    
+                    // If this footer view is for the tweet we're updating, refresh it
+                    if (viewTweetID && [viewTweetID isEqualToString:tweetID]) {
+                        [footerView updateFooterTextView];
+                    }
+                }
+            }
+        }
+        
+        // Recursively search subviews
+        for (UIView *subview in view.subviews) {
+            [self searchAndUpdateFooterTextViewsInView:subview forTweetID:tweetID];
+        }
+    } @catch (NSException *e) {
+        NSLog(@"[BHTwitter] Exception in searchAndUpdateFooterTextViewsInView: %@", e);
+    }
+}
+
 @end
 // --- End Helper Implementation ---
 
@@ -3853,7 +3964,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 - (void)viewDidAppear:(BOOL)animated {
     %orig(animated);
     T1ImmersiveFullScreenViewController *activePlayerVC = self;
-    NSLog(@"[BHTwitter Timestamp] VC %@: viewDidAppear.", activePlayerVC);
 
     if ([BHTManager restoreVideoTimestamp]) {
         if (!playerToTimestampMap) { 
@@ -3872,70 +3982,43 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.75 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
                 if (self && self.view.window) {
                     objc_setAssociatedObject(self, "BHT_FirstLoadDone", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-                    NSLog(@"[BHTwitter Timestamp] VC %@: First load completed", activePlayerVC);
                 }
             });
         }
-        
-        // Let the label visibility be managed by the player controls
-        // Just ensure we have the label identified and styled
     }
 }
 
 - (void)playerViewController:(id)playerViewController playerStateDidChange:(NSInteger)state {
     %orig(playerViewController, state);
     T1ImmersiveFullScreenViewController *activePlayerVC = self;
-    NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange: %ld", activePlayerVC, (long)state);
 
     if (![BHTManager restoreVideoTimestamp] || !playerToTimestampMap) {
-        NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Bailing early (feature off or map nil)", activePlayerVC);
         return;
     }
 
     // Always try to find/prepare the label for the current video content.
     // This is crucial if the VC is reused and new video content has loaded.
     BOOL labelFoundAndPrepared = [self BHT_findAndPrepareTimestampLabelForVC:activePlayerVC];
-    NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - labelFoundAndPrepared: %d", activePlayerVC, labelFoundAndPrepared);
 
     if (labelFoundAndPrepared) {
         UILabel *timestampLabel = [playerToTimestampMap objectForKey:activePlayerVC];
         if (timestampLabel && timestampLabel.superview && [timestampLabel isDescendantOfView:activePlayerVC.view]) {
             // Determine current intended visibility of controls.
-            // This relies on the main showHideNavigationButtons method being the source of truth for user-initiated toggles.
-            // Here, we primarily react to player state changes that might imply controls should appear/disappear.
             BOOL controlsShouldBeVisible = NO;
             UIView *playerControls = nil;
             if ([activePlayerVC respondsToSelector:@selector(playerControlsView)]) { 
                 playerControls = [activePlayerVC valueForKey:@"playerControlsView"];
                 if (playerControls && [playerControls respondsToSelector:@selector(alpha)]) {
                     controlsShouldBeVisible = playerControls.alpha > 0.0f;
-                    NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - current playerControls.alpha: %f", activePlayerVC, playerControls.alpha);
                 }
             }
-
-            // If player state implies controls *should* be visible (e.g., paused, ready and controls were already up),
-            // ensure our timestamp is visible. The primary toggling is done by showHideNavigationButtons.
-            // This is more about reacting to player-induced control visibility changes.
-            // For example, if the video pauses and Twitter automatically shows controls.
-            
-            // More direct: Mirror the state set by showHideNavigationButtons, which should be the authority.
-            // The key is that showHideNavigationButtons should have ALREADY run if controls became visible due to player state.
-            // So, if our label is hidden but controls are visible, something is out of sync OR this state change *caused* controls to show.
 
             // Only fix visibility if there's a clear mismatch
             if (controlsShouldBeVisible && timestampLabel.hidden) {
                 // Controls visible but label hidden - fix it
-                NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Fixing label visibility to match controls", activePlayerVC);
                 timestampLabel.hidden = NO;
-            } else if (!controlsShouldBeVisible && !timestampLabel.hidden && playerControls && playerControls.alpha == 0.0) {
-                // Controls definitely hidden but label still showing - let player hide it
-                NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Label visibility mismatch noted", activePlayerVC);
             }
-        } else {
-            NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Label was prepared but map/superview check failed.", activePlayerVC);
         }
-    } else {
-        NSLog(@"[BHTwitter Timestamp] VC %@: playerStateDidChange - Label not found/prepared.", activePlayerVC);
     }
 }
 
@@ -4099,9 +4182,8 @@ static void PlayRefreshSound(int soundType) {
             NSURL *soundURL = [[BHTBundle sharedBundle] pathForFile:soundFile];
             if (soundURL) {
                 OSStatus status = AudioServicesCreateSystemSoundID((__bridge CFURLRef)soundURL, &sounds[soundType]);
-                if (status == 0) {
+                if (status == kAudioServicesNoError) {
                     soundsInitialized[soundType] = YES;
-                    NSLog(@"[BHTwitter] Successfully initialized sound %@ (type %d)", soundFile, soundType);
                 } else {
                     NSLog(@"[BHTwitter] Failed to initialize sound %@ (type %d), status: %d", soundFile, soundType, (int)status);
                 }
@@ -4132,32 +4214,27 @@ static char kManualRefreshInProgressKey;
 
 // Hook the simple loading property setter
 - (void)setLoading:(_Bool)loading {
-    NSLog(@"[BHTwitter] setLoading: called with loading=%d", loading);
+    static BOOL previousLoading = NO;
+    static BOOL manualRefresh = NO;
     
-    // Get previous loading state
-    NSNumber *previousLoadingState = objc_getAssociatedObject(self, &kPreviousLoadingStateKey);
-    BOOL wasLoading = previousLoadingState ? [previousLoadingState boolValue] : NO;
-    
-    %orig;
-    
-    // Store the new state AFTER calling original
-    objc_setAssociatedObject(self, &kPreviousLoadingStateKey, @(loading), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    
-    // If loading went from YES to NO, refresh is complete - play pop sound
-    if (wasLoading && !loading) {
-        NSLog(@"[BHTwitter] Loading changed from YES to NO - playing pop sound");
+    if (!loading && previousLoading && manualRefresh) {
         PlayRefreshSound(1);
+        manualRefresh = NO;
     }
     
-    if (!wasLoading && loading) {
-        NSLog(@"[BHTwitter] Loading changed from NO to YES - refresh started");
+    if (!loading && previousLoading) {
+        manualRefresh = NO;
+    } else if (loading && !previousLoading) {
+        // This is likely a manual refresh
+        manualRefresh = YES;
     }
+    
+    previousLoading = loading;
+    %orig;
 }
 
 // Hook the completion-based loading setter
 - (void)setLoading:(_Bool)loading completion:(void(^)(void))completion {
-    NSLog(@"[BHTwitter] setLoading:completion: called with loading=%d", loading);
-    
     // Get previous loading state
     NSNumber *previousLoadingState = objc_getAssociatedObject(self, &kPreviousLoadingStateKey);
     BOOL wasLoading = previousLoadingState ? [previousLoadingState boolValue] : NO;
@@ -4173,7 +4250,6 @@ static char kManualRefreshInProgressKey;
     
     // If loading went from YES to NO AND we're in a manual refresh, play pop sound
     if (wasLoading && !loading && isManualRefresh) {
-        NSLog(@"[BHTwitter] Manual refresh completed (completion) - playing pop sound");
         PlayRefreshSound(1);
         // Clear the manual refresh flag
         objc_setAssociatedObject(self, &kManualRefreshInProgressKey, @NO, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
@@ -4186,18 +4262,15 @@ static char kManualRefreshInProgressKey;
 
 // Detect manual pull-to-refresh and play pull sound
 - (void)_setStatus:(unsigned long long)status fromScrolling:(_Bool)fromScrolling {
-    NSLog(@"[BHTwitter] _setStatus:%llu fromScrolling:%d", status, fromScrolling);
     %orig;
     
     if (status == 1 && fromScrolling) {
-        NSLog(@"[BHTwitter] Manual pull detected - playing pull sound");
         PlayRefreshSound(0);
         
         // Mark that we're in a manual refresh
         objc_setAssociatedObject(self, &kManualRefreshInProgressKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         // Mark that loading started (even though setLoading: might not be called with loading=1)
         objc_setAssociatedObject(self, &kPreviousLoadingStateKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        NSLog(@"[BHTwitter] Set manual refresh flag and previous loading state to YES");
     }
 }
 
@@ -4846,6 +4919,7 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 @interface _UINavigationBarContentView (BHTwitter)
 - (void)BHT_addTranslateButtonIfNeeded;
 - (TFNTwitterStatus *)BHT_findStatusObjectInController:(UIViewController *)controller;
+- (UITextView *)BHT_findTweetTextViewInController:(UIViewController *)controller;
 - (NSString *)BHT_extractTextFromStatusObjectInController:(UIViewController *)controller;
 - (void)BHT_translateCurrentTweetAction:(UIButton *)sender;
 @end
@@ -4869,7 +4943,6 @@ static char kTranslateButtonKey;
         return;
     }
     
-    NSLog(@"[BHTwitter Translate] Attempting to add button in BHT_addTranslateButtonIfNeeded for view: %@", self);
     UIViewController *parentVCFromResponder = nil;
     UIResponder *responder = self;
     while (responder && ![responder isKindOfClass:[UIViewController class]]) {
@@ -4881,16 +4954,12 @@ static char kTranslateButtonKey;
 
     UIViewController *actualContentVC = nil;
     if (parentVCFromResponder) {
-        NSLog(@"[BHTwitter Translate] Found parentVCFromResponder: %@", NSStringFromClass([parentVCFromResponder class]));
         if ([parentVCFromResponder isKindOfClass:[UINavigationController class]]) {
             actualContentVC = [(UINavigationController *)parentVCFromResponder topViewController];
-            NSLog(@"[BHTwitter Translate] parentVCFromResponder is a UINavigationController. ActualContentVC is topViewController: %@", NSStringFromClass([actualContentVC class]));
         } else {
             actualContentVC = parentVCFromResponder;
-            NSLog(@"[BHTwitter Translate] parentVCFromResponder is not a UINavigationController. ActualContentVC is parentVCFromResponder: %@", NSStringFromClass([actualContentVC class]));
         }
     } else {
-        NSLog(@"[BHTwitter Translate] Could not find parentVCFromResponder for _UINavigationBarContentView: %@", self);
         // Attempt to get VC from window if direct responder fails (existing fallback)
         UIWindow *keyWindow = self.window;
         if (keyWindow && keyWindow.rootViewController) {
@@ -4901,13 +4970,10 @@ static char kTranslateButtonKey;
             }
             if ([topVC isKindOfClass:[UINavigationController class]]) {
                  actualContentVC = [(UINavigationController*)topVC topViewController];
-                 NSLog(@"[BHTwitter Translate] Fallback: Found actualContentVC from window->topVC (UINav): %@", NSStringFromClass([actualContentVC class]));
             } else {
                  actualContentVC = topVC;
-                 NSLog(@"[BHTwitter Translate] Fallback: Found actualContentVC from window->topVC: %@", NSStringFromClass([actualContentVC class]));
             }
         } else {
-            NSLog(@"[BHTwitter Translate] Fallback: Could not get actualContentVC from window either.");
             return; // Can't proceed without a VC
         }
     }
@@ -4916,47 +4982,31 @@ static char kTranslateButtonKey;
     BOOL isTweetView = NO;
     UILabel *titleLabel = nil;
     
-    NSLog(@"[BHTwitter Translate] Subviews of %@: %@", self, self.subviews);
     for (UIView *subview in self.subviews) {
         if ([subview isKindOfClass:%c(UILabel)]) {
             UILabel *label = (UILabel *)subview;
-            NSLog(@"[BHTwitter Translate] Found UILabel with text: ' %@ '", label.text);
             if ([label.text isEqualToString:@"Post"] || [label.text isEqualToString:@"Tweet"]) {
                 titleLabel = label;
-                NSLog(@"[BHTwitter Translate] Matched titleLabel: %@", titleLabel.text);
                 break;
             }
         }
     }
     
-    if (!titleLabel) {
-        NSLog(@"[BHTwitter Translate] Did not find titleLabel with 'Post' or 'Tweet'.");
-    }
-    
     if (titleLabel && actualContentVC) {
         NSString *vcClassName = NSStringFromClass([actualContentVC class]);
-        NSLog(@"[BHTwitter Translate] Checking actualContentVC className: %@", vcClassName);
         if ([vcClassName containsString:@"Conversation"] || 
             [vcClassName containsString:@"Tweet"] || 
             [vcClassName containsString:@"Status"] || 
             [vcClassName containsString:@"Detail"]) {
             isTweetView = YES;
-            NSLog(@"[BHTwitter Translate] actualContentVC className matched. isTweetView = YES.");
-        } else {
-            NSLog(@"[BHTwitter Translate] actualContentVC className ('%@') did NOT match expected keywords.", vcClassName);
         }
-    } else {
-        if (!titleLabel) NSLog(@"[BHTwitter Translate] Condition failed for isTweetView: titleLabel is nil.");
-        if (!actualContentVC) NSLog(@"[BHTwitter Translate] Condition failed for isTweetView: actualContentVC is nil.");
     }
     
     // Only proceed if this is a valid tweet view
     if (isTweetView) {
-        NSLog(@"[BHTwitter Translate] isTweetView is YES. Proceeding to check/add button.");
         // Check if button already exists
         UIButton *existingButton = objc_getAssociatedObject(self, &kTranslateButtonKey);
         if (existingButton) {
-            NSLog(@"[BHTwitter Translate] Translate button already exists: %@", existingButton);
             // Ensure it's visible and properly placed if it exists
             existingButton.hidden = NO;
             [self bringSubviewToFront:existingButton]; 
@@ -4964,7 +5014,6 @@ static char kTranslateButtonKey;
         }
         
         // If button doesn't exist, create it
-        NSLog(@"[BHTwitter Translate] Creating new translate button.");
         UIButton *translateButton = [UIButton buttonWithType:UIButtonTypeSystem];
         if (@available(iOS 13.0, *)) {
             // Use a proper translation SF symbol
@@ -5106,28 +5155,45 @@ static char kTranslateButtonKey;
     }
 
     if (!targetController) {
-        NSLog(@"[BHTwitter Translate] Error: Could not find a suitable view controller to get tweet context.");
         return;
     }
 
-    NSString *textToTranslate = [self BHT_extractTextFromStatusObjectInController:targetController];
-
-    if (!textToTranslate || textToTranslate.length == 0) {
-        NSLog(@"[BHTwitter Translate] No tweet text found for VC: %@. Displaying fallback message.", NSStringFromClass([targetController class]));
-        
+    // Find the TTAStatusBodySelectableContentTextView
+    UITextView *tweetTextView = [self BHT_findTweetTextViewInController:targetController];
+    
+    if (!tweetTextView || ![tweetTextView isKindOfClass:%c(TTAStatusBodySelectableContentTextView)]) {
         UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
                                                                        message:@"Could not find tweet text to translate." 
                                                                 preferredStyle:UIAlertControllerStyleAlert];
         [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
         [targetController presentViewController:alert animated:YES completion:nil];
-    } else {
-        NSLog(@"[BHTwitter Translate] Text to translate: '%@' (from VC: %@)", textToTranslate, NSStringFromClass([targetController class]));
-        
-        // Call the GeminiTranslator with the extracted text
-        [[GeminiTranslator sharedInstance] translateText:textToTranslate 
-                                           fromLanguage:@"auto" 
-                                             toLanguage:@"en" 
-                                             completion:^(NSString *translatedText, NSError *error) {
+        return;
+    }
+    
+    TTAStatusBodySelectableContentTextView *selectableTextView = (TTAStatusBodySelectableContentTextView *)tweetTextView;
+    
+    // Check if already translated - if so, toggle back to original
+    if ([selectableTextView BHT_isShowingTranslatedText]) {
+        [selectableTextView BHT_restoreOriginalText];
+        return;
+    }
+    
+    NSString *textToTranslate = tweetTextView.text;
+    if (!textToTranslate || textToTranslate.length == 0) {
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
+                                                                       message:@"No text found to translate." 
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+        [targetController presentViewController:alert animated:YES completion:nil];
+        return;
+    }
+    
+    // Call the GeminiTranslator with the extracted text
+    [[GeminiTranslator sharedInstance] translateText:textToTranslate 
+                                       fromLanguage:@"auto" 
+                                         toLanguage:@"en" 
+                                         completion:^(NSString *translatedText, NSError *error) {
+        dispatch_async(dispatch_get_main_queue(), ^{
             if (error || !translatedText) {
                 UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
                                                                                message:error ? error.localizedDescription : @"Failed to translate text." 
@@ -5137,20 +5203,20 @@ static char kTranslateButtonKey;
                 return;
             }
             
-            // Show translation with Copy and Cancel options
-            UIAlertController *resultAlert = [UIAlertController alertControllerWithTitle:@"Translation" 
-                                                                                 message:translatedText 
-                                                                          preferredStyle:UIAlertControllerStyleAlert];
+            // Create new attributed string with the translated text
+            NSAttributedString *originalAttributedText = selectableTextView.attributedText;
+            NSMutableAttributedString *translatedAttributedText = [[NSMutableAttributedString alloc] initWithString:translatedText];
             
-            [resultAlert addAction:[UIAlertAction actionWithTitle:@"Copy" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-                UIPasteboard.generalPasteboard.string = translatedText;
-            }]];
+            // Preserve the original text attributes
+            if (originalAttributedText.length > 0) {
+                NSDictionary *attributes = [originalAttributedText attributesAtIndex:0 effectiveRange:NULL];
+                [translatedAttributedText addAttributes:attributes range:NSMakeRange(0, translatedText.length)];
+            }
             
-            [resultAlert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
-            
-            [targetController presentViewController:resultAlert animated:YES completion:nil];
-        }];
-    }
+            // Use our custom method to set the translated text
+            [selectableTextView BHT_setTranslatedText:translatedAttributedText];
+        });
+    }];
 }
 
 %new - (TFNTwitterStatus *)BHT_findStatusObjectInController:(UIViewController *)controller {
@@ -5160,10 +5226,8 @@ static char kTranslateButtonKey;
     
     // First, if the controller is T1ConversationContainerViewController, we need to find its T1URTViewController child
     if ([NSStringFromClass([controller class]) isEqualToString:@"T1ConversationContainerViewController"]) {
-        NSLog(@"[BHTwitter Translate] Found container controller, searching for T1URTViewController...");
         for (UIViewController *childVC in controller.childViewControllers) {
             if ([NSStringFromClass([childVC class]) isEqualToString:@"T1URTViewController"]) {
-                NSLog(@"[BHTwitter Translate] Found T1URTViewController, switching target");
                 controller = childVC;
                 break;
             }
@@ -5176,7 +5240,6 @@ static char kTranslateButtonKey;
         
         // If it's a T1URTViewController, we need to handle it specially
         if ([NSStringFromClass([controller class]) isEqualToString:@"T1URTViewController"]) {
-            NSLog(@"[BHTwitter Translate] Extracting from T1URTViewController.viewModel");
             @try {
                 // Inspect the view model or try to access specific properties
                 if ([viewModel respondsToSelector:@selector(statusViewModel)]) {
@@ -5184,7 +5247,6 @@ static char kTranslateButtonKey;
                     if (statusViewModel && [statusViewModel respondsToSelector:@selector(status)]) {
                         id status = [statusViewModel valueForKey:@"status"];
                         if (status && [status isKindOfClass:%c(TFNTwitterStatus)]) {
-                            NSLog(@"[BHTwitter Translate] Found TFNTwitterStatus from T1URTViewController.viewModel.statusViewModel.status");
                             return status;
                         }
                     }
@@ -5196,13 +5258,12 @@ static char kTranslateButtonKey;
                     if ([item respondsToSelector:@selector(status)]) {
                         id status = [item valueForKey:@"status"];
                         if (status && [status isKindOfClass:%c(TFNTwitterStatus)]) {
-                            NSLog(@"[BHTwitter Translate] Found TFNTwitterStatus from T1URTViewController.viewModel.item.status");
                             return status;
                         }
                     }
                 }
             } @catch (NSException *e) {
-                NSLog(@"[BHTwitter Translate] Exception accessing T1URTViewController viewModel: %@", e);
+                // Exception accessing T1URTViewController viewModel
             }
         }
         
@@ -5210,7 +5271,6 @@ static char kTranslateButtonKey;
         if ([viewModel respondsToSelector:@selector(status)]) {
             id status = [viewModel valueForKey:@"status"];
             if (status && [status isKindOfClass:%c(TFNTwitterStatus)]) {
-                NSLog(@"[BHTwitter Translate] Found TFNTwitterStatus from controller.viewModel.status");
                 return status;
             }
         }
@@ -5239,26 +5299,39 @@ static char kTranslateButtonKey;
             if (viewModel && [viewModel respondsToSelector:@selector(status)]) {
                 id status = [viewModel valueForKey:@"status"];
                 if (status && [status isKindOfClass:%c(TFNTwitterStatus)]) {
-                    NSLog(@"[BHTwitter Translate] Found TFNTwitterStatus from T1StatusBodyTextView");
                     return status;
                 }
             }
         } @catch (NSException *e) {
-            NSLog(@"[BHTwitter Translate] Exception: %@", e);
+            // Exception occurred
         }
     }
     
-    NSLog(@"[BHTwitter Translate] Failed to find TFNTwitterStatus in controller: %@", NSStringFromClass([controller class]));
     return nil;
 }
 
-// Helper function for finding the text view
+// Helper function for finding the TTAStatusBodySelectableContentTextView
+static void findTweetTextView(UIView *view, UITextView **tweetTextView) {
+    // Check specifically for TTAStatusBodySelectableContentTextView
+    if ([NSStringFromClass([view class]) isEqualToString:@"TTAStatusBodySelectableContentTextView"]) {
+        *tweetTextView = (UITextView *)view;
+        return;
+    }
+    
+    // Recurse into subviews
+    for (UIView *subview in view.subviews) {
+        if (!*tweetTextView) {
+            findTweetTextView(subview, tweetTextView);
+        }
+    }
+}
+
+// Helper function for finding the text view (legacy)
 static void findTextView(UIView *view, UITextView **tweetTextView) {
     // Check for TTAStatusBodySelectableContextTextView or any UITextView in T1URTViewController
     if ([NSStringFromClass([view class]) isEqualToString:@"TTAStatusBodySelectableContextTextView"] ||
         [view isKindOfClass:[UITextView class]]) {
         *tweetTextView = (UITextView *)view;
-        NSLog(@"[BHTwitter Translate] Found text view: %@", NSStringFromClass([view class]));
         return;
     }
     
@@ -5270,17 +5343,19 @@ static void findTextView(UIView *view, UITextView **tweetTextView) {
     }
 }
 
-%new - (NSString *)BHT_extractTextFromStatusObjectInController:(UIViewController *)controller {
-    // Don't limit to specific view controllers - search everywhere
-    NSLog(@"[BHTwitter Translate] Searching for tweet text in %@", NSStringFromClass([controller class]));
+%new - (UITextView *)BHT_findTweetTextViewInController:(UIViewController *)controller {
+    if (!controller || !controller.isViewLoaded) {
+        return nil;
+    }
     
-    // First, try to find the T1URTViewController
+    UITextView *tweetTextView = nil;
+    
+    // First, try to find T1URTViewController
     UIViewController *urtViewController = nil;
     
     // Check if the current controller is a T1URTViewController
     if ([NSStringFromClass([controller class]) isEqualToString:@"T1URTViewController"]) {
         urtViewController = controller;
-        NSLog(@"[BHTwitter Translate] Found T1URTViewController directly");
     }
     
     // If not found, look through the view hierarchy for a T1URTViewController
@@ -5292,7 +5367,6 @@ static void findTextView(UIView *view, UITextView **tweetTextView) {
         for (UIViewController *childVC in childVCs) {
             if ([NSStringFromClass([childVC class]) isEqualToString:@"T1URTViewController"]) {
                 urtViewController = childVC;
-                NSLog(@"[BHTwitter Translate] Found T1URTViewController in children");
                 break;
             }
         }
@@ -5304,7 +5378,6 @@ static void findTextView(UIView *view, UITextView **tweetTextView) {
                 
                 if ([NSStringFromClass([currentVC class]) isEqualToString:@"T1URTViewController"]) {
                     urtViewController = currentVC;
-                    NSLog(@"[BHTwitter Translate] Found T1URTViewController in parent hierarchy");
                     break;
                 }
                 
@@ -5312,7 +5385,74 @@ static void findTextView(UIView *view, UITextView **tweetTextView) {
                 for (UIViewController *childVC in [currentVC childViewControllers]) {
                     if ([NSStringFromClass([childVC class]) isEqualToString:@"T1URTViewController"]) {
                         urtViewController = childVC;
-                        NSLog(@"[BHTwitter Translate] Found T1URTViewController in sibling");
+                        break;
+                    }
+                }
+                
+                if (urtViewController) break;
+            }
+        }
+    }
+    
+    // If we found T1URTViewController, search for TTAStatusBodySelectableContentTextView
+    if (urtViewController && urtViewController.isViewLoaded) {
+        findTweetTextView(urtViewController.view, &tweetTextView);
+        if (tweetTextView) {
+            return tweetTextView;
+        }
+    }
+    
+    // Fallback: Search the entire view hierarchy
+    UIViewController *rootVC = controller;
+    while (rootVC.parentViewController) {
+        rootVC = rootVC.parentViewController;
+    }
+    
+    if (rootVC.isViewLoaded) {
+        findTweetTextView(rootVC.view, &tweetTextView);
+    }
+    
+    return tweetTextView;
+}
+
+%new - (NSString *)BHT_extractTextFromStatusObjectInController:(UIViewController *)controller {
+    // Don't limit to specific view controllers - search everywhere
+    
+    // First, try to find the T1URTViewController
+    UIViewController *urtViewController = nil;
+    
+    // Check if the current controller is a T1URTViewController
+    if ([NSStringFromClass([controller class]) isEqualToString:@"T1URTViewController"]) {
+        urtViewController = controller;
+    }
+    
+    // If not found, look through the view hierarchy for a T1URTViewController
+    if (!urtViewController) {
+        UIViewController *currentVC = controller;
+        
+        // First check child view controllers
+        NSArray *childVCs = [currentVC childViewControllers];
+        for (UIViewController *childVC in childVCs) {
+            if ([NSStringFromClass([childVC class]) isEqualToString:@"T1URTViewController"]) {
+                urtViewController = childVC;
+                break;
+            }
+        }
+        
+        // Then check parent view controllers if not found
+        if (!urtViewController) {
+            while (currentVC.parentViewController) {
+                currentVC = currentVC.parentViewController;
+                
+                if ([NSStringFromClass([currentVC class]) isEqualToString:@"T1URTViewController"]) {
+                    urtViewController = currentVC;
+                    break;
+                }
+                
+                // Also check siblings
+                for (UIViewController *childVC in [currentVC childViewControllers]) {
+                    if ([NSStringFromClass([childVC class]) isEqualToString:@"T1URTViewController"]) {
+                        urtViewController = childVC;
                         break;
                     }
                 }
@@ -5324,14 +5464,12 @@ static void findTextView(UIView *view, UITextView **tweetTextView) {
     
     // If we found T1URTViewController, extract text from it
     if (urtViewController && urtViewController.isViewLoaded) {
-        NSLog(@"[BHTwitter Translate] Found T1URTViewController, searching for text");
         UITextView *tweetTextView = nil;
         findTextView(urtViewController.view, &tweetTextView);
         
         if (tweetTextView) {
             NSString *tweetText = tweetTextView.text;
             if (tweetText && tweetText.length > 0) {
-                NSLog(@"[BHTwitter Translate] Got tweet text from T1URTViewController: %@", tweetText);
                 return tweetText;
             }
         }
@@ -5355,7 +5493,6 @@ static void findTextView(UIView *view, UITextView **tweetTextView) {
         // Get the text directly from the UITextView
         NSString *tweetText = tweetTextView.text;
         if (tweetText && tweetText.length > 0) {
-            NSLog(@"[BHTwitter Translate] Got tweet text directly: %@", tweetText);
             return tweetText;
         }
     }
@@ -5363,7 +5500,6 @@ static void findTextView(UIView *view, UITextView **tweetTextView) {
     // As a backup, search child view controllers explicitly
     if (!tweetTextView && [rootVC respondsToSelector:@selector(childViewControllers)]) {
         for (UIViewController *childVC in rootVC.childViewControllers) {
-            NSLog(@"[BHTwitter Translate] Searching child VC: %@", NSStringFromClass([childVC class]));
             if (childVC.isViewLoaded) {
                 findTextView(childVC.view, &tweetTextView);
                 if (tweetTextView) break;
@@ -5375,16 +5511,157 @@ static void findTextView(UIView *view, UITextView **tweetTextView) {
         // Get the text directly from the UITextView
         NSString *tweetText = tweetTextView.text;
         if (tweetText && tweetText.length > 0) {
-            NSLog(@"[BHTwitter Translate] Got tweet text directly from child VC: %@", tweetText);
             return tweetText;
         }
     }
     
-    NSLog(@"[BHTwitter Translate] Could not find any text in T1URTViewController or elsewhere");
     return nil;
 }
 
 
+
+%end
+
+// Hook TTAStatusBodySelectableContentTextView to prevent text reversion
+%hook TTAStatusBodySelectableContentTextView
+
+static char kIsTranslatedKey;
+static char kOriginalTextKey;
+static char kTranslatedTextKey;
+
+- (void)setAttributedText:(NSAttributedString *)attributedText {
+    // Check if we're currently showing translated text
+    NSNumber *isTranslated = objc_getAssociatedObject(self, &kIsTranslatedKey);
+    
+    if (isTranslated && [isTranslated boolValue]) {
+        // If we're in translated mode, don't allow external updates to override our translation
+        NSAttributedString *currentTranslatedText = objc_getAssociatedObject(self, &kTranslatedTextKey);
+        if (currentTranslatedText && ![attributedText.string isEqualToString:currentTranslatedText.string]) {
+            // External code is trying to revert our translation, ignore it
+            return;
+        }
+    }
+    
+    // Store original text if this is the first time setting text (not translated)
+    if (!isTranslated || ![isTranslated boolValue]) {
+        objc_setAssociatedObject(self, &kOriginalTextKey, attributedText, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    
+    %orig(attributedText);
+}
+
+%new - (void)BHT_setTranslatedText:(NSAttributedString *)translatedText {
+    // Store the translated text and mark as translated
+    objc_setAssociatedObject(self, &kTranslatedTextKey, translatedText, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    objc_setAssociatedObject(self, &kIsTranslatedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    
+    // Set the text directly
+    [self setAttributedText:translatedText];
+}
+
+%new - (void)BHT_restoreOriginalText {
+    NSAttributedString *originalText = objc_getAssociatedObject(self, &kOriginalTextKey);
+    if (originalText) {
+        objc_setAssociatedObject(self, &kIsTranslatedKey, @NO, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        [self setAttributedText:originalText];
+    }
+}
+
+%new - (BOOL)BHT_isShowingTranslatedText {
+    NSNumber *isTranslated = objc_getAssociatedObject(self, &kIsTranslatedKey);
+    return isTranslated && [isTranslated boolValue];
+}
+
+%end
+
+// Hook to remove Twitter's default translate button
+%hook T1StandardStatusTranslateView
+
+- (instancetype)initWithFrame:(CGRect)frame {
+    if ([BHTManager enableTranslate]) {
+        // Return instance with zero frame to take up no space
+        return %orig(CGRectZero);
+    }
+    return %orig(frame);
+}
+
+- (void)setFrame:(CGRect)frame {
+    if ([BHTManager enableTranslate]) {
+        // Always set frame to zero to take up no space
+        %orig(CGRectZero);
+    } else {
+        %orig(frame);
+    }
+}
+
+- (void)layoutSubviews {
+    if ([BHTManager enableTranslate]) {
+        // Set frame to zero and remove from superview
+        self.frame = CGRectZero;
+        [self removeFromSuperview];
+        return;
+    }
+    %orig;
+}
+
+- (void)didMoveToSuperview {
+    %orig;
+    if ([BHTManager enableTranslate] && self.superview) {
+        // Remove from superview immediately when added
+        self.frame = CGRectZero;
+        [self removeFromSuperview];
+    }
+}
+
+%end
+
+// Hook TFNComposableViewAdapterSet to filter out translate adapters
+%hook TFNComposableViewAdapterSet
+
+- (id)initWithViewAdaptersByIdentifier:(id)arg1 {
+    if ([arg1 isKindOfClass:[NSDictionary class]]) {
+        NSDictionary *originalDict = (NSDictionary *)arg1;
+        NSMutableDictionary *filteredDict = [NSMutableDictionary dictionary];
+        
+        for (id key in originalDict) {
+            id adapter = originalDict[key];
+            NSString *adapterClassName = NSStringFromClass([adapter class]);
+            
+            // Filter out Grok adapter
+            if ([adapterClassName isEqualToString:@"T1StandardStatusAskGrokButtonViewAdapter"]) {
+                continue; // Skip this adapter
+            }
+            
+            // Filter out translate-related adapters if translate is enabled
+            if ([BHTManager enableTranslate] && 
+                ([adapterClassName containsString:@"Translate"] || 
+                 [adapterClassName containsString:@"Translation"])) {
+                continue; // Skip translate adapters
+            }
+            
+            // Keep all other adapters
+            filteredDict[key] = adapter;
+        }
+        
+        return %orig([filteredDict copy]);
+    }
+    
+    return %orig(arg1);
+}
+
+%end
+
+%hook TFNComposableViewSet
+
+- (void)_tfn_addView:(id)arg1 toHostViewWithViewAdapter:(id)arg2 {
+    // Check if this is a translate view and our feature is enabled
+    if ([BHTManager enableTranslate] && [arg1 isKindOfClass:%c(T1StandardStatusTranslateView)]) {
+        // Don't add translate views to the view set
+        return;
+    }
+    
+    %orig(arg1, arg2);
+}
 
 %end
 
@@ -5438,7 +5715,7 @@ static GeminiTranslator *_sharedInstance;
         [request setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
         
         // Simplified prompt for translation only
-        NSString *prompt = [NSString stringWithFormat:@"Translate this text from %@ to %@: \"%@\" \n\nOnly return the translated text without any explanation or notes.", 
+        NSString *prompt = [NSString stringWithFormat:@"Translate this text from %@ to %@: \"%@\" \n\nOnly return the translated text without any explanation or notes. include emojis if in original text.", 
                             [sourceLanguage isEqualToString:@"auto"] ? @"the original language" : sourceLanguage, 
                             targetLanguage, 
                             text];
@@ -5618,4 +5895,338 @@ static GeminiTranslator *_sharedInstance;
     }
     return nil;
 }
+%end
+
+// MARK: Source Label using T1ConversationFooterTextView
+
+%hook T1ConversationFooterTextView
+
+- (void)updateFooterTextView {
+    %orig;
+    
+    // Add source label to footer text view
+    if ([BHTManager RestoreTweetLabels] && self.viewModel) {
+        @try {
+            // Get the tweet object from the view model
+            id tweetObject = nil;
+            if ([self.viewModel respondsToSelector:@selector(tweet)]) {
+                tweetObject = [self.viewModel performSelector:@selector(tweet)];
+            } else if ([self.viewModel respondsToSelector:@selector(status)]) {
+                tweetObject = [self.viewModel performSelector:@selector(status)];
+            }
+            
+            if (tweetObject) {
+                // Get tweet ID
+                NSString *tweetIDStr = nil;
+                @try {
+                    id statusIDVal = [tweetObject valueForKey:@"statusID"];
+                    if (statusIDVal && [statusIDVal respondsToSelector:@selector(longLongValue)] && [statusIDVal longLongValue] > 0) {
+                        tweetIDStr = [statusIDVal stringValue];
+                    }
+                } @catch (NSException *e) {}
+                
+                if (!tweetIDStr || tweetIDStr.length == 0) {
+                    @try {
+                        tweetIDStr = [tweetObject valueForKey:@"rest_id"];
+                        if (!tweetIDStr || tweetIDStr.length == 0) {
+                            tweetIDStr = [tweetObject valueForKey:@"id_str"];
+                        }
+                        if (!tweetIDStr || tweetIDStr.length == 0) {
+                            id genericID = [tweetObject valueForKey:@"id"];
+                            if (genericID) tweetIDStr = [genericID description];
+                        }
+                    } @catch (NSException *e) {}
+                }
+                
+                if (tweetIDStr && tweetIDStr.length > 0) {
+                    // Initialize source tracking if needed
+                    if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
+                    
+                    // Fetch source if not already available
+                    if (!tweetSources[tweetIDStr]) {
+                        tweetSources[tweetIDStr] = @""; // Placeholder
+                        [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
+                    }
+                    
+                    // Add source to footer if available
+                    NSString *sourceText = tweetSources[tweetIDStr];
+                    if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@"Source Unavailable"] && ![sourceText isEqualToString:@""]) {
+                        [self BHT_appendSourceToFooter:sourceText];
+                    }
+                }
+            }
+        } @catch (NSException *e) {
+            NSLog(@"[BHTwitter] Exception in T1ConversationFooterTextView updateFooterTextView: %@", e);
+        }
+    }
+}
+
+%new - (void)BHT_appendSourceToFooter:(NSString *)sourceText {
+    @try {
+        // Get current text model
+        TFNAttributedTextModel *currentModel = [self valueForKey:@"_textModel"];
+        if (!currentModel || !currentModel.attributedString) {
+            return;
+        }
+        
+        NSString *currentText = currentModel.attributedString.string;
+        NSString *separator = @" · ";
+        NSString *fullSourceStringWithSeparator = [separator stringByAppendingString:sourceText];
+        
+        // Check if source is already present
+        if ([currentText rangeOfString:fullSourceStringWithSeparator].location != NSNotFound) {
+            return;
+        }
+        
+        // Create new attributed string with source appended
+        NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:currentModel.attributedString];
+        
+        // Get base attributes from existing text
+        NSDictionary *baseAttributes;
+        if (currentModel.attributedString.length > 0) {
+            baseAttributes = [currentModel.attributedString attributesAtIndex:0 effectiveRange:NULL];
+        } else {
+            baseAttributes = @{NSFontAttributeName: [UIFont systemFontOfSize:12], NSForegroundColorAttributeName: [UIColor grayColor]};
+        }
+        
+        // Create source suffix with accent color
+        NSMutableAttributedString *sourceSuffix = [[NSMutableAttributedString alloc] init];
+        [sourceSuffix appendAttributedString:[[NSAttributedString alloc] initWithString:separator attributes:baseAttributes]];
+        
+        NSMutableDictionary *sourceAttributes = [baseAttributes mutableCopy];
+        [sourceAttributes setObject:BHTCurrentAccentColor() forKey:NSForegroundColorAttributeName];
+        [sourceSuffix appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttributes]];
+        
+        [newString appendAttributedString:sourceSuffix];
+        
+        // Create new text model and update
+        TFNAttributedTextModel *newModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newString];
+        [self setTextModel:newModel];
+        
+    } @catch (NSException *e) {
+        NSLog(@"[BHTwitter] Exception in BHT_appendSourceToFooter: %@", e);
+    }
+}
+
+%end
+
+// MARK: Change Pill text.
+
+%hook TFNPillControl
+- (id)text {
+    NSString *localizedText = [[BHTBundle sharedBundle] localizedStringForKey:@"TFN_PILL_TEXT"];
+    return localizedText ?: @"Tweeted";
+}
+- (void)setText:(id)arg1 {
+    NSString *localizedText = [[BHTBundle sharedBundle] localizedStringForKey:@"TFN_PILL_TEXT"];
+    %orig(localizedText ?: @"Tweeted");
+}
+%end
+
+// MARK: Restore Action Button size
+
+%hook TTAStatusInlineActionButton
+- (NSUInteger)buttonSize {
+    // Check if button is inside T1ConversationFocalStatusView - if so, use default size
+    UIView *parentView = self.superview;
+    while (parentView) {
+        if ([parentView isKindOfClass:objc_getClass("T1ConversationFocalStatusView")]) {
+            return %orig; // Return original/default size
+        }
+        parentView = parentView.superview;
+    }
+    
+    return 1; // Use modified size for other views
+}
+- (NSUInteger)_buttonSize {
+    // Check if button is inside T1ConversationFocalStatusView - if so, use default size
+    UIView *parentView = self.superview;
+    while (parentView) {
+        if ([parentView isKindOfClass:objc_getClass("T1ConversationFocalStatusView")]) {
+            return %orig; // Return original/default size
+        }
+        parentView = parentView.superview;
+    }
+    
+    return 1; // Use modified size for other views
+}
+
+- (void)setFrame:(CGRect)frame {
+    // Check if we're inside T1ImmersiveController - if so, move button up
+    UIView *parentView = self.superview;
+    
+    while (parentView) {
+        NSString *className = NSStringFromClass([parentView class]);
+        
+        if ([className containsString:@"ImmersiveCardView"] || 
+            [className containsString:@"ImmersiveAccessibleContainerView"]) {
+            CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
+            frame.origin.y -= upwardOffset;
+            break;
+        }
+        parentView = parentView.superview;
+    }
+    
+    %orig(frame);
+}
+
+- (instancetype)initWithFrame:(CGRect)frame {
+    // Check if we're inside T1ImmersiveController - if so, move button up
+    UIView *parentView = self.superview;
+    while (parentView) {
+        NSString *className = NSStringFromClass([parentView class]);
+        if ([className containsString:@"ImmersiveCardView"] || 
+            [className containsString:@"ImmersiveAccessibleContainerView"]) {
+            CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
+            frame.origin.y -= upwardOffset;
+            break;
+        }
+        parentView = parentView.superview;
+    }
+    
+    return %orig(frame);
+}
+%end
+
+// MARK: Move TTAStatusInlineActionsView up
+
+%hook TTAStatusInlineActionsView
+- (void)setFrame:(CGRect)frame {
+    // Check if we're inside T1ConversationFocalStatusView - if so, don't adjust
+    UIView *parentView = self.superview;
+    while (parentView) {
+        if ([parentView isKindOfClass:objc_getClass("T1ConversationFocalStatusView")]) {
+            %orig(frame); // No adjustment for focal views
+            return;
+        }
+        if ([parentView isKindOfClass:objc_getClass("T1ImmersiveViewController")] || 
+            [NSStringFromClass([parentView class]) containsString:@"T1Immersive"]) {
+            %orig(frame); // No adjustment for immersive views (buttons will handle it)
+            return;
+        }
+        parentView = parentView.superview;
+    }
+    
+    // Default offset for other views
+    CGFloat upwardOffset = 5.0;
+    frame.origin.y -= upwardOffset;
+    %orig(frame);
+}
+
+- (instancetype)initWithFrame:(CGRect)frame {
+    // Check if we're inside T1ConversationFocalStatusView - if so, don't adjust
+    UIView *parentView = self.superview;
+    while (parentView) {
+        if ([parentView isKindOfClass:objc_getClass("T1ConversationFocalStatusView")]) {
+            return %orig(frame); // No adjustment for focal views
+        }
+        if ([parentView isKindOfClass:objc_getClass("T1ImmersiveViewController")] || 
+            [NSStringFromClass([parentView class]) containsString:@"T1Immersive"]) {
+            return %orig(frame); // No adjustment for immersive views (buttons will handle it)
+        }
+        parentView = parentView.superview;
+    }
+    
+    // Default offset for other views
+    CGFloat upwardOffset = 5.0;
+    frame.origin.y -= upwardOffset;
+    return %orig(frame);
+}
+%end
+
+// Helper function to check if we're in the GuideContainerViewController hierarchy
+static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
+    if (!viewController) return NO;
+    
+    // Check all view controllers up the hierarchy
+    UIViewController *currentVC = viewController;
+    while (currentVC) {
+        NSString *className = NSStringFromClass([currentVC class]);
+        
+        // Check for GuideContainerViewController (handles both naming variants)
+        if ([className containsString:@"GuideContainerViewController"]) {
+            return YES;
+        }
+        
+        // Move up the hierarchy
+        if (currentVC.parentViewController) {
+            currentVC = currentVC.parentViewController;
+        } else if (currentVC.navigationController) {
+            currentVC = currentVC.navigationController;
+        } else if (currentVC.presentingViewController) {
+            currentVC = currentVC.presentingViewController;
+        } else {
+            break;
+        }
+    }
+    
+    return NO;
+}
+
+// Hook TFNItemsDataViewController to filter sections array
+%hook TFNItemsDataViewController
+
+- (void)setSections:(NSArray *)sections {
+    // Only filter if we're in the GuideContainerViewController hierarchy
+    if (BHT_isInGuideContainerHierarchy(self)) {
+        // Keep only entry 3 (index 2), remove everything else
+        if (sections.count > 2) {
+            sections = @[sections[2]]; // Extract only the 3rd entry
+        }
+    }
+    
+    %orig(sections);
+}
+
+%end
+
+// Helper function to check if we're in the T1ConversationContainerViewController hierarchy
+static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewController) {
+    if (!viewController) return NO;
+    
+    // Check all view controllers up the hierarchy
+    UIViewController *currentVC = viewController;
+    while (currentVC) {
+        NSString *className = NSStringFromClass([currentVC class]);
+        
+        // Check for T1ConversationContainerViewController
+        if ([className isEqualToString:@"T1ConversationContainerViewController"]) {
+            return YES;
+        }
+        
+        // Move up the hierarchy
+        if (currentVC.parentViewController) {
+            currentVC = currentVC.parentViewController;
+        } else if (currentVC.navigationController) {
+            currentVC = currentVC.navigationController;
+        } else if (currentVC.presentingViewController) {
+            currentVC = currentVC.presentingViewController;
+        } else {
+            break;
+        }
+    }
+    
+    return NO;
+}
+
+// Hook TFNURTViewController to remove entry 1 from sections when in conversation view
+%hook T1URTViewController
+
+- (void)setSections:(NSArray *)sections {
+    
+    // Only filter if we're in the T1ConversationContainerViewController hierarchy
+    BOOL inConversationHierarchy = BHT_isInConversationContainerHierarchy((UIViewController *)self);
+    
+    if (inConversationHierarchy) {
+        // Remove entry 1 (index 1) from sections array
+        if (sections.count > 1) {
+            NSMutableArray *filteredSections = [NSMutableArray arrayWithArray:sections];
+            [filteredSections removeObjectAtIndex:1];
+            sections = [filteredSections copy];
+        }
+    }
+    
+    %orig(sections);
+}
+
 %end
