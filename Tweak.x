@@ -6202,50 +6202,9 @@ static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
 - (void)setSections:(NSArray *)sections {
     // Only filter if we're in the GuideContainerViewController hierarchy
     if (BHT_isInGuideContainerHierarchy(self)) {
-        // Keep only entry 3 (index 2) and create new trend view models
+        // Keep only entry 3 (index 2), remove everything else
         if (sections.count > 2) {
-            id thirdEntry = sections[2];
-            
-            // Since the section is a mutable array of URTTimelineTrendViewModel objects
-            if ([thirdEntry isKindOfClass:[NSMutableArray class]]) {
-                NSMutableArray *trendsArray = (NSMutableArray *)thirdEntry;
-                NSArray *originalTrends = [trendsArray copy]; // Save original trends
-                
-                // Try to create new trend view models
-                Class trendClass = NSClassFromString(@"TwitterURT.URTTimelineTrendViewModel");
-                if (trendClass && originalTrends.count > 0) {
-                    // Get first trend as template
-                    id firstTrend = originalTrends[0];
-                    
-                    // Try to create new trend instances by copying and modifying
-                    for (int i = 0; i < 5; i++) {
-                        @try {
-                            // Try to copy the trend object
-                            id newTrend = nil;
-                            if ([firstTrend respondsToSelector:@selector(copy)]) {
-                                newTrend = [firstTrend copy];
-                            } else if ([firstTrend respondsToSelector:@selector(mutableCopy)]) {
-                                newTrend = [firstTrend mutableCopy];
-                            } else {
-                                // Try to create using alloc/init
-                                newTrend = [[trendClass alloc] init];
-                            }
-                            
-                            if (newTrend) {
-                                [trendsArray addObject:newTrend];
-                                NSLog(@"[BHTwitter] Created new trend %d", i);
-                            }
-                        } @catch (NSException *exception) {
-                            NSLog(@"[BHTwitter] Failed to create trend %d: %@", i, exception.reason);
-                        }
-                    }
-                }
-                
-                NSLog(@"[BHTwitter] New trends: original count %lu, new count %lu", 
-                      (unsigned long)originalTrends.count, (unsigned long)trendsArray.count);
-            }
-            
-            sections = @[thirdEntry];
+            sections = @[sections[2]]; // Extract only the 3rd entry
         }
     }
     
