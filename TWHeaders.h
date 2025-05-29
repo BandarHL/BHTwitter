@@ -24,6 +24,7 @@
 #import "ffmpeg/FFprobeKit.h"
 #import "ffmpeg/MediaInformationSession.h"
 #import "ffmpeg/MediaInformation.h"
+#import <WebKit/WebKit.h>
 
 
 typedef UIFont *(*BH_BaseImp)(id,SEL,...);
@@ -622,4 +623,78 @@ static UIViewController * _Nonnull topMostController() {
 // T1ProfileFriendsFollowingViewModel interface for unrounded follower/following counts
 @interface T1ProfileFriendsFollowingViewModel : NSObject
 - (id)_t1_followCountTextWithLabel:(id)arg1 singularLabel:(id)arg2 count:(id)arg3 highlighted:(_Bool)arg4;
+@end
+
+// Forward declaration for TweetSourceHelper to be used in early hooks
+@interface TweetSourceHelper : NSObject
++ (void)fetchSourceForTweetID:(NSString *)tweetID;
++ (void)timeoutFetchForTweetID:(NSTimer *)timer;
++ (void)retryUpdateForTweetID:(NSString *)tweetID;
++ (void)pollForPendingUpdates;
++ (void)handleAppForeground:(NSNotification *)notification;
++ (NSDictionary *)fetchCookies;
++ (void)cacheCookies:(NSDictionary *)cookies;
++ (NSDictionary *)loadCachedCookies;
++ (BOOL)shouldRefreshCookies;
++ (void)handleClearCacheNotification:(NSNotification *)notification;
++ (void)pruneSourceCachesIfNeeded;
++ (void)logDebugInfo:(NSString *)message;
++ (void)initializeCookiesWithRetry;
++ (void)retryFetchCookies;
++ (void)updateFooterTextViewsForTweetID:(NSString *)tweetID;
+@end
+
+// Forward declaration for WKWebView
+@interface WKWebView (BHTwitter)
+@end
+
+// Forward declare TTAStatusBodySelectableContentTextView
+@interface TTAStatusBodySelectableContentTextView : UITextView
+@property(retain, nonatomic) NSAttributedString *originalAttributedText;
+- (void)setAttributedText:(NSAttributedString *)attributedText;
+- (void)BHT_setTranslatedText:(NSAttributedString *)translatedText;
+- (void)BHT_restoreOriginalText;
+- (BOOL)BHT_isShowingTranslatedText;
+@end
+
+// TTAStatusInlineActionButton - minimal interface for titleLabel property
+@interface TTAStatusInlineActionButton : UIView
+@property(readonly, nonatomic) UILabel *titleLabel;
+@end
+
+// Forward declare T1StandardStatusTranslateView
+@interface T1StandardStatusTranslateView : UIView
+@end
+
+// Forward declare TFNComposableViewSet
+@interface TFNComposableViewSet : NSObject
+@property(retain, nonatomic) NSMutableArray *views;
+- (void)_tfn_addView:(id)arg1 toHostViewWithViewAdapter:(id)arg2;
+@end
+
+// Forward declare TFNComposableViewAdapterSet
+@interface TFNComposableViewAdapterSet : NSObject
+@property(readonly, nonatomic) NSDictionary *viewAdaptersByIdentifier;
+- (id)initWithViewAdaptersByIdentifier:(id)arg1;
+@end
+
+// Block type definitions for compatibility
+typedef void (^VoidBlock)(void);
+typedef id (^UnknownBlock)(void);
+
+// Forward declare T1ColorSettings and its private method to satisfy the compiler
+@interface T1ColorSettings : NSObject
++ (void)_t1_applyPrimaryColorOption;
++ (void)_t1_updateOverrideUserInterfaceStyle;
+@end
+
+// Forward declaration for the immersive view controller
+@interface T1ImmersiveFullScreenViewController : UIViewController
+- (void)immersiveViewController:(id)immersiveViewController showHideNavigationButtons:(_Bool)showButtons;
+- (void)playerViewController:(id)playerViewController playerStateDidChange:(NSInteger)state;
+@end
+
+// Now declare the category, after the main interface is known
+@interface T1ImmersiveFullScreenViewController (BHTwitter)
+- (BOOL)BHT_findAndPrepareTimestampLabelForVC:(T1ImmersiveFullScreenViewController *)activePlayerVC;
 @end

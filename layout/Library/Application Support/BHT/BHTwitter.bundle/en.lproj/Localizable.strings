@@ -10,6 +10,7 @@
 "RESTART_REQUIRED_ALERT_TITLE" = "Restart required";
 "RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC" = "You need to restart Twitter for this change to take effect.";
 "RESTART_REQUIRED_ALERT_MESSAGE_SQUARE_AVATARS" = "You need to restart Twitter for square profile pictures to take effect.";
+"RESTART_REQUIRED_ALERT_MESSAGE_GENERIC" = "You need to restart Twitter for this change to take effect.";
 "RESTART_NOW_BUTTON_TITLE" = "Restart";
 
 "CONFIRM_ALERT_MESSAGE" = "Sure you meant to do that?";
@@ -35,6 +36,9 @@
 "HIDE_TOPICS_TO_FOLLOW_OPTION" = "No 'Topics to follow'";
 "HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "Remove suggested topics.";
 
+"HIDE_WHO_FOLLOW_OPTION" = "No 'Who to follow'";
+"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE" = "Remove follow suggestions.";
+
 "PADLOCK_OPTION_TITLE" = "Lock Twitter";
 "PADLOCK_OPTION_DETAIL_TITLE" = "Require Face ID or a passcode to open Twitter.";
 
@@ -56,7 +60,7 @@
 "TWEET_TO_IMAGE_OPTION_DETAIL_TITLE" = "Long-press share to export Tweets as images.";
 
 "ENABLE_TWEET_LABELS_OPTION_TITLE" = "Show Tweet source labels (beta)";
-"ENABLE_TWEET_LABELS_OPTION_DETAIL_TITLE" = "Shows what client the Tweet was made from (by @nyaathea).";
+"ENABLE_TWEET_LABELS_OPTION_DETAIL_TITLE" = "Shows what client the Tweet was made from.";
 
 "LIKE_CONFIRM_OPTION_TITLE" = "Confirm likes";
 "LIKE_CONFIRM_OPTION_DETAIL_TITLE" = "Ask before liking a Tweet.";
@@ -76,10 +80,13 @@
 "HIDE_GROK_ANALYZE_BUTTON_DETAIL_TITLE" = "Hides the Grok Analyze button in tweets.";
 
 "SQUARE_AVATARS_TITLE" = "Square profile pictures";
-"SQUARE_AVATARS_DETAIL_TITLE" = "Give everyone square profile pictures like branded accounts, just like the old days.";
+"SQUARE_AVATARS_DETAIL_TITLE" = "Gives everyone square profile pictures like brand accounts, just like old twitter.";
+
+"REPLY_SORTING_TITLE" = "No reply sorting";
+"REPLY_SORTING_DETAIL_TITLE" = "Disable the reply sorting feature in tweet conversations.";
 
 "ENABLE_TRANSLATE_OPTION_TITLE" = "AI translate button";
-"ENABLE_TRANSLATE_OPTION_DETAIL_TITLE" = "Adds an AI translate button to Tweets that are not in your language. Requires a translation API key.";
+"ENABLE_TRANSLATE_OPTION_DETAIL_TITLE" = "Adds an AI translate button to Tweets that are not in your language. Requires an API key.";
 
 "TRANSLATE_ENDPOINT_OPTION_TITLE" = "API endpoint";
 "TRANSLATE_API_KEY_OPTION_TITLE" = "API key";
@@ -98,11 +105,8 @@
 "BIO_TRANSALTE_OPTION_TITLE" = "Translate bios";
 "BIO_TRANSALTE_OPTION_DETAIL_TITLE" = "See bios in your language.";
 
-"HIDE_WHO_FOLLOW_OPTION" = "No 'Who to follow'";
-"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE" = "Remove follow suggestions from profiles.";
-
 "DISABLE_MEDIA_TAB_OPTION_TITLE" = "No separate Media tabs";
-"DISABLE_MEDIA_TAB_OPTION_DETAIL_TITLE" = "Merges the Photos and Videos tabs into one.";
+"DISABLE_MEDIA_TAB_OPTION_DETAIL_TITLE" = "Merges the Photos and Videos tabs into one tab.";
 
 "DISABLE_ARTICLES_OPTION_TITLE" = "No Articles tab";
 "DISABLE_ARTICLES_OPTION_DETAIL_TITLE" = "Hide the Articles tab in profiles.";
@@ -127,6 +131,19 @@
 "HIDE_TREND_VIDEOS_OPTION_DETAIL_TITLE" = "Remove the trending videos from the search menu.";
 
 
+/*Messages*/
+"MESSAGES_SECTION_HEADER_TITLE" = "Messages";
+
+"DM_AVATARS_TITLE" = "DM profile pictures";
+"DM_AVATARS_DETAIL_TITLE" = "Adds profile pictures to all recipients. not just groups.";
+
+"DM_COMPOSE_BAR_V2_TITLE" = "Old compose bar";
+"DM_COMPOSE_BAR_V2_DETAIL_TITLE" = "Use the old message compose bar.";
+
+"DM_VOICE_CREATION_TITLE" = "No voice messages";
+"DM_VOICE_CREATION_DETAIL_TITLE" = "Disable voice message sender on compose bar.";
+
+
 /*Photos & Videos*/
 "PHOTOS_VIDEOS_SECTION_HEADER_TITLE" = "Photos and videos";
 
@@ -138,8 +155,10 @@
 "FORCE_TWEET_FULL_FRAME_TITLE" = "Large images";
 
 "RESTORE_VIDEO_TIMESTAMP_TITLE" = "Video Timestamp";
-"RESTORE_VIDEO_TIMESTAMP_DETAIL_TITLE" = "Shows video timestamp on immersive player.";
+"RESTORE_VIDEO_TIMESTAMP_DETAIL_TITLE" = "Shows timestamp on immersive player.";
 
+"BIGGER_ACTION_BUTTONS_TITLE" = "Bigger action buttons";
+"BIGGER_ACTION_BUTTONS_DETAIL_TITLE" = "Makes like, retweet, and reply buttons bigger throughout the app.";
 
 /*Twitter Blue*/
 "TWITTER_BLUE_SECTION_HEADER_TITLE" = "Twitter Blue";
@@ -184,9 +203,6 @@
 "STOP_HIDING_TAB_BAR_TITLE" = "Keep the tab bar visible";
 "STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "Don't fade the tab bar when you scroll.";
 
-"DM_AVATARS_TITLE" = "DM Avatars";
-"DM_AVATARS_DETAIL_TITLE" = "Only show avatars for the last message in a group from the same sender.";
-
 "CLASSIC_TAB_BAR_SETTINGS_TITLE" = "Classic Tab Icons";
 "CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "Applies accent color to the current selected tab. Restart required.";
 
@@ -227,7 +243,7 @@
 "DEVELOPER_SECTION_HEADER_TITLE" = "Developers";
 
 
-/*Main menu end*
+/*Main menu end*/
 
 
 /*Custom fonts*/
@@ -296,10 +312,8 @@
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_2" = "Use a color";
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_3" = "Reset to default";
 
-
-
-/*Pill Text*/
-"TFN_PILL_TEXT" = "Tweeted";
+/*Refresh pill text*/
+"REFRESH_PILL_TEXT" = "Tweeted";
 
 /*Deprecated*/
 "TRUSTED_FRIENSS_OPTION_TITLE" = "Twitter Circles";

@@ -325,6 +325,10 @@ PSSpecifier *searchSection   = [self newSectionWithTitle:[[BHTBundle sharedBundl
                                localizedStringForKey:@"SEARCH_SECTION_HEADER_TITLE"]
                                                   footer:nil];
 
+PSSpecifier *messagesSection = [self newSectionWithTitle:[[BHTBundle sharedBundle]
+                               localizedStringForKey:@"MESSAGES_SECTION_HEADER_TITLE"]
+                                                  footer:nil];
+
 PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"PHOTOS_VIDEOS_SECTION_HEADER_TITLE"] footer:nil];
 
         PSSpecifier *mainSection = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"MAIN_SECTION_HEADER_TITLE"] footer:nil];
@@ -344,15 +348,15 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 
         PSSpecifier *hideTopics = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_TOPICS_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_TOPICS_OPTION_DETAIL_TITLE"] key:@"hide_topics" defaultValue:false changeAction:nil];
         
-        PSSpecifier *hideWhoToFollow = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_WHO_FOLLOW_OPTION"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE"] key:@"hide_who_to_follow" defaultValue:false changeAction:nil];
-        
         PSSpecifier *hideTopicsToFollow = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_TOPICS_TO_FOLLOW_OPTION"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE"] key:@"hide_topics_to_follow" defaultValue:false changeAction:nil];
+
+        PSSpecifier *hideWhoToFollow = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_WHO_FOLLOW_OPTION"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE"] key:@"hide_who_to_follow" defaultValue:false changeAction:nil];
 
         PSSpecifier *hidePremiumOffer = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_PREMIUM_OFFER_OPTION"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_PREMIUM_OFFER_OPTION_DETAIL_TITLE"] key:@"hide_premium_offer" defaultValue:false changeAction:nil];
 
         PSSpecifier *hideTrendVideos = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_TREND_VIDEOS_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_TREND_VIDEOS_OPTION_DETAIL_TITLE"] key:@"hide_trend_videos" defaultValue:false changeAction:nil];
         
-        PSSpecifier *videoLayerCaption = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE"] detailTitle:nil key:@"dis_VODCaptions" defaultValue:false changeAction:nil];
+        PSSpecifier *videoLayerCaption = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE"] detailTitle:nil key:@"video_layer_caption" defaultValue:false changeAction:nil];
         
         PSSpecifier *noHistory = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"NO_HISTORY_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"NO_HISTORY_OPTION_DETAIL_TITLE"] key:@"no_his" defaultValue:false changeAction:nil];
         
@@ -418,6 +422,18 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         
         PSSpecifier *dmAvatars = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DM_AVATARS_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DM_AVATARS_DETAIL_TITLE"] key:@"dm_avatars" defaultValue:false changeAction:nil];
         
+        PSSpecifier *dmComposeBarV2 = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DM_COMPOSE_BAR_V2_TITLE"] 
+                                                        detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DM_COMPOSE_BAR_V2_DETAIL_TITLE"]
+                                                                key:@"dm_compose_bar_v2_enabled"
+                                                       defaultValue:false 
+                                                       changeAction:nil];
+        
+        PSSpecifier *dmVoiceCreation = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DM_VOICE_CREATION_TITLE"] 
+                                                        detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DM_VOICE_CREATION_DETAIL_TITLE"]
+                                                                key:@"dm_voice_creation_enabled"
+                                                       defaultValue:false 
+                                                       changeAction:nil];
+        
         PSSpecifier *tabBarTheming = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CLASSIC_TAB_BAR_SETTINGS_TITLE"]
                                                         detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CLASSIC_TAB_BAR_SETTINGS_DETAIL"]
                                                                 key:@"tab_bar_theming" 
@@ -459,7 +475,19 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
                                                        defaultValue:false 
                                                        changeAction:@selector(squareAvatarsAction:)];
         
+        PSSpecifier *replySorting = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"REPLY_SORTING_TITLE"] 
+                                                        detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"REPLY_SORTING_DETAIL_TITLE"]
+                                                                key:@"reply_sorting_enabled"
+                                                       defaultValue:false 
+                                                       changeAction:nil];
+        
         PSSpecifier *restoreVideoTimestamp = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTORE_VIDEO_TIMESTAMP_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTORE_VIDEO_TIMESTAMP_DETAIL_TITLE"] key:@"restore_video_timestamp" defaultValue:false changeAction:nil];
+
+        PSSpecifier *biggerActionButtons = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BIGGER_ACTION_BUTTONS_TITLE"] 
+                                                        detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BIGGER_ACTION_BUTTONS_DETAIL_TITLE"]
+                                                                key:@"bigger_action_buttons"
+                                                       defaultValue:false 
+                                                       changeAction:@selector(biggerActionButtonsAction:)];
 
         // debug section
         PSSpecifier *flex = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_DETAIL_TITLE"] key:@"flex_twitter" defaultValue:false changeAction:@selector(FLEXAction:)];
@@ -487,6 +515,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             customVoice,
             hideTopics,
             hideTopicsToFollow,
+            hideWhoToFollow,
             padLock,
             alwaysOpenSafari,
             stripTrackingParams,
@@ -507,12 +536,12 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             disableSensitiveTweetWarnings,
             hideGrokAnalyze,
             squareAvatars,
+            replySorting,
 
             profilesSection, // 2
             followConfirm,
             copyProfileInfo,
             bioTranslate,
-            hideWhoToFollow,
             disableMediaTab,
             disableArticles,
             disableHighlights,
@@ -523,13 +552,19 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             noHistory,
             hideTrendVideos,
 
-            photosVideosSection, // 4
+            messagesSection, // 4
+            dmAvatars,
+            dmComposeBarV2,
+            dmVoiceCreation,
+            customDirectBackgroundView,
+
+            photosVideosSection, // 5
             videoLayerCaption,
             autoHighestLoad,
             forceFullFrame,
             restoreVideoTimestamp,
 
-            twitterBlueSection, // 5
+            twitterBlueSection, // 6
             undoTweet,
             download,
             directSave,
@@ -539,11 +574,10 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             appIcon,
             customTabBarVC,
             
-            layoutSection, // 6
-            customDirectBackgroundView,
+            layoutSection, // 7
             hideSpace,
             stopHidingTabBar,
-            dmAvatars,
+            biggerActionButtons,
             tabBarTheming,
             disableRTL,
             showScrollIndicator,
@@ -551,14 +585,14 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             regularFontsPicker,
             boldFontsPicker,
             
-            legalSection, // 7
+            legalSection, // 8
             acknowledgements,
             
-            debug, // 8
+            debug, // 9
             flex,
             clearSourceLabelCache,
             
-            developer, // 9
+            developer, // 10
             actuallyaridan,
             timi2506,
             nyathea,
@@ -1032,6 +1066,31 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_TITLE"]
                                                                    message:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_MESSAGE_SQUARE_AVATARS"]
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_NOW_BUTTON_TITLE"] style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
+        [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:key];
+        [[NSUserDefaults standardUserDefaults] synchronize];
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            exit(0);
+        });
+    }]];
+
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"] style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
+        // Flip the switch back visually if cancelled
+        [sender setOn:previousValue animated:YES];
+    }]];
+
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)biggerActionButtonsAction:(UISwitch *)sender {
+    BOOL enabled = sender.isOn;
+    NSString *key = @"bigger_action_buttons";
+    BOOL previousValue = !enabled; // The value before the switch was flipped
+
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_TITLE"]
+                                                                   message:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_MESSAGE_GENERIC"]
                                                             preferredStyle:UIAlertControllerStyleAlert];
 
     [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_NOW_BUTTON_TITLE"] style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
