@@ -4971,7 +4971,7 @@ static char kTranslateButtonKey;
         // Place the button on the right with standard padding
         NSArray *constraints = @[
             [translateButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
-            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16], // Standard right margin
+            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-14], // Adjusted: formerly -16
             [translateButton.widthAnchor constraintEqualToConstant:44],
             [translateButton.heightAnchor constraintEqualToConstant:44]
         ];
