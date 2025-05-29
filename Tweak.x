@@ -1770,39 +1770,39 @@ static const NSTimeInterval RETRY_DELAY = 2.0; // Fixed delay instead of exponen
 
 + (void)initializeCookiesWithRetry {
     @try {
-        if (isInitializingCookies) {
+    if (isInitializingCookies) {
             return;
-        }
-        isInitializingCookies = YES;
-        cookieRetryCount = 0;
-        
+    }
+    isInitializingCookies = YES;
+    cookieRetryCount = 0;
+    
         // Try to load cached cookies first
-        NSDictionary *cachedCookies = [self loadCachedCookies];
+    NSDictionary *cachedCookies = [self loadCachedCookies];
         BOOL hasValidCachedCookies = [self validateCookies:cachedCookies];
                                     
         if (hasValidCachedCookies && lastCookieRefresh) {
             NSTimeInterval timeSinceRefresh = [[NSDate date] timeIntervalSinceDate:lastCookieRefresh];
             if (timeSinceRefresh < COOKIE_REFRESH_INTERVAL) {
                 // Cached cookies are still fresh
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
-                });
-                isInitializingCookies = NO;
-                return;
-            }
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
+            });
+            isInitializingCookies = NO;
+            return;
         }
-        
+    }
+    
         // Fetch fresh cookies in background with safety
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
             @try {
                 NSDictionary *freshCookies = [self fetchCookies];
-                
-                dispatch_async(dispatch_get_main_queue(), ^{
+            
+            dispatch_async(dispatch_get_main_queue(), ^{
                     @try {
                         if ([self validateCookies:freshCookies]) {
                             [self cacheCookies:freshCookies];
-                            [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
-                            isInitializingCookies = NO;
+                [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
+                isInitializingCookies = NO;
                         } else if (cookieRetryCount < 2) { // Reduced max retries
                             cookieRetryCount++;
                             // Shorter delay and safer retry
@@ -1810,8 +1810,8 @@ static const NSTimeInterval RETRY_DELAY = 2.0; // Fixed delay instead of exponen
                                 if (!isInitializingCookies) { // Double-check before retry
                                     [self initializeCookiesWithRetry];
                                 }
-                            });
-                        } else {
+            });
+        } else {
                             // Give up after max retries
                             isInitializingCookies = NO;
                             [self logDebugInfo:@"Failed to initialize cookies after retries"];
@@ -1823,12 +1823,12 @@ static const NSTimeInterval RETRY_DELAY = 2.0; // Fixed delay instead of exponen
                     }
                 });
             } @catch (NSException *e) {
-                dispatch_async(dispatch_get_main_queue(), ^{
+            dispatch_async(dispatch_get_main_queue(), ^{
                     isInitializingCookies = NO;
                     [self logDebugInfo:[NSString stringWithFormat:@"Exception in cookie background fetch: %@", e.reason]];
-                });
-            }
-        });
+            });
+        }
+    });
     } @catch (NSException *exception) {
         isInitializingCookies = NO;
         [self logDebugInfo:[NSString stringWithFormat:@"Exception in initializeCookiesWithRetry: %@", exception.reason]];
@@ -1864,22 +1864,22 @@ static const NSTimeInterval RETRY_DELAY = 2.0; // Fixed delay instead of exponen
     if (!tweetSources || tweetSources.count <= MAX_SOURCE_CACHE_SIZE) return;
     
     // Remove oldest entries
-    NSMutableArray *keysToRemove = [NSMutableArray array];
-    for (NSString *key in tweetSources) {
-        NSString *source = tweetSources[key];
-        if (!source || [source isEqualToString:@""] || [source isEqualToString:@"Source Unavailable"]) {
-            [keysToRemove addObject:key];
+        NSMutableArray *keysToRemove = [NSMutableArray array];
+        for (NSString *key in tweetSources) {
+            NSString *source = tweetSources[key];
+            if (!source || [source isEqualToString:@""] || [source isEqualToString:@"Source Unavailable"]) {
+                [keysToRemove addObject:key];
             if (keysToRemove.count >= 20) break;
         }
     }
     
-    for (NSString *key in keysToRemove) {
-        [tweetSources removeObjectForKey:key];
-        [fetchTimeouts removeObjectForKey:key];
-        [fetchRetries removeObjectForKey:key];
-        [updateRetries removeObjectForKey:key];
-        [updateCompleted removeObjectForKey:key];
-        [fetchPending removeObjectForKey:key];
+        for (NSString *key in keysToRemove) {
+            [tweetSources removeObjectForKey:key];
+                [fetchTimeouts removeObjectForKey:key];
+            [fetchRetries removeObjectForKey:key];
+            [updateRetries removeObjectForKey:key];
+            [updateCompleted removeObjectForKey:key];
+            [fetchPending removeObjectForKey:key];
     }
 }
 
@@ -1891,20 +1891,20 @@ static const NSTimeInterval RETRY_DELAY = 2.0; // Fixed delay instead of exponen
         NSArray *domains = @[@"twitter.com", @".twitter.com", @"x.com", @".x.com"];
         NSArray *requiredCookies = @[@"ct0", @"auth_token"];
         
-        NSHTTPCookieStorage *cookieStorage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
+    NSHTTPCookieStorage *cookieStorage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
         if (!cookieStorage) {
             [self logDebugInfo:@"Cookie storage unavailable"];
             return cookiesDict;
         }
-        
-        for (NSString *domain in domains) {
+    
+    for (NSString *domain in domains) {
             @autoreleasepool {
-                NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"https://%@", domain]];
-                NSArray *cookies = [cookieStorage cookiesForURL:url];
-                
-                for (NSHTTPCookie *cookie in cookies) {
+        NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"https://%@", domain]];
+        NSArray *cookies = [cookieStorage cookiesForURL:url];
+        
+        for (NSHTTPCookie *cookie in cookies) {
                     if ([requiredCookies containsObject:cookie.name] && cookie.value) {
-                        cookiesDict[cookie.name] = cookie.value;
+                cookiesDict[cookie.name] = cookie.value;
                     }
                 }
                 
@@ -2027,8 +2027,8 @@ static const NSTimeInterval RETRY_DELAY = 2.0; // Fixed delay instead of exponen
                                                                     object:nil 
                                                                   userInfo:@{@"tweetID": tweetID}];
             });
-            return;
-        }
+                return;
+            }
 
         // Check if we're already fetching this tweet
         if (fetchPending[tweetID] && [fetchPending[tweetID] boolValue]) {
@@ -2057,11 +2057,11 @@ static const NSTimeInterval RETRY_DELAY = 2.0; // Fixed delay instead of exponen
             if (!isInitializingCookies) {
                 // Only set "Fetching..." during initial cookie setup
                 tweetSources[tweetID] = @"Fetching...";
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" 
-                                                                        object:nil 
-                                                                      userInfo:@{@"tweetID": tweetID}];
-                });
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" 
+                                                                    object:nil 
+                                                                  userInfo:@{@"tweetID": tweetID}];
+            });
                 [self initializeCookiesWithRetry];
             }
             // The cookie initialization will handle retrying this tweet when ready
@@ -2078,7 +2078,7 @@ static const NSTimeInterval RETRY_DELAY = 2.0; // Fixed delay instead of exponen
                                                                userInfo:@{@"tweetID": tweetID}
                                                                 repeats:NO];
         if (timeoutTimer) {
-            fetchTimeouts[tweetID] = timeoutTimer;
+        fetchTimeouts[tweetID] = timeoutTimer;
         }
 
         // Build and execute request with safety
@@ -2088,7 +2088,7 @@ static const NSTimeInterval RETRY_DELAY = 2.0; // Fixed delay instead of exponen
             [self handleFetchFailure:tweetID];
             return;
         }
-        
+
         NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
         request.HTTPMethod = @"GET";
         request.timeoutInterval = 10.0; // Shorter timeout
@@ -2105,14 +2105,14 @@ static const NSTimeInterval RETRY_DELAY = 2.0; // Fixed delay instead of exponen
 
         // Build cookie header safely
         if (cookieCache && cookieCache.count > 0) {
-            NSMutableArray *cookieStrings = [NSMutableArray array];
+        NSMutableArray *cookieStrings = [NSMutableArray array];
             for (NSString *cookieName in cookieCache) {
                 NSString *cookieValue = cookieCache[cookieName];
                 if (cookieName && cookieValue) {
-                    [cookieStrings addObject:[NSString stringWithFormat:@"%@=%@", cookieName, cookieValue]];
-                }
+            [cookieStrings addObject:[NSString stringWithFormat:@"%@=%@", cookieName, cookieValue]];
+        }
             }
-            if (cookieStrings.count > 0) {
+        if (cookieStrings.count > 0) {
                 [request setValue:[cookieStrings componentsJoinedByString:@"; "] forHTTPHeaderField:@"Cookie"];
             }
         }
@@ -2145,7 +2145,7 @@ static const NSTimeInterval RETRY_DELAY = 2.0; // Fixed delay instead of exponen
                 if (!httpResponse || httpResponse.statusCode != 200) {
                     [self logDebugInfo:[NSString stringWithFormat:@"HTTP error %ld for tweet %@", (long)httpResponse.statusCode, tweetID]];
                     
-                    if (httpResponse.statusCode == 401 || httpResponse.statusCode == 403) {
+                        if (httpResponse.statusCode == 401 || httpResponse.statusCode == 403) {
                         // Force cookie refresh on auth errors
                         isInitializingCookies = NO;
                         [self initializeCookiesWithRetry];
@@ -2160,7 +2160,7 @@ static const NSTimeInterval RETRY_DELAY = 2.0; // Fixed delay instead of exponen
                     [self handleFetchFailure:tweetID];
                     return;
                 }
-                
+
                 NSError *jsonError;
                 NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:0 error:&jsonError];
                 if (jsonError || !json) {
@@ -3430,7 +3430,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 %hook T1ProfileHeaderViewController
 
-- (void)viewDidLayoutSubviews { // Or viewWillAppear:, depending on when controls are added
+- (void) viewWillAppear {
     %orig;
     // Search for and hide T1SuperFollowControl within this view controller's view
     if ([BHTManager restoreFollowButton] && self.isViewLoaded) { // Ensure the view is loaded
@@ -5912,20 +5912,6 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 // MARK: Bird Icon Theming
 
 %hook UIImageView
-
-- (void)didMoveToWindow {
-    %orig;
-    if (!self.window) return;
-    
-    // Check if this is the Twitter bird icon by examining the image's dynamic color name
-    if (self.image && [self.image respondsToSelector:@selector(tfn_dynamicColorImageName)]) {
-        NSString *imageName = [self.image performSelector:@selector(tfn_dynamicColorImageName)];
-        if ([imageName isEqualToString:@"twitter"]) {
-            self.image = [self.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-            self.tintColor = BHTCurrentAccentColor();
-        }
-    }
-}
 
 - (void)setImage:(UIImage *)image {
     %orig(image);
