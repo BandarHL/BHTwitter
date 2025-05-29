@@ -4955,7 +4955,7 @@ static char kTranslateButtonKey;
         // If button doesn't exist, create it
         UIButton *translateButton = [UIButton buttonWithType:UIButtonTypeSystem];
         // Use a proper translation SF symbol
-        [translateButton setImage:[UIImage systemImageNamed:@"translate"] forState:UIControlStateNormal];
+        [translateButton setImage:[UIImage systemImageNamed:@"text.bubble.fill"] forState:UIControlStateNormal];
         
         if (@available(iOS 13.0, *)) {
             translateButton.tintColor = [UIColor labelColor];
