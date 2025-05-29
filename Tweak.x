@@ -1424,11 +1424,14 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         return %orig;
     }
 }
-- (_Bool)_t1_showMediaRail {
-    return true;
-}
 - (_Bool)_t1_shouldShowMediaRail {
     return true;
+}
+- (_Bool)_t1_mediaRailShowing {
+    return true;
+}
+- (_Bool)_t1_shouldShowLiveBroadcastButton {
+    return false;
 }
 %end
 
