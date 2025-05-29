@@ -156,7 +156,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 [NSLayoutConstraint activateConstraints:@[
     [detail.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16],
     [detail.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-16],
-    [detail.topAnchor constraintEqualToAnchor:header.topAnchor constant:-12],  // was 8
+    [detail.topAnchor constraintEqualToAnchor:header.topAnchor constant:-12],
     [detail.bottomAnchor constraintEqualToAnchor:header.bottomAnchor constant:-8]
 ]];
 
