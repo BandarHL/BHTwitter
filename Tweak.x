@@ -6195,3 +6195,9 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
     return %orig(frame);
 }
 %end
+
+%hook T1SubscriptionJourneyManager
+- (_Bool)shouldShowReplyBoostUpsellWithAccount {
+        return false;
+}
+%end
