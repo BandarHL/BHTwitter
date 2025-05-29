@@ -1257,14 +1257,22 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     }
     
     if ([key isEqualToString:@"dm_compose_bar_v2_enabled"]) {
-        return false;
+        return ![BHTManager dmComposeBarV2];
     }
 
     if ([key isEqualToString:@"reply_sorting_enabled"]) {
-        return false;
+        return ![BHTManager replySorting];
     }
 
     if ([key isEqualToString:@"dm_voice_creation_enabled"]) {
+        return ![BHTManager dmVoiceCreation];
+    }
+
+    if ([key isEqualToString:@"ios_tweet_detail_overflow_in_navigation_enabled"]) {
+        return false;
+    }
+
+    if ([key isEqualToString:@"ios_tweet_detail_conversation_context_removal_enabled"]) {
         return false;
     }
     return %orig;
@@ -1423,12 +1431,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     } else {
         return %orig;
     }
-}
-- (_Bool)_t1_shouldShowMediaRail {
-    return true;
-}
-- (_Bool)_t1_mediaRailShowing {
-    return true;
 }
 - (_Bool)_t1_shouldShowLiveBroadcastButton {
     return false;
