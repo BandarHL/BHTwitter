@@ -2128,7 +2128,7 @@ static const NSTimeInterval RETRY_DELAY = 2.0; // Fixed delay instead of exponen
     // Set headers
         [request setValue:@"Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA" forHTTPHeaderField:@"Authorization"];
         [request setValue:@"OAuth2Session" forHTTPHeaderField:@"x-twitter-auth-type"];
-    [request setValue:@"Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15" forHTTPHeaderField:@"User-Agent"];
+    [request setValue:@"CFNetwork/1331.0.7 Darwin/16.9.0" forHTTPHeaderField:@"User-Agent"];
         [request setValue:@"application/json" forHTTPHeaderField:@"Accept"];
 
     if (cookieCache[@"ct0"]) {
@@ -5915,7 +5915,7 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
     // Check if this is the Twitter bird icon by examining the image's dynamic color name
     if (self.image && [self.image respondsToSelector:@selector(tfn_dynamicColorImageName)]) {
         NSString *imageName = [self.image performSelector:@selector(tfn_dynamicColorImageName)];
-        if ([imageName isEqualToString:@"twitter"] && [BHTManager classicTabBarEnabled]) {
+        if ([imageName isEqualToString:@"twitter"]) {
             self.image = [self.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
             self.tintColor = BHTCurrentAccentColor();
         }
@@ -5930,7 +5930,7 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
     // Check if this is the Twitter bird icon by examining the image's dynamic color name
     if ([image respondsToSelector:@selector(tfn_dynamicColorImageName)]) {
         NSString *imageName = [image performSelector:@selector(tfn_dynamicColorImageName)];
-        if ([imageName isEqualToString:@"twitter"] && [BHTManager classicTabBarEnabled]) {
+        if ([imageName isEqualToString:@"twitter"]) {
             if (image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
                 UIImage *templateImage = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
                 self.image = templateImage;
