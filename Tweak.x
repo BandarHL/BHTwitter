@@ -1424,7 +1424,10 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         return %orig;
     }
 }
-- (_Bool)isFontSettingsActive {
+- (_Bool)_t1_showMediaRail {
+    return true;
+}
+- (_Bool)_t1_shouldShowMediaRail {
     return true;
 }
 %end
