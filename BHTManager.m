@@ -373,5 +373,9 @@
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"dm_voice_creation_enabled"];
 }
 
++ (BOOL)restoreReplyContext {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"restore_reply_context"];
+}
+
 @end
 

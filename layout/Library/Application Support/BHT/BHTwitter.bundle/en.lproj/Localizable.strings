@@ -85,6 +85,9 @@
 "REPLY_SORTING_TITLE" = "No reply sorting";
 "REPLY_SORTING_DETAIL_TITLE" = "Disable the reply sorting feature in tweet conversations.";
 
+"RESTORE_REPLY_CONTEXT_TITLE" = "Restore Reply Context";
+"RESTORE_REPLY_CONTEXT_DETAIL_TITLE" = "Shows the people that are being replied to under tweets.";
+
 "ENABLE_TRANSLATE_OPTION_TITLE" = "AI translate button";
 "ENABLE_TRANSLATE_OPTION_DETAIL_TITLE" = "Adds an AI translate button to Tweets that are not in your language. Requires an API key.";
 
