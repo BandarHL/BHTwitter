@@ -5903,3 +5903,83 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
         return false;
 }
 %end
+
+// MARK: Bird Icon Theming - Targeted approach for _UITAMICAdapterView
+
+%hook UIImageView
+
+- (void)didMoveToWindow {
+    %orig;
+    if (!self.window) return;
+    
+    // Only proceed if we're in a navigation bar context and the right size
+    BOOL isCorrectSize = CGSizeEqualToSize(self.frame.size, CGSizeMake(29, 29));
+    if (!isCorrectSize) return;
+    
+    // Check if this ImageView is specifically inside a _UITAMICAdapterView within a TFNNavigationBar
+    UIView *currentView = self.superview;
+    BOOL foundAdapterView = NO;
+    BOOL foundNavBar = NO;
+    
+    while (currentView) {
+        NSString *className = NSStringFromClass([currentView class]);
+        
+        if ([className containsString:@"_UITAMICAdapterView"]) {
+            foundAdapterView = YES;
+        }
+        
+        if ([currentView isKindOfClass:%c(TFNNavigationBar)]) {
+            foundNavBar = YES;
+            break;
+        }
+        
+        currentView = currentView.superview;
+    }
+    
+    // Only theme if we found both the adapter view and navigation bar
+    if (foundAdapterView && foundNavBar && [BHTManager classicTabBarEnabled]) {
+        self.image = [self.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+        self.tintColor = BHTCurrentAccentColor();
+    }
+}
+
+- (void)setImage:(UIImage *)image {
+    %orig(image);
+    
+    if (!image || !self.superview) return;
+    
+    // Only proceed if we're the right size
+    BOOL isCorrectSize = CGSizeEqualToSize(self.frame.size, CGSizeMake(29, 29));
+    if (!isCorrectSize) return;
+    
+    // Check if this ImageView is specifically inside a _UITAMICAdapterView within a TFNNavigationBar
+    UIView *currentView = self.superview;
+    BOOL foundAdapterView = NO;
+    BOOL foundNavBar = NO;
+    
+    while (currentView) {
+        NSString *className = NSStringFromClass([currentView class]);
+        
+        if ([className containsString:@"_UITAMICAdapterView"]) {
+            foundAdapterView = YES;
+        }
+        
+        if ([currentView isKindOfClass:%c(TFNNavigationBar)]) {
+            foundNavBar = YES;
+            break;
+        }
+        
+        currentView = currentView.superview;
+    }
+    
+    // Only theme if we found both the adapter view and navigation bar
+    if (foundAdapterView && foundNavBar && [BHTManager classicTabBarEnabled]) {
+        if (image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
+            UIImage *templateImage = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+            self.image = templateImage;
+            self.tintColor = BHTCurrentAccentColor();
+        }
+    }
+}
+
+%end
