@@ -3367,70 +3367,7 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
 
 // MARK: Bird Icon Theming - Safe implementation targeting navigation bar specifically
 
-%hook UIImageView
-
-- (void)setImage:(UIImage *)image {
-    %orig(image);
-    
-    // Safety checks to prevent crashes
-    if (!image || ![NSThread isMainThread]) {
-        return;
-    }
-    
-    @try {
-        // Only process if we're in a navigation bar context to be more targeted
-        UIView *superview = self.superview;
-        BOOL isInNavigationContext = NO;
-        
-        // Check if we're in a navigation bar by walking up the view hierarchy with proper type checking
-        while (superview && !isInNavigationContext) {
-            // Ensure we're still dealing with a UIView object
-            if (![superview isKindOfClass:[UIView class]]) {
-                break;
-            }
-            
-            if ([superview isKindOfClass:[UINavigationBar class]] || 
-                [NSStringFromClass([superview class]) containsString:@"Navigation"]) {
-                isInNavigationContext = YES;
-                break;
-            }
-            
-            // Safely get the next superview with type checking
-            UIView *nextSuperview = superview.superview;
-            if (nextSuperview && ![nextSuperview isKindOfClass:[UIView class]]) {
-                break;
-            }
-            superview = nextSuperview;
-        }
-        
-        // Only proceed if we're in navigation context
-        if (!isInNavigationContext) {
-            return;
-        }
-        
-        // Check if this is the Twitter bird icon
-        if ([image respondsToSelector:@selector(tfn_dynamicColorImageName)]) {
-            NSString *imageName = [image performSelector:@selector(tfn_dynamicColorImageName)];
-            if ([imageName isKindOfClass:[NSString class]] && [imageName isEqualToString:@"twitter"]) {
-                if (image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
-                    // Use weak reference to prevent crashes from deallocated objects
-                    __weak UIImageView *weakSelf = self;
-                    UIImage *templateImage = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-                    
-                    // Update immediately on main thread instead of async dispatch
-                    if (weakSelf && weakSelf.superview) {
-                        weakSelf.image = templateImage;
-                        weakSelf.tintColor = BHTCurrentAccentColor();
-                    }
-                }
-            }
-        }
-    } @catch (NSException *exception) {
-        // Silently handle exceptions to prevent crashes
-    }
-}
-
-%end
+// removed for now..
 
 // MARK: Replace "your post" with "your tweet" in notifications
 %hook TFNAttributedTextModel
