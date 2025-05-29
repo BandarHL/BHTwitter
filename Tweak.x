@@ -3365,46 +3365,56 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
 
 // --- Initialisation ---
 
-// MARK: Bird Icon Theming - Safer implementation to avoid crashes
-
-static BOOL isProcessingBirdIcon = NO; // Prevent recursion
+// MARK: Bird Icon Theming - Safe implementation targeting navigation bar specifically
 
 %hook UIImageView
 
 - (void)setImage:(UIImage *)image {
-    // Always call original first
     %orig(image);
     
     // Safety checks to prevent crashes
-    if (!image || isProcessingBirdIcon || ![NSThread isMainThread]) {
+    if (!image || ![NSThread isMainThread]) {
         return;
     }
     
     @try {
-        // Check if this is the Twitter bird icon by examining the image's dynamic color name
+        // Only process if we're in a navigation bar context to be more targeted
+        UIView *superview = self.superview;
+        BOOL isInNavigationContext = NO;
+        
+        // Check if we're in a navigation bar by walking up the view hierarchy
+        while (superview && !isInNavigationContext) {
+            if ([superview isKindOfClass:[UINavigationBar class]] || 
+                [NSStringFromClass([superview class]) containsString:@"Navigation"]) {
+                isInNavigationContext = YES;
+                break;
+            }
+            superview = superview.superview;
+        }
+        
+        // Only proceed if we're in navigation context
+        if (!isInNavigationContext) {
+            return;
+        }
+        
+        // Check if this is the Twitter bird icon
         if ([image respondsToSelector:@selector(tfn_dynamicColorImageName)]) {
             NSString *imageName = [image performSelector:@selector(tfn_dynamicColorImageName)];
             if ([imageName isKindOfClass:[NSString class]] && [imageName isEqualToString:@"twitter"]) {
                 if (image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
-                    // Set flag to prevent recursion
-                    isProcessingBirdIcon = YES;
-                    
+                    // Use weak reference to prevent crashes from deallocated objects
+                    __weak UIImageView *weakSelf = self;
                     UIImage *templateImage = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
                     
-                    // Use dispatch_async to avoid recursive setImage: calls
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        if (self.superview) { // Make sure view is still valid
-                            self.image = templateImage;
-                            self.tintColor = BHTCurrentAccentColor();
-                        }
-                        isProcessingBirdIcon = NO;
-                    });
+                    // Update immediately on main thread instead of async dispatch
+                    if (weakSelf && weakSelf.superview) {
+                        weakSelf.image = templateImage;
+                        weakSelf.tintColor = BHTCurrentAccentColor();
+                    }
                 }
             }
         }
     } @catch (NSException *exception) {
-        // Reset flag and log error if needed
-        isProcessingBirdIcon = NO;
         // Silently handle exceptions to prevent crashes
     }
 }
