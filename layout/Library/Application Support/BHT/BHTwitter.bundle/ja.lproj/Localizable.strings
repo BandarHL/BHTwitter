@@ -85,6 +85,9 @@
 "REPLY_SORTING_TITLE" = "リプライの並べ替えを無効化";
 "REPLY_SORTING_DETAIL_TITLE" = "ツイートのリプライにある並べ替え機能を無効にします。";
 
+"RESTORE_REPLY_CONTEXT_TITLE" = "返信コンテキストを復元";
+"RESTORE_REPLY_CONTEXT_DETAIL_TITLE" = "ツイートの下に返信されている人を表示します。";
+
 "ENABLE_TRANSLATE_OPTION_TITLE" = "AI翻訳ボタンを表示";
 "ENABLE_TRANSLATE_OPTION_DETAIL_TITLE" = "システム言語以外のツイートにAI翻訳ボタンを追加します。APIキーが必要です。";
 
