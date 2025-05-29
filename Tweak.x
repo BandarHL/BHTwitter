@@ -997,34 +997,37 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)updateLogoTheme {
     BOOL shouldTheme = [self shouldThemeIcon];
     
-    // ONLY look at DIRECT subviews of the navigation bar
-    for (UIView *subview in self.subviews) {
-        if ([subview isKindOfClass:[UIImageView class]]) {
-            UIImageView *imageView = (UIImageView *)subview;
+    // Only look at DIRECT subviews of the navigation bar to avoid false positives
+    for (UIView *directSubview in self.subviews) {
+        if ([directSubview isKindOfClass:[UIImageView class]]) {
+            UIImageView *imageView = (UIImageView *)directSubview;
             
-            // VERY specific size check to only match Twitter logo
+            // More specific checks for Twitter bird logo
             CGFloat width = imageView.frame.size.width;
             CGFloat height = imageView.frame.size.height;
             
-            // Twitter logo is EXACTLY 29x29 with minimal tolerance
-            BOOL isLikelyTwitterLogo = fabs(width - 29.0) < 2.0 && fabs(height - 29.0) < 2.0 && fabs(width - height) < 1.0;
+            // Twitter logo is EXACTLY 29x29 with minimal tolerance AND must be a direct child of nav bar
+            BOOL isExactTwitterLogoSize = fabs(width - 29.0) < 1.5 && fabs(height - 29.0) < 1.5 && fabs(width - height) < 1.0;
             
-            if (isLikelyTwitterLogo) {
-                // MODIFIED: Use classicTabBarEnabled
-                if (shouldTheme && [BHTManager classicTabBarEnabled]) { 
-                    // Get the original image
+            // Additional validation: check if the image itself looks like the Twitter bird
+            BOOL hasValidImage = imageView.image != nil;
+            
+            // Only proceed if this is definitely the Twitter logo
+            if (isExactTwitterLogoSize && hasValidImage && shouldTheme && [BHTManager classicTabBarEnabled]) {
+                // Verify this is actually in the center area of the nav bar (where the logo should be)
+                CGFloat navBarWidth = self.frame.size.width;
+                CGFloat imageViewCenterX = imageView.center.x;
+                BOOL isCentered = fabs(imageViewCenterX - navBarWidth/2.0) < navBarWidth * 0.3; // Within 30% of center
+                
+                if (isCentered) {
                     UIImage *originalImage = imageView.image;
                     if (originalImage && originalImage.renderingMode != UIImageRenderingModeAlwaysTemplate) {
-                        // Create template image from original
+                        // Apply theming only to confirmed Twitter bird logo
                         UIImage *templateImage = [originalImage imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-                        imageView.image = templateImage; // Setting image might trigger layout, potentially re-calling this. Guard needed?
+                        imageView.image = templateImage;
                         imageView.tintColor = BHTCurrentAccentColor();
                     }
                 }
-                // If classicTabBarEnabled is false, the bird icon should naturally revert
-                // or be handled by BHT_forceRefreshAllWindowAppearances if needed.
-                // For now, no explicit 'else' to revert here, assuming default behavior is okay
-                // or other refresh mechanisms will handle it.
             }
         }
     }
@@ -3031,56 +3034,7 @@ static const NSTimeInterval RETRY_DELAY = 2.0; // Fixed delay instead of exponen
 
 // MARK: Bird Icon Theming - Dirty hax for making the Nav Bird Icon themeable again.
 
-%hook UIImageView
 
-- (void)didMoveToWindow {
-    %orig;
-    if (!self.window) return;
-    
-    // Check if this is the Twitter bird logo by examining view hierarchy
-    UIView *view = self;
-    BOOL isNavBar = NO;
-    BOOL isCorrectSize = CGSizeEqualToSize(self.frame.size, CGSizeMake(29, 29));
-    
-    while (view && !isNavBar) {
-        if ([view isKindOfClass:%c(TFNNavigationBar)] || 
-            [NSStringFromClass([view class]) containsString:@"NavigationBar"]) {
-            isNavBar = YES;
-            break;
-        }
-        view = view.superview;
-    }
-    
-    if (isNavBar && isCorrectSize) {
-        self.image = [self.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-        self.tintColor = BHTCurrentAccentColor();
-    }
-}
-
-- (void)setImage:(UIImage *)image {
-    if (image && [self.superview isKindOfClass:%c(TFNNavigationBar)]) {
-        UIView *view = self;
-        BOOL isNavBar = NO;
-        BOOL isCorrectSize = CGSizeEqualToSize(self.frame.size, CGSizeMake(29, 29));
-        
-        while (view && !isNavBar) {
-            if ([view isKindOfClass:%c(TFNNavigationBar)] || 
-                [NSStringFromClass([view class]) containsString:@"NavigationBar"]) {
-                isNavBar = YES;
-                break;
-            }
-            view = view.superview;
-        }
-        
-        if (isNavBar && isCorrectSize) {
-            image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-            self.tintColor = BHTCurrentAccentColor();
-        }
-    }
-    %orig(image);
-}
-
-%end
 
 // MARK: Replace "your post" with "your tweet" in notifications
 %hook TFNAttributedTextModel
