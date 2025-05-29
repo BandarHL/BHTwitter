@@ -1815,9 +1815,11 @@ static const NSTimeInterval RETRY_DELAY = 2.0; // Fixed delay instead of exponen
 }
 
 + (BOOL)validateCookies:(NSDictionary *)cookies {
-    // More lenient validation - just need at least one authentication token
-    return cookies && cookies.count > 0 && 
-           (cookies[@"ct0"] || cookies[@"auth_token"]);
+    return cookies && 
+           cookies[@"ct0"] && 
+           cookies[@"auth_token"] &&
+           [cookies[@"ct0"] length] > 10 &&
+           [cookies[@"auth_token"] length] > 10;
 }
 
 + (void)markAllPendingTweetsAsUnavailable {
@@ -1863,20 +1865,79 @@ static const NSTimeInterval RETRY_DELAY = 2.0; // Fixed delay instead of exponen
 + (NSDictionary *)fetchCookies {
     NSMutableDictionary *cookiesDict = [NSMutableDictionary dictionary];
     
-    // First, check if we have intercepted tokens from the app's own requests
-    if (cookieCache && cookieCache.count > 0) {
-        [cookiesDict addEntriesFromDictionary:cookieCache];
-        [self logDebugInfo:[NSString stringWithFormat:@"Using intercepted tokens: %lu", (unsigned long)cookiesDict.count]];
-        return cookiesDict;
-    }
-    
-    // Fallback: try web cookies
-    NSArray *domains = @[@"twitter.com", @".twitter.com", @"x.com", @".x.com"];
-    NSArray *requiredCookies = @[@"ct0", @"auth_token"];
-    
+    // Method 1: Try to extract from app's internal session
+    @try {
+        // Look for Twitter's session management classes
+        Class sessionStoreClass = NSClassFromString(@"TWTRSessionStore");
+        
+        // Try to get the current session from the session store
+        if (sessionStoreClass) {
+            id sessionStore = [sessionStoreClass performSelector:@selector(sharedSessionStore)];
+            if (sessionStore) {
+                // Try to get the current session
+                id currentSession = nil;
+                if ([sessionStore respondsToSelector:@selector(session)]) {
+                    currentSession = [sessionStore performSelector:@selector(session)];
+                } else if ([sessionStore respondsToSelector:@selector(existingUserSessions)]) {
+                    NSArray *sessions = [sessionStore performSelector:@selector(existingUserSessions)];
+                    if (sessions && sessions.count > 0) {
+                        currentSession = sessions.firstObject;
+                    }
+                }
+                
+                // Extract auth token from session
+                if (currentSession) {
+                    if ([currentSession respondsToSelector:@selector(authToken)]) {
+                        NSString *authToken = [currentSession performSelector:@selector(authToken)];
+                        if (authToken && authToken.length > 10) {
+                            cookiesDict[@"auth_token"] = authToken;
+                        }
+                    }
+                    
+                    // Try to get CSRF token
+                    if ([currentSession respondsToSelector:@selector(csrfToken)]) {
+                        NSString *csrfToken = [currentSession performSelector:@selector(csrfToken)];
+                        if (csrfToken && csrfToken.length > 10) {
+                            cookiesDict[@"ct0"] = csrfToken;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Method 2: Try to extract from NSUserDefaults (some apps store tokens there)
+        if (cookiesDict.count < 2) {
+            NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+            NSDictionary *allDefaults = [defaults dictionaryRepresentation];
+            
+            for (NSString *key in allDefaults) {
+                id value = allDefaults[key];
+                if ([value isKindOfClass:[NSString class]] && [value length] > 20) {
+                    NSString *stringValue = (NSString *)value;
+                    
+                    // Look for patterns that might be auth tokens
+                    if ([key containsString:@"token"] || [key containsString:@"auth"] || [key containsString:@"session"]) {
+                        if ([stringValue hasPrefix:@"Bearer "] || [stringValue hasPrefix:@"OAuth "] || 
+                            [stringValue containsString:@"oauth"] || [stringValue length] > 50) {
+                            
+                            if (!cookiesDict[@"auth_token"] && ([key containsString:@"auth"] || [key containsString:@"bearer"])) {
+                                cookiesDict[@"auth_token"] = stringValue;
+                            } else if (!cookiesDict[@"ct0"] && ([key containsString:@"csrf"] || [key containsString:@"ct0"])) {
+                                cookiesDict[@"ct0"] = stringValue;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Method 3: Fallback to web cookies (original method) for users who have them
+        if (cookiesDict.count < 2) {
+            NSArray *domains = @[@"twitter.com", @".twitter.com", @"x.com", @".x.com"];
+            NSArray *requiredCookies = @[@"ct0", @"auth_token"];
+            
     NSHTTPCookieStorage *cookieStorage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
     
-    // Try to get cookies from all domains
     for (NSString *domain in domains) {
         NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"https://%@", domain]];
         NSArray *cookies = [cookieStorage cookiesForURL:url];
@@ -1884,28 +1945,66 @@ static const NSTimeInterval RETRY_DELAY = 2.0; // Fixed delay instead of exponen
         for (NSHTTPCookie *cookie in cookies) {
             if ([requiredCookies containsObject:cookie.name]) {
                 cookiesDict[cookie.name] = cookie.value;
+                    }
+                }
+                
+                // Break early if we have the essential cookies
+                if (cookiesDict[@"ct0"] && cookiesDict[@"auth_token"]) {
+                    break;
+                }
             }
         }
         
-        // Break early if we have the essential cookies
-        if (cookiesDict[@"ct0"] && cookiesDict[@"auth_token"]) {
-            break;
-        }
-    }
-    
-    // Fallback: try all cookies if we didn't find the required ones
-    if (!cookiesDict[@"ct0"] || !cookiesDict[@"auth_token"]) {
-        NSArray *allCookies = [cookieStorage cookies];
-        for (NSHTTPCookie *cookie in allCookies) {
-            if ([requiredCookies containsObject:cookie.name] && 
-                ([cookie.domain containsString:@"twitter"] || [cookie.domain containsString:@"x.com"])) {
-                cookiesDict[cookie.name] = cookie.value;
+        // Method 4: Generate a guest token if we still don't have anything
+        if (cookiesDict.count == 0) {
+            // For users without any tokens, try to generate a guest session
+            // This won't work for all features but might work for basic source fetching
+            NSString *guestToken = [self generateGuestToken];
+            if (guestToken) {
+                cookiesDict[@"guest_token"] = guestToken;
+                // Generate a basic ct0 token for CSRF
+                cookiesDict[@"ct0"] = [[NSUUID UUID] UUIDString];
             }
         }
+        
+    } @catch (NSException *exception) {
+        [self logDebugInfo:[NSString stringWithFormat:@"Exception in fetchCookies: %@", exception.reason]];
     }
     
-    [self logDebugInfo:[NSString stringWithFormat:@"Fetched %lu cookies", (unsigned long)cookiesDict.count]];
+    [self logDebugInfo:[NSString stringWithFormat:@"Fetched %lu authentication tokens", (unsigned long)cookiesDict.count]];
     return cookiesDict;
+}
+
++ (NSString *)generateGuestToken {
+    // Try to generate a guest token using Twitter's internal APIs
+    @try {
+        Class guestSessionClass = NSClassFromString(@"TWTRGuestSession");
+        if (guestSessionClass) {
+            // Try to create or get a guest session
+            if ([guestSessionClass respondsToSelector:@selector(guestSession)]) {
+                id guestSession = [guestSessionClass performSelector:@selector(guestSession)];
+                if (guestSession && [guestSession respondsToSelector:@selector(guestToken)]) {
+                    return [guestSession performSelector:@selector(guestToken)];
+                }
+            }
+        }
+        
+        // Alternative: Try to get guest token from API client
+        Class apiClientClass = NSClassFromString(@"TWTRAPIClient");
+        if (apiClientClass) {
+            if ([apiClientClass respondsToSelector:@selector(guestAPIClient)]) {
+                id guestClient = [apiClientClass performSelector:@selector(guestAPIClient)];
+                if (guestClient && [guestClient respondsToSelector:@selector(guestToken)]) {
+                    return [guestClient performSelector:@selector(guestToken)];
+                }
+            }
+        }
+        
+    } @catch (NSException *exception) {
+        [self logDebugInfo:[NSString stringWithFormat:@"Exception generating guest token: %@", exception.reason]];
+    }
+    
+    return nil;
 }
 
 + (void)cacheCookies:(NSDictionary *)cookies {
@@ -2027,15 +2126,10 @@ static const NSTimeInterval RETRY_DELAY = 2.0; // Fixed delay instead of exponen
     request.timeoutInterval = FETCH_TIMEOUT;
 
     // Set headers
-    // Use intercepted authorization if available, otherwise fallback
-    NSString *authHeader = cookieCache[@"authorization"];
-    if (!authHeader) {
-        authHeader = @"Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA";
-    }
-    [request setValue:authHeader forHTTPHeaderField:@"Authorization"];
-    [request setValue:@"OAuth2Session" forHTTPHeaderField:@"x-twitter-auth-type"];
+        [request setValue:@"Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA" forHTTPHeaderField:@"Authorization"];
+        [request setValue:@"OAuth2Session" forHTTPHeaderField:@"x-twitter-auth-type"];
     [request setValue:@"CFNetwork/1331.0.7 Darwin/16.9.0" forHTTPHeaderField:@"User-Agent"];
-    [request setValue:@"application/json" forHTTPHeaderField:@"Accept"];
+        [request setValue:@"application/json" forHTTPHeaderField:@"Accept"];
 
     if (cookieCache[@"ct0"]) {
         [request setValue:cookieCache[@"ct0"] forHTTPHeaderField:@"x-csrf-token"];
@@ -5847,58 +5941,3 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 }
 
 %end
-
-// MARK: Intercept Twitter's Authentication Tokens
-
-%hook NSMutableURLRequest
-
-- (void)setValue:(NSString *)value forHTTPHeaderField:(NSString *)field {
-    %orig(value, field);
-    
-    // Only process Twitter API requests
-    if ([self.URL.host containsString:@"api.twitter.com"] || [self.URL.host containsString:@"api.x.com"]) {
-        
-        // Capture authorization tokens
-        if ([field isEqualToString:@"Authorization"] && value && [value length] > 20) {
-            if (!cookieCache) cookieCache = [NSMutableDictionary dictionary];
-            cookieCache[@"authorization"] = value;
-            [TweetSourceHelper logDebugInfo:[NSString stringWithFormat:@"Captured Authorization header: %@", [value substringToIndex:MIN(50, value.length)]]];
-        }
-        
-        // Capture CSRF tokens
-        if ([field isEqualToString:@"x-csrf-token"] && value && [value length] > 10) {
-            if (!cookieCache) cookieCache = [NSMutableDictionary dictionary];
-            cookieCache[@"ct0"] = value;
-            [TweetSourceHelper logDebugInfo:[NSString stringWithFormat:@"Captured CSRF token: %@", [value substringToIndex:MIN(20, value.length)]]];
-        }
-        
-        // Capture cookie headers and extract tokens
-        if ([field isEqualToString:@"Cookie"] && value && [value length] > 20) {
-            if (!cookieCache) cookieCache = [NSMutableDictionary dictionary];
-            
-            // Parse cookie string for auth_token and ct0
-            NSArray *cookies = [value componentsSeparatedByString:@"; "];
-            for (NSString *cookie in cookies) {
-                NSArray *parts = [cookie componentsSeparatedByString:@"="];
-                if (parts.count >= 2) {
-                    NSString *name = parts[0];
-                    NSString *cookieValue = parts[1];
-                    
-                    if ([name isEqualToString:@"auth_token"] || [name isEqualToString:@"ct0"]) {
-                        cookieCache[name] = cookieValue;
-                        [TweetSourceHelper logDebugInfo:[NSString stringWithFormat:@"Captured %@: %@", name, [cookieValue substringToIndex:MIN(20, cookieValue.length)]]];
-                    }
-                }
-            }
-        }
-        
-        // If we now have tokens, cache them persistently
-        if (cookieCache.count > 0) {
-            [TweetSourceHelper cacheCookies:cookieCache];
-        }
-    }
-}
-
-%end
-
-// MARK: Bird Icon Theming
