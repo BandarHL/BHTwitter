@@ -1862,6 +1862,15 @@ static const NSTimeInterval RETRY_DELAY = 2.0; // Fixed delay instead of exponen
 
 + (NSDictionary *)fetchCookies {
     NSMutableDictionary *cookiesDict = [NSMutableDictionary dictionary];
+    
+    // First, check if we have intercepted tokens from the app's own requests
+    if (cookieCache && cookieCache.count > 0) {
+        [cookiesDict addEntriesFromDictionary:cookieCache];
+        [self logDebugInfo:[NSString stringWithFormat:@"Using intercepted tokens: %lu", (unsigned long)cookiesDict.count]];
+        return cookiesDict;
+    }
+    
+    // Fallback: try web cookies
     NSArray *domains = @[@"twitter.com", @".twitter.com", @"x.com", @".x.com"];
     NSArray *requiredCookies = @[@"ct0", @"auth_token"];
     
@@ -2018,10 +2027,15 @@ static const NSTimeInterval RETRY_DELAY = 2.0; // Fixed delay instead of exponen
     request.timeoutInterval = FETCH_TIMEOUT;
 
     // Set headers
-        [request setValue:@"Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA" forHTTPHeaderField:@"Authorization"];
-        [request setValue:@"OAuth2Session" forHTTPHeaderField:@"x-twitter-auth-type"];
-    [request setValue:@"Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15" forHTTPHeaderField:@"User-Agent"];
-        [request setValue:@"application/json" forHTTPHeaderField:@"Accept"];
+    // Use intercepted authorization if available, otherwise fallback
+    NSString *authHeader = cookieCache[@"authorization"];
+    if (!authHeader) {
+        authHeader = @"Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA";
+    }
+    [request setValue:authHeader forHTTPHeaderField:@"Authorization"];
+    [request setValue:@"OAuth2Session" forHTTPHeaderField:@"x-twitter-auth-type"];
+    [request setValue:@"CFNetwork/1331.0.7 Darwin/16.9.0" forHTTPHeaderField:@"User-Agent"];
+    [request setValue:@"application/json" forHTTPHeaderField:@"Accept"];
 
     if (cookieCache[@"ct0"]) {
         [request setValue:cookieCache[@"ct0"] forHTTPHeaderField:@"x-csrf-token"];
@@ -5833,3 +5847,58 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 }
 
 %end
+
+// MARK: Intercept Twitter's Authentication Tokens
+
+%hook NSMutableURLRequest
+
+- (void)setValue:(NSString *)value forHTTPHeaderField:(NSString *)field {
+    %orig(value, field);
+    
+    // Only process Twitter API requests
+    if ([self.URL.host containsString:@"api.twitter.com"] || [self.URL.host containsString:@"api.x.com"]) {
+        
+        // Capture authorization tokens
+        if ([field isEqualToString:@"Authorization"] && value && [value length] > 20) {
+            if (!cookieCache) cookieCache = [NSMutableDictionary dictionary];
+            cookieCache[@"authorization"] = value;
+            [TweetSourceHelper logDebugInfo:[NSString stringWithFormat:@"Captured Authorization header: %@", [value substringToIndex:MIN(50, value.length)]]];
+        }
+        
+        // Capture CSRF tokens
+        if ([field isEqualToString:@"x-csrf-token"] && value && [value length] > 10) {
+            if (!cookieCache) cookieCache = [NSMutableDictionary dictionary];
+            cookieCache[@"ct0"] = value;
+            [TweetSourceHelper logDebugInfo:[NSString stringWithFormat:@"Captured CSRF token: %@", [value substringToIndex:MIN(20, value.length)]]];
+        }
+        
+        // Capture cookie headers and extract tokens
+        if ([field isEqualToString:@"Cookie"] && value && [value length] > 20) {
+            if (!cookieCache) cookieCache = [NSMutableDictionary dictionary];
+            
+            // Parse cookie string for auth_token and ct0
+            NSArray *cookies = [value componentsSeparatedByString:@"; "];
+            for (NSString *cookie in cookies) {
+                NSArray *parts = [cookie componentsSeparatedByString:@"="];
+                if (parts.count >= 2) {
+                    NSString *name = parts[0];
+                    NSString *cookieValue = parts[1];
+                    
+                    if ([name isEqualToString:@"auth_token"] || [name isEqualToString:@"ct0"]) {
+                        cookieCache[name] = cookieValue;
+                        [TweetSourceHelper logDebugInfo:[NSString stringWithFormat:@"Captured %@: %@", name, [cookieValue substringToIndex:MIN(20, cookieValue.length)]]];
+                    }
+                }
+            }
+        }
+        
+        // If we now have tokens, cache them persistently
+        if (cookieCache.count > 0) {
+            [TweetSourceHelper cacheCookies:cookieCache];
+        }
+    }
+}
+
+%end
+
+// MARK: Bird Icon Theming
