@@ -1395,7 +1395,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     return [BHTManager autoHighestLoad] ? true : %orig;
 }
 
-// --- Start of new hooks for bookmark folders ---
 - (_Bool)isSubscribedToAnyPremiumTier {
     return true;
 }
@@ -1407,9 +1406,19 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (_Bool)isVerifiedPremiumTierUser {
     return true;
 }
-- (_Bool)_isVITModeEnabled {
+
+- (_Bool)hasGraduatedAccess {
     return true;
 }
+
+- (NSUInteger)identityType {
+    return 1;
+}
+
+- (NSUInteger)userType {
+    return 1;
+}
+
 %end
 
 // MARK: Tweet confirm
