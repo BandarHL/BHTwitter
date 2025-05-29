@@ -149,8 +149,8 @@
 "AUTO_HIGHEST_LOAD_OPTION_TITLE" = "High-quality media";
 "AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE" = "Upload and view media in the best quality available.";
 
-"DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "No video captions";
-"DISABLE_VIDEO_LAYER_CAPTION_DETAIL_TITLE" = "Removes the captions from videos."
+"VIDEO_LAYER_CAPTION_TITLE" = "No video captions";
+"VIDEO_LAYER_CAPTION_DETAIL_TITLE" = "Removes the captions from videos.";
 
 "FORCE_TWEET_FULL_FRAME_TITLE" = "Large images";
 
