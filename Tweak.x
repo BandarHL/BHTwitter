@@ -1424,6 +1424,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         return %orig;
     }
 }
+- (_Bool)isFontSettingsActive {
+    return true;
+}
 %end
 
 // MARK: Follow confirm
@@ -6199,11 +6202,5 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 %hook T1SubscriptionJourneyManager
 - (_Bool)shouldShowReplyBoostUpsellWithAccount {
         return false;
-}
-%end
-
-%hook TFSAccountFeatureSwitches
-- (_Bool)usePlayerViewLayoutV2 {
-    return false;
 }
 %end
