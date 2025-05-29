@@ -597,7 +597,6 @@ static UIViewController * _Nonnull topMostController() {
 - (UIViewController *)_viewControllerForAncestor;
 - (BOOL)shouldThemeIcon;
 - (void)updateLogoTheme;
-- (void)findAndThemeTwitterBirdInView:(UIView *)view shouldTheme:(BOOL)shouldTheme;
 @end
 
 @interface TFSTimelineViewController : UIViewController
@@ -641,6 +640,7 @@ static UIViewController * _Nonnull topMostController() {
 + (void)pruneSourceCachesIfNeeded;
 + (void)logDebugInfo:(NSString *)message;
 + (void)initializeCookiesWithRetry;
++ (void)retryFetchCookies;
 + (void)updateFooterTextViewsForTweetID:(NSString *)tweetID;
 @end
 
