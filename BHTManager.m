@@ -314,7 +314,7 @@
 }
 
 + (void)clearSourceLabelCache {
-    NSLog(@"BHTManager: Posting BHTClearSourceLabelCacheNotification");
+    // Post notification to trigger cache clearing in Tweak.x
     [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTClearSourceLabelCacheNotification" object:nil];
 }
 
@@ -330,7 +330,7 @@
 
 + (NSString *)translateAPIKey {
     NSString *apiKey = [[NSUserDefaults standardUserDefaults] stringForKey:@"translate_api_key"];
-    return apiKey ?: @"AIzaSyB-bQ6f2dEzlN_mMOljHazxbJEH1BsS6cQ";
+    return apiKey;
 }
 
 + (NSString *)translateModel {
@@ -359,6 +359,18 @@
     BOOL containsNonDigitsOnly = [string rangeOfCharacterFromSet:digits].location == NSNotFound;
 
     return containsNonDigitsOnly;
+}
+
++ (BOOL)dmComposeBarV2 {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"dm_compose_bar_v2_enabled"];
+}
+
++ (BOOL)replySorting {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"reply_sorting_enabled"];
+}
+
++ (BOOL)dmVoiceCreation {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"dm_voice_creation_enabled"];
 }
 
 @end

@@ -1257,14 +1257,22 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     }
     
     if ([key isEqualToString:@"dm_compose_bar_v2_enabled"]) {
-        return false;
+        return ![BHTManager dmComposeBarV2];
     }
 
     if ([key isEqualToString:@"reply_sorting_enabled"]) {
-        return false;
+        return ![BHTManager replySorting];
     }
 
     if ([key isEqualToString:@"dm_voice_creation_enabled"]) {
+        return ![BHTManager dmVoiceCreation];
+    }
+
+    if ([key isEqualToString:@"ios_tweet_detail_overflow_in_navigation_enabled"]) {
+        return false;
+    }
+
+    if ([key isEqualToString:@"ios_tweet_detail_conversation_context_removal_enabled"]) {
         return false;
     }
     return %orig;
@@ -1423,6 +1431,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     } else {
         return %orig;
     }
+}
+- (_Bool)_t1_shouldShowLiveBroadcastButton {
+    return false;
 }
 %end
 
@@ -4811,7 +4822,7 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 
 %end
 
-// MARK: - Gemini AI Translation Integration
+// MARK: - AI Translation Integration
 
 // Helper class to communicate with Gemini AI API
 @interface GeminiTranslator : NSObject
@@ -4943,24 +4954,13 @@ static char kTranslateButtonKey;
         
         // If button doesn't exist, create it
         UIButton *translateButton = [UIButton buttonWithType:UIButtonTypeSystem];
+        // Use a proper translation SF symbol
+        [translateButton setImage:[UIImage systemImageNamed:@"text.bubble.fill"] forState:UIControlStateNormal];
+        
         if (@available(iOS 13.0, *)) {
-            // Use a proper translation SF symbol
-            [translateButton setImage:[UIImage systemImageNamed:@"text.bubble.fill"] forState:UIControlStateNormal];
-            
-            // Set proper tint color based on appearance
-            if (@available(iOS 12.0, *)) {
-                if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
-                    translateButton.tintColor = [UIColor whiteColor];
-                } else {
-                    translateButton.tintColor = [UIColor blackColor];
-                }
-                
-                // Add trait collection observer for dark/light mode changes
-                [translateButton addObserver:self forKeyPath:@"traitCollection" options:NSKeyValueObservingOptionNew context:NULL];
-            }
-        } else {
-            [translateButton setTitle:@"Translate" forState:UIControlStateNormal]; // Fallback for older iOS
-        }
+            translateButton.tintColor = [UIColor labelColor];
+        } 
+
         [translateButton addTarget:self action:@selector(BHT_translateCurrentTweetAction:) forControlEvents:UIControlEventTouchUpInside];
         translateButton.tag = 12345; // Unique tag
         
@@ -4971,10 +4971,10 @@ static char kTranslateButtonKey;
         // Store button reference in associated object
         objc_setAssociatedObject(self, &kTranslateButtonKey, translateButton, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         
-        // Place the button on the right with a moderate offset to avoid collisions
+        // Place the button on the right with standard padding
         NSArray *constraints = @[
             [translateButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
-            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-55], // Move slightly more to the right
+            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16], // Standard right margin
             [translateButton.widthAnchor constraintEqualToConstant:44],
             [translateButton.heightAnchor constraintEqualToConstant:44]
         ];
@@ -5014,34 +5014,33 @@ static char kTranslateButtonKey;
     }
 }
 
-// Handle dark/light mode changes
-%new
-- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
-    if ([keyPath isEqualToString:@"traitCollection"] && [object isKindOfClass:[UIButton class]]) {
-        UIButton *button = (UIButton *)object;
-        if (@available(iOS 12.0, *)) {
-            if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
-                button.tintColor = [UIColor whiteColor];
-            } else {
-                button.tintColor = [UIColor blackColor];
-            }
-        }
-    }
-}
+// KVO and dealloc are removed as they are no longer needed without the traitCollection observer.
+// %new
+// - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
+//    if ([keyPath isEqualToString:@"traitCollection"] && [object isKindOfClass:[UIButton class]]) {
+//        UIButton *button = (UIButton *)object;
+//        if (@available(iOS 12.0, *)) {
+//            if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
+//                button.tintColor = [UIColor whiteColor];
+//            } else {
+//                button.tintColor = [UIColor blackColor];
+//            }
+//        }
+//    }
+// }
 
-// Handle deallocation to clean up KVO
-%new
-- (void)dealloc {
-    UIButton *translateButton = objc_getAssociatedObject(self, &kTranslateButtonKey);
-    if (translateButton) {
-        @try {
-            [translateButton removeObserver:self forKeyPath:@"traitCollection"];
-        } @catch (NSException *exception) {
-            // Observer might not have been added
-        }
-    }
+// %new
+// - (void)dealloc {
+//    UIButton *translateButton = objc_getAssociatedObject(self, &kTranslateButtonKey);
+//    if (translateButton) {
+//        @try {
+//            [translateButton removeObserver:self forKeyPath:@"traitCollection"];
+//        } @catch (NSException *exception) {
+//            // Observer might not have been added
+//        }
+//    }
     // No %orig here because this is a new method, not an override
-}
+// }
 
 %new - (void)BHT_translateCurrentTweetAction:(UIButton *)sender {
     UIViewController *targetController = nil;
@@ -5502,47 +5501,6 @@ static char kTranslatedTextKey;
 
 %end
 
-// Hook to remove Twitter's default translate button
-%hook T1StandardStatusTranslateView
-
-- (instancetype)initWithFrame:(CGRect)frame {
-    if ([BHTManager enableTranslate]) {
-        // Return instance with zero frame to take up no space
-        return %orig(CGRectZero);
-    }
-    return %orig(frame);
-}
-
-- (void)setFrame:(CGRect)frame {
-    if ([BHTManager enableTranslate]) {
-        // Always set frame to zero to take up no space
-        %orig(CGRectZero);
-    } else {
-        %orig(frame);
-    }
-}
-
-- (void)layoutSubviews {
-    if ([BHTManager enableTranslate]) {
-        // Set frame to zero and remove from superview
-        self.frame = CGRectZero;
-        [self removeFromSuperview];
-        return;
-    }
-    %orig;
-}
-
-- (void)didMoveToSuperview {
-    %orig;
-    if ([BHTManager enableTranslate] && self.superview) {
-        // Remove from superview immediately when added
-        self.frame = CGRectZero;
-        [self removeFromSuperview];
-    }
-}
-
-%end
-
 // Hook TFNComposableViewAdapterSet to filter out translate adapters
 %hook TFNComposableViewAdapterSet
 
@@ -5658,7 +5616,7 @@ static GeminiTranslator *_sharedInstance;
         NSDictionary *payload = @{
             @"contents": @[content],
             @"generationConfig": @{
-                @"temperature": @0.2,
+                @"temperature": @0.5,
                 @"topP": @0.8,
                 @"topK": @40
             }
@@ -6193,5 +6151,11 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
     CGFloat upwardOffset = 5.0;
     frame.origin.y -= upwardOffset;
     return %orig(frame);
+}
+%end
+
+%hook T1SubscriptionJourneyManager
+- (_Bool)shouldShowReplyBoostUpsellWithAccount {
+        return false;
 }
 %end

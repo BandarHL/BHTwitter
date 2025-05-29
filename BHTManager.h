@@ -62,7 +62,6 @@
 + (BOOL)disableArticles;
 + (BOOL)disableHighlights;
 
-// New feature toggles
 + (BOOL)hideGrokAnalyze;
 + (BOOL)hideFollowButton;
 + (BOOL)restoreFollowButton;
@@ -80,6 +79,10 @@
 + (NSString *)translateEndpoint;
 + (NSString *)translateAPIKey;
 + (NSString *)translateModel;
+
++ (BOOL)dmComposeBarV2;
++ (BOOL)replySorting;
++ (BOOL)dmVoiceCreation;
 
 + (void)clearSourceLabelCache;
 
