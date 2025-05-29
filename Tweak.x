@@ -6206,4 +6206,32 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 - (_Bool)isBookmarkFoldersEnabled {
         return true;
 }
+
+// Add the initialization hook to properly set up the bookmark folder configuration
+- (id)initWithAccount:(id)arg1 {
+    // Call the original initialization with the account
+    id originalInstance = %orig;
+    
+    // If initialization fails, return nil as we can't directly initialize
+    if (!originalInstance) {
+        return nil;
+    }
+    
+    // Make sure the account property is set
+    if ([originalInstance respondsToSelector:@selector(setAccount:)]) {
+        [originalInstance setValue:arg1 forKey:@"account"];
+    }
+    
+    // Initialize migration helper if needed
+    if ([originalInstance respondsToSelector:@selector(migrationHelper)] && ![originalInstance valueForKey:@"migrationHelper"]) {
+        // Look for the migration helper class
+        Class migrationHelperClass = NSClassFromString(@"T1BookmarkFolderMigrationHelper");
+        if (migrationHelperClass) {
+            id migrationHelper = [[migrationHelperClass alloc] init];
+            [originalInstance setValue:migrationHelper forKey:@"migrationHelper"];
+        }
+    }
+    
+    return originalInstance;
+}
 %end
