@@ -1394,6 +1394,21 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (_Bool)isDoubleMaxZoomFor4KImagesEnabled {
     return [BHTManager autoHighestLoad] ? true : %orig;
 }
+
+// --- Start of new hooks for bookmark folders ---
+- (_Bool)isSubscribedToAnyPremiumTier {
+    return YES;
+}
+
+- (_Bool)isPremiumTierUser {
+    return YES;
+}
+
+- (_Bool)isVerifiedPremiumTierUser {
+    return YES;
+}
+// --- End of new hooks for bookmark folders ---
+
 %end
 
 // MARK: Tweet confirm
@@ -6205,75 +6220,5 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 %hook T1BookmarkFolderConfig
 - (_Bool)isBookmarkFoldersEnabled {
         return true;
-}
-
-// Add the initialization hook to properly set up the bookmark folder configuration
-- (id)initWithAccount:(id)arg1 {
-    // Call the original initialization with the account
-    id originalInstance = %orig;
-    
-    // If initialization fails, return nil as we can't directly initialize
-    if (!originalInstance) {
-        return nil;
-    }
-    
-    // Make sure the account property is set
-    if ([originalInstance respondsToSelector:@selector(setAccount:)]) {
-        [originalInstance setValue:arg1 forKey:@"account"];
-    }
-    
-    // Initialize migration helper if needed
-    if ([originalInstance respondsToSelector:@selector(migrationHelper)] && ![originalInstance valueForKey:@"migrationHelper"]) {
-        // Look for the migration helper class
-        Class migrationHelperClass = NSClassFromString(@"T1BookmarkFolderMigrationHelper");
-        if (migrationHelperClass) {
-            id migrationHelper = [[migrationHelperClass alloc] init];
-            [originalInstance setValue:migrationHelper forKey:@"migrationHelper"];
-        }
-    }
-    
-    return originalInstance;
-}
-%end
-
-// Add a hook for T1BookmarksManager to ensure account is properly set
-%hook T1BookmarksManager
-
-// Override init to ensure it sets an account
-- (id)init {
-    // Call original init
-    id instance = %orig;
-    
-    // Check if account is already set
-    if (instance && ![instance valueForKey:@"account"]) {
-        // Try to get current account from shared instance or another source
-        id accountManager = [objc_getClass("TFNTwitterAccountsManager") sharedInstance];
-        id account = nil;
-        
-        if ([accountManager respondsToSelector:@selector(activeAccount)]) {
-            account = [accountManager performSelector:@selector(activeAccount)];
-        } else if ([accountManager respondsToSelector:@selector(currentAccount)]) {
-            account = [accountManager performSelector:@selector(currentAccount)];
-        }
-        
-        // Set account if found
-        if (account) {
-            [instance setValue:account forKey:@"account"];
-        }
-    }
-    
-    return instance;
-}
-
-// Ensure initWithAccount also sets the account properly
-- (id)initWithAccount:(id)arg1 {
-    id instance = %orig;
-    
-    // Double check that account is set
-    if (instance && ![instance valueForKey:@"account"] && arg1) {
-        [instance setValue:arg1 forKey:@"account"];
-    }
-    
-    return instance;
 }
 %end
