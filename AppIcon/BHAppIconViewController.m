@@ -102,43 +102,86 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
                      isPrimaryIcon:NO]];
     }];
 
-    NSArray<NSString*> *allCats = @[@"Icons", @"Seasonal Icons", @"Holidays", @"Sports", @"Pride", @"Other"];
+    NSArray<NSString*> *allCats = @[@"Icons", @"Seasonal", @"Holidays", @"Sports", @"Events", @"Pride", @"Legacy", @"Other"];
     NSMutableDictionary *buckets = [NSMutableDictionary new];
     for (NSString *c in allCats) buckets[c] = [NSMutableArray new];
 
     NSSet *seasonKeys = [NSSet setWithArray:@[@"Autumn",@"Summer",@"Winter",@"Spring",@"Fall"]];
-    NSSet *holidayKeys = [NSSet setWithArray:@[@"BlackHistory",@"Holi",@"EarthHour",@"WomansDay",@"LunarNewYear",@"StPatricksDay",@"Christmas",@"NewYears",@"Halloween",@"Thanksgiving",@"ValentinesDay",@"Ramadan",@"Easter",@"Eid",@"Anzac",@"Diwali",@"MayTheFouth",@"MothersDay"]];
+    NSSet *holidayKeys = [NSSet setWithArray:@[@"BlackHistory",@"Holi",@"EarthHour",@"WomansDay",@"LunarNewYear",@"StPatricksDay",@"Christmas",@"NewYears",@"Halloween",@"Thanksgiving",@"ValentinesDay",@"Ramadan",@"Easter",@"Eid",@"Anzac",@"Diwali",@"MayTheFourth",@"MothersDay"]];
     NSSet *sportKeys = [NSSet setWithArray:@[@"BeijingOlympics",@"FormulaOne",@"Daytona",@"Nba",@"Ncaa",@"Masters",@"Nfl",@"Nhl",@"UefaChampionsLeague",@"WorldCup",@"Wimbledon",@"WorldSeries",@"SuperBowl",@"Olympics",@"KentuckyDerby",@"Rugby",@"Cricket",@"Tennis",@"Golf",@"Baseball",@"Football",@"Soccer",@"Basketball",@"Hockey",@"Mlb"]];
+    NSSet *eventsKeys = [NSSet setWithArray:@[@"Eurovision"]];
+    NSSet *prideKeys = [NSSet setWithArray:@[@"Pride",@"LGBTQ",@"Rainbow",@"Gay"]];
+    NSSet *legacyKeys = [NSSet setWithArray:@[@"Legacy",@"Old",@"Classic",@"Retro",@"Vintage"]];
 
-    for (BHAppIconItem *item in flat) {
-      if (item.isPrimaryIcon || [item.bundleIconName hasPrefix:@"Custom-Icon"]) {
-        [buckets[@"Icons"] addObject:item]; continue;
-      }
-      BOOL placed = NO;
-      for (NSString *k in seasonKeys) {
-        if ([item.bundleIconName containsString:k]) {
-          [buckets[@"Seasonal Icons"] addObject:item]; placed = YES; break;
-        }
-      }
-      if (placed) continue;
-      for (NSString *k in holidayKeys) {
-        if ([item.bundleIconName containsString:k]) {
-          [buckets[@"Holidays"] addObject:item]; placed = YES; break;
-        }
-      }
-      if (placed) continue;
-      for (NSString *k in sportKeys) {
-        if ([item.bundleIconName containsString:k]) {
-          [buckets[@"Sports"] addObject:item]; placed = YES; break;
-        }
-      }
-      if (placed) continue;
-      if ([item.bundleIconName containsString:@"Pride"]) {
-        [buckets[@"Pride"] addObject:item];
-      } else {
-        [buckets[@"Other"] addObject:item];
-      }
+ for (BHAppIconItem *item in flat) {
+    if (item.isPrimaryIcon || [item.bundleIconName hasPrefix:@"Custom-Icon"]) {
+        [buckets[@"Icons"] addObject:item];
+        continue;
     }
+
+    if ([item.bundleIconName hasPrefix:@"Legacy-Icon"]) {
+        [buckets[@"Legacy"] addObject:item];
+        continue;
+    }
+
+    BOOL placed = NO;
+
+    for (NSString *k in seasonKeys) {
+        if ([item.bundleIconName containsString:k]) {
+            [buckets[@"Seasonal"] addObject:item];
+            placed = YES;
+            break;
+        }
+    }
+    if (placed) continue;
+
+    for (NSString *k in holidayKeys) {
+        if ([item.bundleIconName containsString:k]) {
+            [buckets[@"Holidays"] addObject:item];
+            placed = YES;
+            break;
+        }
+    }
+    if (placed) continue;
+
+    for (NSString *k in sportKeys) {
+        if ([item.bundleIconName containsString:k]) {
+            [buckets[@"Sports"] addObject:item];
+            placed = YES;
+            break;
+        }
+    }
+    if (placed) continue;
+
+    for (NSString *k in eventsKeys) {
+        if ([item.bundleIconName containsString:k]) {
+            [buckets[@"Events"] addObject:item];
+            placed = YES;
+            break;
+        }
+    }
+    if (placed) continue;
+
+    for (NSString *k in prideKeys) {
+        if ([item.bundleIconName containsString:k]) {
+            [buckets[@"Pride"] addObject:item];
+            placed = YES;
+            break;
+        }
+    }
+    if (placed) continue;
+
+    for (NSString *k in legacyKeys) {
+        if ([item.bundleIconName containsString:k]) {
+            [buckets[@"Legacy"] addObject:item];
+            placed = YES;
+            break;
+        }
+    }
+    if (placed) continue;
+
+    [buckets[@"Other"] addObject:item];
+}
 
     NSMutableArray<NSString*> *titles   = [NSMutableArray new];
     NSMutableArray<NSArray*>   *sections = [NSMutableArray new];
@@ -250,7 +293,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
     NSString *cat = self.sectionTitles[ip.section];
     NSString *titleKey, *detailKey;
-    if ([cat isEqualToString:@"Seasonal Icons"]) {
+    if ([cat isEqualToString:@"Seasonal"]) {
       titleKey  = @"APP_ICON_SEASONS_HEADER_TITLE";
       detailKey = @"APP_ICON_SEASONS_HEADER_DETAIL";
     } else if ([cat isEqualToString:@"Holidays"]) {
@@ -259,9 +302,15 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     } else if ([cat isEqualToString:@"Sports"]) {
       titleKey  = @"APP_ICON_SPORTS_HEADER_TITLE";
       detailKey = @"APP_ICON_SPORTS_HEADER_DETAIL";
+    } else if ([cat isEqualToString:@"Events"]) {
+      titleKey  = @"APP_ICON_EVENTS_HEADER_TITLE";
+      detailKey = @"APP_ICON_EVENTS_HEADER_DETAIL";
     } else if ([cat isEqualToString:@"Pride"]) {
       titleKey  = @"APP_ICON_PRIDE_HEADER_TITLE";
       detailKey = @"APP_ICON_PRIDE_HEADER_DETAIL";
+    } else if ([cat isEqualToString:@"Legacy"]) {
+      titleKey  = @"APP_ICON_LEGACY_HEADER_TITLE";
+      detailKey = @"APP_ICON_LEGACY_HEADER_DETAIL";
     } else if ([cat isEqualToString:@"Other"]) {
       titleKey  = @"APP_ICON_OTHER_HEADER_TITLE";
       detailKey = nil;
@@ -308,10 +357,12 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         return CGSizeMake(cv.bounds.size.width, 60);
     }
     NSString *cat = self.sectionTitles[section];
-    BOOL hasDetail = [cat isEqualToString:@"Seasonal Icons"] ||
-                     [cat isEqualToString:@"Holidays"]       ||
-                     [cat isEqualToString:@"Sports"]         ||
-                     [cat isEqualToString:@"Pride"];
+BOOL hasDetail = [cat isEqualToString:@"Seasonal"]       ||
+                 [cat isEqualToString:@"Holidays"]       ||
+                 [cat isEqualToString:@"Sports"]         ||
+                 [cat isEqualToString:@"Events"]         ||
+                 [cat isEqualToString:@"Pride"]          ||
+                 [cat isEqualToString:@"Legacy"];
     return CGSizeMake(cv.bounds.size.width, hasDetail ? 60 : 30);
 }
 
