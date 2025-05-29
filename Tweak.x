@@ -3365,25 +3365,47 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
 
 // --- Initialisation ---
 
-// MARK: Bird Icon Theming - Dirty hax for making the Nav Bird Icon themeable.
+// MARK: Bird Icon Theming - Safer implementation to avoid crashes
+
+static BOOL isProcessingBirdIcon = NO; // Prevent recursion
 
 %hook UIImageView
 
 - (void)setImage:(UIImage *)image {
+    // Always call original first
     %orig(image);
     
-    if (!image) return;
+    // Safety checks to prevent crashes
+    if (!image || isProcessingBirdIcon || ![NSThread isMainThread]) {
+        return;
+    }
     
-    // Check if this is the Twitter bird icon by examining the image's dynamic color name
-    if ([image respondsToSelector:@selector(tfn_dynamicColorImageName)]) {
-        NSString *imageName = [image performSelector:@selector(tfn_dynamicColorImageName)];
-        if ([imageName isEqualToString:@"twitter"]) {
-            if (image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
-                UIImage *templateImage = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-                self.image = templateImage;
-                self.tintColor = BHTCurrentAccentColor();
+    @try {
+        // Check if this is the Twitter bird icon by examining the image's dynamic color name
+        if ([image respondsToSelector:@selector(tfn_dynamicColorImageName)]) {
+            NSString *imageName = [image performSelector:@selector(tfn_dynamicColorImageName)];
+            if ([imageName isKindOfClass:[NSString class]] && [imageName isEqualToString:@"twitter"]) {
+                if (image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
+                    // Set flag to prevent recursion
+                    isProcessingBirdIcon = YES;
+                    
+                    UIImage *templateImage = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+                    
+                    // Use dispatch_async to avoid recursive setImage: calls
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        if (self.superview) { // Make sure view is still valid
+                            self.image = templateImage;
+                            self.tintColor = BHTCurrentAccentColor();
+                        }
+                        isProcessingBirdIcon = NO;
+                    });
+                }
             }
         }
+    } @catch (NSException *exception) {
+        // Reset flag and log error if needed
+        isProcessingBirdIcon = NO;
+        // Silently handle exceptions to prevent crashes
     }
 }
 
