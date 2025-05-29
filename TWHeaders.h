@@ -640,7 +640,6 @@ static UIViewController * _Nonnull topMostController() {
 + (void)pruneSourceCachesIfNeeded;
 + (void)logDebugInfo:(NSString *)message;
 + (void)initializeCookiesWithRetry;
-+ (void)retryFetchCookies;
 + (void)updateFooterTextViewsForTweetID:(NSString *)tweetID;
 @end
 

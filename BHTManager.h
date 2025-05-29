@@ -86,5 +86,7 @@
 
 + (void)clearSourceLabelCache;
 
++ (BOOL)restoreReplyContext;
+
 @end
 
