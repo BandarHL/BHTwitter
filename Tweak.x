@@ -1394,31 +1394,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (_Bool)isDoubleMaxZoomFor4KImagesEnabled {
     return [BHTManager autoHighestLoad] ? true : %orig;
 }
-
-- (_Bool)isSubscribedToAnyPremiumTier {
-    return true;
-}
-
-- (_Bool)isPremiumTierUser {
-    return true;
-}
-
-- (_Bool)isVerifiedPremiumTierUser {
-    return true;
-}
-
-- (_Bool)hasGraduatedAccess {
-    return true;
-}
-
-- (NSUInteger)identityType {
-    return 1;
-}
-
-- (NSUInteger)userType {
-    return 1;
-}
-
 %end
 
 // MARK: Tweet confirm
@@ -6227,8 +6202,8 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 }
 %end
 
-%hook T1BookmarkFolderConfig
-- (_Bool)isBookmarkFoldersEnabled {
-        return true;
+%hook TFSAccountFeatureSwitches
+- (_Bool)usePlayerViewLayoutV2 {
+    return false;
 }
 %end
