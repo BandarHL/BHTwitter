@@ -10,6 +10,7 @@
 "RESTART_REQUIRED_ALERT_TITLE" = "Restart required";
 "RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC" = "You need to restart Twitter for this change to take effect.";
 "RESTART_REQUIRED_ALERT_MESSAGE_SQUARE_AVATARS" = "You need to restart Twitter for square profile pictures to take effect.";
+"RESTART_REQUIRED_ALERT_MESSAGE_GENERIC" = "You need to restart Twitter for this change to take effect.";
 "RESTART_NOW_BUTTON_TITLE" = "Restart";
 
 "CONFIRM_ALERT_MESSAGE" = "Sure you meant to do that?";
@@ -149,8 +150,7 @@
 "AUTO_HIGHEST_LOAD_OPTION_TITLE" = "High-quality media";
 "AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE" = "Upload and view media in the best quality available.";
 
-"VIDEO_LAYER_CAPTION_TITLE" = "No video captions";
-"VIDEO_LAYER_CAPTION_DETAIL_TITLE" = "Removes the captions from videos.";
+"DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "No video captions";
 
 "FORCE_TWEET_FULL_FRAME_TITLE" = "Large images";
 
