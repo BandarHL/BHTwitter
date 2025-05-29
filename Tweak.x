@@ -6201,3 +6201,9 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
         return false;
 }
 %end
+
+%hook T1BookmarkFolderConfig
+- (_Bool)isBookmarkFoldersEnabled {
+        return true;
+}
+%end
