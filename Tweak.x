@@ -997,39 +997,60 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)updateLogoTheme {
     BOOL shouldTheme = [self shouldThemeIcon];
     
-    // Only look at DIRECT subviews of the navigation bar to avoid false positives
-    for (UIView *directSubview in self.subviews) {
-        if ([directSubview isKindOfClass:[UIImageView class]]) {
-            UIImageView *imageView = (UIImageView *)directSubview;
+    // Recursively search through the navigation bar's view hierarchy
+    // The Twitter bird icon is inside a _UITAMICAdapterView, not a direct subview
+    [self findAndThemeTwitterBirdInView:self shouldTheme:shouldTheme];
+}
+
+%new
+- (void)findAndThemeTwitterBirdInView:(UIView *)view shouldTheme:(BOOL)shouldTheme {
+    // Check if current view is an UIImageView that could be the Twitter bird
+    if ([view isKindOfClass:[UIImageView class]]) {
+        UIImageView *imageView = (UIImageView *)view;
+        
+        // More specific checks for Twitter bird logo
+        CGFloat width = imageView.frame.size.width;
+        CGFloat height = imageView.frame.size.height;
+        
+        // Twitter logo is EXACTLY 29x29 with minimal tolerance
+        BOOL isExactTwitterLogoSize = fabs(width - 29.0) < 1.5 && fabs(height - 29.0) < 1.5 && fabs(width - height) < 1.0;
+        
+        // Additional validation: check if the image itself looks like the Twitter bird
+        BOOL hasValidImage = imageView.image != nil;
+        
+        // Check if we're in the right view hierarchy (_UITAMICAdapterView)
+        UIView *parentView = imageView.superview;
+        BOOL isInAdapterView = NO;
+        while (parentView && parentView != self) {
+            if ([NSStringFromClass([parentView class]) containsString:@"_UITAMICAdapterView"]) {
+                isInAdapterView = YES;
+                break;
+            }
+            parentView = parentView.superview;
+        }
+        
+        // Only proceed if this is definitely the Twitter logo
+        if (isExactTwitterLogoSize && hasValidImage && isInAdapterView && shouldTheme && [BHTManager classicTabBarEnabled]) {
+            // Verify this is actually in the center area of the nav bar (where the logo should be)
+            CGFloat navBarWidth = self.frame.size.width;
+            CGPoint imageViewCenterInNavBar = [self convertPoint:imageView.center fromView:imageView.superview];
+            BOOL isCentered = fabs(imageViewCenterInNavBar.x - navBarWidth/2.0) < navBarWidth * 0.3; // Within 30% of center
             
-            // More specific checks for Twitter bird logo
-            CGFloat width = imageView.frame.size.width;
-            CGFloat height = imageView.frame.size.height;
-            
-            // Twitter logo is EXACTLY 29x29 with minimal tolerance AND must be a direct child of nav bar
-            BOOL isExactTwitterLogoSize = fabs(width - 29.0) < 1.5 && fabs(height - 29.0) < 1.5 && fabs(width - height) < 1.0;
-            
-            // Additional validation: check if the image itself looks like the Twitter bird
-            BOOL hasValidImage = imageView.image != nil;
-            
-            // Only proceed if this is definitely the Twitter logo
-            if (isExactTwitterLogoSize && hasValidImage && shouldTheme && [BHTManager classicTabBarEnabled]) {
-                // Verify this is actually in the center area of the nav bar (where the logo should be)
-                CGFloat navBarWidth = self.frame.size.width;
-                CGFloat imageViewCenterX = imageView.center.x;
-                BOOL isCentered = fabs(imageViewCenterX - navBarWidth/2.0) < navBarWidth * 0.3; // Within 30% of center
-                
-                if (isCentered) {
-                    UIImage *originalImage = imageView.image;
-                    if (originalImage && originalImage.renderingMode != UIImageRenderingModeAlwaysTemplate) {
-                        // Apply theming only to confirmed Twitter bird logo
-                        UIImage *templateImage = [originalImage imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-                        imageView.image = templateImage;
-                        imageView.tintColor = BHTCurrentAccentColor();
-                    }
+            if (isCentered) {
+                UIImage *originalImage = imageView.image;
+                if (originalImage && originalImage.renderingMode != UIImageRenderingModeAlwaysTemplate) {
+                    // Apply theming only to confirmed Twitter bird logo
+                    UIImage *templateImage = [originalImage imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+                    imageView.image = templateImage;
+                    imageView.tintColor = BHTCurrentAccentColor();
                 }
             }
         }
+    }
+    
+    // Recursively search through all subviews
+    for (UIView *subview in view.subviews) {
+        [self findAndThemeTwitterBirdInView:subview shouldTheme:shouldTheme];
     }
 }
 
@@ -1847,9 +1868,6 @@ static const NSTimeInterval RETRY_DELAY = 2.0; // Fixed delay instead of exponen
     // Method 1: Try to extract from app's internal session
     @try {
         // Look for Twitter's session management classes
-        Class sessionClass = NSClassFromString(@"TWTRSession");
-        Class authSessionClass = NSClassFromString(@"TWTRAuthSession");
-        Class guestSessionClass = NSClassFromString(@"TWTRGuestSession");
         Class sessionStoreClass = NSClassFromString(@"TWTRSessionStore");
         
         // Try to get the current session from the session store
