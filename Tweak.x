@@ -1397,18 +1397,19 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 // --- Start of new hooks for bookmark folders ---
 - (_Bool)isSubscribedToAnyPremiumTier {
-    return YES;
+    return true;
 }
 
 - (_Bool)isPremiumTierUser {
-    return YES;
+    return true;
 }
 
 - (_Bool)isVerifiedPremiumTierUser {
-    return YES;
+    return true;
 }
-// --- End of new hooks for bookmark folders ---
-
+- (_Bool)_isVITModeEnabled {
+    return true;
+}
 %end
 
 // MARK: Tweet confirm
