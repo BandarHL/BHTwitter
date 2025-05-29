@@ -1432,9 +1432,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         return %orig;
     }
 }
-- (_Bool)_t1_shouldShowLiveBroadcastButton {
-    return false;
-}
 %end
 
 // MARK: Follow confirm
