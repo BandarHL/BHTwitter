@@ -156,7 +156,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 [NSLayoutConstraint activateConstraints:@[
     [detail.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16],
     [detail.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-16],
-    [detail.topAnchor constraintEqualToAnchor:header.topAnchor constant:-12],
+    [detail.topAnchor constraintEqualToAnchor:header.topAnchor constant: 0],
     [detail.bottomAnchor constraintEqualToAnchor:header.bottomAnchor constant:-8]
 ]];
 
@@ -171,12 +171,12 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     UIView *headerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 52)];
     
     // Top separator - modified to extend full width
-if (section != 1) {
+// if (section != 1) {
     UIView *topSeparator = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 0.5)];
     topSeparator.backgroundColor = [UIColor separatorColor];
     topSeparator.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     [headerView addSubview:topSeparator];
-}
+//}
     
     // Header label
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(16, 16, tableView.frame.size.width - 32, 28)];
@@ -189,7 +189,7 @@ if (section != 1) {
 }
 - (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
     if (section == 0) {
-        return 52; // or whatever height you prefer
+        return 42; // or whatever height you prefer
     }
     return 52; // or your default
 }
