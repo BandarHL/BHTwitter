@@ -3382,14 +3382,25 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
         UIView *superview = self.superview;
         BOOL isInNavigationContext = NO;
         
-        // Check if we're in a navigation bar by walking up the view hierarchy
+        // Check if we're in a navigation bar by walking up the view hierarchy with proper type checking
         while (superview && !isInNavigationContext) {
+            // Ensure we're still dealing with a UIView object
+            if (![superview isKindOfClass:[UIView class]]) {
+                break;
+            }
+            
             if ([superview isKindOfClass:[UINavigationBar class]] || 
                 [NSStringFromClass([superview class]) containsString:@"Navigation"]) {
                 isInNavigationContext = YES;
                 break;
             }
-            superview = superview.superview;
+            
+            // Safely get the next superview with type checking
+            UIView *nextSuperview = superview.superview;
+            if (nextSuperview && ![nextSuperview isKindOfClass:[UIView class]]) {
+                break;
+            }
+            superview = nextSuperview;
         }
         
         // Only proceed if we're in navigation context
