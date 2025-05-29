@@ -6235,3 +6235,45 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
     return originalInstance;
 }
 %end
+
+// Add a hook for T1BookmarksManager to ensure account is properly set
+%hook T1BookmarksManager
+
+// Override init to ensure it sets an account
+- (id)init {
+    // Call original init
+    id instance = %orig;
+    
+    // Check if account is already set
+    if (instance && ![instance valueForKey:@"account"]) {
+        // Try to get current account from shared instance or another source
+        id accountManager = [objc_getClass("TFNTwitterAccountsManager") sharedInstance];
+        id account = nil;
+        
+        if ([accountManager respondsToSelector:@selector(activeAccount)]) {
+            account = [accountManager performSelector:@selector(activeAccount)];
+        } else if ([accountManager respondsToSelector:@selector(currentAccount)]) {
+            account = [accountManager performSelector:@selector(currentAccount)];
+        }
+        
+        // Set account if found
+        if (account) {
+            [instance setValue:account forKey:@"account"];
+        }
+    }
+    
+    return instance;
+}
+
+// Ensure initWithAccount also sets the account properly
+- (id)initWithAccount:(id)arg1 {
+    id instance = %orig;
+    
+    // Double check that account is set
+    if (instance && ![instance valueForKey:@"account"] && arg1) {
+        [instance setValue:arg1 forKey:@"account"];
+    }
+    
+    return instance;
+}
+%end
