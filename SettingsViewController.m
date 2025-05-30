@@ -140,6 +140,17 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
 }
 
+// Add methods to hide floating action button
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    [self hideFloatingActionButtonIfNeeded];
+}
+
+- (void)viewDidAppear:(BOOL)animated {
+    [super viewDidAppear:animated];
+    [self hideFloatingActionButtonIfNeeded];
+}
+
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
     if (section == 0) {
         UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 40)];

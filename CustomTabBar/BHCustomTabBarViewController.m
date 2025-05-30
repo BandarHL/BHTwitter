@@ -11,6 +11,41 @@
 #import "../BHTBundle/BHTBundle.h"
 #import "Colours/Colours.h"
 
+// Implementation of the category for handling floating action buttons
+@implementation UIViewController (BHFloatingActionButtonHiding)
+
+- (void)hideFloatingActionButtonIfNeeded {
+    // Only hide in BH settings controllers or controllers with certain prefixes
+    BOOL isBHController = 
+        [NSStringFromClass([self class]) hasPrefix:@"BH"] || 
+        [NSStringFromClass([self class]) isEqualToString:@"SettingsViewController"];
+    
+    if (isBHController) {
+        // Find only in the key window to avoid affecting other screens
+        UIWindow *keyWindow = [UIApplication sharedApplication].keyWindow;
+        [self findAndHideFloatingButtonInView:keyWindow];
+    }
+}
+
+- (void)findAndHideFloatingButtonInView:(UIView *)view {
+    for (UIView *subview in view.subviews) {
+        // Check if this is a TFNFloatingActionButton
+        if ([subview isKindOfClass:NSClassFromString(@"TFNFloatingActionButton")]) {
+            // Use the proper hideAnimated: method
+            [(TFNFloatingActionButton *)subview hideAnimated:NO completion:^{
+                // Empty completion block to satisfy non-null requirement
+            }];
+        }
+        
+        // Check subviews (limit depth to avoid performance issues)
+        if (subview.subviews.count > 0) {
+            [self findAndHideFloatingButtonInView:subview];
+        }
+    }
+}
+
+@end
+
 @interface BHCustomTabBarViewController () <UICollectionViewDataSource, UICollectionViewDelegateFlowLayout>
 @property (nonatomic, strong) UICollectionView *collectionView;
 @property (nonatomic, strong) NSMutableArray<BHCustomTabBarItem *> *allItems;
@@ -77,38 +112,15 @@
     [self loadData];
 }
 
-// Prevent Twitter's floating action button from appearing
+// Use the category method to hide floating action buttons
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
-    
-    // Hide any floating action buttons that might be in the view hierarchy
-    [self hideFloatingActionButtons];
+    [self hideFloatingActionButtonIfNeeded];
 }
 
 - (void)viewDidAppear:(BOOL)animated {
     [super viewDidAppear:animated];
-    
-    // Hide any floating action buttons that might appear after view is shown
-    [self hideFloatingActionButtons];
-}
-
-- (void)hideFloatingActionButtons {
-    // Find and hide any TFNFloatingActionButton in the view hierarchy
-    for (UIWindow *window in [UIApplication sharedApplication].windows) {
-        [self findAndHideFloatingButtonsInView:window];
-    }
-}
-
-- (void)findAndHideFloatingButtonsInView:(UIView *)view {
-    for (UIView *subview in view.subviews) {
-        // Check if this is a floating action button by class name
-        if ([NSStringFromClass([subview class]) containsString:@"FloatingAction"]) {
-            subview.hidden = YES;
-        }
-        
-        // Recursively check subviews
-        [self findAndHideFloatingButtonsInView:subview];
-    }
+    [self hideFloatingActionButtonIfNeeded];
 }
 
 #pragma mark - Data
