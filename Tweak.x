@@ -6104,10 +6104,4 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 - (_Bool)isImmersiveSSPDefaultVideoPlayerEnabled {
     return false;
 }
-- (_Bool)isImmersiveSSPClientsideEnabled {
-    return false;
-}
-- (_Bool)isImmersiveSSPEnabled {
-    return false;
-}
 %end
