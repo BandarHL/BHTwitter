@@ -698,3 +698,6 @@ typedef id (^UnknownBlock)(void);
 @interface T1ImmersiveFullScreenViewController (BHTwitter)
 - (BOOL)BHT_findAndPrepareTimestampLabelForVC:(T1ImmersiveFullScreenViewController *)activePlayerVC;
 @end
+
+// Forward declaration for the BHTwitter accent color function
+extern UIColor *BHTCurrentAccentColor(void);

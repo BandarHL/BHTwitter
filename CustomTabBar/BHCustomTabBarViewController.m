@@ -10,6 +10,7 @@
 #import "BHCustomTabBarUtility.h"
 #import "../BHTBundle/BHTBundle.h"
 #import "Colours/Colours.h"
+#import "../TWHeaders.h" // Import for BHTCurrentAccentColor()
 
 @interface BHCustomTabBarViewController () <UICollectionViewDataSource, UICollectionViewDelegateFlowLayout>
 @property (nonatomic, strong) UICollectionView *collectionView;
@@ -27,7 +28,7 @@
     UIBarButtonItem *saveButton = [[UIBarButtonItem alloc] initWithTitle:@"Save"
                                                                     style:UIBarButtonItemStyleDone
                                                                    target:self
-                                                                   action:@selector(saveState)];
+                                                                   action:@selector(saveConfigurationAndDismiss)];
     self.navigationItem.rightBarButtonItem = saveButton;
 
     // Layout
@@ -80,9 +81,9 @@ restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
 
 - (UIColor *)disabledBorderColorForCurrentMode {
     if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
-        return [UIColor systemGray6Color];
+        return [UIColor colorWithWhite:0.2 alpha:1.0]; // Darker gray for dark mode
     } else {
-        return [UIColor whiteColor];
+        return [UIColor colorWithWhite:0.85 alpha:1.0]; // Lighter gray for light mode
     }
 }
 
@@ -146,6 +147,11 @@ restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
     [[NSUserDefaults standardUserDefaults] synchronize];
 }
 
+- (void)saveConfigurationAndDismiss {
+    [self saveState];
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
 - (void)resetSettingsBarButtonHandler:(UIBarButtonItem *)sender {
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"BHTwitter"
                                                                    message:@"Reset tab bar layout to default?"
@@ -181,8 +187,19 @@ restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
     BOOL isEnabled = [self.enabledPageIDs containsObject:item.pageID];
 
     // Border colors
-    UIColor *borderColor = isEnabled ? [UIColor systemBlueColor] : [self disabledBorderColorForCurrentMode];
-    UIColor *bgColor = [UIColor systemBackgroundColor];
+    UIColor *borderColor;
+    if (isEnabled) {
+        borderColor = BHTCurrentAccentColor(); // Use BHTwitter theme accent color
+    } else {
+        borderColor = [self disabledBorderColorForCurrentMode];
+    }
+    
+    UIColor *cellBackgroundColor;
+    if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
+        cellBackgroundColor = [UIColor colorWithRed:0.11 green:0.12 blue:0.13 alpha:1.0]; // Twitter dark cell bg
+    } else {
+        cellBackgroundColor = [UIColor systemGray6Color]; // Light gray for light mode
+    }
 
     CGFloat boxSize = cell.contentView.bounds.size.width;
 
@@ -191,8 +208,8 @@ restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
     container.layer.cornerRadius = 16; // More rounded corners
     container.layer.borderWidth = 2.5; // Slightly thicker border
     container.layer.borderColor = [borderColor resolvedColorWithTraitCollection:self.traitCollection].CGColor;
-    container.backgroundColor = [UIColor colorWithRed:0.11 green:0.12 blue:0.13 alpha:1.0]; // Twitter dark cell bg
-    container.layer.masksToBounds = NO;
+    container.backgroundColor = cellBackgroundColor;
+    container.layer.masksToBounds = NO; // masksToBounds should be YES if you don't want shadow, but screenshot has none.
 
     [cell.contentView addSubview:container];
 
@@ -215,8 +232,10 @@ restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
         [self.enabledPageIDs addObject:item.pageID];
     }
 
-    [self saveState];
-    [collectionView reloadItemsAtIndexPaths:@[indexPath]];
+    // Reload without animation
+    [UIView performWithoutAnimation:^{
+        [collectionView reloadItemsAtIndexPaths:@[indexPath]];
+    }];
 }
 
 @end
