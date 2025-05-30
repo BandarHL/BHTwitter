@@ -15,6 +15,7 @@
 @property (nonatomic, strong) UICollectionView *collectionView;
 @property (nonatomic, strong) NSMutableArray<BHCustomTabBarItem *> *allItems;
 @property (nonatomic, strong) NSMutableSet<NSString *> *enabledPageIDs;
+@property (nonatomic, strong) NSMutableSet<NSString *> *originalEnabledPageIDs;
 @end
 
 @implementation BHCustomTabBarViewController
@@ -76,6 +77,40 @@
     [self loadData];
 }
 
+// Prevent Twitter's floating action button from appearing
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    
+    // Hide any floating action buttons that might be in the view hierarchy
+    [self hideFloatingActionButtons];
+}
+
+- (void)viewDidAppear:(BOOL)animated {
+    [super viewDidAppear:animated];
+    
+    // Hide any floating action buttons that might appear after view is shown
+    [self hideFloatingActionButtons];
+}
+
+- (void)hideFloatingActionButtons {
+    // Find and hide any TFNFloatingActionButton in the view hierarchy
+    for (UIWindow *window in [UIApplication sharedApplication].windows) {
+        [self findAndHideFloatingButtonsInView:window];
+    }
+}
+
+- (void)findAndHideFloatingButtonsInView:(UIView *)view {
+    for (UIView *subview in view.subviews) {
+        // Check if this is a floating action button by class name
+        if ([NSStringFromClass([subview class]) containsString:@"FloatingAction"]) {
+            subview.hidden = YES;
+        }
+        
+        // Recursively check subviews
+        [self findAndHideFloatingButtonsInView:subview];
+    }
+}
+
 #pragma mark - Data
 
 - (UIColor *)disabledBorderColorForCurrentMode {
@@ -101,6 +136,8 @@
         for (BHCustomTabBarItem *item in savedAllowed) {
             [self.enabledPageIDs addObject:item.pageID];
         }
+        // Store original state for comparison when saving
+        self.originalEnabledPageIDs = [self.enabledPageIDs mutableCopy];
     } else {
         self.allItems = [@[
             [[BHCustomTabBarItem alloc] initWithTitle:@"Home" pageID:@"home"],
@@ -113,6 +150,7 @@
             [[BHCustomTabBarItem alloc] initWithTitle:@"Media" pageID:@"media"]
         ] mutableCopy];
         self.enabledPageIDs = [NSMutableSet setWithArray:@[@"home", @"guide", @"audiospace", @"communities"]];
+        self.originalEnabledPageIDs = [self.enabledPageIDs mutableCopy];
     }
 
     [self.collectionView reloadData];
@@ -144,6 +182,35 @@
     [[NSUserDefaults standardUserDefaults] setObject:enabledData forKey:@"allowed"];
     [[NSUserDefaults standardUserDefaults] setObject:disabledData forKey:@"hidden"];
     [[NSUserDefaults standardUserDefaults] synchronize];
+    
+    // Update original state to match current state after saving
+    self.originalEnabledPageIDs = [self.enabledPageIDs mutableCopy];
+    
+    // Show a brief save confirmation
+    [self showSaveConfirmation];
+}
+
+- (void)showSaveConfirmation {
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"BHTwitter" 
+                                                                   message:@"Tab bar configuration saved" 
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    
+    [self presentViewController:alert animated:YES completion:^{
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.8 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [alert dismissViewControllerAnimated:YES completion:nil];
+        });
+    }];
+}
+
+// Override back button behavior to check for unsaved changes
+- (void)viewWillDisappear:(BOOL)animated {
+    [super viewWillDisappear:animated];
+    
+    // If view is being popped and there are unsaved changes
+    if ([self.navigationController.viewControllers indexOfObject:self] == NSNotFound && ![self.enabledPageIDs isEqual:self.originalEnabledPageIDs]) {
+        // Revert back to the original state
+        self.enabledPageIDs = [self.originalEnabledPageIDs mutableCopy];
+    }
 }
 
 - (void)resetSettingsBarButtonHandler:(UIBarButtonItem *)sender {
@@ -236,33 +303,33 @@
         [self.enabledPageIDs addObject:item.pageID];
     }
     
-    // Instant visual feedback
-    [self updateCellAppearance:cell isEnabled:!wasEnabled];
-    
-    // Also save the state
-    [self saveState];
+    // Use quick fade for visual feedback instead of animation
+    [self quickFadeCellAppearance:cell isEnabled:!wasEnabled];
 }
 
-// Helper method for updating cell appearance instantly
-- (void)updateCellAppearance:(UICollectionViewCell *)cell isEnabled:(BOOL)isEnabled {
+// Quick fade effect for cell appearance updates
+- (void)quickFadeCellAppearance:(UICollectionViewCell *)cell isEnabled:(BOOL)isEnabled {
     UIView *container = [cell.contentView viewWithTag:100];
     UILabel *label = (UILabel *)[cell.contentView viewWithTag:101];
     
-    // Update border color with animation
+    // Update border color with quick fade
     UIColor *newBorderColor = isEnabled ? [UIColor colorWithRed:0.11 green:0.63 blue:0.95 alpha:1.0] : [self disabledBorderColorForCurrentMode];
     
-    // Animate border color change
-    CABasicAnimation *borderColorAnimation = [CABasicAnimation animationWithKeyPath:@"borderColor"];
-    borderColorAnimation.fromValue = (__bridge id)container.layer.borderColor;
-    borderColorAnimation.toValue = (__bridge id)newBorderColor.CGColor;
-    borderColorAnimation.duration = 0.15;
-    [container.layer addAnimation:borderColorAnimation forKey:@"borderColor"];
-    
-    // Set the final value
-    container.layer.borderColor = newBorderColor.CGColor;
-    
-    // Update label color
-    label.textColor = isEnabled ? [UIColor labelColor] : [UIColor secondaryLabelColor];
+    // Quick fade effect
+    [UIView animateWithDuration:0.1 animations:^{
+        container.alpha = 0.7;
+    } completion:^(BOOL finished) {
+        // Update border color
+        container.layer.borderColor = newBorderColor.CGColor;
+        
+        // Update label color
+        label.textColor = isEnabled ? [UIColor labelColor] : [UIColor secondaryLabelColor];
+        
+        // Fade back in
+        [UIView animateWithDuration:0.1 animations:^{
+            container.alpha = 1.0;
+        }];
+    }];
 }
 
 @end
