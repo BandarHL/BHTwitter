@@ -115,6 +115,8 @@ restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
         ] mutableCopy];
         self.enabledPageIDs = [NSMutableSet setWithArray:@[@"home", @"guide", @"audiospace", @"communities"]];
     }
+    // Ensure "home" is always enabled
+    [self.enabledPageIDs addObject:@"home"];
 
     [self.collectionView reloadData];
 }
@@ -205,11 +207,17 @@ restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
 
     // Container
     UIView *container = [[UIView alloc] initWithFrame:CGRectMake(0, 0, boxSize, boxSize)];
-    container.layer.cornerRadius = 16; // More rounded corners
-    container.layer.borderWidth = 2.5; // Slightly thicker border
+    container.layer.cornerRadius = 16;
+    container.layer.borderWidth = 1.5; // Thinner border
     container.layer.borderColor = [borderColor resolvedColorWithTraitCollection:self.traitCollection].CGColor;
     container.backgroundColor = cellBackgroundColor;
-    container.layer.masksToBounds = NO; // masksToBounds should be YES if you don't want shadow, but screenshot has none.
+    
+    // Shadow effect
+    container.layer.shadowColor = [UIColor blackColor].CGColor;
+    container.layer.shadowOpacity = (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) ? 0.3 : 0.15;
+    container.layer.shadowOffset = CGSizeMake(0, 2);
+    container.layer.shadowRadius = 4;
+    container.layer.masksToBounds = NO;
 
     [cell.contentView addSubview:container];
 
@@ -226,11 +234,26 @@ restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
 - (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath {
     BHCustomTabBarItem *item = self.allItems[indexPath.item];
 
+    // Prevent deselection of "home" item
+    if ([item.pageID isEqualToString:@"home"]) {
+        return;
+    }
+
     if ([self.enabledPageIDs containsObject:item.pageID]) {
+        // Item is currently enabled, so disable it (deselect)
         [self.enabledPageIDs removeObject:item.pageID];
     } else {
+        // Item is currently disabled, try to enable it (select)
+        // Prevent selecting more than 6 items (home + 5 others)
+        if (self.enabledPageIDs.count >= 6) {
+            // Optional: Provide feedback to the user that limit is reached
+            // For now, just prevent selection
+            return;
+        }
         [self.enabledPageIDs addObject:item.pageID];
     }
+
+    // [self saveState]; // Removed: Do not save on every selection change
 
     // Reload without animation
     [UIView performWithoutAnimation:^{
