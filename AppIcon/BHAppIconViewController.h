@@ -6,7 +6,6 @@
 //
 
 #import <UIKit/UIKit.h>
-#import "../CustomTabBar/BHCustomTabBarViewController.h"
 
 NS_ASSUME_NONNULL_BEGIN
 

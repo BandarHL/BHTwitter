@@ -83,16 +83,6 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     [self setupAppIcons];
 }
 
-- (void)viewWillAppear:(BOOL)animated {
-    [super viewWillAppear:animated];
-    [self hideFloatingActionButtonIfNeeded];
-}
-
-- (void)viewDidAppear:(BOOL)animated {
-    [super viewDidAppear:animated];
-    [self hideFloatingActionButtonIfNeeded];
-}
-
 - (void)setupAppIcons {
     NSDictionary *iconsDict =
       [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIcons"];
