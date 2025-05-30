@@ -1975,22 +1975,12 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
 
 + (NSDictionary *)fetchCookies {
     NSMutableDictionary *cookiesDict = [NSMutableDictionary dictionary];
-    NSArray *domains = @[@"api.twitter.com", @".twitter.com", @"twitter.com", @"x.com", @".x.com"];
-    NSArray *requiredCookies = @[@"ct0", @"auth_token", @"twid", @"guest_id", @"guest_id_ads", @"guest_id_marketing", @"personalization_id"];
+    NSArray *domains = @[@"api.twitter.com", @".twitter.com", @"x.com", @"api.x.com"]; // Added x.com domains
+    NSArray *requiredCookies = @[@"ct0", @"auth_token"]; // Simplified to only ct0 and auth_token
     
-    // Get the shared cookie storage
-    NSHTTPCookieStorage *cookieStorage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
-    
-    // Go through each domain
     for (NSString *domain in domains) {
         NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"https://%@", domain]];
-        NSArray *cookies = [cookieStorage cookiesForURL:url];
-        
-        // Only log in debug mode
-#if BHT_DEBUG
-        [self logDebugInfo:[NSString stringWithFormat:@"Found %ld cookies for domain %@", (long)cookies.count, domain]];
-#endif
-        
+        NSArray *cookies = [[NSHTTPCookieStorage sharedHTTPCookieStorage] cookiesForURL:url];
         for (NSHTTPCookie *cookie in cookies) {
             if ([requiredCookies containsObject:cookie.name]) {
                 cookiesDict[cookie.name] = cookie.value;
@@ -1998,37 +1988,7 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
         }
     }
     
-    // IMPROVED: Try additional fallback methods for getting critical cookies
-    if (!cookiesDict[@"ct0"] || !cookiesDict[@"auth_token"]) {
-        // Try getting all cookies without domain filtering
-        NSArray *allCookies = [cookieStorage cookies];
-        for (NSHTTPCookie *cookie in allCookies) {
-            if ([requiredCookies containsObject:cookie.name] && 
-                ([cookie.domain containsString:@"twitter"] || [cookie.domain containsString:@"x.com"])) {
-                cookiesDict[cookie.name] = cookie.value;
-            }
-        }
-        
-        // If still no luck, try to get cookies from WebKit storage (if available)
-        if (!cookiesDict[@"ct0"] || !cookiesDict[@"auth_token"]) {
-            Class WKHTTPCookieStoreClass = NSClassFromString(@"WKHTTPCookieStore");
-            if (WKHTTPCookieStoreClass) {
-                // Try to access WebKit cookie store if available (async operation, but we'll handle it)
-                // This is a fallback for when NSHTTPCookieStorage doesn't have the cookies
-                [self logDebugInfo:@"Attempting WebKit cookie store fallback"];
-            }
-        }
-    }
-    
-    // Log status of required cookies only in debug mode
-#if BHT_DEBUG
-    BOOL hasCritical = cookiesDict[@"ct0"] && cookiesDict[@"auth_token"];
-    [self logDebugInfo:[NSString stringWithFormat:@"Has critical cookies: %@ (ct0: %@, auth_token: %@)", 
-                      hasCritical ? @"Yes" : @"No", 
-                      cookiesDict[@"ct0"] ? @"Yes" : @"No",
-                      cookiesDict[@"auth_token"] ? @"Yes" : @"No"]];
-#endif
-    
+    NSLog(@"TweetSourceTweak: Fetched cookies: %@", cookiesDict);
     return cookiesDict;
 }
 
