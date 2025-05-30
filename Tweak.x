@@ -6099,3 +6099,15 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
         return false;
 }
 %end
+
+%hook T1TimelineFeatures
+- (_Bool)isImmersiveSSPDefaultVideoPlayerEnabled {
+    return false;
+}
+- (_Bool)isImmersiveSSPClientsideEnabled {
+    return false;
+}
+- (_Bool)isImmersiveSSPEnabled {
+    return false;
+}
+%end

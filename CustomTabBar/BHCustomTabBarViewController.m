@@ -10,7 +10,6 @@
 #import "BHCustomTabBarUtility.h"
 #import "../BHTBundle/BHTBundle.h"
 #import "Colours/Colours.h"
-#import "../TWHeaders.h" // Import for BHTCurrentAccentColor()
 
 typedef NS_ENUM(NSInteger, TwitterFontStyle) {
     TwitterFontStyleRegular,
@@ -60,7 +59,6 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     UIBarButtonItem *saveButton = [[UIBarButtonItem alloc] initWithTitle:@"Save"
                                                                     style:UIBarButtonItemStyleDone
                                                                    target:self
-                                                                   action:@selector(saveConfigurationAndDismiss)];
                                                                    action:@selector(saveButtonTapped)];
     self.navigationItem.rightBarButtonItem = saveButton;
     saveButton.enabled = NO;
@@ -112,20 +110,6 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     ]];
 }
 
-#pragma mark - Data
-
-- (UIColor *)disabledBorderColorForCurrentMode {
-    if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
-        return [UIColor colorWithWhite:0.2 alpha:1.0]; // Darker gray for dark mode
-    } else {
-        return [UIColor colorWithWhite:0.85 alpha:1.0]; // Lighter gray for light mode
-    }
-}
-
-- (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
-    [super traitCollectionDidChange:previousTraitCollection];
-    [self.collectionView reloadData];
-}
 #pragma mark - Data Loading
 
 - (void)loadData {
@@ -151,9 +135,6 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         ] mutableCopy];
         self.enabledPageIDs = [NSMutableSet setWithArray:@[@"home", @"guide", @"audiospace", @"communities"]];
     }
-    // Ensure "home" is always enabled
-    [self.enabledPageIDs addObject:@"home"];
-
     [self.collectionView reloadData];
 }
 
@@ -203,12 +184,6 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     [[NSUserDefaults standardUserDefaults] setObject:enabledData forKey:@"allowed"];
     [[NSUserDefaults standardUserDefaults] setObject:disabledData forKey:@"hidden"];
     [[NSUserDefaults standardUserDefaults] synchronize];
-}
-
-- (void)saveConfigurationAndDismiss {
-    [self saveState];
-    [self.navigationController popViewControllerAnimated:YES];
-}
 
     self.hasChanges = NO;
     [self updateSaveButtonState];
@@ -258,36 +233,9 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
     BHCustomTabBarItem *item = self.allItems[indexPath.item];
     BOOL isEnabled = [self.enabledPageIDs containsObject:item.pageID];
-
-    // Border colors
-    UIColor *borderColor;
-    if (isEnabled) {
-        borderColor = BHTCurrentAccentColor(); // Use BHTwitter theme accent color
-    } else {
-        borderColor = [self disabledBorderColorForCurrentMode];
-    }
-    
-    UIColor *cellBackgroundColor;
-    if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
-        cellBackgroundColor = [UIColor colorWithRed:0.11 green:0.12 blue:0.13 alpha:1.0]; // Twitter dark cell bg
-    } else {
-        cellBackgroundColor = [UIColor systemGray6Color]; // Light gray for light mode
-    }
-
     CGFloat boxSize = cell.contentView.bounds.size.width;
 
     UIView *container = [[UIView alloc] initWithFrame:CGRectMake(0, 0, boxSize, boxSize)];
-    container.layer.cornerRadius = 16;
-    container.layer.borderWidth = 1.5; // Thinner border
-    container.layer.borderColor = [borderColor resolvedColorWithTraitCollection:self.traitCollection].CGColor;
-    container.backgroundColor = cellBackgroundColor;
-    
-    // Shadow effect
-    container.layer.shadowColor = [UIColor blackColor].CGColor;
-    container.layer.shadowOpacity = (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) ? 0.3 : 0.15;
-    container.layer.shadowOffset = CGSizeMake(0, 2);
-    container.layer.shadowRadius = 4;
-    container.layer.masksToBounds = NO;
     container.layer.cornerRadius = 12;
 
     if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
@@ -319,7 +267,6 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     label.text = [[BHTBundle sharedBundle] localizedStringForKey:item.title];
     label.font = [TwitterChirpFont(TwitterFontStyleRegular) fontWithSize:14];
     label.textAlignment = NSTextAlignmentCenter;
-    label.font = [UIFont systemFontOfSize:15 weight:UIFontWeightRegular];
     label.textColor = [UIColor labelColor];
     [cell.contentView addSubview:label];
 
@@ -328,32 +275,11 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
 - (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath {
     BHCustomTabBarItem *item = self.allItems[indexPath.item];
-
-    // Prevent deselection of "home" item
-    if ([item.pageID isEqualToString:@"home"]) {
-        return;
-    }
-
     if ([self.enabledPageIDs containsObject:item.pageID]) {
-        // Item is currently enabled, so disable it (deselect)
         [self.enabledPageIDs removeObject:item.pageID];
     } else {
-        // Item is currently disabled, try to enable it (select)
-        // Prevent selecting more than 6 items (home + 5 others)
-        if (self.enabledPageIDs.count >= 6) {
-            // Optional: Provide feedback to the user that limit is reached
-            // For now, just prevent selection
-            return;
-        }
         [self.enabledPageIDs addObject:item.pageID];
     }
-
-    // [self saveState]; // Removed: Do not save on every selection change
-
-    // Reload without animation
-    [UIView performWithoutAnimation:^{
-        [collectionView reloadItemsAtIndexPaths:@[indexPath]];
-    }];
     self.hasChanges = YES;
     [self updateSaveButtonState];
     [collectionView reloadItemsAtIndexPaths:@[indexPath]];
