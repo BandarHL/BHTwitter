@@ -1704,6 +1704,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
+// start of NFB exclusive features
+
 // MARK: Restore Source Labels - This is still pretty experimental and may break. This restores Tweet Source Labels by using an Legacy API. by: @nyaathea
 
 static NSMutableDictionary *tweetSources      = nil;
@@ -3361,82 +3363,24 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
 
 %hook UIImageView
 
-- (void)didMoveToWindow {
-    %orig;
-    if (!self.window) return;
-    
-    // Check if this is the Twitter bird logo by examining view hierarchy
-    UIView *view = self;
-    BOOL isNavBar = NO;
-    BOOL isCorrectSize = CGSizeEqualToSize(self.frame.size, CGSizeMake(29, 29));
-    
-    while (view && !isNavBar) {
-        if ([view isKindOfClass:%c(TFNNavigationBar)] || 
-            [NSStringFromClass([view class]) containsString:@"NavigationBar"]) {
-            isNavBar = YES;
-            break;
-        }
-        view = view.superview;
-    }
-    
-    if (isNavBar && isCorrectSize) {
-        self.image = [self.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-        self.tintColor = BHTCurrentAccentColor();
-    }
-}
-
 - (void)setImage:(UIImage *)image {
-    if (image && [self.superview isKindOfClass:%c(TFNNavigationBar)]) {
-        UIView *view = self;
-        BOOL isNavBar = NO;
-        BOOL isCorrectSize = CGSizeEqualToSize(self.frame.size, CGSizeMake(29, 29));
-        
-        while (view && !isNavBar) {
-            if ([view isKindOfClass:%c(TFNNavigationBar)] || 
-                [NSStringFromClass([view class]) containsString:@"NavigationBar"]) {
-                isNavBar = YES;
-                break;
-            }
-            view = view.superview;
-        }
-        
-        if (isNavBar && isCorrectSize) {
-            image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-            self.tintColor = BHTCurrentAccentColor();
-        }
-    }
     %orig(image);
-}
-
-%end
-
-// MARK: Replace "your post" with "your tweet" in notifications
-%hook TFNAttributedTextModel
-- (NSAttributedString *)attributedString {
-    NSAttributedString *original = %orig;
-    if (!original) return original;
     
-    NSString *originalString = original.string;
-    if ([originalString containsString:@"your post"]) {
-        // Check if we're in a notification context by looking at the view hierarchy
-        UIViewController *topVC = topMostController();
-        if ([NSStringFromClass([topVC class]) containsString:@"Notification"] ||
-            [NSStringFromClass([topVC class]) containsString:@"T1NotificationsTimeline"]) {
-            
-            NSMutableAttributedString *modified = [[NSMutableAttributedString alloc] initWithAttributedString:original];
-            NSRange range = [originalString rangeOfString:@"your post"];
-            if (range.location != NSNotFound) {
-                [modified replaceCharactersInRange:range withString:@"your tweet"];
-                // Preserve the original attributes
-                NSDictionary *attributes = [original attributesAtIndex:range.location effectiveRange:NULL];
-                [modified setAttributes:attributes range:NSMakeRange(range.location, [@"your tweet" length])];
-                return modified;
+    if (!image) return;
+    
+    // Check if this is the Twitter bird icon by examining the image's dynamic color name
+    if ([image respondsToSelector:@selector(tfn_dynamicColorImageName)]) {
+        NSString *imageName = [image performSelector:@selector(tfn_dynamicColorImageName)];
+        if ([imageName isEqualToString:@"twitter"]) {
+            if (image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
+                UIImage *templateImage = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+                self.image = templateImage;
+                self.tintColor = BHTCurrentAccentColor();
             }
         }
     }
-    
-    return original;
 }
+
 %end
 
 // MARK: - Hide Grok Analyze Button (TTAStatusAuthorView)
@@ -3898,21 +3842,18 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
             playerToTimestampMap = [NSMapTable weakToStrongObjectsMapTable];
         }
         
-        // Check if this is the first load for this controller
-        BOOL isFirstLoad = ![objc_getAssociatedObject(activePlayerVC, "BHT_FirstLoadDone") boolValue];
-        
-        // Initialize label without using the result
+        // Ensure the label is found and prepared if the view appears.
         [self BHT_findAndPrepareTimestampLabelForVC:activePlayerVC];
         
-        // Just mark this controller as processed for first load
-        if (isFirstLoad) {
-            // Mark first load as completed after a short delay
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.75 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                if (self && self.view.window) {
-                    objc_setAssociatedObject(self, "BHT_FirstLoadDone", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-                }
-            });
-        }
+        // REMOVED: BHT_FirstLoadDone and related logic for forced first-load visibility.
+        // BOOL isFirstLoad = ![objc_getAssociatedObject(activePlayerVC, "BHT_FirstLoadDone") boolValue];
+        // if (isFirstLoad) {
+            // dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.75 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                // if (self && self.view.window) {
+                    // objc_setAssociatedObject(self, "BHT_FirstLoadDone", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                // }
+            // });
+        // }
     }
 }
 
@@ -3941,11 +3882,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
                 }
             }
 
-            // Only fix visibility if there's a clear mismatch
-            if (controlsShouldBeVisible && timestampLabel.hidden) {
-                // Controls visible but label hidden - fix it
-                timestampLabel.hidden = NO;
-            }
+            // Directly set the label's visibility based on controls
+            timestampLabel.hidden = !controlsShouldBeVisible; 
         }
     }
 }
@@ -4646,7 +4584,7 @@ static void BHT_forceRefreshAllWindowAppearances(void) {
 // MARK: - Timestamp Label Styling via UILabel -setText:
 
 // Global reference to the timestamp label for the active immersive player
-static UILabel *gVideoTimestampLabel = nil;
+// static UILabel *gVideoTimestampLabel = nil; // REMOVED
 
 // Helper method to determine if a text is likely a timestamp
 static BOOL isTimestampText(NSString *text) {
@@ -4706,9 +4644,9 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
     }
     
     // Skip if already our target label
-    if (self == gVideoTimestampLabel) {
-        return;
-    }
+    // if (self == gVideoTimestampLabel) {
+    //     return;
+    // }
     
     // Skip if text doesn't match timestamp pattern
     if (!isTimestampText(self.text)) {
@@ -4769,23 +4707,23 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
         
         // Mark as styled and store reference
         objc_setAssociatedObject(self, "BHT_StyledTimestamp", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        gVideoTimestampLabel = self;
+        // gVideoTimestampLabel = self; // REMOVED
     }
 }
 
 // For first-load mode, prevent hiding the timestamp
 - (void)setHidden:(BOOL)hidden {
     // Only check labels that might be our timestamp
-    if (self == gVideoTimestampLabel && [BHTManager restoreVideoTimestamp]) {
+    // if (self == gVideoTimestampLabel && [BHTManager restoreVideoTimestamp]) { // REMOVED gVideoTimestampLabel logic
         // If trying to hide a fixed label, prevent it
-        if (hidden) {
-            BOOL isFixedForFirstLoad = [objc_getAssociatedObject(self, "BHT_FixedForFirstLoad") boolValue];
-            if (isFixedForFirstLoad) {
+        // if (hidden) {
+            // BOOL isFixedForFirstLoad = [objc_getAssociatedObject(self, "BHT_FixedForFirstLoad") boolValue];
+            // if (isFixedForFirstLoad) {
                 // Let the original method run but with "NO" instead of "YES"
-                return %orig(NO);
-            }
-        }
-    }
+                // return %orig(NO);
+            // }
+        // }
+    // }
     
     // Default behavior
     %orig(hidden);
@@ -4794,16 +4732,16 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 // Also prevent changing alpha to 0 for first-load labels
 - (void)setAlpha:(CGFloat)alpha {
     // Only check our timestamp label
-    if (self == gVideoTimestampLabel && [BHTManager restoreVideoTimestamp]) {
+    // if (self == gVideoTimestampLabel && [BHTManager restoreVideoTimestamp]) { // REMOVED gVideoTimestampLabel logic
         // If trying to make a fixed label transparent, prevent it
-        if (alpha == 0.0) {
-            BOOL isFixedForFirstLoad = [objc_getAssociatedObject(self, "BHT_FixedForFirstLoad") boolValue];
-            if (isFixedForFirstLoad) {
+        // if (alpha == 0.0) {
+            // BOOL isFixedForFirstLoad = [objc_getAssociatedObject(self, "BHT_FixedForFirstLoad") boolValue];
+            // if (isFixedForFirstLoad) {
                 // Keep it fully opaque during protected period
-                return %orig(1.0);
-            }
-        }
-    }
+                // return %orig(1.0);
+            // }
+        // }
+    // }
     
     // Default behavior
     %orig(alpha);
@@ -5825,7 +5763,131 @@ static GeminiTranslator *_sharedInstance;
 }
 %end
 
-// test
+// MARK: Source Label using T1ConversationFooterTextView
+
+%hook T1ConversationFooterTextView
+
+- (void)updateFooterTextView {
+    %orig;
+    
+    // Add source label to footer text view
+    if ([BHTManager RestoreTweetLabels] && self.viewModel) {
+        @try {
+            // Get the tweet object from the view model
+            id tweetObject = nil;
+            if ([self.viewModel respondsToSelector:@selector(tweet)]) {
+                tweetObject = [self.viewModel performSelector:@selector(tweet)];
+            } else if ([self.viewModel respondsToSelector:@selector(status)]) {
+                tweetObject = [self.viewModel performSelector:@selector(status)];
+            }
+            
+            if (tweetObject) {
+                // Get tweet ID
+                NSString *tweetIDStr = nil;
+                @try {
+                    id statusIDVal = [tweetObject valueForKey:@"statusID"];
+                    if (statusIDVal && [statusIDVal respondsToSelector:@selector(longLongValue)] && [statusIDVal longLongValue] > 0) {
+                        tweetIDStr = [statusIDVal stringValue];
+                    }
+                } @catch (NSException *e) {}
+                
+                if (!tweetIDStr || tweetIDStr.length == 0) {
+                    @try {
+                        tweetIDStr = [tweetObject valueForKey:@"rest_id"];
+                        if (!tweetIDStr || tweetIDStr.length == 0) {
+                            tweetIDStr = [tweetObject valueForKey:@"id_str"];
+                        }
+                        if (!tweetIDStr || tweetIDStr.length == 0) {
+                            id genericID = [tweetObject valueForKey:@"id"];
+                            if (genericID) tweetIDStr = [genericID description];
+                        }
+                    } @catch (NSException *e) {}
+                }
+                
+                if (tweetIDStr && tweetIDStr.length > 0) {
+                    // Initialize source tracking if needed
+                    if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
+                    
+                    // Fetch source if not already available
+                    if (!tweetSources[tweetIDStr]) {
+                        tweetSources[tweetIDStr] = @""; // Placeholder
+                        [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
+                    }
+                    
+                    // Add source to footer if available
+                    NSString *sourceText = tweetSources[tweetIDStr];
+                    if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@"Source Unavailable"] && ![sourceText isEqualToString:@""]) {
+                        [self BHT_appendSourceToFooter:sourceText];
+                    }
+                }
+            }
+        } @catch (NSException *e) {
+            NSLog(@"[BHTwitter] Exception in T1ConversationFooterTextView updateFooterTextView: %@", e);
+        }
+    }
+}
+
+%new - (void)BHT_appendSourceToFooter:(NSString *)sourceText {
+    @try {
+        // Get current text model
+        TFNAttributedTextModel *currentModel = [self valueForKey:@"_textModel"];
+        if (!currentModel || !currentModel.attributedString) {
+            return;
+        }
+        
+        NSString *currentText = currentModel.attributedString.string;
+        NSString *separator = @" · ";
+        NSString *fullSourceStringWithSeparator = [separator stringByAppendingString:sourceText];
+        
+        // Check if source is already present
+        if ([currentText rangeOfString:fullSourceStringWithSeparator].location != NSNotFound) {
+            return;
+        }
+        
+        // Create new attributed string with source appended
+        NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:currentModel.attributedString];
+        
+        // Get base attributes from existing text
+        NSDictionary *baseAttributes;
+        if (currentModel.attributedString.length > 0) {
+            baseAttributes = [currentModel.attributedString attributesAtIndex:0 effectiveRange:NULL];
+        } else {
+            baseAttributes = @{NSFontAttributeName: [UIFont systemFontOfSize:12], NSForegroundColorAttributeName: [UIColor grayColor]};
+        }
+        
+        // Create source suffix with accent color
+        NSMutableAttributedString *sourceSuffix = [[NSMutableAttributedString alloc] init];
+        [sourceSuffix appendAttributedString:[[NSAttributedString alloc] initWithString:separator attributes:baseAttributes]];
+        
+        NSMutableDictionary *sourceAttributes = [baseAttributes mutableCopy];
+        [sourceAttributes setObject:BHTCurrentAccentColor() forKey:NSForegroundColorAttributeName];
+        [sourceSuffix appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttributes]];
+        
+        [newString appendAttributedString:sourceSuffix];
+        
+        // Create new text model and update
+        TFNAttributedTextModel *newModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newString];
+        [self setTextModel:newModel];
+        
+    } @catch (NSException *e) {
+        NSLog(@"[BHTwitter] Exception in BHT_appendSourceToFooter: %@", e);
+    }
+}
+
+%end
+
+// MARK: Change Pill text.
+
+%hook TFNPillControl
+- (id)text {
+    NSString *localizedText = [[BHTBundle sharedBundle] localizedStringForKey:@"REFRESH_PILL_TEXT"];
+    return localizedText ?: @"Tweeted";
+}
+- (void)setText:(id)arg1 {
+    NSString *localizedText = [[BHTBundle sharedBundle] localizedStringForKey:@"REFRESH_PILL_TEXT"];
+    %orig(localizedText ?: @"Tweeted");
+}
+%end
 
 // MARK: Restore Action Button size
 
