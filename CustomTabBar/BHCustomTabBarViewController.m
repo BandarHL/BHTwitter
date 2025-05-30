@@ -15,20 +15,24 @@
 @property (nonatomic, strong) UICollectionView *collectionView;
 @property (nonatomic, strong) NSMutableArray<BHCustomTabBarItem *> *allItems;
 @property (nonatomic, strong) NSMutableSet<NSString *> *enabledPageIDs;
+@property (nonatomic, assign) BOOL hasChanges;
 @end
 
 @implementation BHCustomTabBarViewController
 
 - (void)viewDidLoad {
     [super viewDidLoad];
+    self.hasChanges = NO;
+[self updateSaveButtonState];
     self.view.backgroundColor = [UIColor systemBackgroundColor];
 
     // Save button in nav bar
-    UIBarButtonItem *saveButton = [[UIBarButtonItem alloc] initWithTitle:@"Save"
-                                                                    style:UIBarButtonItemStyleDone
-                                                                   target:self
-                                                                   action:@selector(saveState)];
-    self.navigationItem.rightBarButtonItem = saveButton;
+UIBarButtonItem *saveButton = [[UIBarButtonItem alloc] initWithTitle:@"Save"
+                                                                style:UIBarButtonItemStyleDone
+                                                               target:self
+                                                               action:@selector(saveButtonTapped)];
+self.navigationItem.rightBarButtonItem = saveButton;
+saveButton.enabled = NO;
 
     // Layout
 CGFloat padding = 20 * 2 + 20 * 2; // section inset + 2 gaps
@@ -84,6 +88,55 @@ restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
     } else {
         return [UIColor whiteColor];
     }
+}
+
+- (BOOL)isDarkMode {
+    return self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark;
+}
+
+- (void)saveButtonTapped {
+    [self persistChanges]; // Save to UserDefaults
+
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Restart required"
+                                                                   message:@"You need to restart Twitter for your custom tab bar to take affect"
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+
+    [alert addAction:[UIAlertAction actionWithTitle:@"Not now" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
+        [self.navigationController popViewControllerAnimated:YES];
+    }]];
+
+    [alert addAction:[UIAlertAction actionWithTitle:@"Restart now" style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
+        exit(0);
+    }]];
+
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)persistChanges {
+    NSMutableArray *enabledItems = [NSMutableArray array];
+    NSMutableArray *disabledItems = [NSMutableArray array];
+
+    for (BHCustomTabBarItem *item in self.allItems) {
+        if ([self.enabledPageIDs containsObject:item.pageID]) {
+            [enabledItems addObject:item];
+        } else {
+            [disabledItems addObject:item];
+        }
+    }
+
+    NSData *enabledData = [NSKeyedArchiver archivedDataWithRootObject:enabledItems];
+    NSData *disabledData = [NSKeyedArchiver archivedDataWithRootObject:disabledItems];
+
+    [[NSUserDefaults standardUserDefaults] setObject:enabledData forKey:@"allowed"];
+    [[NSUserDefaults standardUserDefaults] setObject:disabledData forKey:@"hidden"];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+
+    self.hasChanges = NO;
+    [self updateSaveButtonState];
+}
+
+- (void)updateSaveButtonState {
+    self.navigationItem.rightBarButtonItem.enabled = self.hasChanges;
 }
 
 - (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
@@ -144,6 +197,21 @@ restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
     [[NSUserDefaults standardUserDefaults] setObject:enabledData forKey:@"allowed"];
     [[NSUserDefaults standardUserDefaults] setObject:disabledData forKey:@"hidden"];
     [[NSUserDefaults standardUserDefaults] synchronize];
+
+    // After saving, show alert
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Restart required"
+                                                                   message:@"You need to restart Twitter for your custom tab bar to take affect"
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+
+    [alert addAction:[UIAlertAction actionWithTitle:@"Not now" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
+        [self.navigationController popViewControllerAnimated:YES];
+    }]];
+
+    [alert addAction:[UIAlertAction actionWithTitle:@"Restart now" style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
+        exit(0); // forcefully terminates the app
+    }]];
+
+    [self presentViewController:alert animated:YES completion:nil];
 }
 
 - (void)resetSettingsBarButtonHandler:(UIBarButtonItem *)sender {
@@ -154,7 +222,7 @@ restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
         [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"allowed"];
         [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"hidden"];
         [self loadData];
-        [self saveState];
+        [self persistChanges];
     }]];
     [alert addAction:[UIAlertAction actionWithTitle:@"No" style:UIAlertActionStyleCancel handler:nil]];
     [self presentViewController:alert animated:YES completion:nil];
@@ -179,26 +247,33 @@ restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
 
     BHCustomTabBarItem *item = self.allItems[indexPath.item];
     BOOL isEnabled = [self.enabledPageIDs containsObject:item.pageID];
-
-    // Border colors
-    UIColor *borderColor = isEnabled ? [UIColor systemBlueColor] : [self disabledBorderColorForCurrentMode];
-    UIColor *bgColor = [UIColor systemBackgroundColor];
-
     CGFloat boxSize = cell.contentView.bounds.size.width;
 
     // Container
     UIView *container = [[UIView alloc] initWithFrame:CGRectMake(0, 0, boxSize, boxSize)];
     container.layer.cornerRadius = 12;
-    container.layer.borderWidth = 2;
-    container.layer.borderColor = [borderColor resolvedColorWithTraitCollection:self.traitCollection].CGColor;
-    container.backgroundColor = bgColor;
 
-    // Subtle shadow
-container.layer.shadowColor = [UIColor blackColor].CGColor;
-container.layer.shadowOpacity = 0.08;  // Increased from 0.05
-container.layer.shadowOffset = CGSizeMake(0, 4);  // Slightly larger vertical offset
-container.layer.shadowRadius = 10;  // Larger blur radius
-container.layer.masksToBounds = NO;
+    if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
+        // DARK MODE
+        container.backgroundColor = [UIColor colorWithRed:28/255.0 green:32/255.0 blue:35/255.0 alpha:1.0];
+        container.layer.borderWidth = isEnabled ? 2 : 0;
+        if (isEnabled) {
+            container.layer.borderColor = [UIColor systemBlueColor].CGColor;
+        }
+        container.layer.shadowOpacity = 0;
+    } else {
+        // LIGHT MODE
+        container.backgroundColor = [UIColor systemBackgroundColor];
+        container.layer.borderWidth = 2;
+        UIColor *borderColor = isEnabled ? [UIColor systemBlueColor] : [UIColor whiteColor];
+        container.layer.borderColor = [borderColor resolvedColorWithTraitCollection:self.traitCollection].CGColor;
+
+        container.layer.shadowColor = [UIColor blackColor].CGColor;
+        container.layer.shadowOpacity = 0.08;
+        container.layer.shadowOffset = CGSizeMake(0, 4);
+        container.layer.shadowRadius = 10;
+        container.layer.masksToBounds = NO;
+    }
 
     [cell.contentView addSubview:container];
 
@@ -219,6 +294,7 @@ container.layer.masksToBounds = NO;
 
     return cell;
 }
+
 - (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath {
     BHCustomTabBarItem *item = self.allItems[indexPath.item];
 
@@ -228,7 +304,8 @@ container.layer.masksToBounds = NO;
         [self.enabledPageIDs addObject:item.pageID];
     }
 
-    [self saveState];
+    self.hasChanges = YES;
+    [self updateSaveButtonState];
     [collectionView reloadItemsAtIndexPaths:@[indexPath]];
 }
 
