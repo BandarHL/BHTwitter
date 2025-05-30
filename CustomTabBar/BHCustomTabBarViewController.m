@@ -31,10 +31,36 @@
     for (UIView *subview in view.subviews) {
         // Check if this is a TFNFloatingActionButton
         if ([subview isKindOfClass:NSClassFromString(@"TFNFloatingActionButton")]) {
-            // Use the proper hideAnimated: method
+            // First animate it out
             [(TFNFloatingActionButton *)subview hideAnimated:NO completion:^{
-                // Empty completion block to satisfy non-null requirement
+                // Then remove it completely from the view hierarchy
+                [subview removeFromSuperview];
             }];
+            
+            // Set zero frame immediately to prevent layout issues
+            CGRect originalFrame = subview.frame;
+            subview.frame = CGRectZero;
+            
+            // Also disable auto layout constraints if any
+            if (subview.translatesAutoresizingMaskIntoConstraints == NO) {
+                for (NSLayoutConstraint *constraint in subview.constraints) {
+                    constraint.active = NO;
+                }
+                
+                // Find and disable any constraints in superview that reference this button
+                NSMutableArray *constraintsToRemove = [NSMutableArray array];
+                for (NSLayoutConstraint *constraint in subview.superview.constraints) {
+                    if (constraint.firstItem == subview || constraint.secondItem == subview) {
+                        [constraintsToRemove addObject:constraint];
+                    }
+                }
+                
+                for (NSLayoutConstraint *constraint in constraintsToRemove) {
+                    constraint.active = NO;
+                }
+            }
+            
+            return; // We found and removed the button, no need to look further
         }
         
         // Check subviews (limit depth to avoid performance issues)
@@ -110,6 +136,9 @@
         [self.collectionView.bottomAnchor constraintEqualToAnchor:restoreButton.topAnchor constant:-10]
     ]];
     [self loadData];
+    
+    // Schedule repeated checks to make sure floating action button stays removed
+    [NSTimer scheduledTimerWithTimeInterval:0.5 target:self selector:@selector(checkForFloatingButton) userInfo:nil repeats:YES];
 }
 
 // Use the category method to hide floating action buttons
@@ -342,6 +371,13 @@
             container.alpha = 1.0;
         }];
     }];
+}
+
+- (void)checkForFloatingButton {
+    // Only run this check if the view is visible
+    if (self.view.window != nil) {
+        [self hideFloatingActionButtonIfNeeded];
+    }
 }
 
 @end
