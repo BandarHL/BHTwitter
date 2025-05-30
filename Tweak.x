@@ -5825,128 +5825,255 @@ static GeminiTranslator *_sharedInstance;
 }
 %end
 
-// MARK: Source Label using T1ConversationFooterTextView
+// test
 
-%hook T1ConversationFooterTextView
+// MARK: Restore Action Button size
 
-- (void)updateFooterTextView {
-    %orig;
-    
-    // Add source label to footer text view
-    if ([BHTManager RestoreTweetLabels] && self.viewModel) {
-        @try {
-            // Get the tweet object from the view model
-            id tweetObject = nil;
-            if ([self.viewModel respondsToSelector:@selector(tweet)]) {
-                tweetObject = [self.viewModel performSelector:@selector(tweet)];
-            } else if ([self.viewModel respondsToSelector:@selector(status)]) {
-                tweetObject = [self.viewModel performSelector:@selector(status)];
-            }
-            
-            if (tweetObject) {
-                // Get tweet ID
-                NSString *tweetIDStr = nil;
-                @try {
-                    id statusIDVal = [tweetObject valueForKey:@"statusID"];
-                    if (statusIDVal && [statusIDVal respondsToSelector:@selector(longLongValue)] && [statusIDVal longLongValue] > 0) {
-                        tweetIDStr = [statusIDVal stringValue];
-                    }
-                } @catch (NSException *e) {}
-                
-                if (!tweetIDStr || tweetIDStr.length == 0) {
-                    @try {
-                        tweetIDStr = [tweetObject valueForKey:@"rest_id"];
-                        if (!tweetIDStr || tweetIDStr.length == 0) {
-                            tweetIDStr = [tweetObject valueForKey:@"id_str"];
-                        }
-                        if (!tweetIDStr || tweetIDStr.length == 0) {
-                            id genericID = [tweetObject valueForKey:@"id"];
-                            if (genericID) tweetIDStr = [genericID description];
-                        }
-                    } @catch (NSException *e) {}
-                }
-                
-                if (tweetIDStr && tweetIDStr.length > 0) {
-                    // Initialize source tracking if needed
-                    if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
-                    
-                    // Fetch source if not already available
-                    if (!tweetSources[tweetIDStr]) {
-                        tweetSources[tweetIDStr] = @""; // Placeholder
-                        [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
-                    }
-                    
-                    // Add source to footer if available
-                    NSString *sourceText = tweetSources[tweetIDStr];
-                    if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@"Source Unavailable"] && ![sourceText isEqualToString:@""]) {
-                        [self BHT_appendSourceToFooter:sourceText];
-                    }
-                }
-            }
-        } @catch (NSException *e) {
-            NSLog(@"[BHTwitter] Exception in T1ConversationFooterTextView updateFooterTextView: %@", e);
-        }
+%hook TTAStatusInlineActionButton
+- (NSUInteger)buttonSize {
+    // Check if bigger action buttons is enabled
+    BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
+    if (!biggerButtons) {
+        return %orig; // Use original size when disabled
     }
+    
+    // Check if button is inside T1ConversationFocalStatusView - if so, use default size
+    UIView *parentView = self.superview;
+    while (parentView) {
+        if ([parentView isKindOfClass:objc_getClass("T1ConversationFocalStatusView")]) {
+            return %orig; // Return original/default size
+        }
+        parentView = parentView.superview;
+    }
+    
+    return 1; // Use modified size for other views
+}
+- (NSUInteger)_buttonSize {
+    // Check if bigger action buttons is enabled
+    BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
+    if (!biggerButtons) {
+        return %orig; // Use original size when disabled
+    }
+    
+    // Check if button is inside T1ConversationFocalStatusView - if so, use default size
+    UIView *parentView = self.superview;
+    while (parentView) {
+        if ([parentView isKindOfClass:objc_getClass("T1ConversationFocalStatusView")]) {
+            return %orig; // Return original/default size
+        }
+        parentView = parentView.superview;
+    }
+    
+    return 1; // Use modified size for other views
 }
 
-%new - (void)BHT_appendSourceToFooter:(NSString *)sourceText {
-    @try {
-        // Get current text model
-        TFNAttributedTextModel *currentModel = [self valueForKey:@"_textModel"];
-        if (!currentModel || !currentModel.attributedString) {
-            return;
-        }
-        
-        NSString *currentText = currentModel.attributedString.string;
-        NSString *separator = @" · ";
-        NSString *fullSourceStringWithSeparator = [separator stringByAppendingString:sourceText];
-        
-        // Check if source is already present
-        if ([currentText rangeOfString:fullSourceStringWithSeparator].location != NSNotFound) {
-            return;
-        }
-        
-        // Create new attributed string with source appended
-        NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:currentModel.attributedString];
-        
-        // Get base attributes from existing text
-        NSDictionary *baseAttributes;
-        if (currentModel.attributedString.length > 0) {
-            baseAttributes = [currentModel.attributedString attributesAtIndex:0 effectiveRange:NULL];
-        } else {
-            baseAttributes = @{NSFontAttributeName: [UIFont systemFontOfSize:12], NSForegroundColorAttributeName: [UIColor grayColor]};
-        }
-        
-        // Create source suffix with accent color
-        NSMutableAttributedString *sourceSuffix = [[NSMutableAttributedString alloc] init];
-        [sourceSuffix appendAttributedString:[[NSAttributedString alloc] initWithString:separator attributes:baseAttributes]];
-        
-        NSMutableDictionary *sourceAttributes = [baseAttributes mutableCopy];
-        [sourceAttributes setObject:BHTCurrentAccentColor() forKey:NSForegroundColorAttributeName];
-        [sourceSuffix appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttributes]];
-        
-        [newString appendAttributedString:sourceSuffix];
-        
-        // Create new text model and update
-        TFNAttributedTextModel *newModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newString];
-        [self setTextModel:newModel];
-        
-    } @catch (NSException *e) {
-        NSLog(@"[BHTwitter] Exception in BHT_appendSourceToFooter: %@", e);
+- (void)setFrame:(CGRect)frame {
+    // Check if bigger action buttons is enabled
+    BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
+    if (!biggerButtons) {
+        %orig(frame); // Use original frame when disabled
+        return;
     }
+    
+    // Check if we're inside T1ImmersiveController - if so, move button up
+    UIView *parentView = self.superview;
+    
+    while (parentView) {
+        NSString *className = NSStringFromClass([parentView class]);
+        
+        if ([className containsString:@"ImmersiveCardView"] || 
+            [className containsString:@"ImmersiveAccessibleContainerView"]) {
+            CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
+            frame.origin.y -= upwardOffset;
+            break;
+        }
+        parentView = parentView.superview;
+    }
+    
+    %orig(frame);
+}
+
+- (instancetype)initWithFrame:(CGRect)frame {
+    // Check if bigger action buttons is enabled
+    BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
+    if (!biggerButtons) {
+        return %orig(frame); // Use original frame when disabled
+    }
+    
+    // Check if we're inside T1ImmersiveController - if so, move button up
+    UIView *parentView = self.superview;
+    while (parentView) {
+        NSString *className = NSStringFromClass([parentView class]);
+        if ([className containsString:@"ImmersiveCardView"] || 
+            [className containsString:@"ImmersiveAccessibleContainerView"]) {
+            CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
+            frame.origin.y -= upwardOffset;
+            break;
+        }
+        parentView = parentView.superview;
+    }
+    
+    return %orig(frame);
+}
+%end
+
+// MARK: Remove all sections from the Explore "for you" tab except the trending cells.
+// Helper function to check if we're in the GuideContainerViewController hierarchy
+static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
+    if (!viewController) return NO;
+    
+    // Check all view controllers up the hierarchy
+    UIViewController *currentVC = viewController;
+    while (currentVC) {
+        NSString *className = NSStringFromClass([currentVC class]);
+        
+        // Check for GuideContainerViewController (handles both naming variants)
+        if ([className containsString:@"GuideContainerViewController"]) {
+            return YES;
+        }
+        
+        // Move up the hierarchy
+        if (currentVC.parentViewController) {
+            currentVC = currentVC.parentViewController;
+        } else if (currentVC.navigationController) {
+            currentVC = currentVC.navigationController;
+        } else if (currentVC.presentingViewController) {
+            currentVC = currentVC.presentingViewController;
+        } else {
+            break;
+        }
+    }
+    
+    return NO;
+}
+
+// Hook TFNItemsDataViewController to filter sections array
+%hook TFNItemsDataViewController
+
+- (void)setSections:(NSArray *)sections {
+    // Only filter if we're in the GuideContainerViewController hierarchy
+    if (BHT_isInGuideContainerHierarchy(self)) {
+        // Keep only entry 3 (index 2), remove everything else
+        if (sections.count > 2) {
+            sections = @[sections[2]]; // Extract only the 3rd entry
+        }
+    }
+    
+    %orig(sections);
 }
 
 %end
 
-// MARK: Change Pill text.
-
-%hook TFNPillControl
-- (id)text {
-    NSString *localizedText = [[BHTBundle sharedBundle] localizedStringForKey:@"REFRESH_PILL_TEXT"];
-    return localizedText ?: @"Tweeted";
+// Helper function to check if we're in the T1ConversationContainerViewController hierarchy
+static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewController) {
+    if (!viewController) return NO;
+    
+    // Check all view controllers up the hierarchy
+    UIViewController *currentVC = viewController;
+    while (currentVC) {
+        NSString *className = NSStringFromClass([currentVC class]);
+        
+        // Check for T1ConversationContainerViewController
+        if ([className isEqualToString:@"T1ConversationContainerViewController"]) {
+            return YES;
+        }
+        
+        // Move up the hierarchy
+        if (currentVC.parentViewController) {
+            currentVC = currentVC.parentViewController;
+        } else if (currentVC.navigationController) {
+            currentVC = currentVC.navigationController;
+        } else if (currentVC.presentingViewController) {
+            currentVC = currentVC.presentingViewController;
+        } else {
+            break;
+        }
+    }
+    
+    return NO;
 }
-- (void)setText:(id)arg1 {
-    NSString *localizedText = [[BHTBundle sharedBundle] localizedStringForKey:@"REFRESH_PILL_TEXT"];
-    %orig(localizedText ?: @"Tweeted");
+
+// MARK : Remove "Discover More" section
+%hook T1URTViewController
+
+- (void)setSections:(NSArray *)sections {
+    
+    // Only filter if we're in the T1ConversationContainerViewController hierarchy
+    BOOL inConversationHierarchy = BHT_isInConversationContainerHierarchy((UIViewController *)self);
+    
+    if (inConversationHierarchy) {
+        // Remove entry 1 (index 1) from sections array
+        if (sections.count > 1) {
+            NSMutableArray *filteredSections = [NSMutableArray arrayWithArray:sections];
+            [filteredSections removeObjectAtIndex:1];
+            sections = [filteredSections copy];
+        }
+    }
+    
+    %orig(sections);
+}
+
+%end
+
+%hook TTAStatusInlineActionsView
+- (void)setFrame:(CGRect)frame {
+    // Check if bigger action buttons is enabled
+    BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
+    if (!biggerButtons) {
+        %orig(frame); // Use original frame when disabled
+        return;
+    }
+    
+    // Check if we're inside T1ConversationFocalStatusView - if so, don't adjust
+    UIView *parentView = self.superview;
+    while (parentView) {
+        if ([parentView isKindOfClass:objc_getClass("T1ConversationFocalStatusView")]) {
+            %orig(frame); // No adjustment for focal views
+            return;
+        }
+        if ([parentView isKindOfClass:objc_getClass("T1ImmersiveViewController")] || 
+            [NSStringFromClass([parentView class]) containsString:@"T1Immersive"]) {
+            %orig(frame); // No adjustment for immersive views (buttons will handle it)
+            return;
+        }
+        parentView = parentView.superview;
+    }
+    
+    // Default offset for other views
+    CGFloat upwardOffset = 5.0;
+    frame.origin.y -= upwardOffset;
+    %orig(frame);
+}
+
+- (instancetype)initWithFrame:(CGRect)frame {
+    // Check if bigger action buttons is enabled
+    BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
+    if (!biggerButtons) {
+        return %orig(frame); // Use original frame when disabled
+    }
+    
+    // Check if we're inside T1ConversationFocalStatusView - if so, don't adjust
+    UIView *parentView = self.superview;
+    while (parentView) {
+        if ([parentView isKindOfClass:objc_getClass("T1ConversationFocalStatusView")]) {
+            return %orig(frame); // No adjustment for focal views
+        }
+        if ([parentView isKindOfClass:objc_getClass("T1ImmersiveViewController")] || 
+            [NSStringFromClass([parentView class]) containsString:@"T1Immersive"]) {
+            return %orig(frame); // No adjustment for immersive views (buttons will handle it)
+        }
+        parentView = parentView.superview;
+    }
+    
+    // Default offset for other views
+    CGFloat upwardOffset = 5.0;
+    frame.origin.y -= upwardOffset;
+    return %orig(frame);
+}
+%end
+
+%hook T1SubscriptionJourneyManager
+- (_Bool)shouldShowReplyBoostUpsellWithAccount {
+        return false;
 }
 %end
