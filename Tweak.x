@@ -12,8 +12,6 @@
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
 
-%config(warnings=default);
-
 // Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
 static void BHT_applyThemeToWindow(UIWindow *window);
@@ -4185,9 +4183,33 @@ static char kManualRefreshInProgressKey;
     // Load cached cookies at initialization
     [TweetSourceHelper loadCachedCookies];
     
-    // Initialize with Swift class hook properly configured
-    %init(_ungrouped, GuideAppNavigationTabEntry=objc_getClass("T1TwitterSwift.GuideAppNavigationTabEntry"));
+    %init;
+    // REMOVED: Observer for BHTClassicTabBarSettingChanged (and its new equivalent CLASSIC_TAB_BAR_DISABLED_NOTIFICATION_NAME)
+    // The logic for handling classic tab bar changes is now fully managed by restart.
     
+    // Add observers for both window and theme changes
+    [[NSNotificationCenter defaultCenter] addObserverForName:UIWindowDidBecomeVisibleNotification 
+                                                    object:nil 
+                                                     queue:[NSOperationQueue mainQueue] 
+                                                usingBlock:^(NSNotification * _Nonnull note) {
+        UIWindow *window = note.object;
+        if (window && [[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+            BHT_applyThemeToWindow(window);
+        }
+    }];
+    
+    // Note: UIApplicationDidBecomeActiveNotification is now primarily handled by
+    // BHT_ensureThemingEngineSynchronized with the appropriate flags and hooks
+    
+    // Observe theme changes
+    // REMOVED: Observer for BHTTabBarThemingChanged (second instance)
+    // [[NSNotificationCenter defaultCenter] addObserverForName:@\"BHTTabBarThemingChanged\" 
+    //                                                 object:nil 
+    //                                                  queue:[NSOperationQueue mainQueue] 
+    //                                             usingBlock:^(NSNotification * _Nonnull note) {
+    //     BHT_ensureTheming(); // This was likely too broad, direct update is better.
+    // }];
+
     static dispatch_once_t onceTokenPlayerMap;
     dispatch_once(&onceTokenPlayerMap, ^{
         playerToTimestampMap = [NSMapTable weakToStrongObjectsMapTable];
@@ -6075,11 +6097,5 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 %hook T1SubscriptionJourneyManager
 - (_Bool)shouldShowReplyBoostUpsellWithAccount {
         return false;
-}
-%end
-
-%hook GuideAppNavigationTabEntry
-- (BOOL)isTabViewSideBarOnly {
-    return true;
 }
 %end

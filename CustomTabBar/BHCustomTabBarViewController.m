@@ -31,14 +31,14 @@
     self.navigationItem.rightBarButtonItem = saveButton;
 
     // Layout
-CGFloat padding = 20 * 2 + 20 * 2; // section inset + 2 gaps
-CGFloat itemWidth = (self.view.bounds.size.width - padding) / 3;
+    CGFloat padding = 20;
+    CGFloat itemWidth = (self.view.bounds.size.width - padding * 4) / 3; // 3 items per row, 4 paddings
 
-UICollectionViewFlowLayout *layout = [[UICollectionViewFlowLayout alloc] init];
-layout.itemSize = CGSizeMake(itemWidth, itemWidth + 30); // 30 for label height
-layout.minimumInteritemSpacing = 20;
-layout.minimumLineSpacing = 20;
-layout.sectionInset = UIEdgeInsetsMake(20, 20, 20, 20);
+    UICollectionViewFlowLayout *layout = [[UICollectionViewFlowLayout alloc] init];
+    layout.itemSize = CGSizeMake(itemWidth, itemWidth + 25); // Reduced the height a bit
+    layout.minimumInteritemSpacing = padding;
+    layout.minimumLineSpacing = padding;
+    layout.sectionInset = UIEdgeInsetsMake(padding, padding, padding, padding);
 
     // Collection view setup
     self.collectionView = [[UICollectionView alloc] initWithFrame:CGRectZero collectionViewLayout:layout];
@@ -50,29 +50,29 @@ layout.sectionInset = UIEdgeInsetsMake(20, 20, 20, 20);
     [self.view addSubview:self.collectionView];
 
     // Restore button
-UIButton *restoreButton = [UIButton buttonWithType:UIButtonTypeSystem];
-[restoreButton setTitle:@"Restore to default" forState:UIControlStateNormal];
-restoreButton.titleLabel.font = [UIFont systemFontOfSize:16 weight:UIFontWeightSemibold];
-[restoreButton setTitleColor:[UIColor labelColor] forState:UIControlStateNormal];
-restoreButton.backgroundColor = [UIColor systemGray6Color];
-restoreButton.layer.cornerRadius = 26;
-restoreButton.contentEdgeInsets = UIEdgeInsetsMake(12, 0, 12, 0);
-restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
-[restoreButton addTarget:self action:@selector(resetSettingsBarButtonHandler:) forControlEvents:UIControlEventTouchUpInside];
-[self.view addSubview:restoreButton];
+    UIButton *restoreButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    [restoreButton setTitle:@"Restore to default" forState:UIControlStateNormal];
+    restoreButton.titleLabel.font = [UIFont systemFontOfSize:16 weight:UIFontWeightSemibold];
+    [restoreButton setTitleColor:[UIColor labelColor] forState:UIControlStateNormal];
+    restoreButton.backgroundColor = [UIColor systemGray6Color];
+    restoreButton.layer.cornerRadius = 22; // Reduced from 26
+    restoreButton.contentEdgeInsets = UIEdgeInsetsMake(12, 0, 12, 0);
+    restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
+    [restoreButton addTarget:self action:@selector(resetSettingsBarButtonHandler:) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:restoreButton];
 
     // Layout constraints
-[NSLayoutConstraint activateConstraints:@[
-    [restoreButton.bottomAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.bottomAnchor constant:-20],
-    [restoreButton.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:20],
-    [restoreButton.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-20],
-    [restoreButton.heightAnchor constraintEqualToConstant:52],
+    [NSLayoutConstraint activateConstraints:@[
+        [restoreButton.bottomAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.bottomAnchor constant:-20],
+        [restoreButton.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:20],
+        [restoreButton.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-20],
+        [restoreButton.heightAnchor constraintEqualToConstant:48], // Slightly shorter
 
-    [self.collectionView.topAnchor constraintEqualToAnchor:self.view.topAnchor],
-    [self.collectionView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
-    [self.collectionView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
-    [self.collectionView.bottomAnchor constraintEqualToAnchor:restoreButton.topAnchor constant:-10]
-]];
+        [self.collectionView.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor],
+        [self.collectionView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
+        [self.collectionView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
+        [self.collectionView.bottomAnchor constraintEqualToAnchor:restoreButton.topAnchor constant:-10]
+    ]];
     [self loadData];
 }
 
@@ -80,9 +80,9 @@ restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
 
 - (UIColor *)disabledBorderColorForCurrentMode {
     if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
-        return [UIColor systemGray6Color];
+        return [UIColor colorWithRed:0.145 green:0.145 blue:0.145 alpha:1.0]; // Dark gray that's closer to Twitter dark mode
     } else {
-        return [UIColor whiteColor];
+        return [UIColor colorWithRed:0.93 green:0.93 blue:0.93 alpha:1.0]; // Light gray for light mode
     }
 }
 
@@ -180,56 +180,89 @@ restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
     BHCustomTabBarItem *item = self.allItems[indexPath.item];
     BOOL isEnabled = [self.enabledPageIDs containsObject:item.pageID];
 
-    // Border colors
-    UIColor *borderColor = isEnabled ? [UIColor systemBlueColor] : [self disabledBorderColorForCurrentMode];
+    // Colors (more Twitter-like)
+    UIColor *borderColor = isEnabled ? [UIColor colorWithRed:0.11 green:0.63 blue:0.95 alpha:1.0] : [self disabledBorderColorForCurrentMode]; // Twitter blue for enabled
     UIColor *bgColor = [UIColor systemBackgroundColor];
 
     CGFloat boxSize = cell.contentView.bounds.size.width;
 
     // Container
     UIView *container = [[UIView alloc] initWithFrame:CGRectMake(0, 0, boxSize, boxSize)];
-    container.layer.cornerRadius = 12;
+    container.layer.cornerRadius = 16; // More like Twitter's rounded corners
     container.layer.borderWidth = 2;
-    container.layer.borderColor = [borderColor resolvedColorWithTraitCollection:self.traitCollection].CGColor;
+    container.layer.borderColor = borderColor.CGColor;
     container.backgroundColor = bgColor;
+    
+    // Tag for retrieving later
+    container.tag = 100;
 
-    // Subtle shadow
-container.layer.shadowColor = [UIColor blackColor].CGColor;
-container.layer.shadowOpacity = 0.08;  // Increased from 0.05
-container.layer.shadowOffset = CGSizeMake(0, 4);  // Slightly larger vertical offset
-container.layer.shadowRadius = 10;  // Larger blur radius
-container.layer.masksToBounds = NO;
+    // Shadow - more subtle like Twitter's UI
+    container.layer.shadowColor = [UIColor blackColor].CGColor;
+    container.layer.shadowOpacity = 0.05;
+    container.layer.shadowOffset = CGSizeMake(0, 2);
+    container.layer.shadowRadius = 4;
+    container.layer.masksToBounds = NO;
 
     [cell.contentView addSubview:container];
 
-    // Icon (placeholder for now)
+    // Placeholder for icon (center of container)
     UIView *icon = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 28, 28)];
     icon.backgroundColor = [UIColor systemGray4Color];
-    icon.layer.cornerRadius = 6;
+    icon.layer.cornerRadius = 14; // More circular like Twitter icons
     icon.center = CGPointMake(container.bounds.size.width / 2, container.bounds.size.height / 2);
     [container addSubview:icon];
 
     // Label below container
-    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(0, CGRectGetMaxY(container.frame) + 2, boxSize, 20)];
+    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(0, CGRectGetMaxY(container.frame) + 6, boxSize, 18)];
     label.text = item.title;
     label.textAlignment = NSTextAlignmentCenter;
-    label.font = [UIFont systemFontOfSize:13 weight:UIFontWeightRegular];
-    label.textColor = [UIColor labelColor];
+    label.font = [UIFont systemFontOfSize:13 weight:UIFontWeightMedium]; // Twitter uses medium weight
+    label.textColor = isEnabled ? [UIColor labelColor] : [UIColor secondaryLabelColor]; // Dimmer text for disabled
+    label.tag = 101; // Tag for retrieving later
     [cell.contentView addSubview:label];
 
     return cell;
 }
+
 - (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath {
     BHCustomTabBarItem *item = self.allItems[indexPath.item];
-
-    if ([self.enabledPageIDs containsObject:item.pageID]) {
+    UICollectionViewCell *cell = [collectionView cellForItemAtIndexPath:indexPath];
+    
+    BOOL wasEnabled = [self.enabledPageIDs containsObject:item.pageID];
+    
+    if (wasEnabled) {
         [self.enabledPageIDs removeObject:item.pageID];
     } else {
         [self.enabledPageIDs addObject:item.pageID];
     }
-
+    
+    // Instant visual feedback
+    [self updateCellAppearance:cell isEnabled:!wasEnabled];
+    
+    // Also save the state
     [self saveState];
-    [collectionView reloadItemsAtIndexPaths:@[indexPath]];
+}
+
+// Helper method for updating cell appearance instantly
+- (void)updateCellAppearance:(UICollectionViewCell *)cell isEnabled:(BOOL)isEnabled {
+    UIView *container = [cell.contentView viewWithTag:100];
+    UILabel *label = (UILabel *)[cell.contentView viewWithTag:101];
+    
+    // Update border color with animation
+    UIColor *newBorderColor = isEnabled ? [UIColor colorWithRed:0.11 green:0.63 blue:0.95 alpha:1.0] : [self disabledBorderColorForCurrentMode];
+    
+    // Animate border color change
+    CABasicAnimation *borderColorAnimation = [CABasicAnimation animationWithKeyPath:@"borderColor"];
+    borderColorAnimation.fromValue = (__bridge id)container.layer.borderColor;
+    borderColorAnimation.toValue = (__bridge id)newBorderColor.CGColor;
+    borderColorAnimation.duration = 0.15;
+    [container.layer addAnimation:borderColorAnimation forKey:@"borderColor"];
+    
+    // Set the final value
+    container.layer.borderColor = newBorderColor.CGColor;
+    
+    // Update label color
+    label.textColor = isEnabled ? [UIColor labelColor] : [UIColor secondaryLabelColor];
 }
 
 @end
