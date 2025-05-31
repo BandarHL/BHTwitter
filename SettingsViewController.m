@@ -52,6 +52,16 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
                    [UIFont systemFontOfSize:12 weight:UIFontWeightRegular];
     }
 }
+
+// Helper method to ensure fonts are applied correctly
+static void EnsureFontApplied(UILabel *label, UIFont *font) {
+    if (label) {
+        label.font = font;
+        // Force redraw to ensure the font is applied
+        [label setNeedsDisplay];
+    }
+}
+
 @interface SettingsViewController () <UIFontPickerViewControllerDelegate, UINavigationControllerDelegate, UIImagePickerControllerDelegate, UIColorPickerViewControllerDelegate>
 @property (nonatomic, strong) TFNTwitterAccount *twAccount;
 @property (nonatomic, assign) BOOL hasDynamicSpecifiers;
@@ -185,13 +195,12 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         detail.text = [[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_DETAIL"];
 
         [header addSubview:detail];
-[NSLayoutConstraint activateConstraints:@[
-    [detail.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16],
-    [detail.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-16],
-    [detail.topAnchor constraintEqualToAnchor:header.topAnchor constant:-12],  // was 8
-    [detail.bottomAnchor constraintEqualToAnchor:header.bottomAnchor constant:-8]
-]];
-
+        [NSLayoutConstraint activateConstraints:@[
+            [detail.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16],
+            [detail.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-16],
+            [detail.topAnchor constraintEqualToAnchor:header.topAnchor constant:-12],
+            [detail.bottomAnchor constraintEqualToAnchor:header.bottomAnchor constant:-8]
+        ]];
 
         return header;
     }
@@ -203,18 +212,22 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     UIView *headerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 52)];
     
     // Top separator - modified to extend full width
-if (section != 1) {
-    UIView *topSeparator = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 0.5)];
-    topSeparator.backgroundColor = [UIColor separatorColor];
-    topSeparator.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    [headerView addSubview:topSeparator];
-}
+    if (section != 1) {
+        UIView *topSeparator = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 0.5)];
+        topSeparator.backgroundColor = [UIColor separatorColor];
+        topSeparator.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+        [headerView addSubview:topSeparator];
+    }
     
-    // Header label
+    // Header label - use attributed text for consistent bold rendering
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(16, 16, tableView.frame.size.width - 32, 28)];
-    label.text = title; 
-    label.font = TwitterChirpFont(TwitterFontStyleBold); // 17pt bold
-    label.textColor = [UIColor labelColor];
+    UIFont *boldFont = TwitterChirpFont(TwitterFontStyleBold);
+    NSDictionary *attrs = @{
+        NSFontAttributeName: boldFont,
+        NSForegroundColorAttributeName: [UIColor labelColor]
+    };
+    
+    label.attributedText = [[NSAttributedString alloc] initWithString:title attributes:attrs];
     [headerView addSubview:label];
     
     return headerView;
@@ -1163,18 +1176,21 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         NSString *subTitle = [specifier.properties[@"subtitle"] copy];
         BOOL isBig = specifier.properties[@"big"] ? ((NSNumber *)specifier.properties[@"big"]).boolValue : NO;
         
-        // Set the font to semibold
-        self.textLabel.font = TwitterChirpFont(TwitterFontStyleSemibold); // 14pt semibold
-        
-        // Set the text color to match the theme color
-        self.textLabel.textColor = BHTCurrentAccentColor();
+        // Apply attributed text to ensure semibold is properly applied
+        UIFont *semiboldFont = TwitterChirpFont(TwitterFontStyleSemibold);
+        if (self.textLabel.text) {
+            NSDictionary *attrs = @{
+                NSFontAttributeName: semiboldFont,
+                NSForegroundColorAttributeName: BHTCurrentAccentColor()
+            };
+            self.textLabel.attributedText = [[NSAttributedString alloc] initWithString:self.textLabel.text attributes:attrs];
+        }
         
         // Keep subtitle style exactly as before
         self.detailTextLabel.text = subTitle;
         self.detailTextLabel.numberOfLines = isBig ? 0 : 1;
         self.detailTextLabel.textColor = [UIColor secondaryLabelColor];
-        self.detailTextLabel.font = TwitterChirpFont(TwitterFontStyleRegular); // Match footer font
-        self.selectionStyle = UITableViewCellSelectionStyleDefault; // or .None if you don't want selection highlight
+        self.detailTextLabel.font = TwitterChirpFont(TwitterFontStyleRegular);
         
         // Apply theme color to cell
         self.tintColor = BHTCurrentAccentColor();
@@ -1184,7 +1200,14 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 
 - (void)tintColorDidChange {
     [super tintColorDidChange];
-    self.textLabel.textColor = BHTCurrentAccentColor();
+    
+    // Just update the tint color but preserve the font
+    if (self.textLabel.attributedText) {
+        NSMutableAttributedString *attr = [self.textLabel.attributedText mutableCopy];
+        [attr addAttribute:NSForegroundColorAttributeName value:BHTCurrentAccentColor() range:NSMakeRange(0, attr.length)];
+        self.textLabel.attributedText = attr;
+    }
+    
     self.tintColor = BHTCurrentAccentColor();
 }
 @end
@@ -1195,15 +1218,18 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         NSString *subTitle = [specifier.properties[@"subtitle"] copy];
         BOOL isBig = specifier.properties[@"big"] ? ((NSNumber *)specifier.properties[@"big"]).boolValue : NO;
         
-        // Set the font to semibold
-        self.textLabel.font = TwitterChirpFont(TwitterFontStyleSemibold); // 14pt semibold
+        // Apply attributed text to ensure semibold is properly applied
+        UIFont *semiboldFont = TwitterChirpFont(TwitterFontStyleSemibold);
+        if (self.textLabel.text) {
+            NSDictionary *attrs = @{NSFontAttributeName: semiboldFont};
+            self.textLabel.attributedText = [[NSAttributedString alloc] initWithString:self.textLabel.text attributes:attrs];
+        }
 
         // Keep subtitle style exactly as before
         self.detailTextLabel.text = subTitle;
         self.detailTextLabel.numberOfLines = isBig ? 0 : 1;
         self.detailTextLabel.textColor = [UIColor secondaryLabelColor];
-        self.detailTextLabel.font = TwitterChirpFont(TwitterFontStyleRegular); // Match footer font
-        self.selectionStyle = UITableViewCellSelectionStyleDefault; // or .None if you don't want selection highlight
+        self.detailTextLabel.font = TwitterChirpFont(TwitterFontStyleRegular);
         
         // Theme the switch
         UISwitch *switchControl = (UISwitch *)[self control];
@@ -1220,6 +1246,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 
 - (void)tintColorDidChange {
     [super tintColorDidChange];
+    
     // Update switch color when theme changes
     UISwitch *switchControl = (UISwitch *)[self control];
     switchControl.onTintColor = BHTCurrentAccentColor();
