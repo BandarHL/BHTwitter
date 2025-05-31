@@ -18,7 +18,7 @@
 // Import external function to get theme color
 extern UIColor *BHTCurrentAccentColor(void);
 
-// Declare the interface to access hideAnimated method
+// Interface declaration for TFNFloatingActionButton
 @interface TFNFloatingActionButton : UIView
 - (void)hideAnimated:(_Bool)animated completion:(id)completion;
 @end
@@ -39,26 +39,17 @@ typedef NS_ENUM(NSInteger, TwitterFontStyle) {
 static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     switch (style) {
         case TwitterFontStyleBold:
-            return [UIFont fontWithName:@"ChirpUIVF_wght3200000_opsz150000" size:15] ?: 
-                   [UIFont systemFontOfSize:15 weight:UIFontWeightBold];
+            return [UIFont fontWithName:@"ChirpUIVF_wght3200000_opsz150000" size:17] ?: 
+                   [UIFont systemFontOfSize:17 weight:UIFontWeightBold];
             
         case TwitterFontStyleSemibold:
-            return [UIFont fontWithName:@"ChirpUIVF_wght2BC0000_opszE0000" size:13] ?: 
-                   [UIFont systemFontOfSize:13 weight:UIFontWeightSemibold];
+            return [UIFont fontWithName:@"ChirpUIVF_wght2BC0000_opszE0000" size:14] ?: 
+                   [UIFont systemFontOfSize:14 weight:UIFontWeightSemibold];
             
         case TwitterFontStyleRegular:
         default:
-            return [UIFont fontWithName:@"ChirpUIVF_wght1900000_opszE0000" size:11] ?: 
-                   [UIFont systemFontOfSize:11 weight:UIFontWeightRegular];
-    }
-}
-
-// Helper method to ensure fonts are applied correctly
-static void EnsureFontApplied(UILabel *label, UIFont *font) {
-    if (label) {
-        label.font = font;
-        // Force redraw to ensure the font is applied
-        [label setNeedsDisplay];
+            return [UIFont fontWithName:@"ChirpUIVF_wght1900000_opszE0000" size:12] ?: 
+                   [UIFont systemFontOfSize:12 weight:UIFontWeightRegular];
     }
 }
 
@@ -106,58 +97,13 @@ static void EnsureFontApplied(UILabel *label, UIFont *font) {
     
     // Apply appearance settings
     self.hb_appearanceSettings = appearanceSettings;
-    
-    // Apply tint color to table view and navigation items
-    self.table.tintColor = primaryColor;
-    self.navigationController.navigationBar.tintColor = primaryColor;
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
     if ([keyPath isEqualToString:@"bh_color_theme_selectedColor"] || [keyPath isEqualToString:@"T1ColorSettingsPrimaryColorOptionKey"]) {
         [self setupAppearance];
-        [self.table reloadData];
     }
-}
-
-
-// Add this method to configure the table view appearance
-- (void)viewDidLoad {
-    if (self.twAccount != nil) {
-        self.navigationItem.titleView = [objc_getClass("TFNTitleView") titleViewWithTitle:[[BHTBundle sharedBundle]
-                               localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"] subtitle:self.twAccount.displayUsername];
-    } else {
-        self.title = [[BHTBundle sharedBundle]
-                               localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"];
-    }
-
-    [super viewDidLoad];
-
-
-    
-    
-    // Set the background color to match system background
-    self.view.backgroundColor = [UIColor systemBackgroundColor];
-    
-    // Configure the table view to blend with background
-    self.table.backgroundColor = [UIColor systemBackgroundColor];
-    self.table.separatorColor = [UIColor separatorColor];
-    
-    // Apply theme color to table
-    self.table.tintColor = BHTCurrentAccentColor();
-    
-    // Remove extra separators below content
-    self.table.tableFooterView = [UIView new];
-    self.table.separatorStyle = UITableViewCellSeparatorStyleNone;
-
-    if (@available(iOS 15.0, *)) {
-        self.table.sectionHeaderTopPadding = 8; 
-    }
-    
-    // These ensure cells align with headers
-    self.table.separatorInset = UIEdgeInsetsMake(0, 16, 0, 0);
-    self.table.layoutMargins = UIEdgeInsetsMake(0, 16, 0, 16);
-
-
+    // Removed tab_bar_theming observation and BHTTabBarThemingChanged notification
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -182,11 +128,39 @@ static void EnsureFontApplied(UILabel *label, UIFont *font) {
     }
 }
 
-- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
-    if (section == 0) {
-        return 40; // Reduced from 52
+// Add this method to configure the table view appearance
+- (void)viewDidLoad {
+    if (self.twAccount != nil) {
+        self.navigationItem.titleView = [objc_getClass("TFNTitleView") titleViewWithTitle:[[BHTBundle sharedBundle]
+                               localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"] subtitle:self.twAccount.displayUsername];
+    } else {
+        self.title = [[BHTBundle sharedBundle]
+                               localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"];
     }
-    return 44; // Reduced from 52
+
+    [super viewDidLoad];
+    
+    // Set the background color to match system background
+    self.view.backgroundColor = [UIColor systemBackgroundColor];
+    
+    // Configure the table view to blend with background
+    self.table.backgroundColor = [UIColor systemBackgroundColor];
+    self.table.separatorColor = [UIColor separatorColor];
+    
+    // Apply theme color to table
+    self.table.tintColor = BHTCurrentAccentColor();
+    
+    // Remove extra separators below content
+    self.table.tableFooterView = [UIView new];
+    self.table.separatorStyle = UITableViewCellSeparatorStyleNone;
+
+    if (@available(iOS 15.0, *)) {
+        self.table.sectionHeaderTopPadding = 8; 
+    }
+    
+    // These ensure cells align with headers
+    self.table.separatorInset = UIEdgeInsetsMake(0, 16, 0, 0);
+    self.table.layoutMargins = UIEdgeInsetsMake(0, 16, 0, 16);
 }
 
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
@@ -195,7 +169,7 @@ static void EnsureFontApplied(UILabel *label, UIFont *font) {
 
         UILabel *detail = [UILabel new];
         detail.translatesAutoresizingMaskIntoConstraints = NO;
-        detail.font = [TwitterChirpFont(TwitterFontStyleRegular) fontWithSize:11];
+        detail.font = [TwitterChirpFont(TwitterFontStyleRegular) fontWithSize:12];
         detail.textColor = [UIColor secondaryLabelColor];
         detail.numberOfLines = 0;
         detail.textAlignment = NSTextAlignmentLeft;
@@ -205,8 +179,8 @@ static void EnsureFontApplied(UILabel *label, UIFont *font) {
         [NSLayoutConstraint activateConstraints:@[
             [detail.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16],
             [detail.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-16],
-            [detail.topAnchor constraintEqualToAnchor:header.topAnchor constant:-8],
-            [detail.bottomAnchor constraintEqualToAnchor:header.bottomAnchor constant:-4]
+            [detail.topAnchor constraintEqualToAnchor:header.topAnchor constant:-12],
+            [detail.bottomAnchor constraintEqualToAnchor:header.bottomAnchor constant:-8]
         ]];
 
         return header;
@@ -216,7 +190,7 @@ static void EnsureFontApplied(UILabel *label, UIFont *font) {
         return nil;
     }
     
-    UIView *headerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 44)];
+    UIView *headerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 52)];
     
     // Top separator - modified to extend full width
     if (section != 1) {
@@ -226,18 +200,44 @@ static void EnsureFontApplied(UILabel *label, UIFont *font) {
         [headerView addSubview:topSeparator];
     }
     
-    // Header label - use attributed text for consistent bold rendering
-    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(16, 12, tableView.frame.size.width - 32, 24)];
-    UIFont *boldFont = TwitterChirpFont(TwitterFontStyleBold);
+    // Header label - use attributed text with bold font
+    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(16, 16, tableView.frame.size.width - 32, 28)];
+    
+    // Use attributed string to ensure bold rendering
     NSDictionary *attrs = @{
-        NSFontAttributeName: boldFont,
+        NSFontAttributeName: TwitterChirpFont(TwitterFontStyleBold),
         NSForegroundColorAttributeName: [UIColor labelColor]
     };
-    
     label.attributedText = [[NSAttributedString alloc] initWithString:title attributes:attrs];
+    
     [headerView addSubview:label];
     
     return headerView;
+}
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
+    if (section == 0) {
+        return 52; // or whatever height you prefer
+    }
+    return 52; // or your default
+}
+
+
+- (UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section {
+    NSString *footerText = [self tableView:tableView titleForFooterInSection:section];
+    if (!footerText) {
+        return nil;
+    }
+    
+    UIView *footerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 44)];
+    
+    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(16, 8, tableView.frame.size.width - 32, 36)];
+    label.text = footerText;
+    label.font = TwitterChirpFont(TwitterFontStyleRegular); // 12pt regular
+    label.textColor = [UIColor secondaryLabelColor];
+    label.numberOfLines = 0;
+    [footerView addSubview:label];
+    
+    return footerView;
 }
 
 - (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section {
@@ -246,32 +246,14 @@ static void EnsureFontApplied(UILabel *label, UIFont *font) {
         return CGFLOAT_MIN; // Use minimal height when no footer
     }
     
-    // Calculate a more compact height
+    // Calculate dynamic height
     CGFloat width = tableView.frame.size.width - 32;
     CGRect rect = [footerText boundingRectWithSize:CGSizeMake(width, CGFLOAT_MAX)
                                          options:NSStringDrawingUsesLineFragmentOrigin
                                         attributes:@{NSFontAttributeName: TwitterChirpFont(TwitterFontStyleRegular)}
                                          context:nil];
     
-    return ceil(rect.size.height) + 16; // Reduced padding (was 24)
-}
-
-- (UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section {
-    NSString *footerText = [self tableView:tableView titleForFooterInSection:section];
-    if (!footerText) {
-        return nil;
-    }
-    
-    UIView *footerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 36)];
-    
-    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(16, 4, tableView.frame.size.width - 32, 32)];
-    label.text = footerText;
-    label.font = TwitterChirpFont(TwitterFontStyleRegular);
-    label.textColor = [UIColor secondaryLabelColor];
-    label.numberOfLines = 0;
-    [footerView addSubview:label];
-    
-    return footerView;
+    return ceil(rect.size.height) + 24; // Top/bottom padding
 }
 
 // And replace with this single implementation:
@@ -285,14 +267,18 @@ static void EnsureFontApplied(UILabel *label, UIFont *font) {
     // Remove selection highlight if needed
     cell.selectionStyle = UITableViewCellSelectionStyleDefault;
     
-    // Set minimal content insets to reduce padding
-    if ([cell respondsToSelector:@selector(setLayoutMargins:)]) {
-        cell.layoutMargins = UIEdgeInsetsMake(0, 16, 0, 16);
-    }
+    // Apply theme color
+    cell.tintColor = BHTCurrentAccentColor();
     
-    // Ensure the cell uses a compact layout
-    if ([cell respondsToSelector:@selector(setPreservesSuperviewLayoutMargins:)]) {
-        cell.preservesSuperviewLayoutMargins = NO;
+    // If it's a button cell, ensure text is bold and blue
+    if ([cell isKindOfClass:NSClassFromString(@"BHButtonTableViewCell")]) {
+        if (cell.textLabel && cell.textLabel.text) {
+            NSDictionary *attrs = @{
+                NSFontAttributeName: TwitterChirpFont(TwitterFontStyleSemibold),
+                NSForegroundColorAttributeName: BHTCurrentAccentColor()
+            };
+            cell.textLabel.attributedText = [[NSAttributedString alloc] initWithString:cell.textLabel.text attributes:attrs];
+        }
     }
 }
 
@@ -318,7 +304,6 @@ static void EnsureFontApplied(UILabel *label, UIFont *font) {
     [switchCell setProperty:NSBundle.mainBundle.bundleIdentifier forKey:@"defaults"];
     [switchCell setProperty:@(defValue) forKey:@"default"];
     [switchCell setProperty:NSStringFromSelector(changeAction) forKey:@"switchAction"];
-    [switchCell setProperty:@44 forKey:@"height"]; // Set explicit height
     if (detailText != nil) {
         [switchCell setProperty:detailText forKey:@"subtitle"];
     }
@@ -336,8 +321,6 @@ static void EnsureFontApplied(UILabel *label, UIFont *font) {
     if (rule != nil) {
         [buttonCell setProperty:@44 forKey:@"height"];
         [buttonCell setProperty:rule forKey:@"dynamicRule"];
-    } else {
-        [buttonCell setProperty:@44 forKey:@"height"]; // Set explicit height for all cells
     }
     return buttonCell;
 }
@@ -671,7 +654,6 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
     [self collectDynamicSpecifiersFromArray:self.specifiers];
 }
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
-    // Handle hidden specifiers
     if (self.hasDynamicSpecifiers) {
         PSSpecifier *dynamicSpecifier = [self specifierAtIndexPath:indexPath];
         BOOL __block shouldHide = false;
@@ -690,8 +672,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         }
     }
     
-    // Use a smaller, fixed height for all cells to match Twitter's compact style
-    return 44.0;
+    return UITableViewAutomaticDimension;
 }
 
 - (void)collectDynamicSpecifiersFromArray:(NSArray *)array {
@@ -1191,7 +1172,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         NSString *subTitle = [specifier.properties[@"subtitle"] copy];
         BOOL isBig = specifier.properties[@"big"] ? ((NSNumber *)specifier.properties[@"big"]).boolValue : NO;
         
-        // Apply attributed text to ensure semibold is properly applied
+        // Set the font to semibold with attributed text to ensure it's applied
         UIFont *semiboldFont = TwitterChirpFont(TwitterFontStyleSemibold);
         if (self.textLabel.text) {
             NSDictionary *attrs = @{
@@ -1201,25 +1182,15 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             self.textLabel.attributedText = [[NSAttributedString alloc] initWithString:self.textLabel.text attributes:attrs];
         }
         
-        // Keep subtitle style exactly as before but with compact layout
+        // Keep subtitle style exactly as before
         self.detailTextLabel.text = subTitle;
         self.detailTextLabel.numberOfLines = isBig ? 0 : 1;
         self.detailTextLabel.textColor = [UIColor secondaryLabelColor];
         self.detailTextLabel.font = TwitterChirpFont(TwitterFontStyleRegular);
+        self.selectionStyle = UITableViewCellSelectionStyleDefault;
         
         // Apply theme color to cell
         self.tintColor = BHTCurrentAccentColor();
-        
-        // Set compact layout
-        self.contentView.frame = CGRectMake(0, 0, self.frame.size.width, 44);
-        if ([self respondsToSelector:@selector(setLayoutMargins:)]) {
-            self.layoutMargins = UIEdgeInsetsMake(0, 16, 0, 16);
-        }
-        
-        // Ensure the cell uses compact layout
-        if ([self respondsToSelector:@selector(setPreservesSuperviewLayoutMargins:)]) {
-            self.preservesSuperviewLayoutMargins = NO;
-        }
     }
     return self;
 }
@@ -1227,8 +1198,8 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 - (void)tintColorDidChange {
     [super tintColorDidChange];
     
-    // Just update the tint color but preserve the font
-    if (self.textLabel.attributedText) {
+    // Update the text color to match the new tint color
+    if (self.textLabel.text) {
         NSMutableAttributedString *attr = [self.textLabel.attributedText mutableCopy];
         [attr addAttribute:NSForegroundColorAttributeName value:BHTCurrentAccentColor() range:NSMakeRange(0, attr.length)];
         self.textLabel.attributedText = attr;
@@ -1244,33 +1215,23 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         NSString *subTitle = [specifier.properties[@"subtitle"] copy];
         BOOL isBig = specifier.properties[@"big"] ? ((NSNumber *)specifier.properties[@"big"]).boolValue : NO;
         
-        // Apply attributed text to ensure semibold is properly applied
+        // Set the font to semibold with attributed text
         UIFont *semiboldFont = TwitterChirpFont(TwitterFontStyleSemibold);
         if (self.textLabel.text) {
             NSDictionary *attrs = @{NSFontAttributeName: semiboldFont};
             self.textLabel.attributedText = [[NSAttributedString alloc] initWithString:self.textLabel.text attributes:attrs];
         }
 
-        // Keep subtitle style exactly as before but with compact layout
+        // Keep subtitle style exactly as before
         self.detailTextLabel.text = subTitle;
         self.detailTextLabel.numberOfLines = isBig ? 0 : 1;
         self.detailTextLabel.textColor = [UIColor secondaryLabelColor];
         self.detailTextLabel.font = TwitterChirpFont(TwitterFontStyleRegular);
+        self.selectionStyle = UITableViewCellSelectionStyleDefault;
         
         // Theme the switch
         UISwitch *switchControl = (UISwitch *)[self control];
         switchControl.onTintColor = BHTCurrentAccentColor();
-        
-        // Set compact layout
-        self.contentView.frame = CGRectMake(0, 0, self.frame.size.width, 44);
-        if ([self respondsToSelector:@selector(setLayoutMargins:)]) {
-            self.layoutMargins = UIEdgeInsetsMake(0, 16, 0, 16);
-        }
-        
-        // Ensure the cell uses compact layout
-        if ([self respondsToSelector:@selector(setPreservesSuperviewLayoutMargins:)]) {
-            self.preservesSuperviewLayoutMargins = NO;
-        }
         
         if (specifier.properties[@"switchAction"]) {
             UISwitch *targetSwitch = ((UISwitch *)[self control]);
