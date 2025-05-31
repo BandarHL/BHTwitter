@@ -267,19 +267,8 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     // Remove selection highlight if needed
     cell.selectionStyle = UITableViewCellSelectionStyleDefault;
     
-    // Apply theme color
+    // Only apply tint color, don't modify other aspects
     cell.tintColor = BHTCurrentAccentColor();
-    
-    // If it's a button cell, ensure text is bold and blue
-    if ([cell isKindOfClass:NSClassFromString(@"BHButtonTableViewCell")]) {
-        if (cell.textLabel && cell.textLabel.text) {
-            NSDictionary *attrs = @{
-                NSFontAttributeName: TwitterChirpFont(TwitterFontStyleSemibold),
-                NSForegroundColorAttributeName: BHTCurrentAccentColor()
-            };
-            cell.textLabel.attributedText = [[NSAttributedString alloc] initWithString:cell.textLabel.text attributes:attrs];
-        }
-    }
 }
 
 
@@ -1172,15 +1161,9 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         NSString *subTitle = [specifier.properties[@"subtitle"] copy];
         BOOL isBig = specifier.properties[@"big"] ? ((NSNumber *)specifier.properties[@"big"]).boolValue : NO;
         
-        // Set the font to semibold with attributed text to ensure it's applied
-        UIFont *semiboldFont = TwitterChirpFont(TwitterFontStyleSemibold);
-        if (self.textLabel.text) {
-            NSDictionary *attrs = @{
-                NSFontAttributeName: semiboldFont,
-                NSForegroundColorAttributeName: BHTCurrentAccentColor()
-            };
-            self.textLabel.attributedText = [[NSAttributedString alloc] initWithString:self.textLabel.text attributes:attrs];
-        }
+        // Just set the font directly without attributed text
+        self.textLabel.font = TwitterChirpFont(TwitterFontStyleSemibold);
+        self.textLabel.textColor = BHTCurrentAccentColor();
         
         // Keep subtitle style exactly as before
         self.detailTextLabel.text = subTitle;
@@ -1197,14 +1180,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 
 - (void)tintColorDidChange {
     [super tintColorDidChange];
-    
-    // Update the text color to match the new tint color
-    if (self.textLabel.text) {
-        NSMutableAttributedString *attr = [self.textLabel.attributedText mutableCopy];
-        [attr addAttribute:NSForegroundColorAttributeName value:BHTCurrentAccentColor() range:NSMakeRange(0, attr.length)];
-        self.textLabel.attributedText = attr;
-    }
-    
+    self.textLabel.textColor = BHTCurrentAccentColor();
     self.tintColor = BHTCurrentAccentColor();
 }
 @end
@@ -1215,13 +1191,9 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         NSString *subTitle = [specifier.properties[@"subtitle"] copy];
         BOOL isBig = specifier.properties[@"big"] ? ((NSNumber *)specifier.properties[@"big"]).boolValue : NO;
         
-        // Set the font to semibold with attributed text
-        UIFont *semiboldFont = TwitterChirpFont(TwitterFontStyleSemibold);
-        if (self.textLabel.text) {
-            NSDictionary *attrs = @{NSFontAttributeName: semiboldFont};
-            self.textLabel.attributedText = [[NSAttributedString alloc] initWithString:self.textLabel.text attributes:attrs];
-        }
-
+        // Just set the font directly without attributed text
+        self.textLabel.font = TwitterChirpFont(TwitterFontStyleSemibold);
+        
         // Keep subtitle style exactly as before
         self.detailTextLabel.text = subTitle;
         self.detailTextLabel.numberOfLines = isBig ? 0 : 1;
