@@ -1564,21 +1564,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         UIImage *twitterIcon = nil;
         
         // Try to get the Twitter vector image - use appropriate sizing for icon
-        twitterIcon = [UIImage tfn_vectorImageNamed:@"twitter" fitsSize:CGSizeMake(29, 29) fillColor:[UIColor labelColor]];
-        
-        if (!twitterIcon) {
-            // First fallback: try with different name in case the icon name changed
-            twitterIcon = [UIImage tfn_vectorImageNamed:@"bird" fitsSize:CGSizeMake(29, 29) fillColor:[UIColor labelColor]];
-        }
-        
-        if (!twitterIcon) {
-            // Second fallback: use our bundled PNG as before
-            NSURL *iconURL = [[BHTBundle sharedBundle] pathForFile:@"twitter_icon.png"];
-            if (iconURL) {
-                twitterIcon = [UIImage imageWithContentsOfFile:iconURL.path];
-                NSLog(@"[BHTwitter] Found Twitter icon at: %@", iconURL.path);
-            }
-        }
+        twitterIcon = [UIImage tfn_vectorImageNamed:@"twitter" fitsSize:CGSizeMake(20, 20) fillColor:[UIColor labelColor]];
         
         // Create the settings item - don't specify an icon name to avoid the system icon
         TFNSettingsNavigationItem *bhtwitter = [[%c(TFNSettingsNavigationItem) alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"] detail:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_DETAIL"] iconName:nil controllerFactory:^UIViewController *{
