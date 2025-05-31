@@ -3468,7 +3468,6 @@ static void findAndHideSuperFollowControl(UIView *viewToSearch) {
 
 @class T1ProfileHeaderViewController; // Forward declaration instead of interface definition
 
-// It's good practice to also declare the class we are looking for, even if just minimally
 @interface T1SuperFollowControl : UIView
 @end
 
@@ -3574,18 +3573,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     }
     return NO;
 }
-
-%hook T1ProfileHeaderViewController
-
-- (void)viewWillAppear {
-    %orig;
-    // Search for and hide T1SuperFollowControl within this view controller's view
-    if ([BHTManager restoreFollowButton] && self.isViewLoaded) { // Ensure the view is loaded
-        findAndHideSuperFollowControl(self.view);
-    }
-}
-
-%end
 
 // MARK: - Timestamp Label Styling via UILabel -setText:
 
@@ -6056,5 +6043,11 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 %hook T1SubscriptionJourneyManager
 - (_Bool)shouldShowReplyBoostUpsellWithAccount {
         return false;
+}
+%end
+
+%hook T1SuperFollowControl
+- (_Bool)_isSubscribableUser {
+    return false;
 }
 %end
