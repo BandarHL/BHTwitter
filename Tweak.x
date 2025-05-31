@@ -6067,4 +6067,12 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
     return %orig;
 }
 
+// Method that creates the overflow button
+- (id)_t1_overflowButtonForItems:(id)arg1 {
+    if ([BHTManager restoreFollowButton]) {
+        return nil; // Return nil to prevent the overflow button from appearing
+    }
+    return %orig;
+}
+
 %end
