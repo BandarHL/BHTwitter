@@ -573,10 +573,13 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         if ([username isEqualToString:@"nyaathea"]) {
             UIView *currentAffiliateLabelView = [self valueForKey:@"affiliateLabel"];
             if (currentAffiliateLabelView) {
-                // Check if our specific badge is already there
                 Class TTAAffiliateBadgeViewClass = objc_getClass("TTAAffiliateBadgeView");
+                if (!TTAAffiliateBadgeViewClass) return;
+
+                // Check if our specific badge is already there
                 for (UIView *subview in currentAffiliateLabelView.subviews) {
-                    if (TTAAffiliateBadgeViewClass && [subview isKindOfClass:TTAAffiliateBadgeViewClass]) { // Changed to use objc_getClass
+                    if ([subview isKindOfClass:TTAAffiliateBadgeViewClass]) {
+                        // Assuming descriptionStr can be KVC-accessed for reading if necessary for check
                         NSString *existingDescription = [subview valueForKey:@"descriptionStr"];
                         if ([existingDescription isEqualToString:@"test"]) {
                             return; // Badge already added
@@ -589,27 +592,34 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                     [subview removeFromSuperview];
                 }
 
-                if (TTAAffiliateBadgeViewClass) { // Ensure class was found
-                    id customBadge = [[TTAAffiliateBadgeViewClass alloc] initWithFrame:CGRectZero]; // Changed to use objc_getClass
-                    [customBadge setValue:@"test" forKey:@"descriptionStr"];
-                    // [customBadge setValue:[UIColor redColor] forKey:@"textColor"]; // Example customization
-
-                    [currentAffiliateLabelView addSubview:customBadge];
-                    // Cast to UIView to access layout anchors if TTAAffiliateBadgeView itself is not fully known as a UIView subclass here
-                    UIView *customBadgeAsView = (UIView *)customBadge;
-                    customBadgeAsView.translatesAutoresizingMaskIntoConstraints = NO;
-                    [NSLayoutConstraint activateConstraints:@[
-                        [customBadgeAsView.leadingAnchor constraintEqualToAnchor:currentAffiliateLabelView.leadingAnchor],
-                        [customBadgeAsView.trailingAnchor constraintEqualToAnchor:currentAffiliateLabelView.trailingAnchor],
-                        [customBadgeAsView.topAnchor constraintEqualToAnchor:currentAffiliateLabelView.topAnchor],
-                        [customBadgeAsView.bottomAnchor constraintEqualToAnchor:currentAffiliateLabelView.bottomAnchor]
-                    ]];
-
-                    [currentAffiliateLabelView setNeedsLayout];
-                    [currentAffiliateLabelView layoutIfNeeded];
-                    [self setNeedsLayout];
-                    [self layoutIfNeeded];
+                id customBadge = [[TTAAffiliateBadgeViewClass alloc] initWithFrame:CGRectZero];
+                
+                // Use direct property access for descriptionStr
+                if ([customBadge respondsToSelector:@selector(setDescriptionStr:)]) {
+                    [(TTAAffiliateBadgeView *)customBadge setDescriptionStr:@"test"];
                 }
+                // Example for textColor, if TTAAffiliateBadgeView has a textColor property defined in your interface
+                // if ([customBadge respondsToSelector:@selector(setTextColor:)]) {
+                // [(TTAAffiliateBadgeView *)customBadge setTextColor:[UIColor redColor]];
+                // }
+
+                [currentAffiliateLabelView addSubview:customBadge];
+                UIView *customBadgeAsView = (UIView *)customBadge;
+                customBadgeAsView.translatesAutoresizingMaskIntoConstraints = NO;
+
+                // Center the badge in the affiliateLabel view and let it use its intrinsic size
+                [NSLayoutConstraint activateConstraints:@[
+                    [customBadgeAsView.centerXAnchor constraintEqualToAnchor:currentAffiliateLabelView.centerXAnchor],
+                    [customBadgeAsView.centerYAnchor constraintEqualToAnchor:currentAffiliateLabelView.centerYAnchor],
+                    // Optional: you might want to constrain width/height if intrinsic size isn't sufficient or too large
+                    // [customBadgeAsView.widthAnchor constraintLessThanOrEqualToAnchor:currentAffiliateLabelView.widthAnchor],
+                    // [customBadgeAsView.heightAnchor constraintLessThanOrEqualToAnchor:currentAffiliateLabelView.heightAnchor]
+                ]];
+
+                [currentAffiliateLabelView setNeedsLayout];
+                [currentAffiliateLabelView layoutIfNeeded];
+                [self setNeedsLayout];
+                [self layoutIfNeeded];
             }
         }
     }
