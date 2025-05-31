@@ -3417,7 +3417,7 @@ static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString 
 
 %end
 
-// MARK: - Restore Follow Button (TUIFollowControl) & Hide SuperFollow (T1SuperFollowControl)
+// MARK: - Restore Follow Button (TUIFollowControl)
 
 @interface TUIFollowControl : UIControl
 - (void)setVariant:(NSUInteger)variant;
@@ -3575,18 +3575,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     }
     return NO;
 }
-
-%hook T1ProfileHeaderViewController
-
-- (void)viewDidLayoutSubviews { // Or viewWillAppear:, depending on when controls are added
-    %orig;
-    // Search for and hide T1SuperFollowControl within this view controller's view
-    if ([BHTManager restoreFollowButton] && self.isViewLoaded) { // Ensure the view is loaded
-        findAndHideSuperFollowControl(self.view);
-    }
-}
-
-%end
 
 // MARK: - Immersive Player Timestamp Visibility Control
 
@@ -6068,57 +6056,4 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
         }
     }
 }
-
-%end
-
-%hook T1ProfileActionButtonsView
-
-- (void)setButtonProviders:(NSArray *)buttonProviders {
-    if ([BHTManager restoreFollowButton] && buttonProviders) {
-        NSMutableArray *filteredProviders = [NSMutableArray array];
-        for (id provider in buttonProviders) {
-            // Filter out any provider that creates a Super Follow button
-            // We're checking the class name since we don't have the exact class for the provider
-            if (![NSStringFromClass([provider class]) containsString:@"SuperFollow"]) {
-                [filteredProviders addObject:provider];
-            }
-        }
-        %orig(filteredProviders);
-    } else {
-        %orig;
-    }
-}
-
-- (void)_t1_updateAllButtonViews {
-    %orig;
-    if ([BHTManager restoreFollowButton]) {
-        // After updating button views, hide any Super Follow control that might have been added
-        for (UIView *subview in self.subviews) {
-            if ([subview isKindOfClass:%c(T1SuperFollowControl)]) {
-                subview.hidden = YES;
-                subview.alpha = 0.0;
-            }
-        }
-    }
-}
-
-%end
-
-%hook T1ProfileHeaderViewController
-
-- (void)setActionButtonProviders:(NSArray *)buttonProviders {
-    if ([BHTManager restoreFollowButton] && buttonProviders) {
-        NSMutableArray *filteredProviders = [NSMutableArray array];
-        for (id provider in buttonProviders) {
-            // Filter out any provider that creates a Super Follow button
-            if (![NSStringFromClass([provider class]) containsString:@"SuperFollow"]) {
-                [filteredProviders addObject:provider];
-            }
-        }
-        %orig(filteredProviders);
-    } else {
-        %orig;
-    }
-}
-
 %end
