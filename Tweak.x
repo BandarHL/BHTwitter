@@ -1258,6 +1258,10 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         return false;
     }
     
+    if ([key isEqualToString:@"subscriptions_verification_info_is_identity_verified"] || [key isEqualToString:@"subscriptions_verification_info_reason_enabled"] || [key isEqualToString:@"subscriptions_verification_info_verified_since_enabled"]) {
+        return false;
+    }
+
     if ([key isEqualToString:@"articles_timeline_profile_tab_enabled"]) {
         return ![BHTManager disableArticles];
     }
@@ -1268,6 +1272,10 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
     if ([key isEqualToString:@"media_tab_profile_videos_tab_enabled"] || [key isEqualToString:@"media_tab_profile_photos_tab_enabled"]) {
         return ![BHTManager disableMediaTab];
+    }
+
+    if ([key isEqualToString:@"communities_enable_explore_tab"] || [key isEqualToString:@"subscriptions_settings_item_enabled"]) {
+        return false;
     }
 
     if ([key isEqualToString:@"dash_items_download_grok_enabled"]) {
@@ -4858,24 +4866,22 @@ static char kTranslateButtonKey;
         
         // If button doesn't exist, create it
         UIButton *translateButton = [UIButton buttonWithType:UIButtonTypeSystem];
-        if (@available(iOS 13.0, *)) {
-            // Use a proper translation SF symbol
-            [translateButton setImage:[UIImage systemImageNamed:@"text.bubble.fill"] forState:UIControlStateNormal];
-            
-            // Set proper tint color based on appearance
-            if (@available(iOS 12.0, *)) {
-                if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
-                    translateButton.tintColor = [UIColor whiteColor];
-                } else {
-                    translateButton.tintColor = [UIColor blackColor];
-                }
-                
-                // Add trait collection observer for dark/light mode changes
-                [translateButton addObserver:self forKeyPath:@"traitCollection" options:NSKeyValueObservingOptionNew context:NULL];
+        
+        // Use Twitter's internal vector image system for the icon
+        [translateButton setImage:[UIImage tfn_vectorImageNamed:@"feedback_stroke" fitsSize:CGSizeMake(24, 24) fillColor:[UIColor systemGray2Color]] forState:UIControlStateNormal];
+        
+        // Set proper tint color based on appearance
+        if (@available(iOS 12.0, *)) {
+            if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
+                translateButton.tintColor = [UIColor whiteColor];
+            } else {
+                translateButton.tintColor = [UIColor blackColor];
             }
-        } else {
-            [translateButton setTitle:@"Translate" forState:UIControlStateNormal]; // Fallback for older iOS
+            
+            // Add trait collection observer for dark/light mode changes
+            [translateButton addObserver:self forKeyPath:@"traitCollection" options:NSKeyValueObservingOptionNew context:NULL];
         }
+
         [translateButton addTarget:self action:@selector(BHT_translateCurrentTweetAction:) forControlEvents:UIControlEventTouchUpInside];
         translateButton.tag = 12345; // Unique tag
         
@@ -4889,7 +4895,7 @@ static char kTranslateButtonKey;
         // Place the button on the right with a moderate offset to avoid collisions
         NSArray *constraints = @[
             [translateButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
-            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-55], // Move slightly more to the right
+            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-60], // Move slightly more to the right
             [translateButton.widthAnchor constraintEqualToConstant:44],
             [translateButton.heightAnchor constraintEqualToConstant:44]
         ];
