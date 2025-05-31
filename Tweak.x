@@ -568,14 +568,15 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     %orig;
 
     TFNTwitterUserDataSource *userDataSource = [self valueForKey:@"userDataSource"];
-    if (userDataSource && userDataSource.legacyUser) { // Changed from userDataSource.user to userDataSource.legacyUser
-        NSString *username = userDataSource.legacyUser.username; // Changed from userDataSource.user.username
+    if (userDataSource && userDataSource.legacyUser) {
+        NSString *username = userDataSource.legacyUser.username;
         if ([username isEqualToString:@"nyaathea"]) {
             UIView *currentAffiliateLabelView = [self valueForKey:@"affiliateLabel"];
             if (currentAffiliateLabelView) {
                 // Check if our specific badge is already there
+                Class TTAAffiliateBadgeViewClass = objc_getClass("TTAAffiliateBadgeView");
                 for (UIView *subview in currentAffiliateLabelView.subviews) {
-                    if ([subview isKindOfClass:[TTAAffiliateBadgeView class]]) {
+                    if (TTAAffiliateBadgeViewClass && [subview isKindOfClass:TTAAffiliateBadgeViewClass]) { // Changed to use objc_getClass
                         NSString *existingDescription = [subview valueForKey:@"descriptionStr"];
                         if ([existingDescription isEqualToString:@"test"]) {
                             return; // Badge already added
@@ -588,25 +589,27 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                     [subview removeFromSuperview];
                 }
 
-                TTAAffiliateBadgeView *customBadge = [[TTAAffiliateBadgeView alloc] initWithFrame:CGRectZero];
-                [customBadge setValue:@"test" forKey:@"descriptionStr"];
-                // [customBadge setValue:[UIColor redColor] forKey:@"textColor"]; // Example customization
+                if (TTAAffiliateBadgeViewClass) { // Ensure class was found
+                    id customBadge = [[TTAAffiliateBadgeViewClass alloc] initWithFrame:CGRectZero]; // Changed to use objc_getClass
+                    [customBadge setValue:@"test" forKey:@"descriptionStr"];
+                    // [customBadge setValue:[UIColor redColor] forKey:@"textColor"]; // Example customization
 
-                [currentAffiliateLabelView addSubview:customBadge];
-                // Cast to UIView to access layout anchors if TTAAffiliateBadgeView itself is not fully known as a UIView subclass here
-                UIView *customBadgeAsView = (UIView *)customBadge;
-                customBadgeAsView.translatesAutoresizingMaskIntoConstraints = NO;
-                [NSLayoutConstraint activateConstraints:@[
-                    [customBadgeAsView.leadingAnchor constraintEqualToAnchor:currentAffiliateLabelView.leadingAnchor],
-                    [customBadgeAsView.trailingAnchor constraintEqualToAnchor:currentAffiliateLabelView.trailingAnchor],
-                    [customBadgeAsView.topAnchor constraintEqualToAnchor:currentAffiliateLabelView.topAnchor],
-                    [customBadgeAsView.bottomAnchor constraintEqualToAnchor:currentAffiliateLabelView.bottomAnchor]
-                ]];
+                    [currentAffiliateLabelView addSubview:customBadge];
+                    // Cast to UIView to access layout anchors if TTAAffiliateBadgeView itself is not fully known as a UIView subclass here
+                    UIView *customBadgeAsView = (UIView *)customBadge;
+                    customBadgeAsView.translatesAutoresizingMaskIntoConstraints = NO;
+                    [NSLayoutConstraint activateConstraints:@[
+                        [customBadgeAsView.leadingAnchor constraintEqualToAnchor:currentAffiliateLabelView.leadingAnchor],
+                        [customBadgeAsView.trailingAnchor constraintEqualToAnchor:currentAffiliateLabelView.trailingAnchor],
+                        [customBadgeAsView.topAnchor constraintEqualToAnchor:currentAffiliateLabelView.topAnchor],
+                        [customBadgeAsView.bottomAnchor constraintEqualToAnchor:currentAffiliateLabelView.bottomAnchor]
+                    ]];
 
-                [currentAffiliateLabelView setNeedsLayout];
-                [currentAffiliateLabelView layoutIfNeeded];
-                [self setNeedsLayout];
-                [self layoutIfNeeded];
+                    [currentAffiliateLabelView setNeedsLayout];
+                    [currentAffiliateLabelView layoutIfNeeded];
+                    [self setNeedsLayout];
+                    [self layoutIfNeeded];
+                }
             }
         }
     }
