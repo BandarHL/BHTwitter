@@ -1550,28 +1550,27 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     if ([self.sections count] == 1) {
         TFNItemsDataViewControllerBackingStore *backingStore = self.backingStore;
         
-        // Create a custom Twitter icon instead of using the system gear icon
+        // Get the Twitter icon using BHTBundle - the same way the sounds are loaded
         UIImage *twitterIcon = nil;
-        NSBundle *bhBundle = [NSBundle bundleWithPath:@"/Library/Application Support/BHT/BHTwitter.bundle"];
-        if (bhBundle) {
-            NSString *iconPath = [bhBundle pathForResource:@"twitter_icon" ofType:@"png"];
-            if (iconPath) {
-                twitterIcon = [UIImage imageWithContentsOfFile:iconPath];
-            }
+        NSURL *iconURL = [[BHTBundle sharedBundle] pathForFile:@"twitter_icon.png"];
+        if (iconURL) {
+            twitterIcon = [UIImage imageWithContentsOfFile:iconURL.path];
+            NSLog(@"[BHTwitter] Found Twitter icon at: %@", iconURL.path);
         }
         
-        // Fall back to system icon if custom icon not found
-        if (!twitterIcon) {
-            twitterIcon = [UIImage systemImageNamed:@"gearshape.circle"];
-        }
-        
-        TFNSettingsNavigationItem *bhtwitter = [[%c(TFNSettingsNavigationItem) alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"] detail:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_DETAIL"] systemIconName:@"gearshape.circle" controllerFactory:^UIViewController *{
+        // Create the settings item - don't specify an icon name to avoid the system icon
+        TFNSettingsNavigationItem *bhtwitter = [[%c(TFNSettingsNavigationItem) alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"] detail:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_DETAIL"] iconName:nil controllerFactory:^UIViewController *{
             return [BHTManager BHTSettingsWithAccount:self.account];
         }];
         
-        // Set the custom icon directly
+        // Set our Twitter icon
         if (twitterIcon) {
+            NSLog(@"[BHTwitter] Successfully loaded Twitter icon");
             [bhtwitter setValue:twitterIcon forKey:@"_icon"];
+        } else {
+            // Fall back to a Twitter-like system icon if our image can't be loaded
+            NSLog(@"[BHTwitter] Failed to load Twitter icon, using system icon");
+            [bhtwitter setValue:[UIImage systemImageNamed:@"at.circle"] forKey:@"_icon"];
         }
         
         if ([backingStore respondsToSelector:@selector(insertSection:atIndex:)]) {
