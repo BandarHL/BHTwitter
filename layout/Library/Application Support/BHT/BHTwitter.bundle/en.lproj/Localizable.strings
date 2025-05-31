@@ -11,6 +11,7 @@
 "RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC" = "You need to restart Twitter for this change to take effect.";
 "RESTART_REQUIRED_ALERT_MESSAGE_SQUARE_AVATARS" = "You need to restart Twitter for square profile pictures to take effect.";
 "RESTART_REQUIRED_ALERT_MESSAGE_GENERIC" = "You need to restart Twitter for this change to take effect.";
+"RESTART_REQUIRED_ALERT_MESSAGE_NAVBAR" = "You need to restart Twitter for your custom navigation to take effect.";
 "RESTART_NOW_BUTTON_TITLE" = "Restart";
 
 "CONFIRM_ALERT_MESSAGE" = "Sure you meant to do that?";
@@ -18,6 +19,7 @@
 "NO_BUTTON_TITLE" = "No";
 "OK_BUTTON_TITLE" = "OK";
 "CANCEL_BUTTON_TITLE" = "Cancel";
+"SAVE_BUTTON_TITLE" = "Save";
 
 /*Main menu start*/
 
@@ -296,8 +298,9 @@
 "THEME_OPTION_6" = "Green";
 
 /*Tab bar*/
-"CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE" = "Edit tab bar";
-"CUSTOM_TAB_BAR_REST_MESSAGE" = "Are you sure you'd like to reset the tab bar?";
+"CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE" = "Custom navigation";
+"CUSTOM_TAB_BAR_RESET_BUTTON" = "Restore to default";
+"CUSTOM_TAB_BAR_RESET_MESSAGE" = "Are you sure you'd like to restore the navigation bar to its default state?";
 "CUSTOM_TAB_BAR_SECTION_1_TITLE" = "Enabled";
 "CUSTOM_TAB_BAR_SECTION_2_TITLE" = "Disabled";
 "CUSTOM_TAB_BAR_HOME" = "Home";

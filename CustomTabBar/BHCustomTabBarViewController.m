@@ -1,9 +1,8 @@
-//
 //  BHCustomTabBarViewController.m
-//  NeoFeeBird
+//  NeoFreeBird
 //
 //  Created by Bandar Alruwaili on 11/12/2023.
-//  Finalized by actuallyaridan on 30/05/2025.
+//  Modified by actuallyaridan on 31/05/2025.
 //
 
 #import "BHCustomTabBarViewController.h"
@@ -33,11 +32,14 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 }
 
 @interface BHCustomTabBarViewController () <UICollectionViewDataSource, UICollectionViewDelegateFlowLayout>
+@property (nonatomic, strong) UIScrollView *scrollView;
+@property (nonatomic, strong) UIView *contentView;
 @property (nonatomic, strong) UICollectionView *collectionView;
+@property (nonatomic, strong) UIButton *restoreButton;
 @property (nonatomic, strong) NSMutableArray<BHCustomTabBarItem *> *allItems;
 @property (nonatomic, strong) NSMutableSet<NSString *> *enabledPageIDs;
 @property (nonatomic, assign) BOOL hasChanges;
-@property (nonatomic, strong) UIButton *restoreButton;
+@property (nonatomic, strong) NSLayoutConstraint *collectionViewHeightConstraint;
 @end
 
 @implementation BHCustomTabBarViewController
@@ -46,22 +48,46 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     [super viewDidLoad];
     self.view.backgroundColor = [UIColor systemBackgroundColor];
     self.hasChanges = NO;
-    [self setupNavigationBar];
+    [self setupScrollView];
     [self setupCollectionView];
     [self setupRestoreButton];
     [self loadData];
     [self updateSaveButtonState];
+    [self setupSaveButton];
 }
 
 #pragma mark - UI Setup
 
-- (void)setupNavigationBar {
-    UIBarButtonItem *saveButton = [[UIBarButtonItem alloc] initWithTitle:@"Save"
+- (void)setupSaveButton {
+    UIBarButtonItem *saveButton = [[UIBarButtonItem alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"SAVE_BUTTON_TITLE"]
                                                                     style:UIBarButtonItemStyleDone
                                                                    target:self
                                                                    action:@selector(saveButtonTapped)];
     self.navigationItem.rightBarButtonItem = saveButton;
     saveButton.enabled = NO;
+}
+
+- (void)setupScrollView {
+    self.scrollView = [[UIScrollView alloc] init];
+    self.scrollView.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.view addSubview:self.scrollView];
+    
+    self.contentView = [[UIView alloc] init];
+    self.contentView.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.scrollView addSubview:self.contentView];
+    
+    [NSLayoutConstraint activateConstraints:@[
+        [self.scrollView.topAnchor constraintEqualToAnchor:self.view.topAnchor],
+        [self.scrollView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
+        [self.scrollView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
+        [self.scrollView.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor],
+        
+        [self.contentView.topAnchor constraintEqualToAnchor:self.scrollView.topAnchor],
+        [self.contentView.leadingAnchor constraintEqualToAnchor:self.scrollView.leadingAnchor],
+        [self.contentView.trailingAnchor constraintEqualToAnchor:self.scrollView.trailingAnchor],
+        [self.contentView.bottomAnchor constraintEqualToAnchor:self.scrollView.bottomAnchor],
+        [self.contentView.widthAnchor constraintEqualToAnchor:self.scrollView.widthAnchor]
+    ]];
 }
 
 - (void)setupCollectionView {
@@ -80,33 +106,35 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     self.collectionView.delegate = self;
     self.collectionView.dataSource = self;
     [self.collectionView registerClass:[UICollectionViewCell class] forCellWithReuseIdentifier:@"tabItemCell"];
-    [self.view addSubview:self.collectionView];
+    [self.contentView addSubview:self.collectionView];
+
+    self.collectionViewHeightConstraint = [self.collectionView.heightAnchor constraintEqualToConstant:100];
+    self.collectionViewHeightConstraint.active = YES;
 }
 
 - (void)setupRestoreButton {
     self.restoreButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    [self.restoreButton setTitle:@"Restore to default" forState:UIControlStateNormal];
+    [self.restoreButton setTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_RESET_BUTTON"] forState:UIControlStateNormal];
     self.restoreButton.titleLabel.font = [TwitterChirpFont(TwitterFontStyleSemibold) fontWithSize:16];
     [self.restoreButton setTitleColor:[UIColor labelColor] forState:UIControlStateNormal];
     self.restoreButton.backgroundColor = [UIColor systemBackgroundColor];
     self.restoreButton.layer.cornerRadius = 26;
-    self.restoreButton.layer.borderWidth = 1.0;
+    self.restoreButton.layer.borderWidth = 2.0;
     self.restoreButton.layer.borderColor = [UIColor.systemGray6Color resolvedColorWithTraitCollection:self.traitCollection].CGColor;
-    self.restoreButton.contentEdgeInsets = UIEdgeInsetsMake(12, 0, 12, 0);
     self.restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
     [self.restoreButton addTarget:self action:@selector(resetSettingsBarButtonHandler:) forControlEvents:UIControlEventTouchUpInside];
-    [self.view addSubview:self.restoreButton];
+    [self.contentView addSubview:self.restoreButton];
 
     [NSLayoutConstraint activateConstraints:@[
-        [self.restoreButton.bottomAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.bottomAnchor constant:-20],
-        [self.restoreButton.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:20],
-        [self.restoreButton.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-20],
-        [self.restoreButton.heightAnchor constraintEqualToConstant:52],
+        [self.collectionView.topAnchor constraintEqualToAnchor:self.contentView.topAnchor],
+        [self.collectionView.leadingAnchor constraintEqualToAnchor:self.contentView.leadingAnchor],
+        [self.collectionView.trailingAnchor constraintEqualToAnchor:self.contentView.trailingAnchor],
 
-        [self.collectionView.topAnchor constraintEqualToAnchor:self.view.topAnchor],
-        [self.collectionView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
-        [self.collectionView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
-        [self.collectionView.bottomAnchor constraintEqualToAnchor:self.restoreButton.topAnchor constant:-10]
+        [self.restoreButton.topAnchor constraintEqualToAnchor:self.collectionView.bottomAnchor constant:20],
+        [self.restoreButton.leadingAnchor constraintEqualToAnchor:self.contentView.leadingAnchor constant:20],
+        [self.restoreButton.trailingAnchor constraintEqualToAnchor:self.contentView.trailingAnchor constant:-20],
+        [self.restoreButton.heightAnchor constraintEqualToConstant:52],
+        [self.restoreButton.bottomAnchor constraintEqualToAnchor:self.contentView.bottomAnchor constant:-20]
     ]];
 }
 
@@ -133,9 +161,17 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
             [[BHCustomTabBarItem alloc] initWithTitle:@"CUSTOM_TAB_BAR_GROK" pageID:@"grok"],
             [[BHCustomTabBarItem alloc] initWithTitle:@"CUSTOM_TAB_BAR_VIDEO" pageID:@"media"]
         ] mutableCopy];
-        self.enabledPageIDs = [NSMutableSet setWithArray:@[@"home", @"guide", @"audiospace", @"communities"]];
+        self.enabledPageIDs = [NSMutableSet setWithArray:@[@"home", @"guide", @"grok", @"media", @"ntab", @"messages"]];
     }
     [self.collectionView reloadData];
+    [self updateCollectionViewHeight];
+}
+
+- (void)updateCollectionViewHeight {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        CGFloat height = self.collectionView.collectionViewLayout.collectionViewContentSize.height;
+        self.collectionViewHeightConstraint.constant = height;
+    });
 }
 
 - (NSArray<BHCustomTabBarItem *> *)getItemsForKey:(NSString *)key {
@@ -150,19 +186,15 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
 - (void)saveButtonTapped {
     [self persistChanges];
-
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Restart required"
-                                                                   message:@"You need to restart Twitter for your custom tab bar to take affect"
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_TITLE"]
+                                                                   message:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_MESSAGE_NAVBAR"]
                                                             preferredStyle:UIAlertControllerStyleAlert];
-
-    [alert addAction:[UIAlertAction actionWithTitle:@"Not now" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"] style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
         [self.navigationController popViewControllerAnimated:YES];
     }]];
-
-    [alert addAction:[UIAlertAction actionWithTitle:@"Restart now" style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_NOW_BUTTON_TITLE"] style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
         exit(0);
     }]];
-
     [self presentViewController:alert animated:YES completion:nil];
 }
 
@@ -177,10 +209,8 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
             [disabledItems addObject:item];
         }
     }
-
     NSData *enabledData = [NSKeyedArchiver archivedDataWithRootObject:enabledItems];
     NSData *disabledData = [NSKeyedArchiver archivedDataWithRootObject:disabledItems];
-
     [[NSUserDefaults standardUserDefaults] setObject:enabledData forKey:@"allowed"];
     [[NSUserDefaults standardUserDefaults] setObject:disabledData forKey:@"hidden"];
     [[NSUserDefaults standardUserDefaults] synchronize];
@@ -196,36 +226,23 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 #pragma mark - Reset Logic
 
 - (void)resetSettingsBarButtonHandler:(UIBarButtonItem *)sender {
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"BHTwitter"
-                                                                   message:@"Reset tab bar layout to default?"
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@""
+                                                                   message:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_RESET_MESSAGE"]
                                                             preferredStyle:UIAlertControllerStyleAlert];
-    [alert addAction:[UIAlertAction actionWithTitle:@"Yes" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"YES_BUTTON_TITLE"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
         [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"allowed"];
         [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"hidden"];
         [self loadData];
         [self persistChanges];
     }]];
-    [alert addAction:[UIAlertAction actionWithTitle:@"No" style:UIAlertActionStyleCancel handler:nil]];
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"NO_BUTTON_TITLE"] style:UIAlertActionStyleCancel handler:nil]];
     [self presentViewController:alert animated:YES completion:nil];
-}
-
-#pragma mark - Trait Collection
-
-- (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
-    [super traitCollectionDidChange:previousTraitCollection];
-    [self.collectionView reloadData];
-    self.restoreButton.layer.borderColor = [UIColor.systemGray6Color resolvedColorWithTraitCollection:self.traitCollection].CGColor;
 }
 
 #pragma mark - UICollectionView
 
-- (NSInteger)numberOfSectionsInCollectionView:(UICollectionView *)collectionView {
-    return 1;
-}
-
-- (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section {
-    return self.allItems.count;
-}
+- (NSInteger)numberOfSectionsInCollectionView:(UICollectionView *)collectionView { return 1; }
+- (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section { return self.allItems.count; }
 
 - (__kindof UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath {
     UICollectionViewCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"tabItemCell" forIndexPath:indexPath];
@@ -236,18 +253,18 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     CGFloat boxSize = cell.contentView.bounds.size.width;
 
     UIView *container = [[UIView alloc] initWithFrame:CGRectMake(0, 0, boxSize, boxSize)];
+    UIColor *twitterBlue = [UIColor colorWithRed:29/255.0 green:155/255.0 blue:240/255.0 alpha:1.0];
     container.layer.cornerRadius = 12;
 
     if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
         container.backgroundColor = [UIColor colorWithRed:28/255.0 green:32/255.0 blue:35/255.0 alpha:1.0];
         container.layer.borderWidth = isEnabled ? 2 : 0;
-        if (isEnabled) container.layer.borderColor = [UIColor systemBlueColor].CGColor;
-        container.layer.shadowOpacity = 0;
+        container.layer.borderColor = isEnabled ? twitterBlue.CGColor : nil;
     } else {
         container.backgroundColor = [UIColor systemBackgroundColor];
         container.layer.borderWidth = 2;
-        UIColor *borderColor = isEnabled ? [UIColor systemBlueColor] : [UIColor whiteColor];
-        container.layer.borderColor = [borderColor resolvedColorWithTraitCollection:self.traitCollection].CGColor;
+        UIColor *borderColor = isEnabled ? twitterBlue : [UIColor whiteColor];
+        container.layer.borderColor = borderColor.CGColor;
         container.layer.shadowColor = [UIColor blackColor].CGColor;
         container.layer.shadowOffset = CGSizeMake(0, 4);
         container.layer.shadowOpacity = 0.10;
@@ -257,11 +274,16 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
     [cell.contentView addSubview:container];
 
-    UIView *icon = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 28, 28)];
-    icon.backgroundColor = [UIColor systemGray4Color];
-    icon.layer.cornerRadius = 6;
-    icon.center = CGPointMake(container.bounds.size.width / 2, container.bounds.size.height / 2);
-    [container addSubview:icon];
+    NSString *baseIconName = item.pageID;
+    NSString *iconFilename = isEnabled ? [NSString stringWithFormat:@"%@.png", baseIconName] : [NSString stringWithFormat:@"%@_stroke.png", baseIconName];
+    NSString *iconPath = [[BHTBundle sharedBundle].mainBundle pathForResource:[NSString stringWithFormat:@"icons/%@", iconFilename] ofType:nil];
+    UIImage *iconImage = [UIImage imageWithContentsOfFile:iconPath];
+
+    UIImageView *iconView = [[UIImageView alloc] initWithImage:iconImage];
+    iconView.frame = CGRectMake(0, 0, 28, 28);
+    iconView.center = CGPointMake(container.bounds.size.width / 2, container.bounds.size.height / 2);
+    iconView.contentMode = UIViewContentModeScaleAspectFit;
+    [container addSubview:iconView];
 
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(0, CGRectGetMaxY(container.frame) + 8, boxSize, 22)];
     label.text = [[BHTBundle sharedBundle] localizedStringForKey:item.title];
