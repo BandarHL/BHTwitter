@@ -18,6 +18,11 @@
 // Import external function to get theme color
 extern UIColor *BHTCurrentAccentColor(void);
 
+// Declare the interface to access hideAnimated method
+@interface TFNFloatingActionButton : UIView
+- (void)hideAnimated:(_Bool)animated completion:(id)completion;
+@end
+
 typedef NS_ENUM(NSInteger, TwitterFontWeight) {
     TwitterFontWeightRegular,
     TwitterFontWeightMedium,
@@ -71,14 +76,17 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         [self.navigationController.navigationBar setPrefersLargeTitles:false];
         [[NSUserDefaults standardUserDefaults] addObserver:self forKeyPath:@"bh_color_theme_selectedColor" options:NSKeyValueObservingOptionNew context:nil];
         [[NSUserDefaults standardUserDefaults] addObserver:self forKeyPath:@"T1ColorSettingsPrimaryColorOptionKey" options:NSKeyValueObservingOptionNew context:nil];
-        // [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:@"tab_bar_theming"]; // Ensure it's removed if previously added
+        
+        // Set property to hide the floating action button
+        if ([self respondsToSelector:@selector(setShouldShowFloatingActionButton:)]) {
+            [self performSelector:@selector(setShouldShowFloatingActionButton:) withObject:@NO];
+        }
     }
     return self;
 }
 - (void)dealloc {
     [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:@"bh_color_theme_selectedColor"];
     [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:@"T1ColorSettingsPrimaryColorOptionKey"];
-    // [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:@"tab_bar_theming"]; // Ensure it's removed
 }
 
 - (void)setupAppearance {
@@ -143,6 +151,22 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     self.table.layoutMargins = UIEdgeInsetsMake(0, 16, 0, 16);
 
 
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    
+    // Find and hide the floating action button
+    for (UIWindow *window in [UIApplication sharedApplication].windows) {
+        if (window.isKeyWindow) {
+            for (UIView *subview in window.subviews) {
+                if ([subview isKindOfClass:NSClassFromString(@"TFNFloatingActionButton")]) {
+                    [(TFNFloatingActionButton *)subview hideAnimated:YES completion:nil];
+                    break;
+                }
+            }
+        }
+    }
 }
 
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
