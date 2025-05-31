@@ -3429,7 +3429,7 @@ static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString 
 - (void)setVariant:(NSUInteger)variant {
     if ([BHTManager restoreFollowButton]) {
         NSUInteger subscribeVariantID = 1;
-        NSUInteger desiredFollowVariantID = 32;
+        NSUInteger desiredFollowVariantID = 1;
         if (variant == subscribeVariantID) {
             %orig(desiredFollowVariantID);
         } else {
@@ -3443,9 +3443,7 @@ static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString 
 // This hook makes the control ALWAYS REPORT its variant as 32
 - (NSUInteger)variant {
     if ([BHTManager restoreFollowButton]) {
-        // This makes the control ALWAYS REPORT its variant as 32
-        // to influence layout decisions that might cause the ellipsis issue.
-        return 32;
+        return 1;
     }
     return %orig;
 }
