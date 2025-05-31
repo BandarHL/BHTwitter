@@ -182,13 +182,20 @@ static void EnsureFontApplied(UILabel *label, UIFont *font) {
     }
 }
 
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
+    if (section == 0) {
+        return 40; // Reduced from 52
+    }
+    return 44; // Reduced from 52
+}
+
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
     if (section == 0) {
         UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 40)];
 
         UILabel *detail = [UILabel new];
         detail.translatesAutoresizingMaskIntoConstraints = NO;
-        detail.font = [TwitterChirpFont(TwitterFontStyleRegular) fontWithSize:12];
+        detail.font = [TwitterChirpFont(TwitterFontStyleRegular) fontWithSize:11];
         detail.textColor = [UIColor secondaryLabelColor];
         detail.numberOfLines = 0;
         detail.textAlignment = NSTextAlignmentLeft;
@@ -198,8 +205,8 @@ static void EnsureFontApplied(UILabel *label, UIFont *font) {
         [NSLayoutConstraint activateConstraints:@[
             [detail.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16],
             [detail.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-16],
-            [detail.topAnchor constraintEqualToAnchor:header.topAnchor constant:-12],
-            [detail.bottomAnchor constraintEqualToAnchor:header.bottomAnchor constant:-8]
+            [detail.topAnchor constraintEqualToAnchor:header.topAnchor constant:-8],
+            [detail.bottomAnchor constraintEqualToAnchor:header.bottomAnchor constant:-4]
         ]];
 
         return header;
@@ -209,7 +216,7 @@ static void EnsureFontApplied(UILabel *label, UIFont *font) {
         return nil;
     }
     
-    UIView *headerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 52)];
+    UIView *headerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 44)];
     
     // Top separator - modified to extend full width
     if (section != 1) {
@@ -220,7 +227,7 @@ static void EnsureFontApplied(UILabel *label, UIFont *font) {
     }
     
     // Header label - use attributed text for consistent bold rendering
-    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(16, 16, tableView.frame.size.width - 32, 28)];
+    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(16, 12, tableView.frame.size.width - 32, 24)];
     UIFont *boldFont = TwitterChirpFont(TwitterFontStyleBold);
     NSDictionary *attrs = @{
         NSFontAttributeName: boldFont,
@@ -232,31 +239,6 @@ static void EnsureFontApplied(UILabel *label, UIFont *font) {
     
     return headerView;
 }
-- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
-    if (section == 0) {
-        return 52; // or whatever height you prefer
-    }
-    return 52; // or your default
-}
-
-
-- (UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section {
-    NSString *footerText = [self tableView:tableView titleForFooterInSection:section];
-    if (!footerText) {
-        return nil;
-    }
-    
-    UIView *footerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 44)];
-    
-    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(16, 8, tableView.frame.size.width - 32, 36)];
-    label.text = footerText;
-    label.font = TwitterChirpFont(TwitterFontStyleRegular); // 12pt regular
-    label.textColor = [UIColor secondaryLabelColor];
-    label.numberOfLines = 0;
-    [footerView addSubview:label];
-    
-    return footerView;
-}
 
 - (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section {
     NSString *footerText = [self tableView:tableView titleForFooterInSection:section];
@@ -264,14 +246,32 @@ static void EnsureFontApplied(UILabel *label, UIFont *font) {
         return CGFLOAT_MIN; // Use minimal height when no footer
     }
     
-    // Calculate dynamic height
+    // Calculate a more compact height
     CGFloat width = tableView.frame.size.width - 32;
     CGRect rect = [footerText boundingRectWithSize:CGSizeMake(width, CGFLOAT_MAX)
                                          options:NSStringDrawingUsesLineFragmentOrigin
                                         attributes:@{NSFontAttributeName: TwitterChirpFont(TwitterFontStyleRegular)}
                                          context:nil];
     
-    return ceil(rect.size.height) + 24; // Top/bottom padding
+    return ceil(rect.size.height) + 16; // Reduced padding (was 24)
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section {
+    NSString *footerText = [self tableView:tableView titleForFooterInSection:section];
+    if (!footerText) {
+        return nil;
+    }
+    
+    UIView *footerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 36)];
+    
+    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(16, 4, tableView.frame.size.width - 32, 32)];
+    label.text = footerText;
+    label.font = TwitterChirpFont(TwitterFontStyleRegular);
+    label.textColor = [UIColor secondaryLabelColor];
+    label.numberOfLines = 0;
+    [footerView addSubview:label];
+    
+    return footerView;
 }
 
 // And replace with this single implementation:
@@ -284,6 +284,16 @@ static void EnsureFontApplied(UILabel *label, UIFont *font) {
     
     // Remove selection highlight if needed
     cell.selectionStyle = UITableViewCellSelectionStyleDefault;
+    
+    // Set minimal content insets to reduce padding
+    if ([cell respondsToSelector:@selector(setLayoutMargins:)]) {
+        cell.layoutMargins = UIEdgeInsetsMake(0, 16, 0, 16);
+    }
+    
+    // Ensure the cell uses a compact layout
+    if ([cell respondsToSelector:@selector(setPreservesSuperviewLayoutMargins:)]) {
+        cell.preservesSuperviewLayoutMargins = NO;
+    }
 }
 
 
@@ -308,6 +318,7 @@ static void EnsureFontApplied(UILabel *label, UIFont *font) {
     [switchCell setProperty:NSBundle.mainBundle.bundleIdentifier forKey:@"defaults"];
     [switchCell setProperty:@(defValue) forKey:@"default"];
     [switchCell setProperty:NSStringFromSelector(changeAction) forKey:@"switchAction"];
+    [switchCell setProperty:@44 forKey:@"height"]; // Set explicit height
     if (detailText != nil) {
         [switchCell setProperty:detailText forKey:@"subtitle"];
     }
@@ -325,6 +336,8 @@ static void EnsureFontApplied(UILabel *label, UIFont *font) {
     if (rule != nil) {
         [buttonCell setProperty:@44 forKey:@"height"];
         [buttonCell setProperty:rule forKey:@"dynamicRule"];
+    } else {
+        [buttonCell setProperty:@44 forKey:@"height"]; // Set explicit height for all cells
     }
     return buttonCell;
 }
@@ -658,6 +671,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
     [self collectDynamicSpecifiersFromArray:self.specifiers];
 }
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
+    // Handle hidden specifiers
     if (self.hasDynamicSpecifiers) {
         PSSpecifier *dynamicSpecifier = [self specifierAtIndexPath:indexPath];
         BOOL __block shouldHide = false;
@@ -676,7 +690,8 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         }
     }
     
-    return UITableViewAutomaticDimension;
+    // Use a smaller, fixed height for all cells to match Twitter's compact style
+    return 44.0;
 }
 
 - (void)collectDynamicSpecifiersFromArray:(NSArray *)array {
@@ -1186,7 +1201,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             self.textLabel.attributedText = [[NSAttributedString alloc] initWithString:self.textLabel.text attributes:attrs];
         }
         
-        // Keep subtitle style exactly as before
+        // Keep subtitle style exactly as before but with compact layout
         self.detailTextLabel.text = subTitle;
         self.detailTextLabel.numberOfLines = isBig ? 0 : 1;
         self.detailTextLabel.textColor = [UIColor secondaryLabelColor];
@@ -1194,6 +1209,17 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         
         // Apply theme color to cell
         self.tintColor = BHTCurrentAccentColor();
+        
+        // Set compact layout
+        self.contentView.frame = CGRectMake(0, 0, self.frame.size.width, 44);
+        if ([self respondsToSelector:@selector(setLayoutMargins:)]) {
+            self.layoutMargins = UIEdgeInsetsMake(0, 16, 0, 16);
+        }
+        
+        // Ensure the cell uses compact layout
+        if ([self respondsToSelector:@selector(setPreservesSuperviewLayoutMargins:)]) {
+            self.preservesSuperviewLayoutMargins = NO;
+        }
     }
     return self;
 }
@@ -1225,7 +1251,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             self.textLabel.attributedText = [[NSAttributedString alloc] initWithString:self.textLabel.text attributes:attrs];
         }
 
-        // Keep subtitle style exactly as before
+        // Keep subtitle style exactly as before but with compact layout
         self.detailTextLabel.text = subTitle;
         self.detailTextLabel.numberOfLines = isBig ? 0 : 1;
         self.detailTextLabel.textColor = [UIColor secondaryLabelColor];
@@ -1234,6 +1260,17 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         // Theme the switch
         UISwitch *switchControl = (UISwitch *)[self control];
         switchControl.onTintColor = BHTCurrentAccentColor();
+        
+        // Set compact layout
+        self.contentView.frame = CGRectMake(0, 0, self.frame.size.width, 44);
+        if ([self respondsToSelector:@selector(setLayoutMargins:)]) {
+            self.layoutMargins = UIEdgeInsetsMake(0, 16, 0, 16);
+        }
+        
+        // Ensure the cell uses compact layout
+        if ([self respondsToSelector:@selector(setPreservesSuperviewLayoutMargins:)]) {
+            self.preservesSuperviewLayoutMargins = NO;
+        }
         
         if (specifier.properties[@"switchAction"]) {
             UISwitch *targetSwitch = ((UISwitch *)[self control]);
