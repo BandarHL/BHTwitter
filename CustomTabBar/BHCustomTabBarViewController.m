@@ -10,6 +10,14 @@
 #import "../BHTBundle/BHTBundle.h"
 #import "Colours/Colours.h"
 
+// Import external function to get theme color
+extern UIColor *BHTCurrentAccentColor(void);
+
+// Interface declaration for TFNFloatingActionButton
+@interface TFNFloatingActionButton : UIView
+- (void)hideAnimated:(_Bool)animated completion:(id)completion;
+@end
+
 // UIImage category for TFN vector image methods
 @interface UIImage (TFNAdditions)
 + (id)tfn_vectorImageNamed:(id)arg1 fitsSize:(struct CGSize)arg2 fillColor:(id)arg3;
@@ -49,6 +57,28 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
 @implementation BHCustomTabBarViewController
 
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    
+    // Find and hide the floating action button using recursive search
+    for (UIWindow *window in [UIApplication sharedApplication].windows) {
+        [self findAndHideFloatingActionButtonInView:window];
+    }
+}
+
+- (void)findAndHideFloatingActionButtonInView:(UIView *)view {
+    // Direct check for the current view
+    if ([view isKindOfClass:NSClassFromString(@"TFNFloatingActionButton")]) {
+        [(TFNFloatingActionButton *)view hideAnimated:YES completion:nil];
+        return;
+    }
+    
+    // Recursively check subviews
+    for (UIView *subview in view.subviews) {
+        [self findAndHideFloatingActionButtonInView:subview];
+    }
+}
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.view.backgroundColor = [UIColor systemBackgroundColor];
@@ -68,6 +98,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
                                                                     style:UIBarButtonItemStyleDone
                                                                    target:self
                                                                    action:@selector(saveButtonTapped)];
+    saveButton.tintColor = BHTCurrentAccentColor();
     self.navigationItem.rightBarButtonItem = saveButton;
     saveButton.enabled = NO;
 }
@@ -258,17 +289,17 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     CGFloat boxSize = cell.contentView.bounds.size.width;
 
     UIView *container = [[UIView alloc] initWithFrame:CGRectMake(0, 0, boxSize, boxSize)];
-    UIColor *twitterBlue = [UIColor colorWithRed:29/255.0 green:155/255.0 blue:240/255.0 alpha:1.0];
+    UIColor *accentColor = BHTCurrentAccentColor();
     container.layer.cornerRadius = 12;
 
     if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
         container.backgroundColor = [UIColor colorWithRed:28/255.0 green:32/255.0 blue:35/255.0 alpha:1.0];
         container.layer.borderWidth = isEnabled ? 2 : 0;
-        container.layer.borderColor = isEnabled ? twitterBlue.CGColor : nil;
+        container.layer.borderColor = isEnabled ? accentColor.CGColor : nil;
     } else {
         container.backgroundColor = [UIColor systemBackgroundColor];
         container.layer.borderWidth = 2;
-        UIColor *borderColor = isEnabled ? twitterBlue : [UIColor whiteColor];
+        UIColor *borderColor = isEnabled ? accentColor : [UIColor whiteColor];
         container.layer.borderColor = borderColor.CGColor;
         container.layer.shadowColor = [UIColor blackColor].CGColor;
         container.layer.shadowOffset = CGSizeMake(0, 4);
