@@ -76,17 +76,14 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         [self.navigationController.navigationBar setPrefersLargeTitles:false];
         [[NSUserDefaults standardUserDefaults] addObserver:self forKeyPath:@"bh_color_theme_selectedColor" options:NSKeyValueObservingOptionNew context:nil];
         [[NSUserDefaults standardUserDefaults] addObserver:self forKeyPath:@"T1ColorSettingsPrimaryColorOptionKey" options:NSKeyValueObservingOptionNew context:nil];
-        
-        // Set property to hide the floating action button
-        if ([self respondsToSelector:@selector(setShouldShowFloatingActionButton:)]) {
-            [self performSelector:@selector(setShouldShowFloatingActionButton:) withObject:@NO];
-        }
+        // [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:@"tab_bar_theming"]; // Ensure it's removed if previously added
     }
     return self;
 }
 - (void)dealloc {
     [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:@"bh_color_theme_selectedColor"];
     [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:@"T1ColorSettingsPrimaryColorOptionKey"];
+    // [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:@"tab_bar_theming"]; // Ensure it's removed
 }
 
 - (void)setupAppearance {
@@ -156,16 +153,22 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
     
-    // Find and hide the floating action button
+    // Find and hide the floating action button using recursive search
     for (UIWindow *window in [UIApplication sharedApplication].windows) {
-        if (window.isKeyWindow) {
-            for (UIView *subview in window.subviews) {
-                if ([subview isKindOfClass:NSClassFromString(@"TFNFloatingActionButton")]) {
-                    [(TFNFloatingActionButton *)subview hideAnimated:YES completion:nil];
-                    break;
-                }
-            }
-        }
+        [self findAndHideFloatingActionButtonInView:window];
+    }
+}
+
+- (void)findAndHideFloatingActionButtonInView:(UIView *)view {
+    // Direct check for the current view
+    if ([view isKindOfClass:NSClassFromString(@"TFNFloatingActionButton")]) {
+        [(TFNFloatingActionButton *)view hideAnimated:YES completion:nil];
+        return;
+    }
+    
+    // Recursively check subviews
+    for (UIView *subview in view.subviews) {
+        [self findAndHideFloatingActionButtonInView:subview];
     }
 }
 
