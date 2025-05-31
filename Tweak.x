@@ -19,6 +19,16 @@
 #import "BHTManager.h"
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
+#import "TWHeaders.h"
+#import "SAMKeychain/SAMKeychain.h"
+#import <Preferences/PSListController.h>
+#import <Preferences/PSSpecifier.h>
+
+// UIImage category for TFN vector image methods
+@interface UIImage (TFNAdditions)
++ (id)tfn_vectorImageNamed:(id)arg1 fitsSize:(struct CGSize)arg2 fillColor:(id)arg3;
++ (BOOL)tfn_vectorImageExistsNamed:(id)arg1 fitsSize:(struct CGSize)arg2 size:(out struct CGSize *)arg3;
+@end
 
 @interface TFNFlexibleLayoutView : UIView
 @property(nonatomic) CGRect frame;
@@ -1550,35 +1560,24 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     if ([self.sections count] == 1) {
         TFNItemsDataViewControllerBackingStore *backingStore = self.backingStore;
         
-        // Get the Twitter icon using BHTBundle - the same way the sounds are loaded
+        // Use Twitter's internal vector image system to get the Twitter bird icon
         UIImage *twitterIcon = nil;
-        NSURL *iconURL = [[BHTBundle sharedBundle] pathForFile:@"twitter_icon.png"];
-        if (iconURL) {
-            UIImage *originalIcon = [UIImage imageWithContentsOfFile:iconURL.path];
-            
-            // Resize the image to an appropriate size (around 24x24 points)
-            CGSize targetSize = CGSizeMake(24, 24);
-            UIGraphicsBeginImageContextWithOptions(targetSize, NO, [UIScreen mainScreen].scale);
-            [originalIcon drawInRect:CGRectMake(0, 0, targetSize.width, targetSize.height)];
-            UIImage *resizedIcon = UIGraphicsGetImageFromCurrentImageContext();
-            UIGraphicsEndImageContext();
-            
-            // Convert to template mode and apply gray tint
-            resizedIcon = [resizedIcon imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-            
-            // Create a grayscale version
-            UIGraphicsBeginImageContextWithOptions(resizedIcon.size, NO, resizedIcon.scale);
-            // Use standard gray color for settings icons
-            [[UIColor systemGrayColor] set];
-            
-            // Draw the image with the gray color
-            CGRect iconRect = CGRectMake(0, 0, resizedIcon.size.width, resizedIcon.size.height);
-            [resizedIcon drawInRect:iconRect blendMode:kCGBlendModeDestinationIn alpha:1.0];
-            
-            twitterIcon = UIGraphicsGetImageFromCurrentImageContext();
-            UIGraphicsEndImageContext();
-            
-            NSLog(@"[BHTwitter] Found and processed Twitter icon at: %@", iconURL.path);
+        
+        // Try to get the Twitter vector image - use appropriate sizing for icon
+        twitterIcon = [UIImage tfn_vectorImageNamed:@"twitter" fitsSize:CGSizeMake(29, 29) fillColor:[UIColor labelColor]];
+        
+        if (!twitterIcon) {
+            // First fallback: try with different name in case the icon name changed
+            twitterIcon = [UIImage tfn_vectorImageNamed:@"bird" fitsSize:CGSizeMake(29, 29) fillColor:[UIColor labelColor]];
+        }
+        
+        if (!twitterIcon) {
+            // Second fallback: use our bundled PNG as before
+            NSURL *iconURL = [[BHTBundle sharedBundle] pathForFile:@"twitter_icon.png"];
+            if (iconURL) {
+                twitterIcon = [UIImage imageWithContentsOfFile:iconURL.path];
+                NSLog(@"[BHTwitter] Found Twitter icon at: %@", iconURL.path);
+            }
         }
         
         // Create the settings item - don't specify an icon name to avoid the system icon
@@ -1588,7 +1587,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         
         // Set our Twitter icon
         if (twitterIcon) {
-            NSLog(@"[BHTwitter] Successfully loaded and processed Twitter icon");
+            NSLog(@"[BHTwitter] Successfully loaded Twitter icon");
             [bhtwitter setValue:twitterIcon forKey:@"_icon"];
         } else {
             // Fall back to a Twitter-like system icon if our image can't be loaded
@@ -6131,3 +6130,7 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 }
 
 %end
+
+static NSBundle *BHBundle() {
+    return [NSBundle bundleWithIdentifier:@"com.bandarhelal.BHTwitter"];
+}
