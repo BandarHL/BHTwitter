@@ -6073,8 +6073,7 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 // Override the method that determines which buttons to show based on width
 - (void)_t1_updateArrangedButtonItemsForContentWidth:(double)arg1 {
     if ([BHTManager restoreFollowButton]) {
-        // Use an extremely large width to force all buttons to be visible
-        %orig(10000.0); // 10000 points should be enough for any screen
+        %orig(1000.0);
     } else {
         %orig(arg1);
     }

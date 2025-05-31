@@ -15,6 +15,9 @@
 #import "CustomTabBar/BHCustomTabBarViewController.h"
 #import "BHTManager.h"
 
+// Import external function to get theme color
+extern UIColor *BHTCurrentAccentColor(void);
+
 typedef NS_ENUM(NSInteger, TwitterFontWeight) {
     TwitterFontWeightRegular,
     TwitterFontWeightMedium,
@@ -79,27 +82,26 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 }
 
 - (void)setupAppearance {
-    TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];
-    UIColor *primaryColor;
-    
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
-        primaryColor = [[[colorSettings currentColorPalette] colorPalette] primaryColorForOption:[[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]];
-    } else if ([[NSUserDefaults standardUserDefaults] objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
-        primaryColor = [[[colorSettings currentColorPalette] colorPalette] primaryColorForOption:[[NSUserDefaults standardUserDefaults] integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"]];
-    } else {
-        primaryColor = nil;
-    }
+    // Get theme color directly from the BHTCurrentAccentColor function
+    UIColor *primaryColor = BHTCurrentAccentColor();
     
     HBAppearanceSettings *appearanceSettings = [[HBAppearanceSettings alloc] init];
     appearanceSettings.tintColor = primaryColor;
     appearanceSettings.largeTitleStyle = HBAppearanceSettingsLargeTitleStyleNever;
-    }
+    
+    // Apply appearance settings
+    self.hb_appearanceSettings = appearanceSettings;
+    
+    // Apply tint color to table view and navigation items
+    self.table.tintColor = primaryColor;
+    self.navigationController.navigationBar.tintColor = primaryColor;
+}
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
     if ([keyPath isEqualToString:@"bh_color_theme_selectedColor"] || [keyPath isEqualToString:@"T1ColorSettingsPrimaryColorOptionKey"]) {
         [self setupAppearance];
+        [self.table reloadData];
     }
-    // Removed tab_bar_theming observation and BHTTabBarThemingChanged notification
 }
 
 
@@ -124,6 +126,9 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     // Configure the table view to blend with background
     self.table.backgroundColor = [UIColor systemBackgroundColor];
     self.table.separatorColor = [UIColor separatorColor];
+    
+    // Apply theme color to table
+    self.table.tintColor = BHTCurrentAccentColor();
     
     // Remove extra separators below content
     self.table.tableFooterView = [UIView new];
@@ -1134,14 +1139,26 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         // Set the font to semibold
         self.textLabel.font = TwitterChirpFont(TwitterFontStyleSemibold); // 14pt semibold
         
+        // Set the text color to match the theme color
+        self.textLabel.textColor = BHTCurrentAccentColor();
+        
         // Keep subtitle style exactly as before
         self.detailTextLabel.text = subTitle;
         self.detailTextLabel.numberOfLines = isBig ? 0 : 1;
         self.detailTextLabel.textColor = [UIColor secondaryLabelColor];
         self.detailTextLabel.font = TwitterChirpFont(TwitterFontStyleRegular); // Match footer font
         self.selectionStyle = UITableViewCellSelectionStyleDefault; // or .None if you don't want selection highlight
+        
+        // Apply theme color to cell
+        self.tintColor = BHTCurrentAccentColor();
     }
     return self;
+}
+
+- (void)tintColorDidChange {
+    [super tintColorDidChange];
+    self.textLabel.textColor = BHTCurrentAccentColor();
+    self.tintColor = BHTCurrentAccentColor();
 }
 @end
 
@@ -1161,6 +1178,10 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         self.detailTextLabel.font = TwitterChirpFont(TwitterFontStyleRegular); // Match footer font
         self.selectionStyle = UITableViewCellSelectionStyleDefault; // or .None if you don't want selection highlight
         
+        // Theme the switch
+        UISwitch *switchControl = (UISwitch *)[self control];
+        switchControl.onTintColor = BHTCurrentAccentColor();
+        
         if (specifier.properties[@"switchAction"]) {
             UISwitch *targetSwitch = ((UISwitch *)[self control]);
             NSString *strAction = [specifier.properties[@"switchAction"] copy];
@@ -1168,5 +1189,12 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         }
     }
     return self;
+}
+
+- (void)tintColorDidChange {
+    [super tintColorDidChange];
+    // Update switch color when theme changes
+    UISwitch *switchControl = (UISwitch *)[self control];
+    switchControl.onTintColor = BHTCurrentAccentColor();
 }
 @end
