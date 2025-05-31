@@ -6058,15 +6058,6 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 
 %hook T1ProfileActionButtonsView
 
-// Add a property getter for overflowItems to return nil when restoreFollowButton is enabled
-- (NSArray *)_overflowItems {
-    if ([BHTManager restoreFollowButton]) {
-        // Return nil to prevent items from being placed in the overflow menu
-        return nil;
-    }
-    return %orig;
-}
-
 // Method that creates the overflow button
 - (id)_t1_overflowButtonForItems:(id)arg1 {
     if ([BHTManager restoreFollowButton]) {
