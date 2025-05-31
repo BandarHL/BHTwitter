@@ -4895,7 +4895,7 @@ static char kTranslateButtonKey;
         // Place the button on the right with a moderate offset to avoid collisions
         NSArray *constraints = @[
             [translateButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
-            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-14], // Adjusted: formerly -16
+            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-12],
             [translateButton.widthAnchor constraintEqualToConstant:44],
             [translateButton.heightAnchor constraintEqualToConstant:44]
         ];
