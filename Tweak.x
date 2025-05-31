@@ -3429,7 +3429,7 @@ static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString 
 - (void)setVariant:(NSUInteger)variant {
     if ([BHTManager restoreFollowButton]) {
         NSUInteger subscribeVariantID = 1;
-        NSUInteger desiredFollowVariantID = 1;
+        NSUInteger desiredFollowVariantID = 2;
         if (variant == subscribeVariantID) {
             %orig(desiredFollowVariantID);
         } else {
@@ -3443,7 +3443,7 @@ static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString 
 // This hook makes the control ALWAYS REPORT its variant as 32
 - (NSUInteger)variant {
     if ([BHTManager restoreFollowButton]) {
-        return 1;
+        return 2;
     }
     return %orig;
 }
