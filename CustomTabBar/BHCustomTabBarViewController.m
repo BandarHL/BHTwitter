@@ -10,6 +10,7 @@
 #import "BHCustomTabBarUtility.h"
 #import "../BHTBundle/BHTBundle.h"
 #import "Colours/Colours.h"
+#import "TWHeaders.h"
 
 typedef NS_ENUM(NSInteger, TwitterFontStyle) {
     TwitterFontStyleRegular,
@@ -241,12 +242,12 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
         container.backgroundColor = [UIColor colorWithRed:28/255.0 green:32/255.0 blue:35/255.0 alpha:1.0];
         container.layer.borderWidth = isEnabled ? 2 : 0;
-        if (isEnabled) container.layer.borderColor = [UIColor systemBlueColor].CGColor;
+        if (isEnabled) container.layer.borderColor = BHTCurrentAccentColor().CGColor;
         container.layer.shadowOpacity = 0;
     } else {
         container.backgroundColor = [UIColor systemBackgroundColor];
         container.layer.borderWidth = 2;
-        UIColor *borderColor = isEnabled ? [UIColor systemBlueColor] : [UIColor whiteColor];
+        UIColor *borderColor = isEnabled ? BHTCurrentAccentColor() : [UIColor whiteColor];
         container.layer.borderColor = [borderColor resolvedColorWithTraitCollection:self.traitCollection].CGColor;
         container.layer.shadowColor = [UIColor blackColor].CGColor;
         container.layer.shadowOffset = CGSizeMake(0, 4);
