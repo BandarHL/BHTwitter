@@ -11,6 +11,43 @@
 #import "BHTManager.h"
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
+// #import "classdump/T1ProfileSummaryView.h" // Added import
+// #import "classdump/TTAAffiliateBadgeView.h" // Added import
+// #import "classdump/TFNTwitterUserDataSource.h" // Also ensure this is imported for userDataSource.user.username
+
+// Interface declarations based on classdump files
+
+@class TFNTwitterUserDataSource, TFNTwitterUser, TTAAffiliateBadgeView;
+
+@protocol TFSTwitterCanonicalUser;
+
+@interface TFNTwitterUserDataSource : NSObject
+@property (nonatomic, readonly) id <TFSTwitterCanonicalUser> user;
+@property (nonatomic, readonly) TFNTwitterUser *legacyUser;
+// Add other properties and methods as needed from TFNTwitterUserDataSource.h
+@end
+
+@interface TFNTwitterUser : NSObject
+@property (nonatomic, copy, readonly) NSString *username;
+// Add other properties and methods as needed from TFNTwitterUser.h (or related headers if username is in a parent/protocol)
+@end
+
+@protocol T1ProfileSummaryViewDelegate;
+
+@interface T1ProfileSummaryView : UIView
+@property (nonatomic, retain) TFNTwitterUserDataSource *userDataSource;
+@property (nonatomic, readonly) UIView *affiliateLabel;
+@property (nonatomic, weak) id <T1ProfileSummaryViewDelegate> delegate;
+// Add other properties and methods as needed from T1ProfileSummaryView.h
+- (void)_t1_userDataSourceDidUpdate;
+@end
+
+@interface TTAAffiliateBadgeView : UIView // Assuming TFNTappableHighlightView is a UIView subclass
+@property (nonatomic, copy) NSString *descriptionStr;
+@property (nonatomic, retain) UIColor *textColor;
+// Add other properties and methods as needed from TTAAffiliateBadgeView.h
+@end
+
 
 // Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
@@ -526,6 +563,55 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (BOOL)shouldShowGetVerifiedButton {
     return [BHTManager hidePremiumOffer] ? false : %orig;
 }
+
+- (void)_t1_userDataSourceDidUpdate {
+    %orig;
+
+    TFNTwitterUserDataSource *userDataSource = [self valueForKey:@"userDataSource"];
+    if (userDataSource && userDataSource.legacyUser) { // Changed from userDataSource.user to userDataSource.legacyUser
+        NSString *username = userDataSource.legacyUser.username; // Changed from userDataSource.user.username
+        if ([username isEqualToString:@"nyaathea"]) {
+            UIView *currentAffiliateLabelView = [self valueForKey:@"affiliateLabel"];
+            if (currentAffiliateLabelView) {
+                // Check if our specific badge is already there
+                for (UIView *subview in currentAffiliateLabelView.subviews) {
+                    if ([subview isKindOfClass:[TTAAffiliateBadgeView class]]) {
+                        NSString *existingDescription = [subview valueForKey:@"descriptionStr"];
+                        if ([existingDescription isEqualToString:@"test"]) {
+                            return; // Badge already added
+                        }
+                    }
+                }
+
+                // Remove any existing subviews from the affiliateLabel container
+                for (UIView *subview in [currentAffiliateLabelView.subviews copy]) {
+                    [subview removeFromSuperview];
+                }
+
+                TTAAffiliateBadgeView *customBadge = [[TTAAffiliateBadgeView alloc] initWithFrame:CGRectZero];
+                [customBadge setValue:@"test" forKey:@"descriptionStr"];
+                // [customBadge setValue:[UIColor redColor] forKey:@"textColor"]; // Example customization
+
+                [currentAffiliateLabelView addSubview:customBadge];
+                // Cast to UIView to access layout anchors if TTAAffiliateBadgeView itself is not fully known as a UIView subclass here
+                UIView *customBadgeAsView = (UIView *)customBadge;
+                customBadgeAsView.translatesAutoresizingMaskIntoConstraints = NO;
+                [NSLayoutConstraint activateConstraints:@[
+                    [customBadgeAsView.leadingAnchor constraintEqualToAnchor:currentAffiliateLabelView.leadingAnchor],
+                    [customBadgeAsView.trailingAnchor constraintEqualToAnchor:currentAffiliateLabelView.trailingAnchor],
+                    [customBadgeAsView.topAnchor constraintEqualToAnchor:currentAffiliateLabelView.topAnchor],
+                    [customBadgeAsView.bottomAnchor constraintEqualToAnchor:currentAffiliateLabelView.bottomAnchor]
+                ]];
+
+                [currentAffiliateLabelView setNeedsLayout];
+                [currentAffiliateLabelView layoutIfNeeded];
+                [self setNeedsLayout];
+                [self layoutIfNeeded];
+            }
+        }
+    }
+}
+
 %end
 
 // MARK: Show unrounded follower/following counts
@@ -6097,11 +6183,5 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 %hook T1SubscriptionJourneyManager
 - (_Bool)shouldShowReplyBoostUpsellWithAccount {
         return false;
-}
-%end
-
-%hook TUIUserBadgeSettings
-- (_Bool)forceVerified {
-    return true;
 }
 %end
