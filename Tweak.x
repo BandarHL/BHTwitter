@@ -11,43 +11,6 @@
 #import "BHTManager.h"
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
-// #import "classdump/T1ProfileSummaryView.h" // Added import
-// #import "classdump/TTAAffiliateBadgeView.h" // Added import
-// #import "classdump/TFNTwitterUserDataSource.h" // Also ensure this is imported for userDataSource.user.username
-
-// Interface declarations based on classdump files
-
-@class TFNTwitterUserDataSource, TFNTwitterUser, TTAAffiliateBadgeView;
-
-@protocol TFSTwitterCanonicalUser;
-
-@interface TFNTwitterUserDataSource : NSObject
-@property (nonatomic, readonly) id <TFSTwitterCanonicalUser> user;
-@property (nonatomic, readonly) TFNTwitterUser *legacyUser;
-// Add other properties and methods as needed from TFNTwitterUserDataSource.h
-@end
-
-@interface TFNTwitterUser : NSObject
-@property (nonatomic, copy, readonly) NSString *username;
-// Add other properties and methods as needed from TFNTwitterUser.h (or related headers if username is in a parent/protocol)
-@end
-
-@protocol T1ProfileSummaryViewDelegate;
-
-@interface T1ProfileSummaryView : UIView
-@property (nonatomic, retain) TFNTwitterUserDataSource *userDataSource;
-@property (nonatomic, readonly) UIView *affiliateLabel;
-@property (nonatomic, weak) id <T1ProfileSummaryViewDelegate> delegate;
-// Add other properties and methods as needed from T1ProfileSummaryView.h
-- (void)_t1_userDataSourceDidUpdate;
-@end
-
-@interface TTAAffiliateBadgeView : UIView // Assuming TFNTappableHighlightView is a UIView subclass
-@property (nonatomic, copy) NSString *descriptionStr;
-@property (nonatomic, retain) UIColor *textColor;
-// Add other properties and methods as needed from TTAAffiliateBadgeView.h
-@end
-
 
 // Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
@@ -563,68 +526,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (BOOL)shouldShowGetVerifiedButton {
     return [BHTManager hidePremiumOffer] ? false : %orig;
 }
-
-- (void)_t1_userDataSourceDidUpdate {
-    %orig;
-
-    TFNTwitterUserDataSource *userDataSource = [self valueForKey:@"userDataSource"];
-    if (userDataSource && userDataSource.legacyUser) {
-        NSString *username = userDataSource.legacyUser.username;
-        if ([username isEqualToString:@"nyaathea"]) {
-            UIView *currentAffiliateLabelView = [self valueForKey:@"affiliateLabel"];
-            if (currentAffiliateLabelView) {
-                Class TTAAffiliateBadgeViewClass = objc_getClass("TTAAffiliateBadgeView");
-                if (!TTAAffiliateBadgeViewClass) return;
-
-                // Check if our specific badge is already there
-                for (UIView *subview in currentAffiliateLabelView.subviews) {
-                    if ([subview isKindOfClass:TTAAffiliateBadgeViewClass]) {
-                        // Assuming descriptionStr can be KVC-accessed for reading if necessary for check
-                        NSString *existingDescription = [subview valueForKey:@"descriptionStr"];
-                        if ([existingDescription isEqualToString:@"test"]) {
-                            return; // Badge already added
-                        }
-                    }
-                }
-
-                // Remove any existing subviews from the affiliateLabel container
-                for (UIView *subview in [currentAffiliateLabelView.subviews copy]) {
-                    [subview removeFromSuperview];
-                }
-
-                id customBadge = [[TTAAffiliateBadgeViewClass alloc] initWithFrame:CGRectZero];
-                
-                // Use direct property access for descriptionStr
-                if ([customBadge respondsToSelector:@selector(setDescriptionStr:)]) {
-                    [(TTAAffiliateBadgeView *)customBadge setDescriptionStr:@"test"];
-                }
-                // Example for textColor, if TTAAffiliateBadgeView has a textColor property defined in your interface
-                // if ([customBadge respondsToSelector:@selector(setTextColor:)]) {
-                // [(TTAAffiliateBadgeView *)customBadge setTextColor:[UIColor redColor]];
-                // }
-
-                [currentAffiliateLabelView addSubview:customBadge];
-                UIView *customBadgeAsView = (UIView *)customBadge;
-                customBadgeAsView.translatesAutoresizingMaskIntoConstraints = NO;
-
-                // Center the badge in the affiliateLabel view and let it use its intrinsic size
-                [NSLayoutConstraint activateConstraints:@[
-                    [customBadgeAsView.centerXAnchor constraintEqualToAnchor:currentAffiliateLabelView.centerXAnchor],
-                    [customBadgeAsView.centerYAnchor constraintEqualToAnchor:currentAffiliateLabelView.centerYAnchor],
-                    // Optional: you might want to constrain width/height if intrinsic size isn't sufficient or too large
-                    // [customBadgeAsView.widthAnchor constraintLessThanOrEqualToAnchor:currentAffiliateLabelView.widthAnchor],
-                    // [customBadgeAsView.heightAnchor constraintLessThanOrEqualToAnchor:currentAffiliateLabelView.heightAnchor]
-                ]];
-
-                [currentAffiliateLabelView setNeedsLayout];
-                [currentAffiliateLabelView layoutIfNeeded];
-                [self setNeedsLayout];
-                [self layoutIfNeeded];
-            }
-        }
-    }
-}
-
 %end
 
 // MARK: Show unrounded follower/following counts
@@ -3676,7 +3577,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 %hook T1ProfileHeaderViewController
 
-- (void)viewDidLayoutSubviews { // Or viewWillAppear:, depending on when controls are added
+- (void)viewWillAppear {
     %orig;
     // Search for and hide T1SuperFollowControl within this view controller's view
     if ([BHTManager restoreFollowButton] && self.isViewLoaded) { // Ensure the view is loaded
@@ -5495,47 +5396,6 @@ static char kTranslatedTextKey;
 %new - (BOOL)BHT_isShowingTranslatedText {
     NSNumber *isTranslated = objc_getAssociatedObject(self, &kIsTranslatedKey);
     return isTranslated && [isTranslated boolValue];
-}
-
-%end
-
-// Hook to remove Twitter's default translate button
-%hook T1StandardStatusTranslateView
-
-- (instancetype)initWithFrame:(CGRect)frame {
-    if ([BHTManager enableTranslate]) {
-        // Return instance with zero frame to take up no space
-        return %orig(CGRectZero);
-    }
-    return %orig(frame);
-}
-
-- (void)setFrame:(CGRect)frame {
-    if ([BHTManager enableTranslate]) {
-        // Always set frame to zero to take up no space
-        %orig(CGRectZero);
-    } else {
-        %orig(frame);
-    }
-}
-
-- (void)layoutSubviews {
-    if ([BHTManager enableTranslate]) {
-        // Set frame to zero and remove from superview
-        self.frame = CGRectZero;
-        [self removeFromSuperview];
-        return;
-    }
-    %orig;
-}
-
-- (void)didMoveToSuperview {
-    %orig;
-    if ([BHTManager enableTranslate] && self.superview) {
-        // Remove from superview immediately when added
-        self.frame = CGRectZero;
-        [self removeFromSuperview];
-    }
 }
 
 %end
