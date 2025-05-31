@@ -3361,7 +3361,7 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
 
 %end
 
-// MARK: - Hide Grok Analyze & Subscribe Buttons on Detail View (UIControl)
+// MARK: - Hide Grok Analyze & Subscribe Buttons on Detail View
 
 // Minimal interface for TFNButton, used by UIControl hook and FollowButton logic
 @class TFNButton;
@@ -3468,7 +3468,9 @@ static void findAndHideSuperFollowControl(UIView *viewToSearch) {
 
 @class T1ProfileHeaderViewController; // Forward declaration instead of interface definition
 
+// It's good practice to also declare the class we are looking for, even if just minimally
 @interface T1SuperFollowControl : UIView
+@property(retain, nonatomic) UIButton *button;
 @end
 
 // Add global class pointer for T1ProfileHeaderViewController
@@ -3574,7 +3576,17 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     return NO;
 }
 
-// MARK: - Timestamp Label Styling via UILabel -setText:
+%hook T1ProfileHeaderViewController
+
+- (void)viewDidLayoutSubviews { // Or viewWillAppear:, depending on when controls are added
+    %orig;
+    // Search for and hide T1SuperFollowControl within this view controller's view
+    if ([BHTManager restoreFollowButton] && self.isViewLoaded) { // Ensure the view is loaded
+        findAndHideSuperFollowControl(self.view);
+    }
+}
+
+%end
 
 // MARK: - Immersive Player Timestamp Visibility Control
 
@@ -4184,18 +4196,6 @@ static char kManualRefreshInProgressKey;
             BHT_applyThemeToWindow(window);
         }
     }];
-    
-    // Note: UIApplicationDidBecomeActiveNotification is now primarily handled by
-    // BHT_ensureThemingEngineSynchronized with the appropriate flags and hooks
-    
-    // Observe theme changes
-    // REMOVED: Observer for BHTTabBarThemingChanged (second instance)
-    // [[NSNotificationCenter defaultCenter] addObserverForName:@\"BHTTabBarThemingChanged\" 
-    //                                                 object:nil 
-    //                                                  queue:[NSOperationQueue mainQueue] 
-    //                                             usingBlock:^(NSNotification * _Nonnull note) {
-    //     BHT_ensureTheming(); // This was likely too broad, direct update is better.
-    // }];
 
     static dispatch_once_t onceTokenPlayerMap;
     dispatch_once(&onceTokenPlayerMap, ^{
@@ -6047,7 +6047,78 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 %end
 
 %hook T1SuperFollowControl
-- (_Bool)_isSubscribableUser {
-    return false;
+
+- (id)initWithSizeClass:(long long)arg1 {
+    id result = %orig;
+    if ([BHTManager restoreFollowButton] && result) {
+        [self setHidden:YES];
+        [self setAlpha:0.0];
+    }
+    return result;
 }
+
+- (void)_t1_configureButton {
+    %orig;
+    if ([BHTManager restoreFollowButton]) {
+        [self setHidden:YES];
+        [self setAlpha:0.0];
+        if (self.button) {
+            [self.button setHidden:YES];
+            [self.button setAlpha:0.0];
+        }
+    }
+}
+
+%end
+
+%hook T1ProfileActionButtonsView
+
+- (void)setButtonProviders:(NSArray *)buttonProviders {
+    if ([BHTManager restoreFollowButton] && buttonProviders) {
+        NSMutableArray *filteredProviders = [NSMutableArray array];
+        for (id provider in buttonProviders) {
+            // Filter out any provider that creates a Super Follow button
+            // We're checking the class name since we don't have the exact class for the provider
+            if (![NSStringFromClass([provider class]) containsString:@"SuperFollow"]) {
+                [filteredProviders addObject:provider];
+            }
+        }
+        %orig(filteredProviders);
+    } else {
+        %orig;
+    }
+}
+
+- (void)_t1_updateAllButtonViews {
+    %orig;
+    if ([BHTManager restoreFollowButton]) {
+        // After updating button views, hide any Super Follow control that might have been added
+        for (UIView *subview in self.subviews) {
+            if ([subview isKindOfClass:%c(T1SuperFollowControl)]) {
+                subview.hidden = YES;
+                subview.alpha = 0.0;
+            }
+        }
+    }
+}
+
+%end
+
+%hook T1ProfileHeaderViewController
+
+- (void)setActionButtonProviders:(NSArray *)buttonProviders {
+    if ([BHTManager restoreFollowButton] && buttonProviders) {
+        NSMutableArray *filteredProviders = [NSMutableArray array];
+        for (id provider in buttonProviders) {
+            // Filter out any provider that creates a Super Follow button
+            if (![NSStringFromClass([provider class]) containsString:@"SuperFollow"]) {
+                [filteredProviders addObject:provider];
+            }
+        }
+        %orig(filteredProviders);
+    } else {
+        %orig;
+    }
+}
+
 %end
