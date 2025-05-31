@@ -301,10 +301,18 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         iconName = isEnabled ? @"media_tab" : @"media_tab_stroke";
     }
     
+    // Choose icon color based on light/dark mode, not selection state
+    UIColor *iconColor;
+    if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
+        iconColor = [UIColor whiteColor];
+    } else {
+        iconColor = [UIColor blackColor];
+    }
+    
     // Generate vector image with proper color
     UIImage *iconImage = [UIImage tfn_vectorImageNamed:iconName 
                                              fitsSize:CGSizeMake(28, 28) 
-                                            fillColor:isEnabled ? twitterBlue : [UIColor labelColor]];
+                                            fillColor:iconColor];
     
     UIImageView *iconView = [[UIImageView alloc] initWithImage:iconImage];
     iconView.frame = CGRectMake(0, 0, 28, 28);
