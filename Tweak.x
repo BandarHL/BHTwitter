@@ -1549,9 +1549,30 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     %orig;
     if ([self.sections count] == 1) {
         TFNItemsDataViewControllerBackingStore *backingStore = self.backingStore;
+        
+        // Create a custom Twitter icon instead of using the system gear icon
+        UIImage *twitterIcon = nil;
+        NSBundle *bhBundle = [NSBundle bundleWithPath:@"/Library/Application Support/BHT/BHTwitter.bundle"];
+        if (bhBundle) {
+            NSString *iconPath = [bhBundle pathForResource:@"twitter_icon" ofType:@"png"];
+            if (iconPath) {
+                twitterIcon = [UIImage imageWithContentsOfFile:iconPath];
+            }
+        }
+        
+        // Fall back to system icon if custom icon not found
+        if (!twitterIcon) {
+            twitterIcon = [UIImage systemImageNamed:@"gearshape.circle"];
+        }
+        
         TFNSettingsNavigationItem *bhtwitter = [[%c(TFNSettingsNavigationItem) alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"] detail:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_DETAIL"] systemIconName:@"gearshape.circle" controllerFactory:^UIViewController *{
             return [BHTManager BHTSettingsWithAccount:self.account];
         }];
+        
+        // Set the custom icon directly
+        if (twitterIcon) {
+            [bhtwitter setValue:twitterIcon forKey:@"_icon"];
+        }
         
         if ([backingStore respondsToSelector:@selector(insertSection:atIndex:)]) {
             [backingStore insertSection:0 atIndex:1];
