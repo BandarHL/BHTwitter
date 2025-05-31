@@ -12,6 +12,10 @@
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
 
+@interface TFNFlexibleLayoutView : UIView
+@property(nonatomic) CGRect frame;
+@end
+
 // Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
 static void BHT_applyThemeToWindow(UIWindow *window);
@@ -6064,6 +6068,36 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
         return nil; // Return nil to prevent the overflow button from appearing
     }
     return %orig;
+}
+
+// Override the method that determines which buttons to show based on width
+- (void)_t1_updateArrangedButtonItemsForContentWidth:(double)arg1 {
+    if ([BHTManager restoreFollowButton]) {
+        // Give it a much larger width to accommodate all buttons
+        %orig(arg1 * 3.0); // Triple the available width
+    } else {
+        %orig(arg1);
+    }
+}
+
+// Force refresh of all button views
+- (void)_t1_updateAllButtonViews {
+    %orig;
+    if ([BHTManager restoreFollowButton]) {
+        // Make sure the inner content view has enough width
+        if (self._innerContentView) {
+            CGRect frame = self._innerContentView.frame;
+            frame.size.width = self.frame.size.width * 3.0; // Wider frame
+            self._innerContentView.frame = frame;
+        }
+        
+        // Also ensure the outer content view is wide enough
+        if (self._outerContentView) {
+            CGRect frame = self._outerContentView.frame;
+            frame.size.width = self.frame.size.width * 3.0; // Wider frame
+            self._outerContentView.frame = frame;
+        }
+    }
 }
 
 %end
