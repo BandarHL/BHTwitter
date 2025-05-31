@@ -6073,30 +6073,10 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 // Override the method that determines which buttons to show based on width
 - (void)_t1_updateArrangedButtonItemsForContentWidth:(double)arg1 {
     if ([BHTManager restoreFollowButton]) {
-        // Give it a much larger width to accommodate all buttons
-        %orig(arg1 * 3.0); // Triple the available width
+        // Use an extremely large width to force all buttons to be visible
+        %orig(10000.0); // 10000 points should be enough for any screen
     } else {
         %orig(arg1);
-    }
-}
-
-// Force refresh of all button views
-- (void)_t1_updateAllButtonViews {
-    %orig;
-    if ([BHTManager restoreFollowButton]) {
-        // Make sure the inner content view has enough width
-        if (self._innerContentView) {
-            CGRect frame = self._innerContentView.frame;
-            frame.size.width = self.frame.size.width * 3.0; // Wider frame
-            self._innerContentView.frame = frame;
-        }
-        
-        // Also ensure the outer content view is wide enough
-        if (self._outerContentView) {
-            CGRect frame = self._outerContentView.frame;
-            frame.size.width = self.frame.size.width * 3.0; // Wider frame
-            self._outerContentView.frame = frame;
-        }
     }
 }
 
