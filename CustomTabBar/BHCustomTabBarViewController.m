@@ -296,7 +296,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     } else if ([item.pageID isEqualToString:@"messages"]) {
         iconName = isEnabled ? @"messages" : @"messages_stroke";
     } else if ([item.pageID isEqualToString:@"grok"]) {
-        iconName = isEnabled ? @"xai_grok_tab" : @"xai_grok_tab_stroke";
+        iconName = isEnabled ? @"grok_icon_blackhole" : @"grok_icon_blackhole_stroke";
     } else if ([item.pageID isEqualToString:@"media"]) {
         iconName = isEnabled ? @"media_tab" : @"media_tab_stroke";
     }
