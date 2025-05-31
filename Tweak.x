@@ -6100,8 +6100,8 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 }
 %end
 
-%hook T1TimelineFeatures
-- (_Bool)isImmersiveSSPDefaultVideoPlayerEnabled {
-    return false;
+%hook TUIUserBadgeSettings
+- (_Bool)forceVerified {
+    return true;
 }
 %end
