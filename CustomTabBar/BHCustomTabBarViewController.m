@@ -83,26 +83,21 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    // Setup header label
-self.headerLabel = [UILabel new];
-self.headerLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_NAVIGATION_DETAIL"];
-self.headerLabel.font = [TwitterChirpFont(TwitterFontStyleRegular) fontWithSize:13];
-self.headerLabel.textColor = [UIColor secondaryLabelColor];
-self.headerLabel.numberOfLines = 0;
-self.headerLabel.textAlignment = NSTextAlignmentLeft;
-self.headerLabel.lineBreakMode = NSLineBreakByWordWrapping;
-self.headerLabel.translatesAutoresizingMaskIntoConstraints = NO;
-[self.view addSubview:self.headerLabel];
-
-// Add constraints for header
-[NSLayoutConstraint activateConstraints:@[
-    [self.headerLabel.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor constant:16],
-    [self.headerLabel.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:16],
-    [self.headerLabel.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-16]
-]];
     self.view.backgroundColor = [UIColor systemBackgroundColor];
     self.hasChanges = NO;
     [self setupScrollView];
+    
+    // Setup header label
+    self.headerLabel = [UILabel new];
+    self.headerLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_NAVIGATION_DETAIL"];
+    self.headerLabel.font = [TwitterChirpFont(TwitterFontStyleRegular) fontWithSize:13];
+    self.headerLabel.textColor = [UIColor secondaryLabelColor];
+    self.headerLabel.numberOfLines = 0;
+    self.headerLabel.textAlignment = NSTextAlignmentLeft;
+    self.headerLabel.lineBreakMode = NSLineBreakByWordWrapping;
+    self.headerLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.contentView addSubview:self.headerLabel];
+    
     [self setupCollectionView];
     [self setupRestoreButton];
     [self loadData];
@@ -135,7 +130,7 @@ self.headerLabel.translatesAutoresizingMaskIntoConstraints = NO;
     [self.scrollView addSubview:self.contentView];
     
     [NSLayoutConstraint activateConstraints:@[
-[self.scrollView.topAnchor constraintEqualToAnchor:self.headerLabel.bottomAnchor constant:8],
+        [self.scrollView.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor],
         [self.scrollView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
         [self.scrollView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
         [self.scrollView.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor],
@@ -149,6 +144,13 @@ self.headerLabel.translatesAutoresizingMaskIntoConstraints = NO;
 }
 
 - (void)setupCollectionView {
+    // Add constraints for header first
+    [NSLayoutConstraint activateConstraints:@[
+        [self.headerLabel.topAnchor constraintEqualToAnchor:self.contentView.topAnchor constant:16],
+        [self.headerLabel.leadingAnchor constraintEqualToAnchor:self.contentView.leadingAnchor constant:16],
+        [self.headerLabel.trailingAnchor constraintEqualToAnchor:self.contentView.trailingAnchor constant:-16]
+    ]];
+    
     CGFloat padding = 20 * 2 + 20 * 2;
     CGFloat itemWidth = (self.view.bounds.size.width - padding) / 3;
 
@@ -184,7 +186,7 @@ self.headerLabel.translatesAutoresizingMaskIntoConstraints = NO;
     [self.contentView addSubview:self.restoreButton];
 
     [NSLayoutConstraint activateConstraints:@[
-        [self.collectionView.topAnchor constraintEqualToAnchor:self.contentView.topAnchor],
+        [self.collectionView.topAnchor constraintEqualToAnchor:self.headerLabel.bottomAnchor constant:16],
         [self.collectionView.leadingAnchor constraintEqualToAnchor:self.contentView.leadingAnchor],
         [self.collectionView.trailingAnchor constraintEqualToAnchor:self.contentView.trailingAnchor],
 
