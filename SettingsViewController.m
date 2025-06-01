@@ -15,6 +15,14 @@
 #import "CustomTabBar/BHCustomTabBarViewController.h"
 #import "BHTManager.h"
 
+// Import external function to get theme color
+extern UIColor *BHTCurrentAccentColor(void);
+
+// Interface declaration for TFNFloatingActionButton
+@interface TFNFloatingActionButton : UIView
+- (void)hideAnimated:(_Bool)animated completion:(id)completion;
+@end
+
 typedef NS_ENUM(NSInteger, TwitterFontWeight) {
     TwitterFontWeightRegular,
     TwitterFontWeightMedium,
@@ -44,6 +52,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
                    [UIFont systemFontOfSize:12 weight:UIFontWeightRegular];
     }
 }
+
 @interface SettingsViewController () <UIFontPickerViewControllerDelegate, UINavigationControllerDelegate, UIImagePickerControllerDelegate, UIColorPickerViewControllerDelegate>
 @property (nonatomic, strong) TFNTwitterAccount *twAccount;
 @property (nonatomic, assign) BOOL hasDynamicSpecifiers;
@@ -89,11 +98,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     } else {
         primaryColor = nil;
     }
-    
-    HBAppearanceSettings *appearanceSettings = [[HBAppearanceSettings alloc] init];
-    appearanceSettings.tintColor = primaryColor;
-    appearanceSettings.largeTitleStyle = HBAppearanceSettingsLargeTitleStyleNever;
-    }
+}
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
     if ([keyPath isEqualToString:@"bh_color_theme_selectedColor"] || [keyPath isEqualToString:@"T1ColorSettingsPrimaryColorOptionKey"]) {
@@ -102,6 +107,27 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     // Removed tab_bar_theming observation and BHTTabBarThemingChanged notification
 }
 
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    
+    // Find and hide the floating action button using recursive search
+    for (UIWindow *window in [UIApplication sharedApplication].windows) {
+        [self findAndHideFloatingActionButtonInView:window];
+    }
+}
+
+- (void)findAndHideFloatingActionButtonInView:(UIView *)view {
+    // Direct check for the current view
+    if ([view isKindOfClass:NSClassFromString(@"TFNFloatingActionButton")]) {
+        [(TFNFloatingActionButton *)view hideAnimated:YES completion:nil];
+        return;
+    }
+    
+    // Recursively check subviews
+    for (UIView *subview in view.subviews) {
+        [self findAndHideFloatingActionButtonInView:subview];
+    }
+}
 
 // Add this method to configure the table view appearance
 - (void)viewDidLoad {
@@ -114,9 +140,6 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     }
 
     [super viewDidLoad];
-
-
-    
     
     // Set the background color to match system background
     self.view.backgroundColor = [UIColor systemBackgroundColor];
@@ -124,6 +147,9 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     // Configure the table view to blend with background
     self.table.backgroundColor = [UIColor systemBackgroundColor];
     self.table.separatorColor = [UIColor separatorColor];
+    
+    // Apply theme color to table
+    self.table.tintColor = BHTCurrentAccentColor();
     
     // Remove extra separators below content
     self.table.tableFooterView = [UIView new];
@@ -136,8 +162,6 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     // These ensure cells align with headers
     self.table.separatorInset = UIEdgeInsetsMake(0, 16, 0, 0);
     self.table.layoutMargins = UIEdgeInsetsMake(0, 16, 0, 16);
-
-
 }
 
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
@@ -153,13 +177,12 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         detail.text = [[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_DETAIL"];
 
         [header addSubview:detail];
-[NSLayoutConstraint activateConstraints:@[
-    [detail.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16],
-    [detail.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-16],
-    [detail.topAnchor constraintEqualToAnchor:header.topAnchor constant:-12],  // was 8
-    [detail.bottomAnchor constraintEqualToAnchor:header.bottomAnchor constant:-8]
-]];
-
+        [NSLayoutConstraint activateConstraints:@[
+            [detail.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16],
+            [detail.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-16],
+            [detail.topAnchor constraintEqualToAnchor:header.topAnchor constant:-12],
+            [detail.bottomAnchor constraintEqualToAnchor:header.bottomAnchor constant:-8]
+        ]];
 
         return header;
     }
@@ -171,18 +194,23 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     UIView *headerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 52)];
     
     // Top separator - modified to extend full width
-if (section != 1) {
-    UIView *topSeparator = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 0.5)];
-    topSeparator.backgroundColor = [UIColor separatorColor];
-    topSeparator.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    [headerView addSubview:topSeparator];
-}
+    if (section != 1) {
+        UIView *topSeparator = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 0.5)];
+        topSeparator.backgroundColor = [UIColor separatorColor];
+        topSeparator.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+        [headerView addSubview:topSeparator];
+    }
     
-    // Header label
+    // Header label - use attributed text with bold font
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(16, 16, tableView.frame.size.width - 32, 28)];
-    label.text = title; 
-    label.font = TwitterChirpFont(TwitterFontStyleBold); // 17pt bold
-    label.textColor = [UIColor labelColor];
+    
+    // Use attributed string to ensure bold rendering
+    NSDictionary *attrs = @{
+        NSFontAttributeName: TwitterChirpFont(TwitterFontStyleBold),
+        NSForegroundColorAttributeName: [UIColor labelColor]
+    };
+    label.attributedText = [[NSAttributedString alloc] initWithString:title attributes:attrs];
+    
     [headerView addSubview:label];
     
     return headerView;
@@ -239,6 +267,9 @@ if (section != 1) {
     
     // Remove selection highlight if needed
     cell.selectionStyle = UITableViewCellSelectionStyleDefault;
+    
+    // Only apply tint color, don't modify other aspects
+    cell.tintColor = BHTCurrentAccentColor();
 }
 
 
@@ -1131,17 +1162,27 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         NSString *subTitle = [specifier.properties[@"subtitle"] copy];
         BOOL isBig = specifier.properties[@"big"] ? ((NSNumber *)specifier.properties[@"big"]).boolValue : NO;
         
-        // Set the font to semibold
-        self.textLabel.font = TwitterChirpFont(TwitterFontStyleSemibold); // 14pt semibold
+        // Set the font to semibold and apply accent color
+        self.textLabel.font = TwitterChirpFont(TwitterFontStyleSemibold);
+        self.textLabel.textColor = BHTCurrentAccentColor();
         
         // Keep subtitle style exactly as before
         self.detailTextLabel.text = subTitle;
         self.detailTextLabel.numberOfLines = isBig ? 0 : 1;
         self.detailTextLabel.textColor = [UIColor secondaryLabelColor];
-        self.detailTextLabel.font = TwitterChirpFont(TwitterFontStyleRegular); // Match footer font
-        self.selectionStyle = UITableViewCellSelectionStyleDefault; // or .None if you don't want selection highlight
+        self.detailTextLabel.font = TwitterChirpFont(TwitterFontStyleRegular);
+        self.selectionStyle = UITableViewCellSelectionStyleDefault;
+        
+        // Apply theme color to cell
+        self.tintColor = BHTCurrentAccentColor();
     }
     return self;
+}
+
+- (void)tintColorDidChange {
+    [super tintColorDidChange];
+    self.textLabel.textColor = BHTCurrentAccentColor();
+    self.tintColor = BHTCurrentAccentColor();
 }
 @end
 
@@ -1152,14 +1193,18 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         BOOL isBig = specifier.properties[@"big"] ? ((NSNumber *)specifier.properties[@"big"]).boolValue : NO;
         
         // Set the font to semibold
-        self.textLabel.font = TwitterChirpFont(TwitterFontStyleSemibold); // 14pt semibold
-
+        self.textLabel.font = TwitterChirpFont(TwitterFontStyleSemibold);
+        
         // Keep subtitle style exactly as before
         self.detailTextLabel.text = subTitle;
         self.detailTextLabel.numberOfLines = isBig ? 0 : 1;
         self.detailTextLabel.textColor = [UIColor secondaryLabelColor];
-        self.detailTextLabel.font = TwitterChirpFont(TwitterFontStyleRegular); // Match footer font
-        self.selectionStyle = UITableViewCellSelectionStyleDefault; // or .None if you don't want selection highlight
+        self.detailTextLabel.font = TwitterChirpFont(TwitterFontStyleRegular);
+        self.selectionStyle = UITableViewCellSelectionStyleDefault;
+        
+        // Theme the switch
+        UISwitch *switchControl = (UISwitch *)[self control];
+        switchControl.onTintColor = BHTCurrentAccentColor();
         
         if (specifier.properties[@"switchAction"]) {
             UISwitch *targetSwitch = ((UISwitch *)[self control]);
@@ -1168,5 +1213,13 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         }
     }
     return self;
+}
+
+- (void)tintColorDidChange {
+    [super tintColorDidChange];
+    
+    // Update switch color when theme changes
+    UISwitch *switchControl = (UISwitch *)[self control];
+    switchControl.onTintColor = BHTCurrentAccentColor();
 }
 @end

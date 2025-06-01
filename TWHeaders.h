@@ -214,6 +214,8 @@ static NSString *_lastCopiedURL;
 @end
 
 @interface T1ProfileActionButtonsView : UIView
+@property(nonatomic, retain) UIView *_innerContentView;
+@property(nonatomic, retain) UIView *_outerContentView;
 @end
 
 @interface T1ProfileHeaderView : UIView
@@ -697,4 +699,17 @@ typedef id (^UnknownBlock)(void);
 // Now declare the category, after the main interface is known
 @interface T1ImmersiveFullScreenViewController (BHTwitter)
 - (BOOL)BHT_findAndPrepareTimestampLabelForVC:(T1ImmersiveFullScreenViewController *)activePlayerVC;
+@end
+
+// Forward declaration for the BHTwitter accent color function
+extern UIColor *BHTCurrentAccentColor(void);
+
+// UIImage category for TFN vector image methods
+@interface UIImage (TFNAdditions)
++ (id)tfn_vectorImageNamed:(id)arg1 fitsSize:(struct CGSize)arg2 fillColor:(id)arg3;
++ (BOOL)tfn_vectorImageExistsNamed:(id)arg1 fitsSize:(struct CGSize)arg2 size:(out struct CGSize *)arg3;
+@end
+
+@interface TFNFlexibleLayoutView : UIView
+@property(nonatomic) CGRect frame;
 @end

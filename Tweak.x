@@ -1,3 +1,11 @@
+//
+//  Tweak.x
+//  BHTwitter/NeoFreeBird
+//
+//  Created by BandarHelal
+//  Modified by nyaathea
+//
+
 #import <UIKit/UIKit.h>
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
@@ -11,6 +19,10 @@
 #import "BHTManager.h"
 #import <math.h>
 #import "BHTBundle/BHTBundle.h"
+#import "TWHeaders.h"
+#import "SAMKeychain/SAMKeychain.h"
+#import <Preferences/PSListController.h>
+#import <Preferences/PSSpecifier.h>
 
 // Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
@@ -1236,6 +1248,10 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         return false;
     }
     
+    if ([key isEqualToString:@"subscriptions_verification_info_is_identity_verified"] || [key isEqualToString:@"subscriptions_verification_info_reason_enabled"] || [key isEqualToString:@"subscriptions_verification_info_verified_since_enabled"]) {
+        return false;
+    }
+
     if ([key isEqualToString:@"articles_timeline_profile_tab_enabled"]) {
         return ![BHTManager disableArticles];
     }
@@ -1248,6 +1264,10 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         return ![BHTManager disableMediaTab];
     }
 
+    if ([key isEqualToString:@"communities_enable_explore_tab"] || [key isEqualToString:@"subscriptions_settings_item_enabled"]) {
+        return false;
+    }
+
     if ([key isEqualToString:@"dash_items_download_grok_enabled"]) {
         return false;
     }
@@ -1257,15 +1277,23 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     }
     
     if ([key isEqualToString:@"dm_compose_bar_v2_enabled"]) {
-        return false;
+        return ![BHTManager dmComposeBarV2];
     }
 
     if ([key isEqualToString:@"reply_sorting_enabled"]) {
-        return false;
+        return ![BHTManager replySorting];
     }
 
     if ([key isEqualToString:@"dm_voice_creation_enabled"]) {
+        return ![BHTManager dmVoiceCreation];
+    }
+
+    if ([key isEqualToString:@"ios_tweet_detail_overflow_in_navigation_enabled"]) {
         return false;
+    }
+
+    if ([key isEqualToString:@"ios_tweet_detail_conversation_context_removal_enabled"]) {
+        return ![BHTManager restoreReplyContext];
     }
     return %orig;
 }
@@ -1537,9 +1565,35 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     %orig;
     if ([self.sections count] == 1) {
         TFNItemsDataViewControllerBackingStore *backingStore = self.backingStore;
-        TFNSettingsNavigationItem *bhtwitter = [[%c(TFNSettingsNavigationItem) alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"] detail:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_DETAIL"] systemIconName:@"gearshape.circle" controllerFactory:^UIViewController *{
+        
+        // Use Twitter's internal vector image system to get the Twitter bird icon
+        UIImage *twitterIcon = nil;
+        
+        // Choose color based on interface style
+        UIColor *iconColor;
+        if (@available(iOS 12.0, *)) {
+            if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
+                iconColor = [UIColor systemGray2Color];
+            } else {
+                iconColor = [UIColor secondaryLabelColor];
+            }
+        } else {
+            iconColor = [UIColor systemGray2Color];
+        }
+        
+        // Try to get the Twitter vector image - use appropriate sizing for icon
+        twitterIcon = [UIImage tfn_vectorImageNamed:@"twitter" fitsSize:CGSizeMake(20, 20) fillColor:iconColor];
+        
+        // Create the settings item - don't specify an icon name to avoid the system icon
+        TFNSettingsNavigationItem *bhtwitter = [[%c(TFNSettingsNavigationItem) alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"] detail:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_DETAIL"] iconName:nil controllerFactory:^UIViewController *{
             return [BHTManager BHTSettingsWithAccount:self.account];
         }];
+        
+        // Set our Twitter icon
+        if (twitterIcon) {
+            NSLog(@"[BHTwitter] Successfully loaded Twitter icon");
+            [bhtwitter setValue:twitterIcon forKey:@"_icon"];
+        }
         
         if ([backingStore respondsToSelector:@selector(insertSection:atIndex:)]) {
             [backingStore insertSection:0 atIndex:1];
@@ -3361,7 +3415,7 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
 
 %end
 
-// MARK: - Hide Grok Analyze & Subscribe Buttons on Detail View (UIControl)
+// MARK: - Hide Grok Analyze & Subscribe Buttons on Detail View
 
 // Minimal interface for TFNButton, used by UIControl hook and FollowButton logic
 @class TFNButton;
@@ -3417,7 +3471,7 @@ static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString 
 
 %end
 
-// MARK: - Restore Follow Button (TUIFollowControl) & Hide SuperFollow (T1SuperFollowControl)
+// MARK: - Restore Follow Button (TUIFollowControl)
 
 @interface TUIFollowControl : UIControl
 - (void)setVariant:(NSUInteger)variant;
@@ -3443,8 +3497,6 @@ static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString 
 // This hook makes the control ALWAYS REPORT its variant as 32
 - (NSUInteger)variant {
     if ([BHTManager restoreFollowButton]) {
-        // This makes the control ALWAYS REPORT its variant as 32
-        // to influence layout decisions that might cause the ellipsis issue.
         return 32;
     }
     return %orig;
@@ -3470,6 +3522,7 @@ static void findAndHideSuperFollowControl(UIView *viewToSearch) {
 
 // It's good practice to also declare the class we are looking for, even if just minimally
 @interface T1SuperFollowControl : UIView
+@property(retain, nonatomic) UIButton *button;
 @end
 
 // Add global class pointer for T1ProfileHeaderViewController
@@ -3574,20 +3627,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     }
     return NO;
 }
-
-%hook T1ProfileHeaderViewController
-
-- (void)viewDidLayoutSubviews { // Or viewWillAppear:, depending on when controls are added
-    %orig;
-    // Search for and hide T1SuperFollowControl within this view controller's view
-    if ([BHTManager restoreFollowButton] && self.isViewLoaded) { // Ensure the view is loaded
-        findAndHideSuperFollowControl(self.view);
-    }
-}
-
-%end
-
-// MARK: - Timestamp Label Styling via UILabel -setText:
 
 // MARK: - Immersive Player Timestamp Visibility Control
 
@@ -4197,18 +4236,6 @@ static char kManualRefreshInProgressKey;
             BHT_applyThemeToWindow(window);
         }
     }];
-    
-    // Note: UIApplicationDidBecomeActiveNotification is now primarily handled by
-    // BHT_ensureThemingEngineSynchronized with the appropriate flags and hooks
-    
-    // Observe theme changes
-    // REMOVED: Observer for BHTTabBarThemingChanged (second instance)
-    // [[NSNotificationCenter defaultCenter] addObserverForName:@\"BHTTabBarThemingChanged\" 
-    //                                                 object:nil 
-    //                                                  queue:[NSOperationQueue mainQueue] 
-    //                                             usingBlock:^(NSNotification * _Nonnull note) {
-    //     BHT_ensureTheming(); // This was likely too broad, direct update is better.
-    // }];
 
     static dispatch_once_t onceTokenPlayerMap;
     dispatch_once(&onceTokenPlayerMap, ^{
@@ -4841,24 +4868,22 @@ static char kTranslateButtonKey;
         
         // If button doesn't exist, create it
         UIButton *translateButton = [UIButton buttonWithType:UIButtonTypeSystem];
-        if (@available(iOS 13.0, *)) {
-            // Use a proper translation SF symbol
-            [translateButton setImage:[UIImage systemImageNamed:@"text.bubble.fill"] forState:UIControlStateNormal];
-            
-            // Set proper tint color based on appearance
-            if (@available(iOS 12.0, *)) {
-                if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
-                    translateButton.tintColor = [UIColor whiteColor];
-                } else {
-                    translateButton.tintColor = [UIColor blackColor];
-                }
-                
-                // Add trait collection observer for dark/light mode changes
-                [translateButton addObserver:self forKeyPath:@"traitCollection" options:NSKeyValueObservingOptionNew context:NULL];
+        
+        // Use Twitter's internal vector image system for the icon
+        [translateButton setImage:[UIImage tfn_vectorImageNamed:@"feedback_stroke" fitsSize:CGSizeMake(24, 24) fillColor:[UIColor systemGray2Color]] forState:UIControlStateNormal];
+        
+        // Set proper tint color based on appearance
+        if (@available(iOS 12.0, *)) {
+            if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
+                translateButton.tintColor = [UIColor whiteColor];
+            } else {
+                translateButton.tintColor = [UIColor blackColor];
             }
-        } else {
-            [translateButton setTitle:@"Translate" forState:UIControlStateNormal]; // Fallback for older iOS
+            
+            // Add trait collection observer for dark/light mode changes
+            [translateButton addObserver:self forKeyPath:@"traitCollection" options:NSKeyValueObservingOptionNew context:NULL];
         }
+
         [translateButton addTarget:self action:@selector(BHT_translateCurrentTweetAction:) forControlEvents:UIControlEventTouchUpInside];
         translateButton.tag = 12345; // Unique tag
         
@@ -4872,7 +4897,7 @@ static char kTranslateButtonKey;
         // Place the button on the right with a moderate offset to avoid collisions
         NSArray *constraints = @[
             [translateButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
-            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-55], // Move slightly more to the right
+            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-10],
             [translateButton.widthAnchor constraintEqualToConstant:44],
             [translateButton.heightAnchor constraintEqualToConstant:44]
         ];
@@ -5396,47 +5421,6 @@ static char kTranslatedTextKey;
 %new - (BOOL)BHT_isShowingTranslatedText {
     NSNumber *isTranslated = objc_getAssociatedObject(self, &kIsTranslatedKey);
     return isTranslated && [isTranslated boolValue];
-}
-
-%end
-
-// Hook to remove Twitter's default translate button
-%hook T1StandardStatusTranslateView
-
-- (instancetype)initWithFrame:(CGRect)frame {
-    if ([BHTManager enableTranslate]) {
-        // Return instance with zero frame to take up no space
-        return %orig(CGRectZero);
-    }
-    return %orig(frame);
-}
-
-- (void)setFrame:(CGRect)frame {
-    if ([BHTManager enableTranslate]) {
-        // Always set frame to zero to take up no space
-        %orig(CGRectZero);
-    } else {
-        %orig(frame);
-    }
-}
-
-- (void)layoutSubviews {
-    if ([BHTManager enableTranslate]) {
-        // Set frame to zero and remove from superview
-        self.frame = CGRectZero;
-        [self removeFromSuperview];
-        return;
-    }
-    %orig;
-}
-
-- (void)didMoveToSuperview {
-    %orig;
-    if ([BHTManager enableTranslate] && self.superview) {
-        // Remove from superview immediately when added
-        self.frame = CGRectZero;
-        [self removeFromSuperview];
-    }
 }
 
 %end
@@ -6099,3 +6083,52 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
         return false;
 }
 %end
+
+%hook T1SuperFollowControl
+
+- (id)initWithSizeClass:(long long)arg1 {
+    id result = %orig;
+    if ([BHTManager restoreFollowButton] && result) {
+        [self setHidden:YES];
+        [self setAlpha:0.0];
+    }
+    return result;
+}
+
+- (void)_t1_configureButton {
+    %orig;
+    if ([BHTManager restoreFollowButton]) {
+        [self setHidden:YES];
+        [self setAlpha:0.0];
+        if (self.button) {
+            [self.button setHidden:YES];
+            [self.button setAlpha:0.0];
+        }
+    }
+}
+%end
+
+%hook T1ProfileActionButtonsView
+
+// Method that creates the overflow button
+- (id)_t1_overflowButtonForItems:(id)arg1 {
+    if ([BHTManager restoreFollowButton]) {
+        return nil; // Return nil to prevent the overflow button from appearing
+    }
+    return %orig;
+}
+
+// Override the method that determines which buttons to show based on width
+- (void)_t1_updateArrangedButtonItemsForContentWidth:(double)arg1 {
+    if ([BHTManager restoreFollowButton]) {
+        %orig(1000.0);
+    } else {
+        %orig(arg1);
+    }
+}
+
+%end
+
+static NSBundle *BHBundle() {
+    return [NSBundle bundleWithIdentifier:@"com.bandarhelal.BHTwitter"];
+}
