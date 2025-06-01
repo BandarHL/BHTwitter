@@ -703,3 +703,13 @@ typedef id (^UnknownBlock)(void);
 
 // Forward declaration for the BHTwitter accent color function
 extern UIColor *BHTCurrentAccentColor(void);
+
+// UIImage category for TFN vector image methods
+@interface UIImage (TFNAdditions)
++ (id)tfn_vectorImageNamed:(id)arg1 fitsSize:(struct CGSize)arg2 fillColor:(id)arg3;
++ (BOOL)tfn_vectorImageExistsNamed:(id)arg1 fitsSize:(struct CGSize)arg2 size:(out struct CGSize *)arg3;
+@end
+
+@interface TFNFlexibleLayoutView : UIView
+@property(nonatomic) CGRect frame;
+@end

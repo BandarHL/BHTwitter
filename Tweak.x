@@ -24,16 +24,6 @@
 #import <Preferences/PSListController.h>
 #import <Preferences/PSSpecifier.h>
 
-// UIImage category for TFN vector image methods
-@interface UIImage (TFNAdditions)
-+ (id)tfn_vectorImageNamed:(id)arg1 fitsSize:(struct CGSize)arg2 fillColor:(id)arg3;
-+ (BOOL)tfn_vectorImageExistsNamed:(id)arg1 fitsSize:(struct CGSize)arg2 size:(out struct CGSize *)arg3;
-@end
-
-@interface TFNFlexibleLayoutView : UIView
-@property(nonatomic) CGRect frame;
-@end
-
 // Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
 static void BHT_applyThemeToWindow(UIWindow *window);
