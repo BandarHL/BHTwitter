@@ -6,161 +6,10 @@
 //  Modified by nyaathea
 //
 
-// --- Simple Method Logging System (For Development) ---
-// Simple and safe system to log method calls for reverse engineering
-
 #import <UIKit/UIKit.h>
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
 #import <objc/message.h> // For objc_msgSend and objc_msgSend_stret
-
-// Simple logger function to avoid repeating the prefix
-static void BHT_Log(NSString *format, ...) {
-    va_list args;
-    va_start(args, format);
-    NSString *formattedString = [[NSString alloc] initWithFormat:format arguments:args];
-    va_end(args);
-    NSLog(@"[BHTLogger] %@", formattedString);
-}
-
-// A safe way to get class hierarchy
-static NSString *BHT_ClassHierarchyString(Class cls) {
-    if (!cls) return @"nil";
-    
-    NSMutableString *hierarchy = [NSMutableString string];
-    Class currentClass = cls;
-    BOOL first = YES;
-    
-    while (currentClass) {
-        if (!first) [hierarchy appendString:@" -> "];
-        [hierarchy appendString:NSStringFromClass(currentClass)];
-        first = NO;
-        currentClass = class_getSuperclass(currentClass);
-    }
-    
-    return hierarchy;
-}
-
-// Method logging group - much safer than runtime swizzling approach
-%group MethodLogging
-
-// UIViewController lifecycle hooks - safe and very useful for tracing the UI flow
-%hook UIViewController
-- (void)viewDidLoad {
-    BHT_Log(@"[%@] viewDidLoad (Hierarchy: %@)", 
-        NSStringFromClass([self class]), 
-        BHT_ClassHierarchyString([self class]));
-    %orig;
-}
-
-- (void)viewWillAppear:(BOOL)animated {
-    BHT_Log(@"[%@] viewWillAppear:%d (Hierarchy: %@)", 
-        NSStringFromClass([self class]), 
-        animated,
-        BHT_ClassHierarchyString([self class]));
-    %orig;
-}
-
-- (void)viewDidAppear:(BOOL)animated {
-    BHT_Log(@"[%@] viewDidAppear:%d (Hierarchy: %@)", 
-        NSStringFromClass([self class]), 
-        animated,
-        BHT_ClassHierarchyString([self class]));
-    %orig;
-}
-%end
-
-// Hook a few core Twitter controller classes to see navigation flow
-// T1TabBarViewController - main tab controller
-%hook T1TabBarViewController
-- (void)viewDidLoad {
-    BHT_Log(@"[T1TabBarViewController] viewDidLoad");
-    %orig;
-}
-
-- (void)setSelectedIndex:(NSUInteger)index {
-    BHT_Log(@"[T1TabBarViewController] setSelectedIndex: %lu", (unsigned long)index);
-    %orig;
-}
-%end
-
-// T1HomeTimelineViewController - home timeline
-%hook T1HomeTimelineViewController
-- (void)viewDidLoad {
-    BHT_Log(@"[T1HomeTimelineViewController] viewDidLoad");
-    %orig;
-}
-%end
-
-// T1TweetDetailsViewController - tweet detail view
-%hook T1TweetDetailsViewController
-- (void)viewDidLoad {
-    BHT_Log(@"[T1TweetDetailsViewController] viewDidLoad");
-    %orig;
-}
-
-- (void)viewWillAppear:(BOOL)animated {
-    BHT_Log(@"[T1TweetDetailsViewController] viewWillAppear: %d", animated);
-    %orig;
-}
-%end
-
-// T1ProfileViewController - profile view
-%hook T1ProfileViewController
-- (void)viewDidLoad {
-    BHT_Log(@"[T1ProfileViewController] viewDidLoad");
-    %orig;
-}
-%end
-
-// Log table/collection view events
-%hook UITableView
-- (UITableViewCell *)cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    UITableViewCell *cell = %orig;
-    
-    // Only log cells from Twitter classes, not system ones
-    if ([NSStringFromClass([cell class]) hasPrefix:@"T"] || 
-        [NSStringFromClass([cell class]) hasPrefix:@"TFN"]) {
-        BHT_Log(@"[UITableView] Cell %@ created at indexPath: %ld, %ld", 
-            NSStringFromClass([cell class]), 
-            (long)indexPath.section, 
-            (long)indexPath.row);
-    }
-    
-    return cell;
-}
-%end
-
-// Log touch handling - useful for tracking interaction points
-%hook UIResponder
-- (void)touchesBegan:(NSSet*)touches withEvent:(UIEvent*)event {
-    // Only log for specific classes we care about
-    if ([self isKindOfClass:[UIButton class]] || 
-        [NSStringFromClass([self class]) hasPrefix:@"T1"] ||
-        [NSStringFromClass([self class]) hasPrefix:@"TFN"]) {
-        
-        UITouch *touch = [touches anyObject];
-        CGPoint location = [touch locationInView:nil];
-        BHT_Log(@"[Touch] Began on %@ at point: %.1f, %.1f", 
-            NSStringFromClass([self class]), location.x, location.y);
-    }
-    %orig;
-}
-%end
-
-// Navigation controller for understanding screen flow
-%hook UINavigationController
-- (void)pushViewController:(UIViewController *)viewController animated:(BOOL)animated {
-    BHT_Log(@"[Navigation] Pushing %@ onto %@", 
-        NSStringFromClass([viewController class]),
-        NSStringFromClass([self class]));
-    %orig;
-}
-%end
-
-%end // MethodLogging group
-
-// Rest of original imports
 #import <AudioToolbox/AudioToolbox.h>
 #import <AVFoundation/AVFoundation.h>
 #import <WebKit/WebKit.h>
@@ -4298,11 +4147,6 @@ static char kManualRefreshInProgressKey;
     
     NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
     NSOperationQueue *mainQueue = [NSOperationQueue mainQueue];
-    
-    // Initialize method logging system - much safer approach
-    BHT_Log(@"Initializing method logger");
-    %init(MethodLogging);
-    
     // Someone needs to hold reference the to Notification
     _PasteboardChangeObserver = [center addObserverForName:UIPasteboardChangedNotification object:nil queue:mainQueue usingBlock:^(NSNotification * _Nonnull note){
         
