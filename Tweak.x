@@ -5959,9 +5959,50 @@ static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
 - (void)setSections:(NSArray *)sections {
     // Only filter if we're in the GuideContainerViewController hierarchy
     if (BHT_isInGuideContainerHierarchy(self)) {
-        // Keep only entry 3 (index 2), remove everything else
-        if (sections.count > 2) {
-            sections = @[sections[2]]; // Extract only the 3rd entry
+        // Filter sections to keep only those with TwitterURT.URTModuleHeaderViewModel
+        if (sections.count > 0) {
+            NSMutableArray *filteredSections = [NSMutableArray array];
+            
+            for (id section in sections) {
+                // Check if this section has the URTModuleHeaderViewModel class
+                NSString *className = NSStringFromClass([section class]);
+                if ([className isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || 
+                    [className containsString:@"URTModuleHeaderViewModel"]) {
+                    [filteredSections addObject:section];
+                }
+                
+                // If no header view models found directly, try to inspect section contents
+                // (sections might contain items/entries that have the header view model)
+                else if ([section respondsToSelector:@selector(items)] || 
+                         [section respondsToSelector:@selector(entries)]) {
+                    NSArray *items = [section respondsToSelector:@selector(items)] ? 
+                                     [section performSelector:@selector(items)] : 
+                                     [section performSelector:@selector(entries)];
+                    
+                    BOOL containsHeaderViewModel = NO;
+                    for (id item in items) {
+                        NSString *itemClassName = NSStringFromClass([item class]);
+                        if ([itemClassName isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || 
+                            [itemClassName containsString:@"URTModuleHeaderViewModel"]) {
+                            containsHeaderViewModel = YES;
+                            break;
+                        }
+                    }
+                    
+                    if (containsHeaderViewModel) {
+                        [filteredSections addObject:section];
+                    }
+                }
+            }
+            
+            // If we found matching sections, use them
+            if (filteredSections.count > 0) {
+                sections = [filteredSections copy];
+            }
+            // If no matching sections found, keep the original behavior as fallback
+            else if (sections.count > 2) {
+                sections = @[sections[2]]; // Extract only the 3rd entry as fallback
+            }
         }
     }
     
@@ -6021,6 +6062,7 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 
 %end
 
+// MARK: bigger action buttons
 %hook TTAStatusInlineActionsView
 - (void)setFrame:(CGRect)frame {
     // Check if bigger action buttons is enabled
@@ -6078,6 +6120,7 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 }
 %end
 
+// MARK: should hopefully remove reply boost upsells
 %hook T1SubscriptionJourneyManager
 - (_Bool)shouldShowReplyBoostUpsellWithAccount {
         return false;
@@ -6108,6 +6151,7 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 }
 %end
 
+// MARK : fix for super follower profiles.
 %hook T1ProfileActionButtonsView
 
 // Method that creates the overflow button
