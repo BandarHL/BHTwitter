@@ -88,15 +88,16 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 }
 
 - (void)setupAppearance {
-    // Get theme color directly from the BHTCurrentAccentColor function
-    UIColor *primaryColor = BHTCurrentAccentColor();
+    TAEColorSettings *colorSettings = [objc_getClass("TAEColorSettings") sharedSettings];
+    UIColor *primaryColor;
     
-    HBAppearanceSettings *appearanceSettings = [[HBAppearanceSettings alloc] init];
-    appearanceSettings.tintColor = primaryColor;
-    appearanceSettings.largeTitleStyle = HBAppearanceSettingsLargeTitleStyleNever;
-    
-    // Apply appearance settings
-    self.hb_appearanceSettings = appearanceSettings;
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        primaryColor = [[[colorSettings currentColorPalette] colorPalette] primaryColorForOption:[[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"]];
+    } else if ([[NSUserDefaults standardUserDefaults] objectForKey:@"T1ColorSettingsPrimaryColorOptionKey"]) {
+        primaryColor = [[[colorSettings currentColorPalette] colorPalette] primaryColorForOption:[[NSUserDefaults standardUserDefaults] integerForKey:@"T1ColorSettingsPrimaryColorOptionKey"]];
+    } else {
+        primaryColor = nil;
+    }
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
@@ -1161,7 +1162,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         NSString *subTitle = [specifier.properties[@"subtitle"] copy];
         BOOL isBig = specifier.properties[@"big"] ? ((NSNumber *)specifier.properties[@"big"]).boolValue : NO;
         
-        // Just set the font directly without attributed text
+        // Set the font to semibold and apply accent color
         self.textLabel.font = TwitterChirpFont(TwitterFontStyleSemibold);
         self.textLabel.textColor = BHTCurrentAccentColor();
         
@@ -1191,7 +1192,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         NSString *subTitle = [specifier.properties[@"subtitle"] copy];
         BOOL isBig = specifier.properties[@"big"] ? ((NSNumber *)specifier.properties[@"big"]).boolValue : NO;
         
-        // Just set the font directly without attributed text
+        // Set the font to semibold
         self.textLabel.font = TwitterChirpFont(TwitterFontStyleSemibold);
         
         // Keep subtitle style exactly as before
