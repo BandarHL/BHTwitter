@@ -101,7 +101,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
                                                                    action:@selector(saveButtonTapped)];
     
     // Explicitly set the disabled appearance for better visibility in dark mode
-    [saveButton setTitleTextAttributes:@{NSForegroundColorAttributeName: [UIColor systemGrayColor]} forState:UIControlStateDisabled];
+    [saveButton setTitleTextAttributes:@{NSForegroundColorAttributeName: [UIColor systemGray3Color]} forState:UIControlStateDisabled];
     
     self.navigationItem.rightBarButtonItem = saveButton;
     saveButton.enabled = NO;
