@@ -99,6 +99,10 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
                                                                     style:UIBarButtonItemStyleDone
                                                                    target:self
                                                                    action:@selector(saveButtonTapped)];
+    
+    // Explicitly set the disabled appearance for better visibility in dark mode
+    [saveButton setTitleTextAttributes:@{NSForegroundColorAttributeName: [UIColor systemGrayColor]} forState:UIControlStateDisabled];
+    
     self.navigationItem.rightBarButtonItem = saveButton;
     saveButton.enabled = NO;
 }
@@ -377,7 +381,13 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     self.hasChanges = ![self.enabledPageIDs isEqual:self.originalEnabledPageIDs];
     
     [self updateSaveButtonState];
-    [collectionView reloadItemsAtIndexPaths:@[indexPath]];
+    
+    // Use a faster animation for selection changes
+    [UIView animateWithDuration:0.15 animations:^{
+        [collectionView performBatchUpdates:^{
+            [collectionView reloadItemsAtIndexPaths:@[indexPath]];
+        } completion:nil];
+    }];
 }
 
 @end
