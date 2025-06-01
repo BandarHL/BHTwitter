@@ -6235,10 +6235,15 @@ static void BHT_SwizzleMethodsForClass(Class cls, BOOL isMeta) {
             continue;
         }
 
+        const char *typeEncoding = method_getTypeEncoding(method);
+        if (!typeEncoding || typeEncoding[0] == '\0') { // ADDED SAFETY CHECK HERE
+            //NSLog(@"[BHT_SUPER_TRACE_SETUP] Skipping method %@::%@ due to NULL or empty type encoding.", className, selectorName);
+            continue;
+        }
+
         NSString *key = [NSString stringWithFormat:@"%c:%@:%@", isMeta ? '+' : '-', className, selectorName];
         [gBHTOriginalIMPs setObject:[NSValue valueWithPointer:originalImp] forKey:key];
 
-        const char *typeEncoding = method_getTypeEncoding(method);
         IMP forwarder = _objc_msgForward;
         if (typeEncoding[0] == '{') { // Method returns a struct
             if (gGlobalObjcMsgForwardStret) {
