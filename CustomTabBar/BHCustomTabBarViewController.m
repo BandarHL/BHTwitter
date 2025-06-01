@@ -53,6 +53,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 @property (nonatomic, strong) NSMutableSet<NSString *> *enabledPageIDs;
 @property (nonatomic, assign) BOOL hasChanges;
 @property (nonatomic, strong) NSLayoutConstraint *collectionViewHeightConstraint;
+@property (nonatomic, strong) NSMutableSet<NSString *> *originalEnabledPageIDs;
 @end
 
 @implementation BHCustomTabBarViewController
@@ -98,7 +99,6 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
                                                                     style:UIBarButtonItemStyleDone
                                                                    target:self
                                                                    action:@selector(saveButtonTapped)];
-    saveButton.tintColor = BHTCurrentAccentColor();
     self.navigationItem.rightBarButtonItem = saveButton;
     saveButton.enabled = NO;
 }
@@ -199,6 +199,10 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         ] mutableCopy];
         self.enabledPageIDs = [NSMutableSet setWithArray:@[@"home", @"guide", @"grok", @"media", @"ntab", @"messages"]];
     }
+    
+    // Store initial state for comparison later
+    self.originalEnabledPageIDs = [self.enabledPageIDs mutableCopy];
+    
     [self.collectionView reloadData];
     [self updateCollectionViewHeight];
 }
@@ -368,7 +372,10 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     } else {
         [self.enabledPageIDs addObject:item.pageID];
     }
-    self.hasChanges = YES;
+    
+    // Check if current state differs from original state
+    self.hasChanges = ![self.enabledPageIDs isEqual:self.originalEnabledPageIDs];
+    
     [self updateSaveButtonState];
     [collectionView reloadItemsAtIndexPaths:@[indexPath]];
 }
