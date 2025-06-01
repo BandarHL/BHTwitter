@@ -11,6 +11,7 @@
 "RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC" = "You need to restart Twitter for this change to take effect.";
 "RESTART_REQUIRED_ALERT_MESSAGE_SQUARE_AVATARS" = "You need to restart Twitter for square profile pictures to take effect.";
 "RESTART_REQUIRED_ALERT_MESSAGE_GENERIC" = "You need to restart Twitter for this change to take effect.";
+"RESTART_REQUIRED_ALERT_MESSAGE_NAVBAR" = "You need to restart Twitter for your custom navigation to take effect.";
 "RESTART_NOW_BUTTON_TITLE" = "Restart";
 
 "CONFIRM_ALERT_MESSAGE" = "Sure you meant to do that?";
