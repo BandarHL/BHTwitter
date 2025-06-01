@@ -1585,7 +1585,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
                 iconColor = [UIColor systemGray2Color];
             } else {
-                iconColor = [UIColor systemRedColor];
+                iconColor = [UIColor systemGrayColor];
             }
         } else {
             iconColor = [UIColor systemGray2Color];
