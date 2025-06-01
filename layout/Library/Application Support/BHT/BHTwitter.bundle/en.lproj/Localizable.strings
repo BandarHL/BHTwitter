@@ -299,10 +299,7 @@
 
 /*Tab bar*/
 "CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE" = "Custom navigation";
-"CUSTOM_TAB_BAR_RESET_BUTTON" = "Restore to default";
-"CUSTOM_TAB_BAR_RESET_MESSAGE" = "Are you sure you'd like to restore the navigation bar to its default state?";
-"CUSTOM_TAB_BAR_SECTION_1_TITLE" = "Enabled";
-"CUSTOM_TAB_BAR_SECTION_2_TITLE" = "Disabled";
+"CUSTOM_TAB_BAR_NAVIGATION_DETAIL" = "Customize the naviagtion bar with your most-used Twitter destinations.";
 "CUSTOM_TAB_BAR_HOME" = "Home";
 "CUSTOM_TAB_BAR_EXPLORE" = "Explore";
 "CUSTOM_TAB_BAR_SPACES" = "Spaces";
@@ -311,6 +308,12 @@
 "CUSTOM_TAB_BAR_MESSAGES" = "Messages";
 "CUSTOM_TAB_BAR_GROK" = "Grok";
 "CUSTOM_TAB_BAR_VIDEO" = "Video";
+"CUSTOM_TAB_BAR_SECTION_1_TITLE" = "Enabled";
+"CUSTOM_TAB_BAR_SECTION_2_TITLE" = "Disabled";
+"CUSTOM_TAB_BAR_RESET_BUTTON" = "Restore to default";
+"CUSTOM_TAB_BAR_RESET_MESSAGE" = "Are you sure you'd like to restore the navigation bar to its default state?";
+
+
 
 /* Classic tab bar */
 "RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_ON" = "You will need to restart Twitter for this to take effect.";

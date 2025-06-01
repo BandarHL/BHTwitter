@@ -54,6 +54,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 @property (nonatomic, assign) BOOL hasChanges;
 @property (nonatomic, strong) NSLayoutConstraint *collectionViewHeightConstraint;
 @property (nonatomic, strong) NSMutableSet<NSString *> *originalEnabledPageIDs;
+@property (nonatomic, strong) UILabel *headerLabel;
 @end
 
 @implementation BHCustomTabBarViewController
@@ -82,6 +83,23 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
 - (void)viewDidLoad {
     [super viewDidLoad];
+    // Setup header label
+self.headerLabel = [UILabel new];
+self.headerLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_NAVIGATION_DETAIL"];
+self.headerLabel.font = [TwitterChirpFont(TwitterFontStyleRegular) fontWithSize:13];
+self.headerLabel.textColor = [UIColor secondaryLabelColor];
+self.headerLabel.numberOfLines = 0;
+self.headerLabel.textAlignment = NSTextAlignmentLeft;
+self.headerLabel.lineBreakMode = NSLineBreakByWordWrapping;
+self.headerLabel.translatesAutoresizingMaskIntoConstraints = NO;
+[self.view addSubview:self.headerLabel];
+
+// Add constraints for header
+[NSLayoutConstraint activateConstraints:@[
+    [self.headerLabel.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor constant:16],
+    [self.headerLabel.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:16],
+    [self.headerLabel.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-16]
+]];
     self.view.backgroundColor = [UIColor systemBackgroundColor];
     self.hasChanges = NO;
     [self setupScrollView];
@@ -117,7 +135,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     [self.scrollView addSubview:self.contentView];
     
     [NSLayoutConstraint activateConstraints:@[
-        [self.scrollView.topAnchor constraintEqualToAnchor:self.view.topAnchor],
+[self.scrollView.topAnchor constraintEqualToAnchor:self.headerLabel.bottomAnchor constant:8],
         [self.scrollView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
         [self.scrollView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
         [self.scrollView.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor],
