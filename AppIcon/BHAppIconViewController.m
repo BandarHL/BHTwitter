@@ -10,6 +10,7 @@
 #import "BHAppIconItem.h"
 #import "BHAppIconCell.h"
 #import "../BHTBundle/BHTBundle.h"
+#import "../BHDimPalette.h"
 #import <UIKit/UIKit.h>
 
 typedef NS_ENUM(NSInteger, TwitterFontStyle) {
@@ -69,8 +70,13 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     self.appIconCollectionView.delegate   = self;
     self.appIconCollectionView.dataSource = self;
     self.appIconCollectionView.translatesAutoresizingMaskIntoConstraints = NO;
+    
+    // Apply background color from BHDimPalette to collection view
+    self.appIconCollectionView.backgroundColor = [BHDimPalette currentBackgroundColor];
 
-    self.view.backgroundColor = [UIColor systemBackgroundColor];
+    // Use BHDimPalette for background color
+    self.view.backgroundColor = [BHDimPalette currentBackgroundColor];
+    
     [self.view addSubview:self.appIconCollectionView];
 
     [NSLayoutConstraint activateConstraints:@[

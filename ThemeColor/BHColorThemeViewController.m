@@ -12,6 +12,7 @@
 #import "../BHTBundle/BHTBundle.h"
 #import "../Colours/Colours.h"
 #import "../TWHeaders.h"
+#import "../BHDimPalette.h"
 #import <UIKit/UIKit.h>
 
 typedef NS_ENUM(NSInteger, TwitterFontStyle) {
@@ -82,6 +83,9 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     self.colorCollectionView.delegate   = self;
     self.colorCollectionView.dataSource = self;
     self.colorCollectionView.translatesAutoresizingMaskIntoConstraints = NO;
+    
+    // Apply background color from BHDimPalette
+    self.colorCollectionView.backgroundColor = [BHDimPalette currentBackgroundColor];
 
     // Data source
     self.colors = [NSMutableArray new];
@@ -117,7 +121,10 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
                    color:[UIColor colorFromHexString:@"#00BA7C"]]];
 
     self.navigationController.navigationBar.prefersLargeTitles = NO;
-    self.view.backgroundColor = [UIColor systemBackgroundColor];
+    
+    // Use BHDimPalette for background color
+    self.view.backgroundColor = [BHDimPalette currentBackgroundColor];
+    
     [self.view addSubview:self.headerLabel];
     [self.view addSubview:self.colorCollectionView];
 

@@ -14,6 +14,7 @@
 #import "ThemeColor/BHColorThemeViewController.h"
 #import "CustomTabBar/BHCustomTabBarViewController.h"
 #import "BHTManager.h"
+#import "BHDimPalette.h"
 
 // Import external function to get theme color
 extern UIColor *BHTCurrentAccentColor(void);
@@ -134,17 +135,6 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     }
 }
 
-// Add method to check for dim mode
-- (BOOL)isDimMode {
-    TAETwitterColorPaletteSettingInfo *paletteInfo = (TAETwitterColorPaletteSettingInfo *)[[objc_getClass("TAEColorSettings") sharedSettings] currentColorPalette];
-    // Check if we're in dim mode by checking palette info
-    if ([paletteInfo respondsToSelector:@selector(isDark)] && [paletteInfo isDark]) {
-        NSString *name = [paletteInfo valueForKey:@"_name"];
-        return [name isEqualToString:@"dark"];
-    }
-    return NO;
-}
-
 - (void)viewDidLoad {
     if (self.twAccount != nil) {
         self.navigationItem.titleView = [objc_getClass("TFNTitleView") titleViewWithTitle:[[BHTBundle sharedBundle]
@@ -156,20 +146,10 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
     [super viewDidLoad];
     
-    // Check if we're in dim mode
-    BOOL isDimMode = [self isDimMode];
-    
-    // Set the background color based on the theme mode
-    if (isDimMode) {
-        // Use a more gray background color for dim mode
-        UIColor *dimBackgroundColor = [UIColor colorWithRed:0.082 green:0.125 blue:0.169 alpha:1.0]; // #15202b
-        self.view.backgroundColor = dimBackgroundColor;
-        self.table.backgroundColor = dimBackgroundColor;
-    } else {
-        // Use the standard system background color for other modes
-        self.view.backgroundColor = [UIColor systemBackgroundColor];
-        self.table.backgroundColor = [UIColor systemBackgroundColor];
-    }
+    // Set the background color based on the theme mode using BHDimPalette
+    UIColor *backgroundColor = [BHDimPalette currentBackgroundColor];
+    self.view.backgroundColor = backgroundColor;
+    self.table.backgroundColor = backgroundColor;
     
     self.table.separatorColor = [UIColor separatorColor];
     
@@ -194,8 +174,8 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 40)];
 
         // Set background color for dim mode if needed
-        if ([self isDimMode]) {
-            header.backgroundColor = [UIColor colorWithRed:0.082 green:0.125 blue:0.169 alpha:1.0]; // #15202b
+        if ([BHDimPalette isDimMode]) {
+            header.backgroundColor = [BHDimPalette dimModeColor];
         }
 
         UILabel *detail = [UILabel new];
@@ -224,8 +204,8 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     UIView *headerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 52)];
     
     // Set background color for dim mode if needed
-    if ([self isDimMode]) {
-        headerView.backgroundColor = [UIColor colorWithRed:0.082 green:0.125 blue:0.169 alpha:1.0]; // #15202b
+    if ([BHDimPalette isDimMode]) {
+        headerView.backgroundColor = [BHDimPalette dimModeColor];
     }
     
     // Top separator - modified to extend full width
@@ -267,8 +247,8 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     UIView *footerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 44)];
     
     // Set background color for dim mode if needed
-    if ([self isDimMode]) {
-        footerView.backgroundColor = [UIColor colorWithRed:0.082 green:0.125 blue:0.169 alpha:1.0]; // #15202b
+    if ([BHDimPalette isDimMode]) {
+        footerView.backgroundColor = [BHDimPalette dimModeColor];
     }
     
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(16, 8, tableView.frame.size.width - 32, 36)];
@@ -301,12 +281,8 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     // Remove any default separator insets
     cell.separatorInset = UIEdgeInsetsMake(0, 0, 0, CGRectGetWidth(tableView.bounds));
     
-    // Set cell background color for dim mode if needed
-    if ([self isDimMode]) {
-        cell.backgroundColor = [UIColor colorWithRed:0.082 green:0.125 blue:0.169 alpha:1.0]; // #15202b
-    } else {
-        cell.backgroundColor = [UIColor systemBackgroundColor];
-    }
+    // Set cell background color using BHDimPalette
+    cell.backgroundColor = [BHDimPalette currentBackgroundColor];
     
     // Remove selection highlight if needed
     cell.selectionStyle = UITableViewCellSelectionStyleDefault;
