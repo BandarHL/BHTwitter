@@ -134,7 +134,17 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     }
 }
 
-// Add this method to configure the table view appearance
+// Add method to check for dim mode
+- (BOOL)isDimMode {
+    TAETwitterColorPaletteSettingInfo *paletteInfo = (TAETwitterColorPaletteSettingInfo *)[[objc_getClass("TAEColorSettings") sharedSettings] currentColorPalette];
+    // Check if we're in dim mode by checking palette info
+    if ([paletteInfo respondsToSelector:@selector(isDark)] && [paletteInfo isDark]) {
+        NSString *name = [paletteInfo valueForKey:@"_name"];
+        return [name isEqualToString:@"dark"];
+    }
+    return NO;
+}
+
 - (void)viewDidLoad {
     if (self.twAccount != nil) {
         self.navigationItem.titleView = [objc_getClass("TFNTitleView") titleViewWithTitle:[[BHTBundle sharedBundle]
@@ -146,11 +156,21 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
     [super viewDidLoad];
     
-    // Set the background color to match system background
-    self.view.backgroundColor = [UIColor systemBackgroundColor];
+    // Check if we're in dim mode
+    BOOL isDimMode = [self isDimMode];
     
-    // Configure the table view to blend with background
-    self.table.backgroundColor = [UIColor systemBackgroundColor];
+    // Set the background color based on the theme mode
+    if (isDimMode) {
+        // Use a more gray background color for dim mode
+        UIColor *dimBackgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0];
+        self.view.backgroundColor = dimBackgroundColor;
+        self.table.backgroundColor = dimBackgroundColor;
+    } else {
+        // Use the standard system background color for other modes
+        self.view.backgroundColor = [UIColor systemBackgroundColor];
+        self.table.backgroundColor = [UIColor systemBackgroundColor];
+    }
+    
     self.table.separatorColor = [UIColor separatorColor];
     
     // Apply theme color to table
@@ -172,6 +192,11 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
     if (section == 0) {
         UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 40)];
+
+        // Set background color for dim mode if needed
+        if ([self isDimMode]) {
+            header.backgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0];
+        }
 
         UILabel *detail = [UILabel new];
         detail.translatesAutoresizingMaskIntoConstraints = NO;
@@ -198,6 +223,11 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     
     UIView *headerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 52)];
     
+    // Set background color for dim mode if needed
+    if ([self isDimMode]) {
+        headerView.backgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0];
+    }
+    
     // Top separator - modified to extend full width
     if (section != 1) {
         UIView *topSeparator = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 0.5)];
@@ -220,13 +250,13 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     
     return headerView;
 }
+
 - (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
     if (section == 0) {
         return 52; // or whatever height you prefer
     }
     return 52; // or your default
 }
-
 
 - (UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section {
     NSString *footerText = [self tableView:tableView titleForFooterInSection:section];
@@ -235,6 +265,11 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     }
     
     UIView *footerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 44)];
+    
+    // Set background color for dim mode if needed
+    if ([self isDimMode]) {
+        footerView.backgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0];
+    }
     
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(16, 8, tableView.frame.size.width - 32, 36)];
     label.text = footerText;
@@ -262,13 +297,16 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     return ceil(rect.size.height) + 24; // Top/bottom padding
 }
 
-// And replace with this single implementation:
 - (void)tableView:(UITableView *)tableView willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath {
     // Remove any default separator insets
     cell.separatorInset = UIEdgeInsetsMake(0, 0, 0, CGRectGetWidth(tableView.bounds));
     
-    // Set cell background
-    cell.backgroundColor = [UIColor systemBackgroundColor];
+    // Set cell background color for dim mode if needed
+    if ([self isDimMode]) {
+        cell.backgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0];
+    } else {
+        cell.backgroundColor = [UIColor systemBackgroundColor];
+    }
     
     // Remove selection highlight if needed
     cell.selectionStyle = UITableViewCellSelectionStyleDefault;
@@ -276,7 +314,6 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     // Only apply tint color, don't modify other aspects
     cell.tintColor = BHTCurrentAccentColor();
 }
-
 
 - (UITableViewStyle)tableViewStyle {
     return UITableViewStyleGrouped;
