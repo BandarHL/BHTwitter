@@ -22,7 +22,6 @@
 #import "TWHeaders.h"
 #import "SAMKeychain/SAMKeychain.h"
 #import <Preferences/PSListController.h>
-#import <Preferences/PSSpecifier.h>
 
 // Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
@@ -6136,55 +6135,237 @@ static NSBundle *BHBundle() {
     return [NSBundle bundleWithIdentifier:@"com.bandarhelal.BHTwitter"];
 }
 
-// MARK: - Call Logger (Forwarding Path)
+// MARK: - Comprehensive Method Call Logger (via _objc_msgForward)
+
+// Structure to store original method details
+// typedef struct {
+//     IMP imp;
+//     const char* typeEncoding;
+// } BHTOriginalMethodInfo;
+
+static NSMutableDictionary<NSString*, NSValue*> *gBHTOriginalIMPs = nil;
+static NSMutableSet<NSString*> *gBHTSwizzledClassesLog = nil; // For debugging the logger itself
+
+// Extern declarations for _objc_msgForward_stret if unavailable in SDK
+OBJC_EXTERN void _objc_msgForward_stret(void);
+OBJC_EXTERN void objc_msgForward_stret(void) __asm__("_objc_msgForward_stret"); // Alternative declaration
+
+static void BHT_SwizzleMethodsForClass(Class cls, BOOL isMeta) {
+    if (![gBHTOriginalIMPs isKindOfClass:[NSMutableDictionary class]]) {
+        //NSLog(@"[BHT_SUPER_TRACE_SETUP] gBHTOriginalIMPs is not initialized!");
+        return;
+    }
+
+    NSString *className = NSStringFromClass(cls);
+
+    // Critical Filter: Skip classes known to cause issues or are too low-level / noisy
+    if ([className hasPrefix:@"OS_"] || 
+        [className hasPrefix:@"CF"] || 
+        [className hasPrefix:@"_NS"] || 
+        [className hasPrefix:@"__NS"] ||
+        [className isEqualToString:@"NSUserDefaults"] || 
+        [className isEqualToString:@"NSAutoreleasePool"] || 
+        [className isEqualToString:@"NSZone"] ||
+        [className isEqualToString:@"FigIrisAutoTrimmerMotionSample"] || // Example of a problematic class
+        [className isEqualToString:@"NSString"] || // Often too noisy and can cause issues with logging itself
+        [className isEqualToString:@"NSMutableString"] ||
+        [className isEqualToString:@"NSDictionary"] || 
+        [className isEqualToString:@"NSMutableDictionary"] ||
+        [className isEqualToString:@"NSArray"] || 
+        [className isEqualToString:@"NSMutableArray"] ||
+        [className isEqualToString:@"NSData"] || 
+        [className isEqualToString:@"NSMutableData"] ||
+        [className isEqualToString:@"NSNumber"] ||
+        [className isEqualToString:@"NSValue"] ||
+        [className isEqualToString:@"NSInvocation"] || 
+        [className isEqualToString:@"NSMethodSignature"] || 
+        [className isEqualToString:@"NSException"] ||
+        [className isEqualToString:@"NSLog"] || // Avoid self-logging loops
+        [className hasSuffix:@"SwiftNativeNSObject"] || // Avoid swift internals
+        [className hasPrefix:@"SwiftUI."] ||
+        [className hasPrefix:@"FLEX"] || // Don't swizzle FLEX if it's used
+        [className hasPrefix:@"BHT"] // Don't swizzle our own logger helpers
+        ) {
+        //NSLog(@"[BHT_SUPER_TRACE_SETUP] Skipping class: %@", className);
+        return;
+    }
+
+    unsigned int methodCount = 0;
+    Method *methods = class_copyMethodList(cls, &methodCount);
+
+    //NSLog(@"[BHT_SUPER_TRACE_SETUP] Processing %sclass %@ with %u methods", isMeta ? "meta " : "", className, methodCount);
+
+    for (unsigned int i = 0; i < methodCount; i++) {
+        Method method = methods[i];
+        SEL selector = method_getName(method);
+        NSString *selectorName = NSStringFromSelector(selector);
+        IMP originalImp = method_getImplementation(method);
+
+        // Skip common NSObject methods that are part of the forwarding mechanism or lifecycle
+        if ( (strcmp(sel_getName(selector), "forwardInvocation:") == 0) ||
+             (strcmp(sel_getName(selector), "methodSignatureForSelector:") == 0) ||
+             (strcmp(sel_getName(selector), "respondsToSelector:") == 0) ||
+             (strcmp(sel_getName(selector), "class") == 0) ||
+             (strcmp(sel_getName(selector), "superclass") == 0) ||
+             (strcmp(sel_getName(selector), "retain") == 0) ||
+             (strcmp(sel_getName(selector), "release") == 0) ||
+             (strcmp(sel_getName(selector), "autorelease") == 0) ||
+             (strcmp(sel_getName(selector), "retainCount") == 0) ||
+             (strcmp(sel_getName(selector), "dealloc") == 0) ||
+             (strcmp(sel_getName(selector), "zone") == 0) ||
+             (strcmp(sel_getName(selector), "self") == 0) ||
+             (strcmp(sel_getName(selector), "isKindOfClass:") == 0) ||
+             (strcmp(sel_getName(selector), "isMemberOfClass:") == 0) ||
+             (strcmp(sel_getName(selector), "conformsToProtocol:") == 0) ||
+             (strcmp(sel_getName(selector), "hash") == 0) ||
+             (strcmp(sel_getName(selector), "isEqual:") == 0) ||
+             (strcmp(sel_getName(selector), "description") == 0) || // Logging description can cause recursion
+             (strcmp(sel_getName(selector), "debugDescription") == 0) ||
+             (strcmp(sel_getName(selector), "allowsWeakReference") == 0) ||
+             (strcmp(sel_getName(selector), "retainWeakReference") == 0) ||
+             (strcmp(sel_getName(selector), ".cxx_destruct") == 0) ) {
+            continue;
+        }
+        
+        // Avoid swizzling _objc_msgForward itself
+        if (originalImp == (IMP)_objc_msgForward || originalImp == (IMP)objc_msgForward_stret) { // Use declared objc_msgForward_stret
+            continue;
+        }
+
+        NSString *key = [NSString stringWithFormat:@"%c:%@:%@", isMeta ? '+' : '-', className, selectorName];
+        [gBHTOriginalIMPs setObject:[NSValue valueWithPointer:originalImp] forKey:key];
+
+        const char *typeEncoding = method_getTypeEncoding(method);
+        IMP forwarder = _objc_msgForward;
+        if (typeEncoding[0] == '{') { // Method returns a struct
+            forwarder = (IMP)objc_msgForward_stret; // Use declared objc_msgForward_stret
+        }
+        method_setImplementation(method, forwarder);
+        //NSLog(@"[BHT_SUPER_TRACE_SETUP] Swizzled: %@ (%@)", key, selectorName);
+    }
+    free(methods);
+    [gBHTSwizzledClassesLog addObject:className]; // Log that we've processed this class
+}
+
+%ctor {
+    NSLog(@"[BHT_SUPER_TRACE_SETUP] Initializing comprehensive logger...");
+    gBHTOriginalIMPs = [NSMutableDictionary dictionary];
+    gBHTSwizzledClassesLog = [NSMutableSet set];
+
+    // dlopen libobjc to ensure _objc_msgForward and _objc_msgForward_stret are resolved if needed by name.
+    // However, they are typically available directly.
+    // void *libobjc = dlopen("/usr/lib/libobjc.A.dylib", RTLD_LAZY | RTLD_GLOBAL);
+    // if (libobjc) {
+    //     _objc_msgForward_stret = dlsym(libobjc, "_objc_msgForward_stret");
+    //     _objc_msgForward = dlsym(libobjc, "_objc_msgForward");
+    //     NSLog(@"[BHT_SUPER_TRACE_SETUP] _objc_msgForward: %p, _objc_msgForward_stret: %p", _objc_msgForward, _objc_msgForward_stret);
+    // } else {
+    //     NSLog(@"[BHT_SUPER_TRACE_SETUP] Failed to dlopen libobjc!");
+    // }
+
+    int numClasses = objc_getClassList(NULL, 0);
+    Class *classes = NULL;
+    if (numClasses > 0) {
+        classes = (__unsafe_unretained Class *)malloc(sizeof(Class) * numClasses);
+        numClasses = objc_getClassList(classes, numClasses);
+        for (int i = 0; i < numClasses; i++) {
+            Class cls = classes[i];
+            BHT_SwizzleMethodsForClass(cls, NO); // Instance methods
+            BHT_SwizzleMethodsForClass(object_getClass(cls), YES); // Class methods (metaclass)
+        }
+        free(classes);
+    }
+    NSLog(@"[BHT_SUPER_TRACE_SETUP] Comprehensive logger initialized. Processed %lu classes.", (unsigned long)gBHTSwizzledClassesLog.count);
+}
 
 %hook NSObject
 
 - (NSMethodSignature *)methodSignatureForSelector:(SEL)sel {
-    // Log before calling original, as %orig might return nil
-    NSLog(@"[BHT_TRACE_SIG] Class: %@, Selector: %@", NSStringFromClass([self class]), NSStringFromSelector(sel));
-    
-    // Log hierarchy
-    NSMutableString *hierarchyLog = [NSMutableString stringWithString:@"[BHT_TRACE_SIG] Hierarchy: "];
-    Class currentClass = [self class];
-    while (currentClass != nil) {
-        [hierarchyLog appendFormat:@"%@ -> ", NSStringFromClass(currentClass)];
-        currentClass = [currentClass superclass];
+    NSString *className = NSStringFromClass([self class]);
+    NSString *selectorName = NSStringFromSelector(sel);
+    // Limit logging for methodSignatureForSelector to reduce noise from common selectors
+    if (!([selectorName isEqualToString:@"respondsToSelector:"] || [selectorName isEqualToString:@"class"] || [selectorName isEqualToString:@"retain"] || [selectorName isEqualToString:@"release"] || [selectorName isEqualToString:@"autorelease"])) {
+        NSLog(@"[BHT_SUPER_TRACE_SIG] Class: %@, Selector: %@", className, selectorName); // Use className here
     }
-    [hierarchyLog appendString:@"nil"];
-    NSLog(@"%@", hierarchyLog);
-    
-    NSMethodSignature *sig = %orig;
-    
-    // If the original implementation doesn't find a signature,
-    // we provide a generic one. This makes it more likely that
-    // forwardInvocation: will be called, allowing us to log it.
-    // This is primarily for logging purposes.
-    if (!sig) {
-        //NSLog(@"[BHT_TRACE_SIG] Original signature was nil for %@::%@. Providing generic to force forwarding.", NSStringFromClass([self class]), NSStringFromSelector(sel));
-        return [NSMethodSignature signatureWithObjCTypes:"v@:"]; // Generic: void return, id self, SEL _cmd
+
+    NSMethodSignature *signature = %orig;
+    if (signature) {
+        return signature;
     }
-    
-    return sig;
+
+    //NSLog(@"[BHT_SUPER_TRACE_SIG] Original signature nil for %@::%@. Providing generic for forwarding.", className, selectorName);
+    return [NSMethodSignature signatureWithObjCTypes:"v@:"]; // Generic: void return, id self, SEL _cmd
 }
 
 - (void)forwardInvocation:(NSInvocation *)invocation {
-    NSLog(@"[BHT_TRACE_INVOKE] Class: %@, Selector: %@", NSStringFromClass([[invocation target] class]), NSStringFromSelector([invocation selector]));
+    id target = [invocation target];
+    SEL selector = [invocation selector];
+    NSString *targetClassName = NSStringFromClass([target class]);
+    NSString *selectorName = NSStringFromSelector(selector);
 
-    // Log hierarchy for the target of the invocation
-    NSMutableString *hierarchyLog = [NSMutableString stringWithString:@"[BHT_TRACE_INVOKE] Hierarchy: "];
-    Class currentClass = [[invocation target] class];
-    while (currentClass != nil) {
-        [hierarchyLog appendFormat:@"%@ -> ", NSStringFromClass(currentClass)];
-        currentClass = [currentClass superclass];
+    NSLog(@"[BHT_SUPER_TRACE_INVOKE] Class: %@ (%p), Selector: %@", targetClassName, target, selectorName);
+
+    NSMutableString *hierarchyLog = [NSMutableString stringWithString:@"[BHT_SUPER_TRACE_INVOKE] Hierarchy: "];
+    Class currentHierarchyClass = [target class];
+    while (currentHierarchyClass != nil) {
+        [hierarchyLog appendFormat:@"%@ -> ", NSStringFromClass(currentHierarchyClass)];
+        currentHierarchyClass = class_getSuperclass(currentHierarchyClass);
+        if (currentHierarchyClass == [NSObject class]) { [hierarchyLog appendString:@"NSObject -> nil"]; break; }
+        if (!currentHierarchyClass) { [hierarchyLog appendString:@"nil"]; break; }
     }
-    [hierarchyLog appendString:@"nil"];
     NSLog(@"%@", hierarchyLog);
-    
-    // Crucially, call the original forwardInvocation.
-    // If this is not done, the app will likely crash when it encounters
-    // a message that it was expecting to be forwarded.
-    %orig(invocation);
+
+    IMP originalImp = NULL;
+    Method originalMethodObject = NULL;
+
+    Class lookupClass = object_getClass(target); // Start with actual class of target (could be metaclass)
+
+    while (lookupClass) {
+        NSString *keyPrefix = class_isMetaClass(lookupClass) ? @"+" : @"-";
+        NSString *keyClassName = NSStringFromClass(class_isMetaClass(lookupClass) ? (Class)target : lookupClass); // Use target for class name if meta, else lookupClass
+        if(class_isMetaClass(lookupClass) && target == (id)lookupClass) keyClassName = NSStringFromClass((Class)target);
+        
+        NSString *methodKey = [NSString stringWithFormat:@"%@:%@:%@", keyPrefix, keyClassName, selectorName];
+        
+        NSValue *originalImpValue = [gBHTOriginalIMPs objectForKey:methodKey];
+        if (originalImpValue) {
+            originalImp = [originalImpValue pointerValue];
+            if (class_isMetaClass(lookupClass)) {
+                originalMethodObject = class_getClassMethod(keyClassName == NSStringFromClass((Class)target) ? (Class)target : lookupClass, selector); // Use target for class methods if it's the class itself
+            } else {
+                originalMethodObject = class_getInstanceMethod(lookupClass, selector);
+            }
+            break; 
+        }
+        lookupClass = class_getSuperclass(lookupClass);
+        if (lookupClass == [NSObject class] && !originalImp) { // Check NSObject last if not found yet
+             NSString *nsObjectKeyPrefix = class_isMetaClass(object_getClass(target)) ? @"+":@"-";
+             NSString *nsObjectKey = [NSString stringWithFormat:@"%@:NSObject:%@", nsObjectKeyPrefix, selectorName];
+             NSValue *nsObjectImpVal = [gBHTOriginalIMPs objectForKey:nsObjectKey];
+             if(nsObjectImpVal) {
+                originalImp = [nsObjectImpVal pointerValue];
+                if(class_isMetaClass(object_getClass(target))) originalMethodObject = class_getClassMethod([NSObject class], selector);
+                else originalMethodObject = class_getInstanceMethod([NSObject class], selector);
+             }
+            break;
+        }
+    }
+
+    if (originalImp && originalMethodObject) {
+        IMP previousFwdImp = method_getImplementation(originalMethodObject);
+        method_setImplementation(originalMethodObject, originalImp);
+        @try {
+            [invocation invoke]; // This will now call the original IMP
+        } @catch (NSException *exception) {
+            NSLog(@"[BHT_SUPER_TRACE_INVOKE] Exception during original IMP invocation for %@::%@ : %@", targetClassName, selectorName, exception);
+        } @finally {
+            method_setImplementation(originalMethodObject, previousFwdImp); // Restore _objc_msgForward / _stret
+        }
+    } else {
+        //NSLog(@"[BHT_SUPER_TRACE_INVOKE] No original IMP found for %@ on %@ (%@). Calling NSObject's forwardInvocation.", selectorName, targetClassName, NSStringFromClass(object_getClass(target)));
+        %orig; // Call original NSObject's forwardInvocation (likely leads to doesNotRecognizeSelector)
+    }
 }
 
 %end
+
