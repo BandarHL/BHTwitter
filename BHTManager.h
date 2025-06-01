@@ -69,10 +69,6 @@
 + (BOOL)restoreVideoTimestamp;
 + (BOOL)dmAvatars;
 + (BOOL)classicTabBarEnabled;
-+ (BOOL)noTabBarHiding;
-
-// Prevent Tab Bar Fade
-+ (BOOL)preventTabBarFade;
 
 // Translate functionality
 + (BOOL)enableTranslate;

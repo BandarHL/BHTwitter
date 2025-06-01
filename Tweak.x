@@ -367,38 +367,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 // MARK: Custom Tab bar
 %hook T1TabBarViewController
-- (void)loadView {
-    %orig;
-    NSArray <NSString *> *hiddenBars = [BHCustomTabBarUtility getHiddenTabBars];
-    for (T1TabView *tabView in self.tabViews) {
-        if ([hiddenBars containsObject:tabView.scribePage]) {
-            [tabView setHidden:true];
-        }
-    }
-}
-
-- (void)setTabBarHidden:(BOOL)arg1 withDuration:(CGFloat)arg2 {
-    if ([BHTManager stopHidingTabBar]) {
-        return;
-    }
-    
-    return %orig;
-}
-- (void)setTabBarHidden:(BOOL)arg1 {
-    if ([BHTManager stopHidingTabBar]) {
-        return;
-    }
-    
-    return %orig;
-}
-
-- (void)setTabBarOpacity:(double)opacity {
-    if ([BHTManager stopHidingTabBar]) {
-        %orig(1.0);
-    } else {
-        %orig(opacity);
-    }
-}
 
 // Combined with stopHidingTabBar
 - (void)setTabBarScrolling:(BOOL)scrolling {

@@ -300,11 +300,6 @@
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"restore_video_timestamp"];
 }
 
-+ (BOOL)preventTabBarFade {
-    // This is now controlled by stopHidingTabBar
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"no_tab_bar_hiding"];
-}
-
 + (BOOL)dmAvatars {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"dm_avatars"];
 }
