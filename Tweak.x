@@ -6200,6 +6200,11 @@ static void BHT_SwizzleMethodsForClass(Class cls, BOOL isMeta) {
 
     for (unsigned int i = 0; i < methodCount; i++) {
         Method method = methods[i];
+        if (!method) { // ADDED SAFETY CHECK HERE
+            //NSLog(@"[BHT_SUPER_TRACE_SETUP] Encountered NULL method in class %@ at index %u. Skipping.", className, i);
+            continue;
+        }
+
         SEL selector = method_getName(method);
         NSString *selectorName = NSStringFromSelector(selector);
         IMP originalImp = method_getImplementation(method);
