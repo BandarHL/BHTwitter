@@ -162,7 +162,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     // Set the background color based on the theme mode
     if (isDimMode) {
         // Use a more gray background color for dim mode
-        UIColor *dimBackgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0];
+        UIColor *dimBackgroundColor = [UIColor colorWithRed:0.082 green:0.125 blue:0.169 alpha:1.0]; // #15202b
         self.view.backgroundColor = dimBackgroundColor;
         self.table.backgroundColor = dimBackgroundColor;
     } else {
@@ -195,7 +195,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
         // Set background color for dim mode if needed
         if ([self isDimMode]) {
-            header.backgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0];
+            header.backgroundColor = [UIColor colorWithRed:0.082 green:0.125 blue:0.169 alpha:1.0]; // #15202b
         }
 
         UILabel *detail = [UILabel new];
@@ -225,7 +225,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     
     // Set background color for dim mode if needed
     if ([self isDimMode]) {
-        headerView.backgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0];
+        headerView.backgroundColor = [UIColor colorWithRed:0.082 green:0.125 blue:0.169 alpha:1.0]; // #15202b
     }
     
     // Top separator - modified to extend full width
@@ -268,7 +268,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     
     // Set background color for dim mode if needed
     if ([self isDimMode]) {
-        footerView.backgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0];
+        footerView.backgroundColor = [UIColor colorWithRed:0.082 green:0.125 blue:0.169 alpha:1.0]; // #15202b
     }
     
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(16, 8, tableView.frame.size.width - 32, 36)];
@@ -303,7 +303,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     
     // Set cell background color for dim mode if needed
     if ([self isDimMode]) {
-        cell.backgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0];
+        cell.backgroundColor = [UIColor colorWithRed:0.082 green:0.125 blue:0.169 alpha:1.0]; // #15202b
     } else {
         cell.backgroundColor = [UIColor systemBackgroundColor];
     }
