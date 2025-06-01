@@ -5942,7 +5942,7 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 // Override the method that determines which buttons to show based on width
 - (void)_t1_updateArrangedButtonItemsForContentWidth:(double)arg1 {
     if ([BHTManager restoreFollowButton]) {
-        %orig(100.0);
+        %orig(1000.0);
     } else {
         %orig(arg1);
     }
