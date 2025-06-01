@@ -4870,7 +4870,7 @@ static char kTranslateButtonKey;
         UIButton *translateButton = [UIButton buttonWithType:UIButtonTypeSystem];
         
         // Use Twitter's internal vector image system for the icon
-        [translateButton setImage:[UIImage tfn_vectorImageNamed:@"feedback_stroke" fitsSize:CGSizeMake(24, 24) fillColor:[UIColor systemGray2Color]] forState:UIControlStateNormal];
+        [translateButton setImage:[UIImage tfn_vectorImageNamed:@"translate" fitsSize:CGSizeMake(24, 24) fillColor:[UIColor systemGray2Color]] forState:UIControlStateNormal];
         
         // Set proper tint color based on appearance
         if (@available(iOS 12.0, *)) {
@@ -6021,6 +6021,7 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 
 %end
 
+// MARK: bigger action buttons
 %hook TTAStatusInlineActionsView
 - (void)setFrame:(CGRect)frame {
     // Check if bigger action buttons is enabled
@@ -6078,6 +6079,7 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 }
 %end
 
+// MARK: should hopefully remove reply boost upsells
 %hook T1SubscriptionJourneyManager
 - (_Bool)shouldShowReplyBoostUpsellWithAccount {
         return false;
@@ -6108,6 +6110,7 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 }
 %end
 
+// MARK : fix for super follower profiles.
 %hook T1ProfileActionButtonsView
 
 // Method that creates the overflow button
