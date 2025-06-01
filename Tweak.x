@@ -6,10 +6,282 @@
 //  Modified by nyaathea
 //
 
+// --- Method Logging System (For Development) ---
+// Simple system to log method calls for reverse engineering
+
 #import <UIKit/UIKit.h>
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
 #import <objc/message.h> // For objc_msgSend and objc_msgSend_stret
+
+// Simple flag to enable/disable method logging
+static BOOL enableMethodLogging = YES;
+// Classes to watch (add/remove as needed)
+static NSSet *classesToLog = nil;
+// Cache of already logged methods to avoid log spam
+static NSMutableSet *loggedMethods = nil;
+// Excluded prefixes for system stuff we don't care about
+static NSArray *excludedPrefixes = nil;
+
+// Whitelist of classes to monitor - change this to focus on specific areas
+static void initializeMethodLogging() {
+    if (!classesToLog) {
+        // Add main Twitter classes here - adjust based on what you're investigating
+        classesToLog = [NSSet setWithArray:@[
+            @"TFNTwitter", @"TTR", @"T1", @"TAE", @"TFSTwitter", 
+            @"TFNAva", @"TFNMedia", @"TTMedia", @"UIView", @"T1Tab",
+            @"TFNMenu", @"TFNAction", @"TFNNavigation",
+            @"TFNFeed", @"TFNStatus", @"TFNCompose", @"TFNTimeline"
+        ]];
+    }
+    
+    if (!loggedMethods) {
+        loggedMethods = [NSMutableSet set];
+    }
+    
+    // Skip private methods/classes we don't care about
+    if (!excludedPrefixes) {
+        excludedPrefixes = @[
+            @"_UI", @"CA", @"NS", @"_NS", @"_layout", @"setNeedsLayout", 
+            @"layoutSubviews", @"dealloc", @"init", @"description",
+            @"drawRect", @"copy", @"mutableCopy", @"hash"
+        ];
+    }
+    
+    NSLog(@"[MethodTracer] Method logging initialized");
+}
+
+// Helper to get readable class hierarchy
+static NSString *classHierarchyString(Class cls) {
+    if (!cls) return @"nil";
+    
+    NSMutableString *hierarchy = [NSMutableString string];
+    Class currentClass = cls;
+    BOOL first = YES;
+    
+    while (currentClass) {
+        if (!first) [hierarchy appendString:@" -> "];
+        [hierarchy appendString:NSStringFromClass(currentClass)];
+        first = NO;
+        currentClass = class_getSuperclass(currentClass);
+    }
+    
+    return hierarchy;
+}
+
+// Method that will be called before original method - logs method info
+static void logMethodCall(id self, SEL _cmd) {
+    @try {
+        if (!enableMethodLogging) return;
+        
+        // Initial setup if needed
+        if (!classesToLog) {
+            initializeMethodLogging();
+        }
+        
+        Class cls = object_getClass(self);
+        NSString *className = NSStringFromClass(cls);
+        NSString *methodName = NSStringFromSelector(_cmd);
+        
+        // Skip some noisy method patterns
+        for (NSString *prefix in excludedPrefixes) {
+            if ([methodName hasPrefix:prefix] || [className hasPrefix:prefix]) {
+                return;
+            }
+        }
+        
+        // Check if this class prefix is in our watch list
+        BOOL shouldLog = NO;
+        for (NSString *watchPrefix in classesToLog) {
+            if ([className hasPrefix:watchPrefix]) {
+                shouldLog = YES;
+                break;
+            }
+        }
+        
+        if (!shouldLog) return;
+        
+        // Avoid duplicate logging of the same method on the same class
+        NSString *logKey = [NSString stringWithFormat:@"%@_%@", className, methodName];
+        if ([loggedMethods containsObject:logKey]) {
+            return;
+        }
+        
+        // Don't log too many methods (prevent log spam)
+        if (loggedMethods.count > 2000) {
+            [loggedMethods removeAllObjects];
+        }
+        
+        // Add to logged methods
+        [loggedMethods addObject:logKey];
+        
+        // Log the method call with class hierarchy
+        NSLog(@"[MethodTracer] %@ -> %@ (Hierarchy: %@)", className, methodName, classHierarchyString(cls));
+    } @catch (NSException *e) {
+        // Do nothing on exception - safety first
+    }
+}
+
+%group MethodLogging
+
+// Hook class loading to instrument methods
+%hook NSBundle
+- (BOOL)load {
+    BOOL result = %orig;
+    
+    if (result && enableMethodLogging) {
+        @try {
+            // Check bundle path to make sure we're only instrumenting the Twitter app
+            NSString *bundlePath = self.bundlePath;
+            if ([bundlePath containsString:@"Twitter.app"] || [bundlePath containsString:@"X.app"]) {
+                static dispatch_once_t onceToken;
+                dispatch_once(&onceToken, ^{
+                    // Delay to ensure app is fully loaded
+                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                        initializeMethodLogging();
+                        NSLog(@"[MethodTracer] Twitter app bundle loaded, method tracing active");
+                    });
+                });
+            }
+        } @catch (NSException *e) {
+            NSLog(@"[MethodTracer] Exception during bundle load: %@", e);
+        }
+    }
+    
+    return result;
+}
+%end
+
+%end // MethodLogging group
+
+// Add dynamic method logging to specified classes
+static void addMethodLoggingToClass(Class cls) {
+    @try {
+        if (!cls) return;
+        
+        NSString *className = NSStringFromClass(cls);
+        
+        // Skip system classes
+        for (NSString *prefix in excludedPrefixes) {
+            if ([className hasPrefix:prefix]) return;
+        }
+        
+        // Only log classes we care about
+        BOOL shouldTrace = NO;
+        for (NSString *watchPrefix in classesToLog) {
+            if ([className hasPrefix:watchPrefix]) {
+                shouldTrace = YES;
+                break;
+            }
+        }
+        
+        if (!shouldTrace) return;
+        
+        // Get list of instance methods
+        unsigned int methodCount = 0;
+        Method *methods = class_copyMethodList(cls, &methodCount);
+        
+        for (unsigned int i = 0; i < methodCount; i++) {
+            @try {
+                Method method = methods[i];
+                SEL selector = method_getName(method);
+                NSString *methodName = NSStringFromSelector(selector);
+                
+                // Skip certain patterns
+                BOOL shouldSkip = NO;
+                for (NSString *prefix in excludedPrefixes) {
+                    if ([methodName hasPrefix:prefix]) {
+                        shouldSkip = YES;
+                        break;
+                    }
+                }
+                if (shouldSkip) continue;
+                
+                // Create implementation that will call our logging function and then the original method
+                IMP original = method_getImplementation(method);
+                
+                // This is a very simple implementation that just logs
+                IMP newImp = imp_implementationWithBlock(^(id self, ...){
+                    if (enableMethodLogging) {
+                        logMethodCall(self, selector);
+                    }
+                    
+                    // Call the original method
+                    typedef id (*origFunc)(id, SEL, ...);
+                    return ((origFunc)original)(self, selector);
+                });
+                
+                // Swizzle method with our new implementation
+                method_setImplementation(method, newImp);
+            } @catch (NSException *e) {
+                // Silently skip methods that cause issues
+            }
+        }
+        
+        if (methods) {
+            free(methods);
+        }
+        
+    } @catch (NSException *e) {
+        NSLog(@"[MethodTracer] Exception adding method logging to %@: %@", NSStringFromClass(cls), e);
+    }
+}
+
+// This will dynamically trace targeted classes at runtime
+static void startRuntimeTracing() {
+    NSLog(@"[MethodTracer] Starting runtime tracing");
+    
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        @try {
+            // Get all classes in the runtime
+            int numClasses = objc_getClassList(NULL, 0);
+            Class *classes = (Class*)malloc(sizeof(Class) * numClasses);
+            numClasses = objc_getClassList(classes, numClasses);
+            
+            // Process a few at a time to avoid blocking
+            int processedCount = 0;
+            
+            NSLog(@"[MethodTracer] Found %d classes, preparing tracing", numClasses);
+            
+            for (int i = 0; i < numClasses; i++) {
+                @autoreleasepool {
+                    @try {
+                        Class cls = classes[i];
+                        NSString *className = NSStringFromClass(cls);
+                        
+                        // Skip classes that don't match our target prefixes
+                        BOOL shouldInstrument = NO;
+                        for (NSString *watchPrefix in classesToLog) {
+                            if ([className hasPrefix:watchPrefix]) {
+                                shouldInstrument = YES;
+                                break;
+                            }
+                        }
+                        
+                        if (shouldInstrument) {
+                            addMethodLoggingToClass(cls);
+                            processedCount++;
+                            
+                            if (processedCount % 10 == 0) {
+                                // Log progress every 10 classes
+                                NSLog(@"[MethodTracer] Processed %d classes so far", processedCount);
+                            }
+                        }
+                    } @catch (NSException *e) {
+                        // Skip on exceptions
+                    }
+                }
+            }
+            
+            free(classes);
+            NSLog(@"[MethodTracer] Completed setup - instrumented %d classes", processedCount);
+        } @catch (NSException *e) {
+            NSLog(@"[MethodTracer] Exception during runtime tracing: %@", e);
+        }
+    });
+}
+
+// Rest of original imports
 #import <AudioToolbox/AudioToolbox.h>
 #import <AVFoundation/AVFoundation.h>
 #import <WebKit/WebKit.h>
@@ -23,162 +295,6 @@
 #import "SAMKeychain/SAMKeychain.h"
 #import <Preferences/PSListController.h>
 #import <Preferences/PSSpecifier.h>
-
-// ---- START METHOD LOGGING SYSTEM ----
-// Set to YES to enable method logging, NO to disable
-// Change this single line to toggle the entire system
-static BOOL BHT_EnableMethodLogging = YES;
-
-// Simple global variable to track recursive logging
-static BOOL BHT_LoggingInProgress = NO;
-static NSMutableDictionary *BHT_MethodCalls = nil;
-
-// Only log classes with these prefixes
-static NSArray *BHT_ClassPrefixesToLog = nil;
-
-// Function that gets called for every method invocation
-static void BHT_LogMethodCall(id self, SEL _cmd, ...) {
-    // Prevent recursive logging
-    if (BHT_LoggingInProgress) return;
-    BHT_LoggingInProgress = YES;
-    
-    @try {
-        // Get class hierarchy
-        Class cls = object_getClass(self);
-        NSMutableString *classHierarchy = [NSMutableString string];
-        
-        // Build class hierarchy string
-        while (cls) {
-            [classHierarchy appendString:NSStringFromClass(cls)];
-            cls = class_getSuperclass(cls);
-            if (cls) [classHierarchy appendString:@" -> "];
-        }
-        
-        // Get method signature to determine argument count
-        Method method = class_getInstanceMethod([self class], _cmd);
-        unsigned int argCount = method_getNumberOfArguments(method) - 2; // Subtract self and _cmd
-        
-        // Add memory address for distinguishing between different instances
-        NSString *addressStr = [NSString stringWithFormat:@"%p", self];
-        
-        // Log the method call with instance address and arg count
-        NSLog(@"[BHT_MethodLogger] %@ (%@) called %@ [args: %u]", 
-              classHierarchy, addressStr, NSStringFromSelector(_cmd), argCount);
-        
-        // Track frequency
-        NSString *key = [NSString stringWithFormat:@"%@.%@", NSStringFromClass([self class]), NSStringFromSelector(_cmd)];
-        NSNumber *count = BHT_MethodCalls[key] ?: @0;
-        BHT_MethodCalls[key] = @(count.intValue + 1);
-        
-        // If this method is called frequently, log less often
-        if (count.intValue > 20 && count.intValue % 5 != 0) {
-            // Skip logging for frequently called methods
-            BHT_LoggingInProgress = NO;
-            return;
-        }
-    } @catch (NSException *e) {
-        NSLog(@"[BHT_MethodLogger] Exception: %@", e);
-    }
-    
-    BHT_LoggingInProgress = NO;
-    
-    // Call original method (handled by swizzling implementation)
-}
-
-// Setup the logging system by swizzling methods
-static void BHT_SetupMethodLogging() {
-    // Initialize method calls dictionary
-    BHT_MethodCalls = [NSMutableDictionary dictionary];
-    
-    // Set up which class prefixes to log - focusing on Twitter and UI classes
-    BHT_ClassPrefixesToLog = @[
-        @"T1", @"TFN", @"TW", @"TF", @"Twitter", 
-        @"UI", // Core UI classes
-        @"_TtC", // Swift classes
-        @"NS", // Foundation classes that might be subclassed
-        @"TA", @"TD", @"TP", @"TUI", // More Twitter prefixes
-        @"TFS", // Twitter file system classes
-    ];
-    
-    NSLog(@"[BHT_MethodLogger] Starting method logging for classes with prefixes: %@", 
-          [BHT_ClassPrefixesToLog componentsJoinedByString:@", "]);
-    
-    // Get all classes
-    unsigned int classCount;
-    Class *classes = objc_copyClassList(&classCount);
-    
-    NSUInteger loggedClassCount = 0;
-    NSUInteger loggedMethodCount = 0;
-    
-    for (unsigned int i = 0; i < classCount; i++) {
-        Class cls = classes[i];
-        NSString *className = NSStringFromClass(cls);
-        
-        // Skip classes that don't match our prefixes
-        BOOL shouldLog = NO;
-        for (NSString *prefix in BHT_ClassPrefixesToLog) {
-            if ([className hasPrefix:prefix]) {
-                shouldLog = YES;
-                break;
-            }
-        }
-        
-        if (!shouldLog) continue;
-        loggedClassCount++;
-        
-        // Get all methods for the class
-        unsigned int methodCount;
-        Method *methods = class_copyMethodList(cls, &methodCount);
-        
-        for (unsigned int j = 0; j < methodCount; j++) {
-            Method method = methods[j];
-            SEL selector = method_getName(method);
-            
-            // Skip logging internal methods that cause noise
-            NSString *methodName = NSStringFromSelector(selector);
-            if ([methodName hasPrefix:@"_"] || 
-                [methodName containsString:@"BHT_"] ||
-                [methodName isEqualToString:@"description"] ||
-                [methodName isEqualToString:@"hash"] ||
-                [methodName isEqualToString:@"dealloc"] ||
-                [methodName isEqualToString:@"retain"] ||
-                [methodName isEqualToString:@"release"] ||
-                [methodName isEqualToString:@"autorelease"] ||
-                [methodName hasPrefix:@"_accessibility"]) {
-                continue;
-            }
-            
-            loggedMethodCount++;
-            
-            // Get the method implementation and signature
-            IMP imp = method_getImplementation(method);
-            const char *typeEncoding = method_getTypeEncoding(method);
-            
-            // Block for calling the original implementation and logging
-            id block = ^id(id self, ...) {
-                // Log the method call
-                BHT_LogMethodCall(self, selector);
-                
-                // Call the original implementation - the compiler handles the va_args
-                return ((id(*)(id, SEL))imp)(self, selector);
-            };
-            
-            // Create a block implementation of our method
-            IMP newIMP = imp_implementationWithBlock(block);
-            
-            // Replace the implementation
-            class_replaceMethod(cls, selector, newIMP, typeEncoding);
-        }
-        
-        free(methods);
-    }
-    
-    free(classes);
-    
-    NSLog(@"[BHT_MethodLogger] Method logging initialized - hooked %lu methods across %lu classes", 
-          (unsigned long)loggedMethodCount, (unsigned long)loggedClassCount);
-}
-// ---- END METHOD LOGGING SYSTEM ----
 
 // Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
@@ -422,9 +538,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 %hook T1AppDelegate
 - (_Bool)application:(UIApplication *)application didFinishLaunchingWithOptions:(id)arg2 {
-    // Initialize our method logging system at app startup
-    BHT_SetupMethodLogging();
-    
     _Bool orig = %orig;
     
     // Remove the animation trigger entirely since it causes black screen
@@ -4306,6 +4419,21 @@ static char kManualRefreshInProgressKey;
     
     NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
     NSOperationQueue *mainQueue = [NSOperationQueue mainQueue];
+    
+    // Initialize and enable method logging system
+    if (enableMethodLogging) {
+        NSLog(@"[MethodTracer] Starting method tracing system");
+        initializeMethodLogging();
+        
+        // Initialize method tracing group
+        %init(MethodLogging);
+        
+        // Schedule runtime tracing after a delay to let the app start up
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(4 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            startRuntimeTracing();
+        });
+    }
+    
     // Someone needs to hold reference the to Notification
     _PasteboardChangeObserver = [center addObserverForName:UIPasteboardChangedNotification object:nil queue:mainQueue usingBlock:^(NSNotification * _Nonnull note){
         
