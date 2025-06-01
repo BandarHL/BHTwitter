@@ -6150,6 +6150,9 @@ static NSMutableSet<NSString*> *gBHTSwizzledClassesLog = nil; // For debugging t
 OBJC_EXTERN void _objc_msgForward_stret(void);
 OBJC_EXTERN void objc_msgForward_stret(void) __asm__("_objc_msgForward_stret"); // Alternative declaration
 
+// Function pointer for holding _objc_msgForward_stret address
+static void (*gGlobalObjcMsgForwardStret)(void) = NULL;
+
 static void BHT_SwizzleMethodsForClass(Class cls, BOOL isMeta) {
     if (![gBHTOriginalIMPs isKindOfClass:[NSMutableDictionary class]]) {
         //NSLog(@"[BHT_SUPER_TRACE_SETUP] gBHTOriginalIMPs is not initialized!");
@@ -6228,7 +6231,7 @@ static void BHT_SwizzleMethodsForClass(Class cls, BOOL isMeta) {
         }
         
         // Avoid swizzling _objc_msgForward itself
-        if (originalImp == (IMP)_objc_msgForward || originalImp == (IMP)objc_msgForward_stret) { // Use declared objc_msgForward_stret
+        if (originalImp == (IMP)_objc_msgForward || (gGlobalObjcMsgForwardStret && originalImp == (IMP)gGlobalObjcMsgForwardStret) ) {
             continue;
         }
 
@@ -6238,7 +6241,12 @@ static void BHT_SwizzleMethodsForClass(Class cls, BOOL isMeta) {
         const char *typeEncoding = method_getTypeEncoding(method);
         IMP forwarder = _objc_msgForward;
         if (typeEncoding[0] == '{') { // Method returns a struct
-            forwarder = (IMP)objc_msgForward_stret; // Use declared objc_msgForward_stret
+            if (gGlobalObjcMsgForwardStret) {
+                forwarder = (IMP)gGlobalObjcMsgForwardStret;
+            } else {
+                NSLog(@"[BHT_SUPER_TRACE_SETUP] ERROR: _objc_msgForward_stret not found via dlsym! Cannot swizzle method %@ for class %@ that returns a struct.", selectorName, className);
+                continue; // Skip swizzling this method if _objc_msgForward_stret is unavailable
+            }
         }
         method_setImplementation(method, forwarder);
         //NSLog(@"[BHT_SUPER_TRACE_SETUP] Swizzled: %@ (%@)", key, selectorName);
@@ -6252,16 +6260,19 @@ static void BHT_SwizzleMethodsForClass(Class cls, BOOL isMeta) {
     gBHTOriginalIMPs = [NSMutableDictionary dictionary];
     gBHTSwizzledClassesLog = [NSMutableSet set];
 
-    // dlopen libobjc to ensure _objc_msgForward and _objc_msgForward_stret are resolved if needed by name.
-    // However, they are typically available directly.
-    // void *libobjc = dlopen("/usr/lib/libobjc.A.dylib", RTLD_LAZY | RTLD_GLOBAL);
-    // if (libobjc) {
-    //     _objc_msgForward_stret = dlsym(libobjc, "_objc_msgForward_stret");
-    //     _objc_msgForward = dlsym(libobjc, "_objc_msgForward");
-    //     NSLog(@"[BHT_SUPER_TRACE_SETUP] _objc_msgForward: %p, _objc_msgForward_stret: %p", _objc_msgForward, _objc_msgForward_stret);
-    // } else {
-    //     NSLog(@"[BHT_SUPER_TRACE_SETUP] Failed to dlopen libobjc!");
-    // }
+    // Dynamically load _objc_msgForward_stret
+    void *libobjc = dlopen("/usr/lib/libobjc.A.dylib", RTLD_LAZY | RTLD_GLOBAL);
+    if (libobjc) {
+        gGlobalObjcMsgForwardStret = (void (*)(void))dlsym(libobjc, "_objc_msgForward_stret");
+        if (gGlobalObjcMsgForwardStret) {
+            NSLog(@"[BHT_SUPER_TRACE_SETUP] Successfully found _objc_msgForward_stret at %p", gGlobalObjcMsgForwardStret);
+        } else {
+            NSLog(@"[BHT_SUPER_TRACE_SETUP] ERROR: Failed to find _objc_msgForward_stret using dlsym. Struct-returning methods may not be logged correctly or cause issues.");
+        }
+        // We don't typically dlclose libobjc as it's fundamental
+    } else {
+        NSLog(@"[BHT_SUPER_TRACE_SETUP] ERROR: Failed to dlopen /usr/lib/libobjc.A.dylib. _objc_msgForward_stret will be unavailable.");
+    }
 
     int numClasses = objc_getClassList(NULL, 0);
     Class *classes = NULL;
