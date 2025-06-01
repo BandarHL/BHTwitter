@@ -521,11 +521,6 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         
         PSSpecifier *restoreVideoTimestamp = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTORE_VIDEO_TIMESTAMP_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTORE_VIDEO_TIMESTAMP_DETAIL_TITLE"] key:@"restore_video_timestamp" defaultValue:false changeAction:nil];
 
-        PSSpecifier *biggerActionButtons = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BIGGER_ACTION_BUTTONS_TITLE"] 
-                                                        detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BIGGER_ACTION_BUTTONS_DETAIL_TITLE"]
-                                                                key:@"bigger_action_buttons"
-                                                       defaultValue:false 
-                                                       changeAction:@selector(biggerActionButtonsAction:)];
 
         // debug section
         PSSpecifier *flex = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_DETAIL_TITLE"] key:@"flex_twitter" defaultValue:false changeAction:@selector(FLEXAction:)];
@@ -616,7 +611,6 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             layoutSection, // 7
             hideSpace,
             stopHidingTabBar,
-            biggerActionButtons,
             tabBarTheming,
             disableRTL,
             showScrollIndicator,
@@ -1105,31 +1099,6 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_TITLE"]
                                                                    message:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_MESSAGE_SQUARE_AVATARS"]
-                                                            preferredStyle:UIAlertControllerStyleAlert];
-
-    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_NOW_BUTTON_TITLE"] style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
-        [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:key];
-        [[NSUserDefaults standardUserDefaults] synchronize];
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            exit(0);
-        });
-    }]];
-
-    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"] style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
-        // Flip the switch back visually if cancelled
-        [sender setOn:previousValue animated:YES];
-    }]];
-
-    [self presentViewController:alert animated:YES completion:nil];
-}
-
-- (void)biggerActionButtonsAction:(UISwitch *)sender {
-    BOOL enabled = sender.isOn;
-    NSString *key = @"bigger_action_buttons";
-    BOOL previousValue = !enabled; // The value before the switch was flipped
-
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_TITLE"]
-                                                                   message:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_MESSAGE_GENERIC"]
                                                             preferredStyle:UIAlertControllerStyleAlert];
 
     [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_NOW_BUTTON_TITLE"] style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
