@@ -11,6 +11,7 @@
 "RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC" = "この変更を反映するには、Twitterを再起動する必要があります。";
 "RESTART_REQUIRED_ALERT_MESSAGE_SQUARE_AVATARS" = "この変更を反映するには、Twitterを再起動する必要があります。";
 "RESTART_REQUIRED_ALERT_MESSAGE_GENERIC" = "この変更を反映するには、Twitterを再起動する必要があります。";
+"RESTART_REQUIRED_ALERT_MESSAGE_NAVBAR" = "この変更を反映するには、Twitterを再起動する必要があります。";
 "RESTART_NOW_BUTTON_TITLE" = "再起動";
 
 "CONFIRM_ALERT_MESSAGE" = "続行しますか？";
@@ -18,6 +19,7 @@
 "NO_BUTTON_TITLE" = "いいえ";
 "OK_BUTTON_TITLE" = "OK";
 "CANCEL_BUTTON_TITLE" = "キャンセル";
+"SAVE_BUTTON_TITLE" = "保存";
 
 /*Main menu start*/
 /*General*/
@@ -270,8 +272,12 @@
 "APP_ICON_HOLIDAYS_HEADER_DETAIL" = "カスタムアプリアイコンで祝日を祝いましょう。";
 "APP_ICON_SPORTS_HEADER_TITLE" = "スポーツ";
 "APP_ICON_SPORTS_HEADER_DETAIL" = "カスタムアプリアイコンでお気に入りのスポーツを披露しましょう。";
+"APP_ICON_EVENTS_HEADER_TITLE" = "イベント";
+"APP_ICON_EVENTS_HEADER_DETAIL" = "カスタムアプリアイコンで特別なイベントをお祝いしましょう。";
 "APP_ICON_PRIDE_HEADER_TITLE" = "プライド";
 "APP_ICON_PRIDE_HEADER_DETAIL" = "プライドをテーマにしたアプリアイコンを使用して、あなた自身を表現しましょう。";
+"APP_ICON_LEGACY_HEADER_TITLE" = "レガシー";
+"APP_ICON_LEGACY_HEADER_DETAIL" = "昔のTwitterアプリアイコンで過去に戻りましょう。";
 "APP_ICON_OTHER_HEADER_TITLE" = "その他";
 
 /*Copy profile info*/
@@ -292,18 +298,22 @@
 "THEME_OPTION_6" = "グリーン";
 
 /*Tab bar*/
-"CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE" = "タブバーを編集";
-"CUSTOM_TAB_BAR_REST_MESSAGE" = "タブバーをリセットしてもよろしいですか？";
+"CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE" = "カスタムナビゲーション";
+"CUSTOM_TAB_BAR_NAVIGATION_DETAIL" = "最も使用するナビゲーションバーをカスタマイズしましょう。";
+"CUSTOM_TAB_BAR_HOME" = "ホーム";
+"CUSTOM_TAB_BAR_EXPLORE" = "話題を検索";
+"CUSTOM_TAB_BAR_SPACES" = "スペース";
+"CUSTOM_TAB_BAR_COMMUNITIES" = "コミュニティ";
+"CUSTOM_TAB_BAR_NOTIFICATIONS" = "通知";
+"CUSTOM_TAB_BAR_MESSAGES" = "ダイレクトメッセージ";
+"CUSTOM_TAB_BAR_GROK" = "Grok";
+"CUSTOM_TAB_BAR_VIDEO" = "動画";
 "CUSTOM_TAB_BAR_SECTION_1_TITLE" = "有効";
 "CUSTOM_TAB_BAR_SECTION_2_TITLE" = "無効";
-"CUSTOM_TAB_BAR_OPTION_1" = "ホーム";
-"CUSTOM_TAB_BAR_OPTION_2" = "話題を検索";
-"CUSTOM_TAB_BAR_OPTION_3" = "スペース";
-"CUSTOM_TAB_BAR_OPTION_4" = "コミュニティ";
-"CUSTOM_TAB_BAR_OPTION_5" = "通知";
-"CUSTOM_TAB_BAR_OPTION_6" = "ダイレクトメッセージ";
-"CUSTOM_TAB_BAR_OPTION_7" = "Grok";
-"CUSTOM_TAB_BAR_OPTION_8" = "動画";
+"CUSTOM_TAB_BAR_RESET_BUTTON" = "デフォルトに戻す";
+"CUSTOM_TAB_BAR_RESET_MESSAGE" = "ナビゲーションバーをデフォルトの状態に戻してもよろしいですか？";
+
+
 
 /* Classic tab bar */
 "RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_ON" = "この変更を反映するには、Twitterを再起動する必要があります。";
@@ -316,7 +326,7 @@
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_3" = "デフォルトに戻す";
 
 /*Refresh pill text*/
-"REFRESH_PILL_TEXT" = "最新のツイート";
+"REFRESH_PILL_TEXT" = "新しいツイート";
 
 /*Deprecated*/
 "TRUSTED_FRIENSS_OPTION_TITLE" = "Twitterサークル";
