@@ -368,12 +368,26 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 // MARK: Custom Tab bar
 %hook T1TabBarViewController
 
-// Combined with stopHidingTabBar
-- (void)setTabBarScrolling:(BOOL)scrolling {
+- (void)setTabBarHidden:(BOOL)arg1 withDuration:(CGFloat)arg2 {
     if ([BHTManager stopHidingTabBar]) {
-        %orig(NO); // Force scrolling to NO if fading is prevented
+        return;
+    }
+    
+    return %orig;
+}
+- (void)setTabBarHidden:(BOOL)arg1 {
+    if ([BHTManager stopHidingTabBar]) {
+        return;
+    }
+    
+    return %orig;
+}
+
+- (void)setTabBarOpacity:(double)opacity {
+    if ([BHTManager stopHidingTabBar]) {
+        %orig(1.0);
     } else {
-        %orig(scrolling);
+        %orig(opacity);
     }
 }
 %end
