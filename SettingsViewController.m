@@ -97,6 +97,24 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     
     // Apply appearance settings
     self.hb_appearanceSettings = appearanceSettings;
+    
+    // Set navigation bar appearance to match Twitter's style
+    if (@available(iOS 13.0, *)) {
+        UINavigationBarAppearance *appearance = [[UINavigationBarAppearance alloc] init];
+        [appearance configureWithOpaqueBackground];
+        
+        // Match Twitter's blur style
+        appearance.backgroundEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemMaterial];
+        appearance.backgroundColor = [UIColor clearColor];
+        
+        // Apply the appearance settings
+        self.navigationController.navigationBar.standardAppearance = appearance;
+        self.navigationController.navigationBar.scrollEdgeAppearance = appearance;
+        self.navigationController.navigationBar.compactAppearance = appearance;
+        
+        // Apply tint color
+        self.navigationController.navigationBar.tintColor = primaryColor;
+    }
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
@@ -139,6 +157,9 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     }
 
     [super viewDidLoad];
+    
+    // Re-apply appearance settings for navigation bar
+    [self setupAppearance];
     
     // Set the background color to match system background
     self.view.backgroundColor = [UIColor systemBackgroundColor];
