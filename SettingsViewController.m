@@ -98,6 +98,11 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     } else {
         primaryColor = nil;
     }
+    
+    // Use the primaryColor to update UI elements
+    if (primaryColor) {
+        self.view.tintColor = primaryColor;
+    }
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
@@ -516,6 +521,11 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         
         PSSpecifier *restoreVideoTimestamp = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTORE_VIDEO_TIMESTAMP_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTORE_VIDEO_TIMESTAMP_DETAIL_TITLE"] key:@"restore_video_timestamp" defaultValue:false changeAction:nil];
 
+        PSSpecifier *biggerActionButtons = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BIGGER_ACTION_BUTTONS_TITLE"] 
+                                                        detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BIGGER_ACTION_BUTTONS_DETAIL_TITLE"]
+                                                                key:@"bigger_action_buttons"
+                                                       defaultValue:false 
+                                                       changeAction:@selector(biggerActionButtonsAction:)];
 
         // debug section
         PSSpecifier *flex = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_DETAIL_TITLE"] key:@"flex_twitter" defaultValue:false changeAction:@selector(FLEXAction:)];
@@ -606,6 +616,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             layoutSection, // 7
             hideSpace,
             stopHidingTabBar,
+            biggerActionButtons,
             tabBarTheming,
             disableRTL,
             showScrollIndicator,
