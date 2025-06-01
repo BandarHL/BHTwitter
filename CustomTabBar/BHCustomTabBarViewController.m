@@ -53,6 +53,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 @property (nonatomic, strong) NSMutableSet<NSString *> *enabledPageIDs;
 @property (nonatomic, assign) BOOL hasChanges;
 @property (nonatomic, strong) NSLayoutConstraint *collectionViewHeightConstraint;
+@property (nonatomic, strong) NSMutableSet<NSString *> *originalEnabledPageIDs;
 @property (nonatomic, strong) UILabel *headerLabel;
 @end
 
