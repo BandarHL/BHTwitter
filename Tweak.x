@@ -1579,8 +1579,20 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         // Use Twitter's internal vector image system to get the Twitter bird icon
         UIImage *twitterIcon = nil;
         
+        // Choose color based on interface style
+        UIColor *iconColor;
+        if (@available(iOS 12.0, *)) {
+            if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
+                iconColor = [UIColor systemGray2Color];
+            } else {
+                iconColor = [UIColor systemGray6Color];
+            }
+        } else {
+            iconColor = [UIColor systemGray2Color];
+        }
+        
         // Try to get the Twitter vector image - use appropriate sizing for icon
-        twitterIcon = [UIImage tfn_vectorImageNamed:@"twitter" fitsSize:CGSizeMake(20, 20) fillColor:[UIColor systemGray2Color]];
+        twitterIcon = [UIImage tfn_vectorImageNamed:@"twitter" fitsSize:CGSizeMake(20, 20) fillColor:iconColor];
         
         // Create the settings item - don't specify an icon name to avoid the system icon
         TFNSettingsNavigationItem *bhtwitter = [[%c(TFNSettingsNavigationItem) alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"] detail:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_DETAIL"] iconName:nil controllerFactory:^UIViewController *{
@@ -4895,7 +4907,7 @@ static char kTranslateButtonKey;
         // Place the button on the right with a moderate offset to avoid collisions
         NSArray *constraints = @[
             [translateButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
-            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-12],
+            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-10],
             [translateButton.widthAnchor constraintEqualToConstant:44],
             [translateButton.heightAnchor constraintEqualToConstant:44]
         ];
