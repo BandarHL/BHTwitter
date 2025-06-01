@@ -214,6 +214,8 @@ static NSString *_lastCopiedURL;
 @end
 
 @interface T1ProfileActionButtonsView : UIView
+@property(nonatomic, retain) UIView *_innerContentView;
+@property(nonatomic, retain) UIView *_outerContentView;
 @end
 
 @interface T1ProfileHeaderView : UIView
@@ -698,3 +700,6 @@ typedef id (^UnknownBlock)(void);
 @interface T1ImmersiveFullScreenViewController (BHTwitter)
 - (BOOL)BHT_findAndPrepareTimestampLabelForVC:(T1ImmersiveFullScreenViewController *)activePlayerVC;
 @end
+
+// Forward declaration for the BHTwitter accent color function
+extern UIColor *BHTCurrentAccentColor(void);

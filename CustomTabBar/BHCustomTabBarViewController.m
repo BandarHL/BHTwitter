@@ -10,6 +10,19 @@
 #import "../BHTBundle/BHTBundle.h"
 #import "Colours/Colours.h"
 
+// Import external function to get theme color
+extern UIColor *BHTCurrentAccentColor(void);
+
+// Interface declaration for TFNFloatingActionButton
+@interface TFNFloatingActionButton : UIView
+- (void)hideAnimated:(_Bool)animated completion:(id)completion;
+@end
+
+// UIImage category for TFN vector image methods
+@interface UIImage (TFNAdditions)
++ (id)tfn_vectorImageNamed:(id)arg1 fitsSize:(struct CGSize)arg2 fillColor:(id)arg3;
+@end
+
 typedef NS_ENUM(NSInteger, TwitterFontStyle) {
     TwitterFontStyleRegular,
     TwitterFontStyleSemibold,
@@ -40,9 +53,32 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 @property (nonatomic, strong) NSMutableSet<NSString *> *enabledPageIDs;
 @property (nonatomic, assign) BOOL hasChanges;
 @property (nonatomic, strong) NSLayoutConstraint *collectionViewHeightConstraint;
+@property (nonatomic, strong) NSMutableSet<NSString *> *originalEnabledPageIDs;
 @end
 
 @implementation BHCustomTabBarViewController
+
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    
+    // Find and hide the floating action button using recursive search
+    for (UIWindow *window in [UIApplication sharedApplication].windows) {
+        [self findAndHideFloatingActionButtonInView:window];
+    }
+}
+
+- (void)findAndHideFloatingActionButtonInView:(UIView *)view {
+    // Direct check for the current view
+    if ([view isKindOfClass:NSClassFromString(@"TFNFloatingActionButton")]) {
+        [(TFNFloatingActionButton *)view hideAnimated:YES completion:nil];
+        return;
+    }
+    
+    // Recursively check subviews
+    for (UIView *subview in view.subviews) {
+        [self findAndHideFloatingActionButtonInView:subview];
+    }
+}
 
 - (void)viewDidLoad {
     [super viewDidLoad];
@@ -63,6 +99,10 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
                                                                     style:UIBarButtonItemStyleDone
                                                                    target:self
                                                                    action:@selector(saveButtonTapped)];
+    
+    // Explicitly set the disabled appearance for better visibility in dark mode
+    [saveButton setTitleTextAttributes:@{NSForegroundColorAttributeName: [UIColor systemGray2Color]} forState:UIControlStateDisabled];
+    
     self.navigationItem.rightBarButtonItem = saveButton;
     saveButton.enabled = NO;
 }
@@ -163,6 +203,10 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         ] mutableCopy];
         self.enabledPageIDs = [NSMutableSet setWithArray:@[@"home", @"guide", @"grok", @"media", @"ntab", @"messages"]];
     }
+    
+    // Store initial state for comparison later
+    self.originalEnabledPageIDs = [self.enabledPageIDs mutableCopy];
+    
     [self.collectionView reloadData];
     [self updateCollectionViewHeight];
 }
@@ -253,17 +297,17 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     CGFloat boxSize = cell.contentView.bounds.size.width;
 
     UIView *container = [[UIView alloc] initWithFrame:CGRectMake(0, 0, boxSize, boxSize)];
-    UIColor *twitterBlue = [UIColor colorWithRed:29/255.0 green:155/255.0 blue:240/255.0 alpha:1.0];
+    UIColor *accentColor = BHTCurrentAccentColor();
     container.layer.cornerRadius = 12;
 
     if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
         container.backgroundColor = [UIColor colorWithRed:28/255.0 green:32/255.0 blue:35/255.0 alpha:1.0];
         container.layer.borderWidth = isEnabled ? 2 : 0;
-        container.layer.borderColor = isEnabled ? twitterBlue.CGColor : nil;
+        container.layer.borderColor = isEnabled ? accentColor.CGColor : nil;
     } else {
         container.backgroundColor = [UIColor systemBackgroundColor];
         container.layer.borderWidth = 2;
-        UIColor *borderColor = isEnabled ? twitterBlue : [UIColor whiteColor];
+        UIColor *borderColor = isEnabled ? accentColor : [UIColor whiteColor];
         container.layer.borderColor = borderColor.CGColor;
         container.layer.shadowColor = [UIColor blackColor].CGColor;
         container.layer.shadowOffset = CGSizeMake(0, 4);
@@ -274,11 +318,41 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
     [cell.contentView addSubview:container];
 
-    NSString *baseIconName = item.pageID;
-    NSString *iconFilename = isEnabled ? [NSString stringWithFormat:@"%@.png", baseIconName] : [NSString stringWithFormat:@"%@_stroke.png", baseIconName];
-    NSString *iconPath = [[BHTBundle sharedBundle].mainBundle pathForResource:[NSString stringWithFormat:@"icons/%@", iconFilename] ofType:nil];
-    UIImage *iconImage = [UIImage imageWithContentsOfFile:iconPath];
-
+    // Use Twitter's internal vector images based on pageID
+    NSString *iconName = nil;
+    
+    // Choose the right icon name based on tab ID and enabled state
+    if ([item.pageID isEqualToString:@"home"]) {
+        iconName = isEnabled ? @"home" : @"home_stroke";
+    } else if ([item.pageID isEqualToString:@"guide"]) {
+        iconName = isEnabled ? @"search" : @"search_stroke";
+    } else if ([item.pageID isEqualToString:@"audiospace"]) {
+        iconName = isEnabled ? @"spaces" : @"spaces_stroke";
+    } else if ([item.pageID isEqualToString:@"communities"]) {
+        iconName = isEnabled ? @"communities" : @"communities_stroke";
+    } else if ([item.pageID isEqualToString:@"ntab"]) {
+        iconName = isEnabled ? @"notifications" : @"notifications_stroke";
+    } else if ([item.pageID isEqualToString:@"messages"]) {
+        iconName = isEnabled ? @"messages" : @"messages_stroke";
+    } else if ([item.pageID isEqualToString:@"grok"]) {
+        iconName = isEnabled ? @"grok_icon_blackhole" : @"grok_icon_blackhole_stroke";
+    } else if ([item.pageID isEqualToString:@"media"]) {
+        iconName = isEnabled ? @"media_tab" : @"media_tab_stroke";
+    }
+    
+    // Choose icon color based on light/dark mode, not selection state
+    UIColor *iconColor;
+    if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
+        iconColor = [UIColor whiteColor];
+    } else {
+        iconColor = [UIColor blackColor];
+    }
+    
+    // Generate vector image with proper color
+    UIImage *iconImage = [UIImage tfn_vectorImageNamed:iconName 
+                                             fitsSize:CGSizeMake(28, 28) 
+                                            fillColor:iconColor];
+    
     UIImageView *iconView = [[UIImageView alloc] initWithImage:iconImage];
     iconView.frame = CGRectMake(0, 0, 28, 28);
     iconView.center = CGPointMake(container.bounds.size.width / 2, container.bounds.size.height / 2);
@@ -302,9 +376,18 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     } else {
         [self.enabledPageIDs addObject:item.pageID];
     }
-    self.hasChanges = YES;
+    
+    // Check if current state differs from original state
+    self.hasChanges = ![self.enabledPageIDs isEqual:self.originalEnabledPageIDs];
+    
     [self updateSaveButtonState];
-    [collectionView reloadItemsAtIndexPaths:@[indexPath]];
+    
+    // Use a faster animation for selection changes
+    [UIView animateWithDuration:0.15 animations:^{
+        [collectionView performBatchUpdates:^{
+            [collectionView reloadItemsAtIndexPaths:@[indexPath]];
+        } completion:nil];
+    }];
 }
 
 @end
