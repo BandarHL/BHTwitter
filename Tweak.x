@@ -6001,9 +6001,28 @@ static NSBundle *BHBundle() {
 // MARK: Theme TFNBarButtonItemButtonV1
 %hook TFNBarButtonItemButtonV1
 
+- (void)didMoveToWindow {
+    %orig;
+    if (self.window) {
+        // Trigger our setTintColor logic
+        self.tintColor = [UIColor blackColor]; // Actual color will be determined by our setTintColor hook
+    }
+}
+
 - (void)setTintColor:(UIColor *)tintColor {
     BOOL isDark = BHT_isTwitterDarkThemeActive();
     UIColor *correctColor = isDark ? [UIColor whiteColor] : [UIColor blackColor];
     %orig(correctColor);
+}
+
+- (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
+    %orig(previousTraitCollection);
+
+    if (@available(iOS 13.0, *)) {
+        if ([self.traitCollection hasDifferentColorAppearanceComparedToTraitCollection:previousTraitCollection]) {
+            // Trigger our setTintColor logic
+            self.tintColor = [UIColor blackColor]; // Actual color will be determined by our setTintColor hook
+        }
+    }
 }
 %end
