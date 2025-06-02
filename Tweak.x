@@ -5990,7 +5990,7 @@ static NSBundle *BHBundle() {
 - (void)setTintColor:(UIColor *)tintColor {
     // Get current palette
     UIColor *textColor = nil;
-    Class TAETwitterColorPaletteClass = NSClassFromString(@"TAETwitterColorPalette");
+    Class TAETwitterColorPaletteClass = NSClassFromString(@"TAEColorPalette");
     if (TAETwitterColorPaletteClass) {
         id palette = [TAETwitterColorPaletteClass valueForKey:@"currentColorPalette"];
         if (palette && [palette respondsToSelector:@selector(textColor)]) {
