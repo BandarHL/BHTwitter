@@ -5960,43 +5960,27 @@ static NSBundle *BHBundle() {
 
 // MARK: Theme TFNBarButtonItemButtonV1
 %hook TFNBarButtonItemButtonV1
-static BOOL isDarkMode = NO;
 
-+ (void)load {
-    %orig;
-    
-    // Check initial theme
+// Get the current dark mode status from Twitter only
+static BOOL BHTIsDarkMode() {
     Class TAETwitterColorPaletteClass = NSClassFromString(@"TAETwitterColorPalette");
     if (TAETwitterColorPaletteClass) {
         id paletteInfo = [TAETwitterColorPaletteClass valueForKey:@"currentPaletteInfo"];
         if (paletteInfo && [paletteInfo respondsToSelector:@selector(isDark)]) {
-            isDarkMode = [paletteInfo isDark];
+            return [paletteInfo isDark];
         }
     }
-    
-    // Listen for theme changes
-    [[NSNotificationCenter defaultCenter] addObserverForName:@"TAETwitterColorPaletteDidChangeNotification" 
-                                                      object:nil 
-                                                       queue:[NSOperationQueue mainQueue] 
-                                                  usingBlock:^(NSNotification *notification) {
-        Class TAETwitterColorPaletteClass = NSClassFromString(@"TAETwitterColorPalette");
-        if (TAETwitterColorPaletteClass) {
-            id paletteInfo = [TAETwitterColorPaletteClass valueForKey:@"currentPaletteInfo"];
-            if (paletteInfo && [paletteInfo respondsToSelector:@selector(isDark)]) {
-                isDarkMode = [paletteInfo isDark];
-            }
-        }
-    }];
+    return NO; // Default to light mode if palette info isn't available
 }
 
 - (void)didMoveToWindow {
     %orig;
     if (self.window) {
-        self.tintColor = isDarkMode ? [UIColor whiteColor] : [UIColor blackColor];
+        self.tintColor = BHTIsDarkMode() ? [UIColor whiteColor] : [UIColor blackColor];
     }
 }
 
 - (void)setTintColor:(UIColor *)tintColor {
-    %orig(isDarkMode ? [UIColor whiteColor] : [UIColor blackColor]);
+    %orig(BHTIsDarkMode() ? [UIColor whiteColor] : [UIColor blackColor]);
 }
 %end
