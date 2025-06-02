@@ -6024,6 +6024,8 @@ static NSBundle *BHBundle() {
     }
 %end
 
+
+
 // MARK: Custom Dark Mode Settings
 @interface T1DarkModeSettingsViewController : UIViewController
 + (void)presentFromViewController:(UIViewController *)viewController animated:(BOOL)animated;
@@ -6031,29 +6033,57 @@ static NSBundle *BHBundle() {
 
 %hook T1DarkModeSettingsViewController
 
-// Let Twitter handle its own presentation, but log that we intercepted it
+// Let Twitter handle presentation, but log it
 + (void)presentFromViewController:(UIViewController *)viewController animated:(BOOL)animated {
-    NSLog(@"[BHTwitter] Intercepted dark mode sheet presentation - letting Twitter handle it");
-    %orig; // Let Twitter show its own sheet while we debug
+    NSLog(@"[BHTwitter] Intercepted dark mode sheet presentation");
+    %orig;
 }
 
-// Add some logging to view lifecycle methods
 - (void)viewDidLoad {
     %orig;
-    NSLog(@"[BHTwitter] Dark Mode viewDidLoad");
-    // Just observe for now, don't modify
+    NSLog(@"[BHTwitter] Dark Mode viewDidLoad - customizing sheet");
+    
+    // Change the view controller title
+    self.title = @"BHT Dark Mode";
+    
+    // Add a custom label at the top
+    UILabel *customLabel = [[UILabel alloc] init];
+    customLabel.text = @"Custom Dark Mode by BHT";
+    customLabel.textAlignment = NSTextAlignmentCenter;
+    customLabel.font = [UIFont boldSystemFontOfSize:16];
+    customLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.view addSubview:customLabel];
+    
+    // Position the label at the top
+    [NSLayoutConstraint activateConstraints:@[
+        [customLabel.topAnchor constraintEqualToAnchor:self.view.topAnchor constant:16],
+        [customLabel.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:16],
+        [customLabel.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-16]
+    ]];
+    
+    // Change background color to something slightly different so we can tell it's modified
+    self.view.backgroundColor = [UIColor colorWithRed:0.1 green:0.1 blue:0.15 alpha:1.0];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
     %orig;
     NSLog(@"[BHTwitter] Dark Mode viewWillAppear");
-    // Just observe for now, don't modify
 }
 
 - (void)viewDidAppear:(BOOL)animated {
     %orig;
     NSLog(@"[BHTwitter] Dark Mode viewDidAppear");
-    // Just observe for now, don't modify
+    
+    // Display a system toast to indicate our custom controller is active
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"BHT Active"
+                                                                   message:@"Custom dark mode active"
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    
+    [self presentViewController:alert animated:YES completion:^{
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [alert dismissViewControllerAnimated:YES completion:nil];
+        });
+    }];
 }
 
 %end
