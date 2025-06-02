@@ -6025,34 +6025,22 @@ static NSBundle *BHBundle() {
 %end
 
 // MARK: Custom Dark Mode Settings
+@interface T1DarkModeSettingsViewController : UIViewController
+@end
+
+// MARK: Custom Dark Mode Settings
 %hook T1DarkModeSettingsViewController
 
-+ (void)presentFromViewController:(UIViewController *)viewController animated:(BOOL)animated {
-    // Create a simple view controller for our dark mode sheet
-    UIViewController *customVC = [[UIViewController alloc] init];
-    customVC.view.backgroundColor = [UIColor systemBackgroundColor];
-    customVC.title = @"Dark Mode";
-    
-    // Add a simple table view
-    UITableView *tableView = [[UITableView alloc] initWithFrame:customVC.view.bounds style:UITableViewStyleInsetGrouped];
-    tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    [customVC.view addSubview:tableView];
-    
-    // Add a done button
-    customVC.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] 
-                                                initWithBarButtonSystemItem:UIBarButtonSystemItemDone 
-                                                target:customVC 
-                                                action:@selector(dismissController)];
-    
-    // Add the dismiss method
-    class_addMethod([customVC class], @selector(dismissController), imp_implementationWithBlock(^(id self) {
-        [self dismissViewControllerAnimated:YES completion:nil];
-    }), "v@:");
-    
-    // Present in a navigation controller with sheet style
-    UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:customVC];
-    navController.modalPresentationStyle = UIModalPresentationPageSheet;
-    [viewController presentViewController:navController animated:YES completion:nil];
+- (instancetype)initWithScribe:(id)scribe {
+    NSLog(@"[BHTwitter] Dark Mode controller initialized!");
+    return %orig;
+}
+
+- (void)viewDidLoad {
+    %orig;
+    NSLog(@"[BHTwitter] Dark Mode viewDidLoad");
 }
 
 %end
+
+
