@@ -6031,47 +6031,29 @@ static NSBundle *BHBundle() {
 
 %hook T1DarkModeSettingsViewController
 
+// Let Twitter handle its own presentation, but log that we intercepted it
 + (void)presentFromViewController:(UIViewController *)viewController animated:(BOOL)animated {
-    NSLog(@"[BHTwitter] Intercepted dark mode sheet presentation");
-    
-    // Simple approach: Create a basic view controller with a simple table
-    UIViewController *customVC = [[UIViewController alloc] init];
-    customVC.title = @"Dark Mode";
-    customVC.view.backgroundColor = [UIColor systemBackgroundColor];
-    
-    // Add a simple label
-    UILabel *label = [[UILabel alloc] init];
-    label.text = @"Custom Dark Mode Settings";
-    label.textAlignment = NSTextAlignmentCenter;
-    label.translatesAutoresizingMaskIntoConstraints = NO;
-    [customVC.view addSubview:label];
-    
-    // Center the label
-    [NSLayoutConstraint activateConstraints:@[
-        [label.centerXAnchor constraintEqualToAnchor:customVC.view.centerXAnchor],
-        [label.centerYAnchor constraintEqualToAnchor:customVC.view.centerYAnchor]
-    ]];
-    
-    // Create a navigation controller to present it modally
-    UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:customVC];
-    
-    // Add a done button
-    UIBarButtonItem *doneButton = [[UIBarButtonItem alloc] 
-                                  initWithBarButtonSystemItem:UIBarButtonSystemItemDone 
-                                  target:customVC 
-                                  action:@selector(dismissModalViewControllerAnimated:)];
-    customVC.navigationItem.rightBarButtonItem = doneButton;
-    
-    // Use simple presentation style
-    navController.modalPresentationStyle = UIModalPresentationPageSheet;
-    
-    // Present from the provided view controller
-    [viewController presentViewController:navController animated:YES completion:nil];
+    NSLog(@"[BHTwitter] Intercepted dark mode sheet presentation - letting Twitter handle it");
+    %orig; // Let Twitter show its own sheet while we debug
 }
 
-// Prevent the regular initialization from happening
-- (instancetype)initWithScribe:(id)scribe {
-    return nil; // Return nil to prevent the original controller from being created
+// Add some logging to view lifecycle methods
+- (void)viewDidLoad {
+    %orig;
+    NSLog(@"[BHTwitter] Dark Mode viewDidLoad");
+    // Just observe for now, don't modify
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    %orig;
+    NSLog(@"[BHTwitter] Dark Mode viewWillAppear");
+    // Just observe for now, don't modify
+}
+
+- (void)viewDidAppear:(BOOL)animated {
+    %orig;
+    NSLog(@"[BHTwitter] Dark Mode viewDidAppear");
+    // Just observe for now, don't modify
 }
 
 %end
