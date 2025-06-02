@@ -6034,50 +6034,39 @@ static NSBundle *BHBundle() {
 + (void)presentFromViewController:(UIViewController *)viewController animated:(BOOL)animated {
     NSLog(@"[BHTwitter] Intercepted dark mode sheet presentation");
     
-    // Create a title for the menu sheet
-    NSAttributedString *titleString = [[NSAttributedString alloc] initWithString:@"Dark Mode"
-        attributes:@{
-            NSFontAttributeName: [[%c(TAEStandardFontGroup) sharedFontGroup] headline2BoldFont],
-            NSForegroundColorAttributeName: [UIColor labelColor]
-        }];
+    // Simple approach: Create a basic view controller with a simple table
+    UIViewController *customVC = [[UIViewController alloc] init];
+    customVC.title = @"Dark Mode";
+    customVC.view.backgroundColor = [UIColor systemBackgroundColor];
     
-    // Create text item for the title
-    id textModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:titleString];
-    TFNActiveTextItem *titleItem = [[%c(TFNActiveTextItem) alloc] initWithTextModel:textModel activeRanges:nil];
+    // Add a simple label
+    UILabel *label = [[UILabel alloc] init];
+    label.text = @"Custom Dark Mode Settings";
+    label.textAlignment = NSTextAlignmentCenter;
+    label.translatesAutoresizingMaskIntoConstraints = NO;
+    [customVC.view addSubview:label];
     
-    // Create menu actions
-    NSMutableArray *actions = [[NSMutableArray alloc] init];
-    [actions addObject:titleItem];
+    // Center the label
+    [NSLayoutConstraint activateConstraints:@[
+        [label.centerXAnchor constraintEqualToAnchor:customVC.view.centerXAnchor],
+        [label.centerYAnchor constraintEqualToAnchor:customVC.view.centerYAnchor]
+    ]];
     
-    // Dark mode toggle
-    TFNActionItem *darkModeToggle = [%c(TFNActionItem) actionItemWithTitle:@"Dark Mode" 
-                                                               imageName:@"lightbulb" 
-                                                                  action:^{
-        NSLog(@"[BHTwitter] Dark Mode toggle pressed");
-    }];
-    [actions addObject:darkModeToggle];
+    // Create a navigation controller to present it modally
+    UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:customVC];
     
-    // Dim theme option
-    TFNActionItem *dimTheme = [%c(TFNActionItem) actionItemWithTitle:@"Dim" 
-                                                         imageName:@"moon" 
-                                                            action:^{
-        NSLog(@"[BHTwitter] Dim theme selected");
-    }];
-    [actions addObject:dimTheme];
+    // Add a done button
+    UIBarButtonItem *doneButton = [[UIBarButtonItem alloc] 
+                                  initWithBarButtonSystemItem:UIBarButtonSystemItemDone 
+                                  target:customVC 
+                                  action:@selector(dismissModalViewControllerAnimated:)];
+    customVC.navigationItem.rightBarButtonItem = doneButton;
     
-    // Lights out theme option
-    TFNActionItem *lightsOutTheme = [%c(TFNActionItem) actionItemWithTitle:@"Lights Out" 
-                                                               imageName:@"moon.fill" 
-                                                                  action:^{
-        NSLog(@"[BHTwitter] Lights out theme selected");
-    }];
-    [actions addObject:lightsOutTheme];
-    
-    // Create the menu sheet using Twitter's native controller
-    TFNMenuSheetViewController *menuSheet = [[%c(TFNMenuSheetViewController) alloc] initWithActionItems:actions];
+    // Use simple presentation style
+    navController.modalPresentationStyle = UIModalPresentationPageSheet;
     
     // Present from the provided view controller
-    [viewController presentViewController:menuSheet animated:YES completion:nil];
+    [viewController presentViewController:navController animated:YES completion:nil];
 }
 
 // Prevent the regular initialization from happening
