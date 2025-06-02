@@ -6026,106 +6026,6 @@ static NSBundle *BHBundle() {
 
 // MARK: Custom Dark Mode Settings
 @interface T1DarkModeSettingsViewController : UIViewController
-- (void)updateColorsForCurrentTraitCollection;
-@end
-
-@interface CustomDarkModeController : UIViewController <UITableViewDelegate, UITableViewDataSource>
-@property (nonatomic, strong) UITableView *tableView;
-@end
-
-@implementation CustomDarkModeController
-
-- (instancetype)init {
-    self = [super init];
-    if (self) {
-        self.title = @"Dark Mode";
-    }
-    return self;
-}
-
-- (void)loadView {
-    [super loadView];
-    self.view.backgroundColor = [UIColor systemBackgroundColor];
-    
-    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] 
-                                            initWithBarButtonSystemItem:UIBarButtonSystemItemDone 
-                                            target:self 
-                                            action:@selector(dismissController)];
-    
-    self.tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleInsetGrouped];
-    self.tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    self.tableView.delegate = self;
-    self.tableView.dataSource = self;
-    [self.view addSubview:self.tableView];
-}
-
-- (void)dismissController {
-    [self dismissViewControllerAnimated:YES completion:nil];
-}
-
-#pragma mark - UITableViewDataSource
-
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
-    return 2;
-}
-
-- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    return section == 0 ? 1 : 2;
-}
-
-- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    static NSString *cellID = @"DarkModeCell";
-    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID];
-    if (!cell) {
-        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellID];
-    }
-    
-    if (indexPath.section == 0) {
-        cell.textLabel.text = @"Dark mode";
-        cell.accessoryType = UITableViewCellAccessoryCheckmark;
-    } else {
-        if (indexPath.row == 0) {
-            cell.textLabel.text = @"Dim";
-            cell.accessoryType = UITableViewCellAccessoryNone;
-        } else {
-            cell.textLabel.text = @"Lights out";
-            cell.accessoryType = UITableViewCellAccessoryCheckmark;
-        }
-    }
-    
-    return cell;
-}
-
-- (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
-    return section == 0 ? @"Appearance" : @"Theme";
-}
-
-- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
-    return section == 1 ? @"Dim is a dark blue theme, while Lights out is a true black theme better for OLED displays and battery life." : nil;
-}
-
-#pragma mark - UITableViewDelegate
-
-- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-    [tableView deselectRowAtIndexPath:indexPath animated:YES];
-    
-    // Toggle dark mode in section 0
-    if (indexPath.section == 0) {
-        // Toggle dark mode logic would go here
-        NSLog(@"[BHTwitter] Toggle dark mode");
-    } 
-    // Handle theme selection in section 1
-    else if (indexPath.section == 1) {
-        // Update checkmarks
-        for (int i = 0; i < [tableView numberOfRowsInSection:1]; i++) {
-            UITableViewCell *cell = [tableView cellForRowAtIndexPath:[NSIndexPath indexPathForRow:i inSection:1]];
-            cell.accessoryType = (i == indexPath.row) ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone;
-        }
-        
-        NSLog(@"[BHTwitter] Selected theme: %@", indexPath.row == 0 ? @"Dim" : @"Lights out");
-    }
-}
-
 @end
 
 %hook T1DarkModeSettingsViewController
@@ -6133,57 +6033,55 @@ static NSBundle *BHBundle() {
 - (void)viewDidLoad {
     %orig;
     
-    NSLog(@"[BHTwitter] Dark Mode viewDidLoad - replacing with custom content");
+    NSLog(@"[BHTwitter] Dark Mode viewDidLoad - replacing with TFNMenuSheetViewController");
     
-    // Clear the original view controller's view
-    for (UIView *subview in self.view.subviews) {
-        [subview removeFromSuperview];
-    }
+    // Create a title for the menu sheet
+    NSAttributedString *titleString = [[NSAttributedString alloc] initWithString:@"Twitter Dark Mode"
+        attributes:@{
+            NSFontAttributeName: [UIFont boldSystemFontOfSize:22],
+            NSForegroundColorAttributeName: [UIColor labelColor]
+        }];
     
-    // Set background color - use semantic color that adapts to dark/light mode
-    self.view.backgroundColor = [UIColor systemBackgroundColor];
+    // Create text item for the title
+    id textModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:titleString];
+    TFNActiveTextItem *titleItem = [[%c(TFNActiveTextItem) alloc] initWithTextModel:textModel activeRanges:nil];
     
-    // Create a simple table view with appropriate style
-    UITableView *tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleInsetGrouped];
-    tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    [self.view addSubview:tableView];
+    // Create menu actions
+    NSMutableArray *actions = [[NSMutableArray alloc] init];
+    [actions addObject:titleItem];
     
-    // Add a label to show we succeeded
-    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(20, 100, 300, 30)];
-    label.text = @"Custom Dark Mode View";
-    label.textAlignment = NSTextAlignmentCenter;
-    label.font = [UIFont boldSystemFontOfSize:20];
-    label.textColor = [UIColor labelColor]; // Use semantic text color
-    [self.view addSubview:label];
+    // Dark mode toggle
+    TFNActionItem *darkModeToggle = [%c(TFNActionItem) actionItemWithTitle:@"Dark Mode" 
+                                                               imageName:@"lightbulb" 
+                                                                  action:^{
+        NSLog(@"[BHTwitter] Dark Mode toggle pressed");
+    }];
+    [actions addObject:darkModeToggle];
     
-    // Change the title
-    self.title = @"Custom Dark Mode";
-}
-
-// Add method to handle dark/light mode changes
-- (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
-    %orig;
+    // Dim theme option
+    TFNActionItem *dimTheme = [%c(TFNActionItem) actionItemWithTitle:@"Dim" 
+                                                         imageName:@"moon" 
+                                                            action:^{
+        NSLog(@"[BHTwitter] Dim theme selected");
+    }];
+    [actions addObject:dimTheme];
     
-    if ([self.traitCollection hasDifferentColorAppearanceComparedToTraitCollection:previousTraitCollection]) {
-        NSLog(@"[BHTwitter] Dark mode appearance changed");
-        
-        // Update colors when appearance changes
-        [self updateColorsForCurrentTraitCollection];
-    }
-}
-
-%new
-- (void)updateColorsForCurrentTraitCollection {
-    // This method will update colors based on the current trait collection
-    // No need to manually set colors as we're using the system semantic colors
-    // that automatically adapt to the current trait collection
+    // Lights out theme option
+    TFNActionItem *lightsOutTheme = [%c(TFNActionItem) actionItemWithTitle:@"Lights Out" 
+                                                               imageName:@"moon.fill" 
+                                                                  action:^{
+        NSLog(@"[BHTwitter] Lights out theme selected");
+    }];
+    [actions addObject:lightsOutTheme];
     
-    // If you need to manually check the user interface style:
-    if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
-        NSLog(@"[BHTwitter] Dark mode is active");
-    } else {
-        NSLog(@"[BHTwitter] Light mode is active");
-    }
+    // Create the custom dark mode menu sheet using Twitter's native controller
+    TFNMenuSheetViewController *menuSheet = [[%c(TFNMenuSheetViewController) alloc] initWithActionItems:actions];
+    
+    // Present our menu sheet from the current view controller
+    // Schedule this to happen after the current runloop to avoid presentation issues
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self presentViewController:menuSheet animated:YES completion:nil];
+    });
 }
 
 %end
