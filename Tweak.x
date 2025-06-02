@@ -6026,19 +6026,18 @@ static NSBundle *BHBundle() {
 
 // MARK: Custom Dark Mode Settings
 @interface T1DarkModeSettingsViewController : UIViewController
++ (void)presentFromViewController:(UIViewController *)viewController animated:(BOOL)animated;
 @end
 
 %hook T1DarkModeSettingsViewController
 
-- (void)viewDidLoad {
-    %orig;
-    
-    NSLog(@"[BHTwitter] Dark Mode viewDidLoad - replacing with TFNMenuSheetViewController");
++ (void)presentFromViewController:(UIViewController *)viewController animated:(BOOL)animated {
+    NSLog(@"[BHTwitter] Intercepted dark mode sheet presentation");
     
     // Create a title for the menu sheet
-    NSAttributedString *titleString = [[NSAttributedString alloc] initWithString:@"Twitter Dark Mode"
+    NSAttributedString *titleString = [[NSAttributedString alloc] initWithString:@"Dark Mode"
         attributes:@{
-            NSFontAttributeName: [UIFont boldSystemFontOfSize:22],
+            NSFontAttributeName: [[%c(TAEStandardFontGroup) sharedFontGroup] headline2BoldFont],
             NSForegroundColorAttributeName: [UIColor labelColor]
         }];
     
@@ -6074,14 +6073,16 @@ static NSBundle *BHBundle() {
     }];
     [actions addObject:lightsOutTheme];
     
-    // Create the custom dark mode menu sheet using Twitter's native controller
+    // Create the menu sheet using Twitter's native controller
     TFNMenuSheetViewController *menuSheet = [[%c(TFNMenuSheetViewController) alloc] initWithActionItems:actions];
     
-    // Present our menu sheet from the current view controller
-    // Schedule this to happen after the current runloop to avoid presentation issues
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [self presentViewController:menuSheet animated:YES completion:nil];
-    });
+    // Present from the provided view controller
+    [viewController presentViewController:menuSheet animated:YES completion:nil];
+}
+
+// Prevent the regular initialization from happening
+- (instancetype)initWithScribe:(id)scribe {
+    return nil; // Return nil to prevent the original controller from being created
 }
 
 %end
