@@ -6050,7 +6050,7 @@ static NSBundle *BHBundle() {
     
     // Set up the appearance
     self.title = @"Appearance";
-    self.view.backgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.11 alpha:1.0]; // Very dark gray/black
+    self.view.backgroundColor = [UIColor systemBackgroundColor]; // Adapts to light/dark mode
     
     // Create a container for our buttons
     UIView *containerView = [[UIView alloc] init];
@@ -6065,9 +6065,9 @@ static NSBundle *BHBundle() {
         [containerView.heightAnchor constraintEqualToConstant:250] // Reduce height
     ]];
     
-    // Create button style based on the screenshot
-    UIColor *buttonBackgroundColor = [UIColor colorWithRed:0.15 green:0.15 blue:0.15 alpha:1.0]; // Slightly lighter than background
-    UIColor *buttonTextColor = [UIColor whiteColor];
+    // Create button style based on the screenshot - using semantic colors
+    UIColor *buttonBackgroundColor = [UIColor secondarySystemBackgroundColor]; // Adapts to light/dark mode
+    UIColor *buttonTextColor = [UIColor labelColor]; // Adapts to light/dark mode
     UIFont *buttonLabelFont = [UIFont systemFontOfSize:13 weight:UIFontWeightMedium]; // Smaller font
     CGFloat cornerRadius = 16.0;
     
@@ -6079,11 +6079,17 @@ static NSBundle *BHBundle() {
         buttonView.layer.cornerRadius = cornerRadius;
         buttonView.translatesAutoresizingMaskIntoConstraints = NO;
         
+        // Add shadow and border for better visibility in both modes
+        buttonView.layer.shadowColor = [UIColor blackColor].CGColor;
+        buttonView.layer.shadowOffset = CGSizeMake(0, 1);
+        buttonView.layer.shadowOpacity = 0.1;
+        buttonView.layer.shadowRadius = 2;
+        
         // Create symbol image view
         UIImageConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:24 weight:UIImageSymbolWeightRegular]; // Smaller icon
         UIImage *image = [UIImage systemImageNamed:symbolName withConfiguration:config];
         UIImageView *imageView = [[UIImageView alloc] initWithImage:image];
-        imageView.tintColor = buttonTextColor;
+        imageView.tintColor = buttonTextColor; // Adapts to light/dark mode
         imageView.translatesAutoresizingMaskIntoConstraints = NO;
         imageView.contentMode = UIViewContentModeScaleAspectFit;
         [buttonView addSubview:imageView];
@@ -6091,7 +6097,7 @@ static NSBundle *BHBundle() {
         // Create label
         UILabel *label = [[UILabel alloc] init];
         label.text = title;
-        label.textColor = buttonTextColor;
+        label.textColor = buttonTextColor; // Adapts to light/dark mode
         label.font = buttonLabelFont;
         label.textAlignment = NSTextAlignmentCenter;
         label.translatesAutoresizingMaskIntoConstraints = NO;
