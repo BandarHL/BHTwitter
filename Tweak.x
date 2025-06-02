@@ -6033,12 +6033,33 @@ static NSBundle *BHBundle() {
 
 - (instancetype)initWithScribe:(id)scribe {
     NSLog(@"[BHTwitter] Dark Mode controller initialized!");
-    return %orig;
-}
-
-- (void)viewDidLoad {
-    %orig;
-    NSLog(@"[BHTwitter] Dark Mode viewDidLoad");
+    
+    // Create a simple view controller for our sheet
+    UIViewController *customVC = [[UIViewController alloc] init];
+    customVC.view.backgroundColor = [UIColor systemBackgroundColor];
+    customVC.title = @"Custom Dark Mode";
+    
+    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(20, 100, 300, 30)];
+    label.text = @"This is our custom dark mode sheet!";
+    [customVC.view addSubview:label];
+    
+    // Add a done button
+    customVC.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] 
+                                                 initWithBarButtonSystemItem:UIBarButtonSystemItemDone 
+                                                 target:customVC 
+                                                 action:@selector(dismiss)];
+    
+    // Add dismiss method to the view controller
+    class_addMethod([customVC class], @selector(dismiss), imp_implementationWithBlock(^(id self) {
+        [self dismissViewControllerAnimated:YES completion:nil];
+    }), "v@:");
+    
+    // Present in a navigation controller
+    UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:customVC];
+    [[UIApplication sharedApplication].keyWindow.rootViewController presentViewController:navController animated:YES completion:nil];
+    
+    // Return nil to prevent original controller from loading
+    return nil;
 }
 
 %end
