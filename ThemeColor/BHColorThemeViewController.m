@@ -174,11 +174,6 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     cell.colorLabel.textAlignment = NSTextAlignmentCenter;
     // background as item.color
     cell.colorLabel.backgroundColor = item.color;
-    
-    // Make sure the color applies to the label container as well
-    if (cell.colorLabel.superview && [cell.colorLabel.superview isKindOfClass:[UIView class]]) {
-        cell.colorLabel.superview.backgroundColor = item.color;
-    }
 
     // Check both the regular theme key and our tracking key
     NSInteger currentlySelectedID = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
