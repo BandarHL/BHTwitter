@@ -6041,49 +6041,149 @@ static NSBundle *BHBundle() {
 
 - (void)viewDidLoad {
     %orig;
-    NSLog(@"[BHTwitter] Dark Mode viewDidLoad - customizing sheet");
+    NSLog(@"[BHTwitter] Dark Mode viewDidLoad - replacing with completely custom UI");
     
-    // Change the view controller title
-    self.title = @"BHT Dark Mode";
+    // Clear all existing subviews
+    for (UIView *subview in self.view.subviews) {
+        [subview removeFromSuperview];
+    }
     
-    // Add a custom label at the top
-    UILabel *customLabel = [[UILabel alloc] init];
-    customLabel.text = @"Custom Dark Mode by BHT";
-    customLabel.textAlignment = NSTextAlignmentCenter;
-    customLabel.font = [UIFont boldSystemFontOfSize:16];
-    customLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    [self.view addSubview:customLabel];
+    // Set up the appearance
+    self.title = @"Appearance";
+    self.view.backgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.11 alpha:1.0]; // Very dark gray/black
     
-    // Position the label at the top
+    // Create a container for our buttons
+    UIView *containerView = [[UIView alloc] init];
+    containerView.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.view addSubview:containerView];
+    
+    // Center container and set proper width
     [NSLayoutConstraint activateConstraints:@[
-        [customLabel.topAnchor constraintEqualToAnchor:self.view.topAnchor constant:16],
-        [customLabel.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:16],
-        [customLabel.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-16]
+        [containerView.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
+        [containerView.centerYAnchor constraintEqualToAnchor:self.view.centerYAnchor],
+        [containerView.widthAnchor constraintEqualToAnchor:self.view.widthAnchor multiplier:0.9],
+        [containerView.heightAnchor constraintEqualToConstant:300]
     ]];
     
-    // Change background color to something slightly different so we can tell it's modified
-    self.view.backgroundColor = [UIColor colorWithRed:0.1 green:0.1 blue:0.15 alpha:1.0];
+    // Create button style based on the screenshot
+    UIColor *buttonBackgroundColor = [UIColor colorWithRed:0.15 green:0.15 blue:0.15 alpha:1.0]; // Slightly lighter than background
+    UIColor *buttonTextColor = [UIColor whiteColor];
+    UIFont *buttonLabelFont = [UIFont systemFontOfSize:14 weight:UIFontWeightMedium];
+    CGFloat cornerRadius = 16.0;
+    
+    // Helper function to create appearance buttons
+    UIView * (^createAppearanceButton)(NSString *title, NSString *symbolName) = ^UIView *(NSString *title, NSString *symbolName) {
+        // Create container view
+        UIView *buttonView = [[UIView alloc] init];
+        buttonView.backgroundColor = buttonBackgroundColor;
+        buttonView.layer.cornerRadius = cornerRadius;
+        buttonView.translatesAutoresizingMaskIntoConstraints = NO;
+        
+        // Create symbol image view
+        UIImageConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:28 weight:UIImageSymbolWeightRegular];
+        UIImage *image = [UIImage systemImageNamed:symbolName withConfiguration:config];
+        UIImageView *imageView = [[UIImageView alloc] initWithImage:image];
+        imageView.tintColor = buttonTextColor;
+        imageView.translatesAutoresizingMaskIntoConstraints = NO;
+        imageView.contentMode = UIViewContentModeScaleAspectFit;
+        [buttonView addSubview:imageView];
+        
+        // Create label
+        UILabel *label = [[UILabel alloc] init];
+        label.text = title;
+        label.textColor = buttonTextColor;
+        label.font = buttonLabelFont;
+        label.textAlignment = NSTextAlignmentCenter;
+        label.translatesAutoresizingMaskIntoConstraints = NO;
+        [buttonView addSubview:label];
+        
+        // Layout constraints
+        [NSLayoutConstraint activateConstraints:@[
+            [imageView.centerXAnchor constraintEqualToAnchor:buttonView.centerXAnchor],
+            [imageView.centerYAnchor constraintEqualToAnchor:buttonView.centerYAnchor constant:-12],
+            
+            [label.centerXAnchor constraintEqualToAnchor:buttonView.centerXAnchor],
+            [label.topAnchor constraintEqualToAnchor:imageView.bottomAnchor constant:8],
+        ]];
+        
+        return buttonView;
+    };
+    
+    // Create the 4 appearance buttons
+    UIView *systemButton = createAppearanceButton(@"SYSTEM", @"slider.horizontal.3");
+    UIView *lightButton = createAppearanceButton(@"DAY", @"sun.max");
+    UIView *dimButton = createAppearanceButton(@"DIM", @"moon.stars");
+    UIView *lightsOutButton = createAppearanceButton(@"NIGHT", @"moon.fill");
+    
+    [containerView addSubview:systemButton];
+    [containerView addSubview:lightButton];
+    [containerView addSubview:dimButton];
+    [containerView addSubview:lightsOutButton];
+    
+    // Set up grid layout for the buttons (2x2)
+    CGFloat padding = 16.0;
+    [NSLayoutConstraint activateConstraints:@[
+        // First row
+        [systemButton.topAnchor constraintEqualToAnchor:containerView.topAnchor],
+        [systemButton.leadingAnchor constraintEqualToAnchor:containerView.leadingAnchor],
+        [systemButton.widthAnchor constraintEqualToAnchor:containerView.widthAnchor multiplier:0.47],
+        [systemButton.heightAnchor constraintEqualToAnchor:systemButton.widthAnchor],
+        
+        [lightButton.topAnchor constraintEqualToAnchor:containerView.topAnchor],
+        [lightButton.trailingAnchor constraintEqualToAnchor:containerView.trailingAnchor],
+        [lightButton.widthAnchor constraintEqualToAnchor:containerView.widthAnchor multiplier:0.47],
+        [lightButton.heightAnchor constraintEqualToAnchor:lightButton.widthAnchor],
+        
+        // Second row
+        [dimButton.topAnchor constraintEqualToAnchor:systemButton.bottomAnchor constant:padding],
+        [dimButton.leadingAnchor constraintEqualToAnchor:containerView.leadingAnchor],
+        [dimButton.widthAnchor constraintEqualToAnchor:containerView.widthAnchor multiplier:0.47],
+        [dimButton.heightAnchor constraintEqualToAnchor:dimButton.widthAnchor],
+        
+        [lightsOutButton.topAnchor constraintEqualToAnchor:lightButton.bottomAnchor constant:padding],
+        [lightsOutButton.trailingAnchor constraintEqualToAnchor:containerView.trailingAnchor],
+        [lightsOutButton.widthAnchor constraintEqualToAnchor:containerView.widthAnchor multiplier:0.47],
+        [lightsOutButton.heightAnchor constraintEqualToAnchor:lightsOutButton.widthAnchor]
+    ]];
+    
+    // Add tap gestures to buttons (for future functionality)
+    UITapGestureRecognizer *systemTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(systemTapped)];
+    [systemButton addGestureRecognizer:systemTap];
+    
+    UITapGestureRecognizer *lightTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(dayTapped)];
+    [lightButton addGestureRecognizer:lightTap];
+    
+    UITapGestureRecognizer *dimTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(dimTapped)];
+    [dimButton addGestureRecognizer:dimTap];
+    
+    UITapGestureRecognizer *nightTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(nightTapped)];
+    [lightsOutButton addGestureRecognizer:nightTap];
+    
+    // Make buttons interactive
+    systemButton.userInteractionEnabled = YES;
+    lightButton.userInteractionEnabled = YES;
+    dimButton.userInteractionEnabled = YES;
+    lightsOutButton.userInteractionEnabled = YES;
 }
 
-- (void)viewWillAppear:(BOOL)animated {
-    %orig;
-    NSLog(@"[BHTwitter] Dark Mode viewWillAppear");
+%new
+- (void)systemTapped {
+    NSLog(@"[BHTwitter] System theme selected");
 }
 
-- (void)viewDidAppear:(BOOL)animated {
-    %orig;
-    NSLog(@"[BHTwitter] Dark Mode viewDidAppear");
-    
-    // Display a system toast to indicate our custom controller is active
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"BHT Active"
-                                                                   message:@"Custom dark mode active"
-                                                            preferredStyle:UIAlertControllerStyleAlert];
-    
-    [self presentViewController:alert animated:YES completion:^{
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            [alert dismissViewControllerAnimated:YES completion:nil];
-        });
-    }];
+%new
+- (void)dayTapped {
+    NSLog(@"[BHTwitter] Day theme selected");
+}
+
+%new
+- (void)dimTapped {
+    NSLog(@"[BHTwitter] Dim theme selected");
+}
+
+%new
+- (void)nightTapped {
+    NSLog(@"[BHTwitter] Night theme selected");
 }
 
 %end
