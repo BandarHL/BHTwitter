@@ -4518,20 +4518,6 @@ static void BHT_forceRefreshAllWindowAppearances(void) {
     }
 }
 
-// MARK: Theme TFNBarButtonItemButtonV1
-%hook TFNBarButtonItemButtonV1
-- (void)didMoveToWindow {
-    %orig;
-    if (self.window) {
-        self.tintColor = BHTCurrentAccentColor();
-    }
-}
-
-- (void)setTintColor:(UIColor *)tintColor {
-    %orig(BHTCurrentAccentColor());
-}
-%end
-
 // MARK: - Timestamp Label Styling via UILabel -setText:
 
 // Global reference to the timestamp label for the active immersive player
@@ -5953,3 +5939,21 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 static NSBundle *BHBundle() {
     return [NSBundle bundleWithIdentifier:@"com.bandarhelal.BHTwitter"];
 }
+
+%hook TFSAccountFeatureSwitches
+- (_Bool)videoFeaturesUpsellEnabled {
+    return false;
+}
+%end
+
+%hook TPSDeviceFeatureSwitches
+- (_Bool)deviceAttestationClientEventsEnabled {
+    return false;
+}
+- (_Bool)deviceGuestAttestationTokensEnabled {
+    return false;
+}
+- (_Bool)deviceAttestationTokensEnabled {
+    return false;
+}
+%end
