@@ -5960,35 +5960,43 @@ static NSBundle *BHBundle() {
 
 // MARK: Theme TFNBarButtonItemButtonV1
 %hook TFNBarButtonItemButtonV1
+static BOOL isDarkMode = NO;
+
++ (void)load {
+    %orig;
+    
+    // Check initial theme
+    Class TAETwitterColorPaletteClass = NSClassFromString(@"TAETwitterColorPalette");
+    if (TAETwitterColorPaletteClass) {
+        id paletteInfo = [TAETwitterColorPaletteClass valueForKey:@"currentPaletteInfo"];
+        if (paletteInfo && [paletteInfo respondsToSelector:@selector(isDark)]) {
+            isDarkMode = [paletteInfo isDark];
+        }
+    }
+    
+    // Listen for theme changes
+    [[NSNotificationCenter defaultCenter] addObserverForName:@"TAETwitterColorPaletteDidChangeNotification" 
+                                                      object:nil 
+                                                       queue:[NSOperationQueue mainQueue] 
+                                                  usingBlock:^(NSNotification *notification) {
+        Class TAETwitterColorPaletteClass = NSClassFromString(@"TAETwitterColorPalette");
+        if (TAETwitterColorPaletteClass) {
+            id paletteInfo = [TAETwitterColorPaletteClass valueForKey:@"currentPaletteInfo"];
+            if (paletteInfo && [paletteInfo respondsToSelector:@selector(isDark)]) {
+                isDarkMode = [paletteInfo isDark];
+            }
+        }
+    }];
+}
+
 - (void)didMoveToWindow {
     %orig;
     if (self.window) {
-        // Get current theme state from Twitter's internal theming system
-        Class TAETwitterColorPaletteClass = NSClassFromString(@"TAETwitterColorPalette");
-        if (TAETwitterColorPaletteClass) {
-            TAETwitterColorPaletteSettingInfo *paletteInfo = [TAETwitterColorPaletteClass valueForKey:@"currentPaletteInfo"];
-            if (paletteInfo) {
-                self.tintColor = [paletteInfo isDark] ? [UIColor whiteColor] : [UIColor blackColor];
-            } else {
-                self.tintColor = UIColor.labelColor;
-            }
-        } else {
-            self.tintColor = UIColor.labelColor;
-        }
+        self.tintColor = isDarkMode ? [UIColor whiteColor] : [UIColor blackColor];
     }
 }
 
 - (void)setTintColor:(UIColor *)tintColor {
-    Class TAETwitterColorPaletteClass = NSClassFromString(@"TAETwitterColorPalette");
-    if (TAETwitterColorPaletteClass) {
-        TAETwitterColorPaletteSettingInfo *paletteInfo = [TAETwitterColorPaletteClass valueForKey:@"currentPaletteInfo"];
-        if (paletteInfo) {
-            %orig([paletteInfo isDark] ? [UIColor whiteColor] : [UIColor blackColor]);
-            return;
-        }
-    }
-    %orig(UIColor.labelColor);
+    %orig(isDarkMode ? [UIColor whiteColor] : [UIColor blackColor]);
 }
-
-// No need for traitCollectionDidChange since we're using Twitter's palette system
 %end
