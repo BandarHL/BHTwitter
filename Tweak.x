@@ -6026,6 +6026,7 @@ static NSBundle *BHBundle() {
 
 // MARK: Custom Dark Mode Settings
 @interface T1DarkModeSettingsViewController : UIViewController
+- (void)updateColorsForCurrentTraitCollection;
 @end
 
 @interface CustomDarkModeController : UIViewController <UITableViewDelegate, UITableViewDataSource>
@@ -6139,10 +6140,10 @@ static NSBundle *BHBundle() {
         [subview removeFromSuperview];
     }
     
-    // Set background color
+    // Set background color - use semantic color that adapts to dark/light mode
     self.view.backgroundColor = [UIColor systemBackgroundColor];
     
-    // Create a simple table view
+    // Create a simple table view with appropriate style
     UITableView *tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleInsetGrouped];
     tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     [self.view addSubview:tableView];
@@ -6152,10 +6153,37 @@ static NSBundle *BHBundle() {
     label.text = @"Custom Dark Mode View";
     label.textAlignment = NSTextAlignmentCenter;
     label.font = [UIFont boldSystemFontOfSize:20];
+    label.textColor = [UIColor labelColor]; // Use semantic text color
     [self.view addSubview:label];
     
     // Change the title
     self.title = @"Custom Dark Mode";
+}
+
+// Add method to handle dark/light mode changes
+- (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
+    %orig;
+    
+    if ([self.traitCollection hasDifferentColorAppearanceComparedToTraitCollection:previousTraitCollection]) {
+        NSLog(@"[BHTwitter] Dark mode appearance changed");
+        
+        // Update colors when appearance changes
+        [self updateColorsForCurrentTraitCollection];
+    }
+}
+
+%new
+- (void)updateColorsForCurrentTraitCollection {
+    // This method will update colors based on the current trait collection
+    // No need to manually set colors as we're using the system semantic colors
+    // that automatically adapt to the current trait collection
+    
+    // If you need to manually check the user interface style:
+    if (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
+        NSLog(@"[BHTwitter] Dark mode is active");
+    } else {
+        NSLog(@"[BHTwitter] Light mode is active");
+    }
 }
 
 %end
