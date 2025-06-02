@@ -6060,15 +6060,15 @@ static NSBundle *BHBundle() {
     // Center container and set proper width
     [NSLayoutConstraint activateConstraints:@[
         [containerView.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
-        [containerView.centerYAnchor constraintEqualToAnchor:self.view.centerYAnchor],
-        [containerView.widthAnchor constraintEqualToAnchor:self.view.widthAnchor multiplier:0.9],
-        [containerView.heightAnchor constraintEqualToConstant:300]
+        [containerView.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor constant:40], // Position from top instead of center
+        [containerView.widthAnchor constraintEqualToAnchor:self.view.widthAnchor multiplier:0.85], // Slightly narrower
+        [containerView.heightAnchor constraintEqualToConstant:250] // Reduce height
     ]];
     
     // Create button style based on the screenshot
     UIColor *buttonBackgroundColor = [UIColor colorWithRed:0.15 green:0.15 blue:0.15 alpha:1.0]; // Slightly lighter than background
     UIColor *buttonTextColor = [UIColor whiteColor];
-    UIFont *buttonLabelFont = [UIFont systemFontOfSize:14 weight:UIFontWeightMedium];
+    UIFont *buttonLabelFont = [UIFont systemFontOfSize:13 weight:UIFontWeightMedium]; // Smaller font
     CGFloat cornerRadius = 16.0;
     
     // Helper function to create appearance buttons
@@ -6080,7 +6080,7 @@ static NSBundle *BHBundle() {
         buttonView.translatesAutoresizingMaskIntoConstraints = NO;
         
         // Create symbol image view
-        UIImageConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:28 weight:UIImageSymbolWeightRegular];
+        UIImageConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:24 weight:UIImageSymbolWeightRegular]; // Smaller icon
         UIImage *image = [UIImage systemImageNamed:symbolName withConfiguration:config];
         UIImageView *imageView = [[UIImageView alloc] initWithImage:image];
         imageView.tintColor = buttonTextColor;
@@ -6100,10 +6100,10 @@ static NSBundle *BHBundle() {
         // Layout constraints
         [NSLayoutConstraint activateConstraints:@[
             [imageView.centerXAnchor constraintEqualToAnchor:buttonView.centerXAnchor],
-            [imageView.centerYAnchor constraintEqualToAnchor:buttonView.centerYAnchor constant:-12],
+            [imageView.centerYAnchor constraintEqualToAnchor:buttonView.centerYAnchor constant:-10], // Adjust position
             
             [label.centerXAnchor constraintEqualToAnchor:buttonView.centerXAnchor],
-            [label.topAnchor constraintEqualToAnchor:imageView.bottomAnchor constant:8],
+            [label.topAnchor constraintEqualToAnchor:imageView.bottomAnchor constant:6], // Less spacing
         ]];
         
         return buttonView;
@@ -6121,29 +6121,29 @@ static NSBundle *BHBundle() {
     [containerView addSubview:lightsOutButton];
     
     // Set up grid layout for the buttons (2x2)
-    CGFloat padding = 16.0;
+    CGFloat padding = 12.0; // Reduce padding between buttons
     [NSLayoutConstraint activateConstraints:@[
         // First row
         [systemButton.topAnchor constraintEqualToAnchor:containerView.topAnchor],
         [systemButton.leadingAnchor constraintEqualToAnchor:containerView.leadingAnchor],
-        [systemButton.widthAnchor constraintEqualToAnchor:containerView.widthAnchor multiplier:0.47],
-        [systemButton.heightAnchor constraintEqualToAnchor:systemButton.widthAnchor],
+        [systemButton.widthAnchor constraintEqualToConstant:140], // Fixed width instead of percentage
+        [systemButton.heightAnchor constraintEqualToConstant:110], // Fixed height, not as tall
         
         [lightButton.topAnchor constraintEqualToAnchor:containerView.topAnchor],
         [lightButton.trailingAnchor constraintEqualToAnchor:containerView.trailingAnchor],
-        [lightButton.widthAnchor constraintEqualToAnchor:containerView.widthAnchor multiplier:0.47],
-        [lightButton.heightAnchor constraintEqualToAnchor:lightButton.widthAnchor],
+        [lightButton.widthAnchor constraintEqualToConstant:140], // Fixed width
+        [lightButton.heightAnchor constraintEqualToConstant:110], // Fixed height
         
         // Second row
         [dimButton.topAnchor constraintEqualToAnchor:systemButton.bottomAnchor constant:padding],
         [dimButton.leadingAnchor constraintEqualToAnchor:containerView.leadingAnchor],
-        [dimButton.widthAnchor constraintEqualToAnchor:containerView.widthAnchor multiplier:0.47],
-        [dimButton.heightAnchor constraintEqualToAnchor:dimButton.widthAnchor],
+        [dimButton.widthAnchor constraintEqualToConstant:140], // Fixed width
+        [dimButton.heightAnchor constraintEqualToConstant:110], // Fixed height
         
         [lightsOutButton.topAnchor constraintEqualToAnchor:lightButton.bottomAnchor constant:padding],
         [lightsOutButton.trailingAnchor constraintEqualToAnchor:containerView.trailingAnchor],
-        [lightsOutButton.widthAnchor constraintEqualToAnchor:containerView.widthAnchor multiplier:0.47],
-        [lightsOutButton.heightAnchor constraintEqualToAnchor:lightsOutButton.widthAnchor]
+        [lightsOutButton.widthAnchor constraintEqualToConstant:140], // Fixed width
+        [lightsOutButton.heightAnchor constraintEqualToConstant:110] // Fixed height
     ]];
     
     // Add tap gestures to buttons (for future functionality)
