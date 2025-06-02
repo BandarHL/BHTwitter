@@ -39,6 +39,18 @@
     }
     return self;
 }
+
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    
+    // Update shadow path based on current bounds
+    if ([self.backgroundView isKindOfClass:[UIView class]]) {
+        UIView *shadowView = self.backgroundView;
+        shadowView.frame = self.imageView.frame;
+        shadowView.layer.shadowPath = [UIBezierPath bezierPathWithRoundedRect:self.imageView.bounds cornerRadius:22].CGPath;
+    }
+}
+
 + (NSString *)reuseIdentifier {
     return @"appicon";
 }

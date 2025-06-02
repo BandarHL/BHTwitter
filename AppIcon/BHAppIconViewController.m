@@ -244,6 +244,22 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
       }
     }
     cell.imageView.image = img;
+    
+    // Create a background view for the icon with shadow
+    if (!cell.backgroundView) {
+        UIView *shadowView = [[UIView alloc] init];
+        shadowView.backgroundColor = [UIColor clearColor];
+        shadowView.layer.shadowColor = [UIColor blackColor].CGColor;
+        shadowView.layer.shadowOffset = CGSizeMake(0, 4);
+        shadowView.layer.shadowOpacity = 0.15;
+        shadowView.layer.shadowRadius = 8;
+        shadowView.layer.shadowPath = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(0, 0, 98, 98) cornerRadius:22].CGPath;
+        cell.backgroundView = shadowView;
+    }
+    
+    // Make sure the image view has correct corner radius
+    cell.imageView.layer.cornerRadius = 22;
+    cell.imageView.clipsToBounds = YES;
 
     // Update checkmark state
     NSString *curr = [UIApplication sharedApplication].alternateIconName;
