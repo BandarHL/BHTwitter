@@ -6028,37 +6028,125 @@ static NSBundle *BHBundle() {
 @interface T1DarkModeSettingsViewController : UIViewController
 @end
 
-// MARK: Custom Dark Mode Settings
+@interface CustomDarkModeController : UIViewController <UITableViewDelegate, UITableViewDataSource>
+@property (nonatomic, strong) UITableView *tableView;
+@end
+
+@implementation CustomDarkModeController
+
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        self.title = @"Dark Mode";
+    }
+    return self;
+}
+
+- (void)loadView {
+    [super loadView];
+    self.view.backgroundColor = [UIColor systemBackgroundColor];
+    
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] 
+                                            initWithBarButtonSystemItem:UIBarButtonSystemItemDone 
+                                            target:self 
+                                            action:@selector(dismissController)];
+    
+    self.tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleInsetGrouped];
+    self.tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    self.tableView.delegate = self;
+    self.tableView.dataSource = self;
+    [self.view addSubview:self.tableView];
+}
+
+- (void)dismissController {
+    [self dismissViewControllerAnimated:YES completion:nil];
+}
+
+#pragma mark - UITableViewDataSource
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+    return 2;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    return section == 0 ? 1 : 2;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    static NSString *cellID = @"DarkModeCell";
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID];
+    if (!cell) {
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellID];
+    }
+    
+    if (indexPath.section == 0) {
+        cell.textLabel.text = @"Dark mode";
+        cell.accessoryType = UITableViewCellAccessoryCheckmark;
+    } else {
+        if (indexPath.row == 0) {
+            cell.textLabel.text = @"Dim";
+            cell.accessoryType = UITableViewCellAccessoryNone;
+        } else {
+            cell.textLabel.text = @"Lights out";
+            cell.accessoryType = UITableViewCellAccessoryCheckmark;
+        }
+    }
+    
+    return cell;
+}
+
+- (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
+    return section == 0 ? @"Appearance" : @"Theme";
+}
+
+- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
+    return section == 1 ? @"Dim is a dark blue theme, while Lights out is a true black theme better for OLED displays and battery life." : nil;
+}
+
+#pragma mark - UITableViewDelegate
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    
+    // Toggle dark mode in section 0
+    if (indexPath.section == 0) {
+        // Toggle dark mode logic would go here
+        NSLog(@"[BHTwitter] Toggle dark mode");
+    } 
+    // Handle theme selection in section 1
+    else if (indexPath.section == 1) {
+        // Update checkmarks
+        for (int i = 0; i < [tableView numberOfRowsInSection:1]; i++) {
+            UITableViewCell *cell = [tableView cellForRowAtIndexPath:[NSIndexPath indexPathForRow:i inSection:1]];
+            cell.accessoryType = (i == indexPath.row) ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone;
+        }
+        
+        NSLog(@"[BHTwitter] Selected theme: %@", indexPath.row == 0 ? @"Dim" : @"Lights out");
+    }
+}
+
+@end
+
 %hook T1DarkModeSettingsViewController
 
 - (instancetype)initWithScribe:(id)scribe {
     NSLog(@"[BHTwitter] Dark Mode controller initialized!");
     
-    // Create a simple view controller for our sheet
-    UIViewController *customVC = [[UIViewController alloc] init];
-    customVC.view.backgroundColor = [UIColor systemBackgroundColor];
-    customVC.title = @"Custom Dark Mode";
-    
-    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(20, 100, 300, 30)];
-    label.text = @"This is our custom dark mode sheet!";
-    [customVC.view addSubview:label];
-    
-    // Add a done button
-    customVC.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] 
-                                                 initWithBarButtonSystemItem:UIBarButtonSystemItemDone 
-                                                 target:customVC 
-                                                 action:@selector(dismiss)];
-    
-    // Add dismiss method to the view controller
-    class_addMethod([customVC class], @selector(dismiss), imp_implementationWithBlock(^(id self) {
-        [self dismissViewControllerAnimated:YES completion:nil];
-    }), "v@:");
-    
-    // Present in a navigation controller
+    // Create and present our custom controller
+    CustomDarkModeController *customVC = [[CustomDarkModeController alloc] init];
     UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:customVC];
-    [[UIApplication sharedApplication].keyWindow.rootViewController presentViewController:navController animated:YES completion:nil];
+    navController.modalPresentationStyle = UIModalPresentationPageSheet;
     
-    // Return nil to prevent original controller from loading
+    // Find a view controller to present from
+    UIViewController *rootVC = [UIApplication sharedApplication].keyWindow.rootViewController;
+    while (rootVC.presentedViewController) {
+        rootVC = rootVC.presentedViewController;
+    }
+    
+    // Present the view controller 
+    [rootVC presentViewController:navController animated:YES completion:nil];
+    
+    // Return nil so Twitter's own controller is not created
     return nil;
 }
 
