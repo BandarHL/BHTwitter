@@ -89,6 +89,46 @@ UIColor *BHTCurrentAccentColor(void) {
     return [UIColor systemBlueColor];
 }
 
+// Helper function to get Twitter's current dark mode state
+static BOOL BHT_isTwitterDarkThemeActive() {
+    Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
+    if (!TAEColorSettingsCls) {
+        if (@available(iOS 13.0, *)) {
+            return UITraitCollection.currentTraitCollection.userInterfaceStyle == UIUserInterfaceStyleDark;
+        }
+        return NO; // Default to light mode if essential classes are missing
+    }
+
+    id settings = [TAEColorSettingsCls sharedSettings];
+    if (!settings || ![settings respondsToSelector:@selector(currentColorPalette)]) {
+        if (@available(iOS 13.0, *)) {
+            return UITraitCollection.currentTraitCollection.userInterfaceStyle == UIUserInterfaceStyleDark;
+        }
+        return NO;
+    }
+    
+    id currentPaletteContainer = [settings currentColorPalette]; // This is TAEThemeColorPalette
+    // TAETwitterColorPaletteSettingInfo is returned by [TAEThemeColorPalette colorPalette]
+    if (!currentPaletteContainer || ![currentPaletteContainer respondsToSelector:@selector(colorPalette)]) { 
+         if (@available(iOS 13.0, *)) {
+            return UITraitCollection.currentTraitCollection.userInterfaceStyle == UIUserInterfaceStyleDark;
+        }
+        return NO;
+    }
+
+    id actualPaletteInfo = [currentPaletteContainer colorPalette]; 
+    if (actualPaletteInfo && [actualPaletteInfo respondsToSelector:@selector(isDark)]) {
+        // Use objc_msgSend to call the isDark method
+        return ((BOOL (*)(id, SEL))objc_msgSend)(actualPaletteInfo, @selector(isDark));
+    }
+
+    // Fallback to system trait if Twitter's internal state is inaccessible
+    if (@available(iOS 13.0, *)) {
+        return UITraitCollection.currentTraitCollection.userInterfaceStyle == UIUserInterfaceStyleDark;
+    }
+    return NO;
+}
+
 static UIFont * _Nullable TAEStandardFontGroupReplacement(UIFont *self, SEL _cmd, CGFloat arg1, CGFloat arg2) {
     BH_BaseImp orig  = originalFontsIMP[NSStringFromSelector(_cmd)].pointerValue;
     NSUInteger nArgs = [[self class] instanceMethodSignatureForSelector:_cmd].numberOfArguments;
@@ -5960,55 +6000,32 @@ static NSBundle *BHBundle() {
 
 // MARK: Theme TFNBarButtonItemButtonV1
 %hook TFNBarButtonItemButtonV1
+
 - (void)didMoveToWindow {
     %orig;
     if (self.window) {
-        // Get current palette
-        UIColor *textColor = nil;
-        Class TAETwitterColorPaletteClass = NSClassFromString(@"TAEColorPalette");
-        if (TAETwitterColorPaletteClass) {
-            id palette = [TAETwitterColorPaletteClass valueForKey:@"currentColorPalette"];
-            if (palette && [palette respondsToSelector:@selector(textColor)]) {
-                textColor = [palette textColor];
-            }
-            
-            // Check if we're using a dark palette
-            Class TAEDarkColorPaletteClass = NSClassFromString(@"TAEDarkColorPalette");
-            Class TAEDarkerColorPaletteClass = NSClassFromString(@"TAEDarkerColorPalette");
-            
-            if ((TAEDarkColorPaletteClass && [palette isKindOfClass:TAEDarkColorPaletteClass]) ||
-                (TAEDarkerColorPaletteClass && [palette isKindOfClass:TAEDarkerColorPaletteClass])) {
-                // For dark palettes, we'll use white
-                textColor = [UIColor whiteColor];
-            }
-        }
-        
-        self.tintColor = textColor;
+        // Trigger our setTintColor logic
+        self.tintColor = [UIColor blackColor]; // Actual color will be determined by our setTintColor hook
     }
 }
 
 - (void)setTintColor:(UIColor *)tintColor {
-    // Get current palette
-    UIColor *textColor = nil;
-    Class TAETwitterColorPaletteClass = NSClassFromString(@"TAEColorPalette");
-    if (TAETwitterColorPaletteClass) {
-        id palette = [TAETwitterColorPaletteClass valueForKey:@"currentColorPalette"];
-        if (palette && [palette respondsToSelector:@selector(textColor)]) {
-            textColor = [palette textColor];
-        }
-        
-        // Check if we're using a dark palette
-        Class TAEDarkColorPaletteClass = NSClassFromString(@"TAEDarkColorPalette");
-        Class TAEDarkerColorPaletteClass = NSClassFromString(@"TAEDarkerColorPalette");
-        
-        if ((TAEDarkColorPaletteClass && [palette isKindOfClass:TAEDarkColorPaletteClass]) ||
-            (TAEDarkerColorPaletteClass && [palette isKindOfClass:TAEDarkerColorPaletteClass])) {
-            // For dark palettes, we'll use white
-            textColor = [UIColor whiteColor];
-        }
-    }
-    
+    BOOL isDark = BHT_isTwitterDarkThemeActive();
+    UIColor *correctColor = isDark ? [UIColor whiteColor] : [UIColor blackColor];
+    %orig(correctColor);
+}
 
-    %orig(textColor);
+- (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
+    %orig(previousTraitCollection);
+
+    if (@available(iOS 13.0, *)) {
+        if ([self.traitCollection hasDifferentColorAppearanceComparedToTraitCollection:previousTraitCollection]) {
+            // Trigger our setTintColor logic
+            self.tintColor = [UIColor blackColor]; // Actual color will be determined by our setTintColor hook
+        }
+    } else {
+        // For older iOS or if specific trait check doesn't cover all cases
+        self.tintColor = [UIColor blackColor]; // Actual color will be determined by our setTintColor hook
+    }
 }
 %end
