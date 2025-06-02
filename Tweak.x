@@ -5970,4 +5970,11 @@ static NSBundle *BHBundle() {
 - (void)setTintColor:(UIColor *)tintColor {
     %orig(UIColor.labelColor);
 }
+
+- (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
+    %orig;
+    if ([self.traitCollection hasDifferentColorAppearanceComparedToTraitCollection:previousTraitCollection]) {
+        self.tintColor = UIColor.labelColor;
+    }
+}
 %end
