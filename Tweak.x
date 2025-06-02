@@ -6005,7 +6005,7 @@ static NSBundle *BHBundle() {
     %orig;
     if (self.window) {
         // Trigger our setTintColor logic
-        self.tintColor = [UIColor blackColor]; // Actual color will be determined by our setTintColor hook
+        self.tintColor = [UIColor blackColor];
     }
 }
 
@@ -6017,12 +6017,9 @@ static NSBundle *BHBundle() {
 
 - (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
     %orig(previousTraitCollection);
-
-    if (@available(iOS 13.0, *)) {
         if ([self.traitCollection hasDifferentColorAppearanceComparedToTraitCollection:previousTraitCollection]) {
             // Trigger our setTintColor logic
-            self.tintColor = [UIColor blackColor]; // Actual color will be determined by our setTintColor hook
+            self.tintColor = [UIColor blackColor];
         }
     }
-}
 %end
