@@ -5963,18 +5963,32 @@ static NSBundle *BHBundle() {
 - (void)didMoveToWindow {
     %orig;
     if (self.window) {
-        self.tintColor = UIColor.labelColor;
+        // Get current theme state from Twitter's internal theming system
+        Class TAETwitterColorPaletteClass = NSClassFromString(@"TAETwitterColorPalette");
+        if (TAETwitterColorPaletteClass) {
+            TAETwitterColorPaletteSettingInfo *paletteInfo = [TAETwitterColorPaletteClass valueForKey:@"currentPaletteInfo"];
+            if (paletteInfo) {
+                self.tintColor = [paletteInfo isDark] ? [UIColor whiteColor] : [UIColor blackColor];
+            } else {
+                self.tintColor = UIColor.labelColor;
+            }
+        } else {
+            self.tintColor = UIColor.labelColor;
+        }
     }
 }
 
 - (void)setTintColor:(UIColor *)tintColor {
+    Class TAETwitterColorPaletteClass = NSClassFromString(@"TAETwitterColorPalette");
+    if (TAETwitterColorPaletteClass) {
+        TAETwitterColorPaletteSettingInfo *paletteInfo = [TAETwitterColorPaletteClass valueForKey:@"currentPaletteInfo"];
+        if (paletteInfo) {
+            %orig([paletteInfo isDark] ? [UIColor whiteColor] : [UIColor blackColor]);
+            return;
+        }
+    }
     %orig(UIColor.labelColor);
 }
 
-- (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
-    %orig;
-    if ([self.traitCollection hasDifferentColorAppearanceComparedToTraitCollection:previousTraitCollection]) {
-        self.tintColor = UIColor.labelColor;
-    }
-}
+// No need for traitCollectionDidChange since we're using Twitter's palette system
 %end
