@@ -5957,3 +5957,17 @@ static NSBundle *BHBundle() {
     return false;
 }
 %end
+
+// MARK: Theme TFNBarButtonItemButtonV1
+%hook TFNBarButtonItemButtonV1
+- (void)didMoveToWindow {
+    %orig;
+    if (self.window) {
+        self.tintColor = UIColor.labelColor;
+    }
+}
+
+- (void)setTintColor:(UIColor *)tintColor {
+    %orig(UIColor.labelColor);
+}
+%end
