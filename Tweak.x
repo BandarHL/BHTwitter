@@ -6129,27 +6129,33 @@ static NSBundle *BHBundle() {
 
 %hook T1DarkModeSettingsViewController
 
-- (instancetype)initWithScribe:(id)scribe {
-    NSLog(@"[BHTwitter] Dark Mode controller initialized!");
+- (void)viewDidLoad {
+    %orig;
     
-    // Create and present our custom controller
-    CustomDarkModeController *customVC = [[CustomDarkModeController alloc] init];
-    UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:customVC];
-    navController.modalPresentationStyle = UIModalPresentationPageSheet;
+    NSLog(@"[BHTwitter] Dark Mode viewDidLoad - replacing with custom content");
     
-    // Find a view controller to present from
-    UIViewController *rootVC = [UIApplication sharedApplication].keyWindow.rootViewController;
-    while (rootVC.presentedViewController) {
-        rootVC = rootVC.presentedViewController;
+    // Clear the original view controller's view
+    for (UIView *subview in self.view.subviews) {
+        [subview removeFromSuperview];
     }
     
-    // Present the view controller 
-    [rootVC presentViewController:navController animated:YES completion:nil];
+    // Set background color
+    self.view.backgroundColor = [UIColor systemBackgroundColor];
     
-    // Return nil so Twitter's own controller is not created
-    return nil;
+    // Create a simple table view
+    UITableView *tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleInsetGrouped];
+    tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [self.view addSubview:tableView];
+    
+    // Add a label to show we succeeded
+    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(20, 100, 300, 30)];
+    label.text = @"Custom Dark Mode View";
+    label.textAlignment = NSTextAlignmentCenter;
+    label.font = [UIFont boldSystemFontOfSize:20];
+    [self.view addSubview:label];
+    
+    // Change the title
+    self.title = @"Custom Dark Mode";
 }
 
 %end
-
-
