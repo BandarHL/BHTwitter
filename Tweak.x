@@ -964,55 +964,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 
 %new
-- (BOOL)shouldThemeIcon {
-    UIViewController *ancestor = [self _viewControllerForAncestor];
-    if (!ancestor) {
-        return NO;
-    }
-    
-    // Always allow onboarding
-    if ([ancestor isKindOfClass:NSClassFromString(@"ONBSignedOutViewController")]) {
-        return YES;
-    }
-    
-    // Get navigation controller
-    UINavigationController *navController = nil;
-    if ([ancestor isKindOfClass:[UINavigationController class]]) {
-        navController = (UINavigationController *)ancestor;
-    } else {
-        navController = ancestor.navigationController;
-    }
-    
-    // Check if we're on a detail view
-    if (navController && navController.viewControllers.count > 1) {
-        return NO;
-    }
-    
-    // Show on timeline navigation controller with single view
-    if ([NSStringFromClass([ancestor class]) containsString:@"TimelineNavigationController"]) {
-        return YES;
-    }
-    
-    // Show on home timeline views
-    if ([NSStringFromClass([ancestor class]) containsString:@"HomeTimelineViewController"] || 
-        [NSStringFromClass([ancestor class]) containsString:@"FeedTimelineViewController"]) {
-        return YES;
-    }
-    
-    return NO;
-}
-
-- (void)didMoveToWindow {
-    %orig;
-    [self updateLogoTheme];
-}
-
-- (void)didMoveToSuperview {
-    %orig;
-    [self updateLogoTheme];
-}
-
-%new
 - (void)updateLogoTheme {
     BOOL shouldTheme = [self shouldThemeIcon];
     
@@ -4351,25 +4302,8 @@ static char kManualRefreshInProgressKey;
 
 %hook T1TabBarViewController
 
-// + (void)load { // REMOVED
-    // Initialize the hash table once
-    // static dispatch_once_t onceToken;
-    // dispatch_once(&onceToken, ^{
-        // gTabBarControllers = [NSHashTable hashTableWithOptions:NSPointerFunctionsWeakMemory];
-        // [[NSNotificationCenter defaultCenter] addObserverForName:NSUserDefaultsDidChangeNotification 
-                                                          // object:nil 
-                                                           // queue:[NSOperationQueue mainQueue] 
-                                                      // usingBlock:^(NSNotification * _Nonnull note) {
-            // BHTTabBarAccentColorChanged(NULL, NULL, NULL, NULL, NULL); 
-        // }];
-    // });
-// }
-
 - (void)viewDidLoad {
     %orig;
-    // if (gTabBarControllers) { // REMOVED
-        // [gTabBarControllers addObject:self]; // REMOVED
-    // }
     // Apply theme on initial load
     if ([self respondsToSelector:@selector(tabViews)]) {
         NSArray *tabViews = [self valueForKey:@"tabViews"];
@@ -4379,13 +4313,6 @@ static char kManualRefreshInProgressKey;
             }
         }
     }
-}
-
-- (void)dealloc {
-    // if (gTabBarControllers) { // REMOVED
-        // [gTabBarControllers removeObject:self]; // REMOVED
-    // }
-    %orig;
 }
 
 %end
@@ -4422,16 +4349,10 @@ static void BHT_UpdateAllTabBarIcons(void) {
 static void BHT_applyThemeToWindow(UIWindow *window) {
     if (!window) return;
 
-    // 1. Update our custom themed elements first
-    // Update our custom tab bar icons
     if ([window.rootViewController isKindOfClass:NSClassFromString(@"T1TabBarViewController")]) {
-        // Ensure BHT_UpdateAllTabBarIcons properly targets the tabViews of this specific window's rootVC
-        // If BHT_UpdateAllTabBarIcons iterates all T1TabBarViewControllers globally, this direct call might be okay,
-        // but targeting is safer if possible.
         BHT_UpdateAllTabBarIcons(); 
     }
 
-    // Update our custom nav bar bird icon by recursively finding TFNNavigationBars
     BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
         if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
             // updateLogoTheme should internally use BHTCurrentAccentColor()
@@ -4439,21 +4360,16 @@ static void BHT_applyThemeToWindow(UIWindow *window) {
         }
     });
 
-    // 2. Force a refresh of the currently visible content view hierarchy.
-    // This is an attempt to make Twitter's own views re-evaluate the (now changed) accent color.
     UIViewController *rootVC = window.rootViewController;
     if (rootVC) {
         UIViewController *currentContentVC = rootVC;
         // Traverse to the most relevant visible content view controller
         if ([rootVC isKindOfClass:NSClassFromString(@"T1TabBarViewController")]) {
-            // T1TabBarViewController is a UITabBarController subclass.
-            // Cast to UITabBarController to access standard 'selectedViewController' property.
             if ([rootVC isKindOfClass:[UITabBarController class]]) {
                 currentContentVC = ((UITabBarController *)rootVC).selectedViewController;
             }
         }
         
-        // If the selected VC in a tab bar is a Nav controller, go to its visible VC
         if ([currentContentVC isKindOfClass:[UINavigationController class]]) {
             currentContentVC = [(UINavigationController *)currentContentVC visibleViewController];
         }
@@ -4462,8 +4378,6 @@ static void BHT_applyThemeToWindow(UIWindow *window) {
         if (currentContentVC && currentContentVC.isViewLoaded) {
             [currentContentVC.view setNeedsDisplay];
             [currentContentVC.view setNeedsLayout];
-            // Optionally, for a more immediate effect, though it can be costly if overused:
-            // [currentContentVC.view layoutIfNeeded]; 
         }
     }
 }
@@ -4560,9 +4474,6 @@ static void BHT_forceRefreshAllWindowAppearances(void) {
 
 // MARK: - Timestamp Label Styling via UILabel -setText:
 
-// Global reference to the timestamp label for the active immersive player
-// static UILabel *gVideoTimestampLabel = nil; // REMOVED
-
 // Helper method to determine if a text is likely a timestamp
 static BOOL isTimestampText(NSString *text) {
     if (!text || text.length == 0) {
@@ -4619,11 +4530,6 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
     if (![BHTManager restoreVideoTimestamp]) {
         return;
     }
-    
-    // Skip if already our target label
-    // if (self == gVideoTimestampLabel) {
-    //     return;
-    // }
     
     // Skip if text doesn't match timestamp pattern
     if (!isTimestampText(self.text)) {
@@ -5359,8 +5265,6 @@ static void findTextView(UIView *view, UITextView **tweetTextView) {
     return nil;
 }
 
-
-
 %end
 
 // Hook TTAStatusBodySelectableContentTextView to prevent text reversion
@@ -5811,7 +5715,6 @@ static GeminiTranslator *_sharedInstance;
 %end
 
 // MARK: Change Pill text.
-
 %hook TFNPillControl
 - (id)text {
     NSString *localizedText = [[BHTBundle sharedBundle] localizedStringForKey:@"REFRESH_PILL_TEXT"];
@@ -5824,7 +5727,6 @@ static GeminiTranslator *_sharedInstance;
 %end
 
 // MARK: Remove all sections from the Explore "for you" tab except the trending cells.
-// Helper function to check if we're in the GuideContainerViewController hierarchy
 static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
     if (!viewController) return NO;
     
@@ -5921,8 +5823,6 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 
 %end
 
-
-
 // MARK: should hopefully remove reply boost upsells
 %hook T1SubscriptionJourneyManager
 - (_Bool)shouldShowReplyBoostUpsellWithAccount {
@@ -5968,7 +5868,7 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 // Override the method that determines which buttons to show based on width
 - (void)_t1_updateArrangedButtonItemsForContentWidth:(double)arg1 {
     if ([BHTManager restoreFollowButton]) {
-        %orig(1000.0);
+        %orig(5000.0);
     } else {
         %orig(arg1);
     }
