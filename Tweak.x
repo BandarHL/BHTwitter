@@ -241,7 +241,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                 if (window.rootViewController && window.rootViewController.isViewLoaded) {
                     BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
                         if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
-                            [(TFNNavigationBar *)currentView updateLogoTheme];
+                            // updateLogoTheme removed - newer method handles bird icon
                         }
                     });
                 }
@@ -4305,8 +4305,8 @@ static void BHT_applyThemeToWindow(UIWindow *window) {
 
     BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
         if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
-            // updateLogoTheme should internally use BHTCurrentAccentColor()
-            [(TFNNavigationBar *)currentView updateLogoTheme];
+            // updateLogoTheme removed - newer method handles bird icon
+            // updateLogoTheme removed - newer method handles bird icon
         }
     });
 
@@ -4394,9 +4394,7 @@ static void BHT_forceRefreshAllWindowAppearances(void) {
         if (window.rootViewController && window.rootViewController.isViewLoaded) {
             BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
                 if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
-                    if ([BHTManager classicTabBarEnabled]) {
-                        [(TFNNavigationBar *)currentView updateLogoTheme];
-                    }
+                    // updateLogoTheme removed - newer method handles bird icon
                 }
             });
         }

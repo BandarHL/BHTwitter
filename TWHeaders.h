@@ -598,7 +598,6 @@ static UIViewController * _Nonnull topMostController() {
 @interface TFNNavigationBar : UIView
 - (UIViewController *)_viewControllerForAncestor;
 - (BOOL)shouldThemeIcon;
-- (void)updateLogoTheme;
 @end
 
 @interface TFSTimelineViewController : UIViewController
