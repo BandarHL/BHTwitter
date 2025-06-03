@@ -952,56 +952,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
-
-// MARK: Color theme
-// Previous view controller hooks for theme re-application have been removed
-// We now use a centralized theme management approach through our TAEColorSettings hooks
-
-%hook TFNNavigationBar
-- (void)setPrefersLargeTitles:(BOOL)largeTitles {
-    largeTitles = false;
-    return %orig(largeTitles);
-}
-
-%new
-- (void)updateLogoTheme {
-    BOOL shouldTheme = [self shouldThemeIcon];
-    
-    // ONLY look at DIRECT subviews of the navigation bar
-    for (UIView *subview in self.subviews) {
-        if ([subview isKindOfClass:[UIImageView class]]) {
-            UIImageView *imageView = (UIImageView *)subview;
-            
-            // VERY specific size check to only match Twitter logo
-            CGFloat width = imageView.frame.size.width;
-            CGFloat height = imageView.frame.size.height;
-            
-            // Twitter logo is EXACTLY 29x29 with minimal tolerance
-            BOOL isLikelyTwitterLogo = fabs(width - 29.0) < 2.0 && fabs(height - 29.0) < 2.0 && fabs(width - height) < 1.0;
-            
-            if (isLikelyTwitterLogo) {
-                // MODIFIED: Use classicTabBarEnabled
-                if (shouldTheme && [BHTManager classicTabBarEnabled]) { 
-                    // Get the original image
-                    UIImage *originalImage = imageView.image;
-                    if (originalImage && originalImage.renderingMode != UIImageRenderingModeAlwaysTemplate) {
-                        // Create template image from original
-                        UIImage *templateImage = [originalImage imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-                        imageView.image = templateImage; // Setting image might trigger layout, potentially re-calling this. Guard needed?
-                        imageView.tintColor = BHTCurrentAccentColor();
-                    }
-                }
-                // If classicTabBarEnabled is false, the bird icon should naturally revert
-                // or be handled by BHT_forceRefreshAllWindowAppearances if needed.
-                // For now, no explicit 'else' to revert here, assuming default behavior is okay
-                // or other refresh mechanisms will handle it.
-            }
-        }
-    }
-}
-
-%end
-
 // MARK: Save tweet as an image
 // Twitter 9.31 and higher
 %hook TTAStatusInlineShareButton
