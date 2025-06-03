@@ -594,11 +594,6 @@ static UIViewController * _Nonnull topMostController() {
     return topController;
 }
 
-// Declare TFNNavigationBar as a subclass of UIView
-@interface TFNNavigationBar : UIView
-- (UIViewController *)_viewControllerForAncestor;
-- (BOOL)shouldThemeIcon;
-@end
 
 @interface TFSTimelineViewController : UIViewController
 @end

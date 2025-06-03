@@ -238,13 +238,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             for (UIWindow *window in UIApplication.sharedApplication.windows) {
                 if (window.isHidden || !window.isOpaque) continue;
                 
-                if (window.rootViewController && window.rootViewController.isViewLoaded) {
-                    BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
-                        if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
-                            // updateLogoTheme removed - newer method handles bird icon
-                        }
-                    });
-                }
+                // Navigation bar logo theme updates removed - no longer needed
             }
         });
     }
@@ -4303,13 +4297,6 @@ static void BHT_applyThemeToWindow(UIWindow *window) {
         BHT_UpdateAllTabBarIcons(); 
     }
 
-    BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
-        if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
-            // updateLogoTheme removed - newer method handles bird icon
-            // updateLogoTheme removed - newer method handles bird icon
-        }
-    });
-
     UIViewController *rootVC = window.rootViewController;
     if (rootVC) {
         UIViewController *currentContentVC = rootVC;
@@ -4392,11 +4379,7 @@ static void BHT_forceRefreshAllWindowAppearances(void) {
 
         // Update our custom nav bar bird icon for this window
         if (window.rootViewController && window.rootViewController.isViewLoaded) {
-            BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
-                if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
-                    // updateLogoTheme removed - newer method handles bird icon
-                }
-            });
+            // Navigation bar logo theme updates removed - no longer needed
         }
 
         // Trigger UI refresh hierarchy
