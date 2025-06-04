@@ -5361,7 +5361,6 @@ static NSString *getBHTwitterBundlePath() {
     return bundlePath;
 }
 
-// meow meow meow meow
 %hook UIImage
 
 // Hook the main tfn_vectorImageNamed method to selectively redirect custom images
