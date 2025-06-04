@@ -5348,8 +5348,16 @@ static NSString *getBHTwitterBundlePath() {
     static NSString *bundlePath = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        // Use the exact same logic as BHTBundle class
-        bundlePath = [[objc_getClass("BHTBundle") bundlePath] copy];
+        NSFileManager *fileManager = [NSFileManager defaultManager];
+        NSURL *bundleURL = [NSURL new];
+        if ([fileManager fileExistsAtPath:@"/Library/Application Support/BHT/BHTwitter.bundle"]) {
+            bundleURL = [NSURL fileURLWithPath:@"/Library/Application Support/BHT/BHTwitter.bundle"];
+        } else if ([fileManager fileExistsAtPath:@"/var/jb/Library/Application Support/BHT/BHTwitter.bundle"]) {
+            bundleURL = [NSURL fileURLWithPath:@"/var/jb/Library/Application Support/BHT/BHTwitter.bundle"];
+        } else {
+            bundleURL = [[NSBundle mainBundle] URLForResource:@"BHTwitter" withExtension:@"bundle"];
+        }
+        bundlePath = [bundleURL path];
     });
     return bundlePath;
 }
