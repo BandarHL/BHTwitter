@@ -127,31 +127,69 @@ jobs:
         run: |
           # Create custom directory in Twitter's vector bundle
           TWITTER_BUNDLE_PATH="main/tmp/Payload/Twitter.app/TwitterAppearance_TwitterAppearance.bundle"
-          CUSTOM_DIR="${TWITTER_BUNDLE_PATH}/VectorImages/custom"
+          VECTOR_IMAGES_PATH="${TWITTER_BUNDLE_PATH}/VectorImages"
+          CUSTOM_DIR="${VECTOR_IMAGES_PATH}/custom"
+          
+          echo "=== Debug: Checking paths ==="
+          echo "Twitter bundle path: ${TWITTER_BUNDLE_PATH}"
+          echo "VectorImages path: ${VECTOR_IMAGES_PATH}"
+          echo "Custom dir path: ${CUSTOM_DIR}"
           
           if [ -d "${TWITTER_BUNDLE_PATH}" ]; then
-            echo "Found TwitterAppearance bundle at: ${TWITTER_BUNDLE_PATH}"
+            echo "✓ Found TwitterAppearance bundle"
+            ls -la "${TWITTER_BUNDLE_PATH}" | head -10
             
-            # Create custom directory
-            mkdir -p "${CUSTOM_DIR}"
-            echo "Created custom directory: ${CUSTOM_DIR}"
-            
-            # Copy our SVG files from BHTwitter bundle to Twitter's custom directory
-            SVG_SOURCE="main/layout/Library/Application Support/BHT/BHTwitter.bundle"
-            if [ -f "${SVG_SOURCE}/translate.svg" ]; then
-              cp "${SVG_SOURCE}/translate.svg" "${CUSTOM_DIR}/"
-              echo "Copied translate.svg to Twitter bundle"
-              ls -la "${CUSTOM_DIR}/"
+            if [ -d "${VECTOR_IMAGES_PATH}" ]; then
+              echo "✓ Found VectorImages directory"
+              ls -la "${VECTOR_IMAGES_PATH}" | head -10
             else
-              echo "Warning: translate.svg not found in BHTwitter bundle"
+              echo "✗ VectorImages directory not found, creating it"
+              mkdir -p "${VECTOR_IMAGES_PATH}"
             fi
             
-            # Add any additional SVG files here as needed
-            # cp "${SVG_SOURCE}/other.svg" "${CUSTOM_DIR}/" || true
+            # Create custom directory
+            echo "Creating custom directory: ${CUSTOM_DIR}"
+            mkdir -p "${CUSTOM_DIR}"
+            
+            if [ -d "${CUSTOM_DIR}" ]; then
+              echo "✓ Custom directory created successfully"
+            else
+              echo "✗ Failed to create custom directory"
+              exit 1
+            fi
+            
+            # Find our SVG file
+            echo "=== Looking for translate.svg ==="
+            find main -name "translate.svg" -type f
+            
+            SVG_SOURCE="main/layout/Library/Application Support/BHT/BHTwitter.bundle/translate.svg"
+            echo "Checking SVG source: ${SVG_SOURCE}"
+            
+            if [ -f "${SVG_SOURCE}" ]; then
+              echo "✓ Found translate.svg, copying..."
+              cp -v "${SVG_SOURCE}" "${CUSTOM_DIR}/"
+              
+              # Verify the copy worked
+              if [ -f "${CUSTOM_DIR}/translate.svg" ]; then
+                echo "✓ Successfully copied translate.svg"
+                ls -la "${CUSTOM_DIR}/"
+                echo "File size: $(stat -f%z "${CUSTOM_DIR}/translate.svg" 2>/dev/null || stat -c%s "${CUSTOM_DIR}/translate.svg")"
+              else
+                echo "✗ Copy failed - file not found in destination"
+                exit 1
+              fi
+            else
+              echo "✗ translate.svg not found at expected location"
+              echo "Searching for it..."
+              find main -name "*.svg" -type f
+              exit 1
+            fi
             
           else
-            echo "Warning: TwitterAppearance bundle not found"
+            echo "✗ TwitterAppearance bundle not found"
+            echo "Contents of Twitter.app:"
             ls -la main/tmp/Payload/Twitter.app/ | head -20
+            exit 1
           fi
 
       - name: Build Package
