@@ -4123,7 +4123,7 @@ static char kTranslateButtonKey;
         UIButton *translateButton = [UIButton buttonWithType:UIButtonTypeSystem];
         
         // Use Twitter's internal vector image system for the icon
-        [translateButton setImage:[UIImage tfn_vectorImageNamed:@"translate" fitsSize:CGSizeMake(24, 24) fillColor:[UIColor systemGray2Color]] forState:UIControlStateNormal];
+        [translateButton setImage:[UIImage tfn_vectorImageNamed:@"chat" fitsSize:CGSizeMake(24, 24) fillColor:[UIColor systemGray2Color]] forState:UIControlStateNormal];
         
         // Set proper tint color based on appearance
         if (@available(iOS 12.0, *)) {
