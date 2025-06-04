@@ -549,20 +549,15 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         
         // dvelopers section
     
-        PSSpecifier *actuallyaridan = [self newHBTwitterCellWithTitle:@"aridan" twitterUsername:@"actuallyaridan" customAvatarURL:@"https://avatars.githubusercontent.com/u/96298432?v=4"];
-        [actuallyaridan setProperty:@"twitter://user?id=1351218086649720837" forKey:@"url"];
+        PSSpecifier *actuallyaridan = [self newHBLinkCellWithTitle:@"aridan" detailTitle:nil url:@"twitter://user?id=1351218086649720837"];
         
-        PSSpecifier *timi2506 = [self newHBTwitterCellWithTitle:@"timi2506" twitterUsername:@"timi2506" customAvatarURL:@"https://avatars.githubusercontent.com/u/172171055?v=4"];
-        [timi2506 setProperty:@"twitter://user?id=1671731225424195584" forKey:@"url"];
+        PSSpecifier *timi2506 = [self newHBLinkCellWithTitle:@"timi2506" detailTitle:nil url:@"twitter://user?id=1671731225424195584"];
         
-        PSSpecifier *nyathea = [self newHBTwitterCellWithTitle:@"nyathea" twitterUsername:@"nyaathea" customAvatarURL:@"https://avatars.githubusercontent.com/u/108613931?v=4"];
-        [nyathea setProperty:@"twitter://user?id=1541742676009226241" forKey:@"url"];
+        PSSpecifier *nyathea = [self newHBLinkCellWithTitle:@"nyathea" detailTitle:nil url:@"twitter://user?id=1541742676009226241"];
         
-        PSSpecifier *bandarHL = [self newHBTwitterCellWithTitle:@"BandarHelal" twitterUsername:@"BandarHL" customAvatarURL:@"https://unavatar.io/x/BandarHL"];
-        [bandarHL setProperty:@"twitter://user?id=827842200708853762" forKey:@"url"];
+        PSSpecifier *bandarHL = [self newHBLinkCellWithTitle:@"BandarHelal" detailTitle:nil url:@"twitter://user?id=827842200708853762"];
         
-        PSSpecifier *neoFreeBird = [self newHBTwitterCellWithTitle:@"NeoFreeBird" twitterUsername:@"NeoFreeBird" customAvatarURL:@"https://unavatar.io/x/NeoFreeBird"];
-        [neoFreeBird setProperty:@"twitter://user?id=1878595268255297537" forKey:@"url"];
+        PSSpecifier *neoFreeBird = [self newHBLinkCellWithTitle:@"NeoFreeBird" detailTitle:nil url:@"twitter://user?id=1878595268255297537"];
         
         _specifiers = [NSMutableArray arrayWithArray:@[
             subtitleSection,
