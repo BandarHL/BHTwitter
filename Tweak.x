@@ -63,7 +63,7 @@ static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *
     recursionDepth--;
 }
 
-// Add this before the hooks, after the imports
+// MARK: imports to hook into Twitters TAE color system
 
 UIColor *BHTCurrentAccentColor(void) {
     Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
@@ -165,8 +165,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     }
 }
 
-// MARK: Clean cache and Padlock
-// MARK: - Core Theme Engine Hooks
+// MARK: - Core TAE Color hooks
 %hook TAEColorSettings
 
 - (instancetype)init {
@@ -246,7 +245,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 %end
 
-// Hook T1ColorSettings to intercept Twitter's internal theme application
 %hook T1ColorSettings
 
 + (void)_t1_applyPrimaryColorOption {
@@ -274,7 +272,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 %end
 
-// This replaces the multiple NSUserDefaults method of protecting our theme key
 %hook NSUserDefaults
 
 - (void)setObject:(id)value forKey:(NSString *)defaultName {
@@ -298,6 +295,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 %end
 
+// MARK: App Delegate hooks
 %hook T1AppDelegate
 - (_Bool)application:(UIApplication *)application didFinishLaunchingWithOptions:(id)arg2 {
     _Bool orig = %orig;
@@ -316,8 +314,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"disableSensitiveTweetWarnings"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"disable_immersive_player"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"custom_voice_upload"];
-        [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"dm_avatars"];
-        [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"tab_bar_theming"];
     }
     [BHTManager cleanCache];
     if ([BHTManager FLEX]) {
@@ -556,18 +552,18 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             return originalResult;
         }
         
-        // Format the number with commas
+        // Format the number with the current locale's formatting
         NSNumberFormatter *formatter = [[NSNumberFormatter alloc] init];
         [formatter setNumberStyle:NSNumberFormatterDecimalStyle];
-        [formatter setGroupingSeparator:@","];
         [formatter setUsesGroupingSeparator:YES];
         NSString *formattedCount = [formatter stringFromNumber:number];
         
         // If original result is an NSString, find and replace abbreviated numbers
         if ([originalResult isKindOfClass:[NSString class]]) {
             NSString *originalString = (NSString *)originalResult;
-            // Use regex to find patterns like "1.7K", "6.7K", etc.
-            NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"\\d+(\\.\\d+)?[KMB]" options:0 error:nil];
+            // Updated regex to match patterns like "1.7K", "1,7K", "6.2K", "6,2K", etc.
+            // This handles both period and comma as decimal separators
+            NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"\\d+[.,]\\d+[KMB]|\\d+[KMB]" options:0 error:nil];
             NSString *result = [regex stringByReplacingMatchesInString:originalString options:0 range:NSMakeRange(0, originalString.length) withTemplate:formattedCount];
             return result;
         }
@@ -576,8 +572,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             NSMutableAttributedString *mutableResult = [[NSMutableAttributedString alloc] initWithAttributedString:(NSAttributedString *)originalResult];
             NSString *originalText = mutableResult.string;
             
-            // Use regex to find and replace abbreviated numbers while preserving formatting
-            NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"\\d+(\\.\\d+)?[KMB]" options:0 error:nil];
+            // Updated regex to match patterns like "1.7K", "1,7K", "6.2K", "6,2K", etc.
+            // This handles both period and comma as decimal separators
+            NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"\\d+[.,]\\d+[KMB]|\\d+[KMB]" options:0 error:nil];
             NSArray *matches = [regex matchesInString:originalText options:0 range:NSMakeRange(0, originalText.length)];
             
             // Replace matches in reverse order to maintain correct indices
@@ -587,14 +584,11 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             return [mutableResult copy];
         }
     }
-    
-    NSLog(@"[BHTwitter] Returning original result: %@", originalResult);
-    // Return original result if we couldn't modify it safely
     return originalResult;
 }
 %end
 
-// MARK: hide ADs - New Implementation
+// MARK: hide ADS - New Implementation
 %hook TFNItemsDataViewAdapterRegistry
 - (id)dataViewAdapterForItem:(id)item {
     if ([BHTManager HidePromoted]) {
@@ -947,7 +941,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %end
 
 // MARK: Save tweet as an image
-// Twitter 9.31 and higher
+
 %hook TTAStatusInlineShareButton
 - (void)didLongPressActionButton:(UILongPressGestureRecognizer *)gestureRecognizer {
     if ([BHTManager tweetToImage]) {
@@ -983,46 +977,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
-// Twitter 9.30 and lower
-%hook T1StatusInlineShareButton
-- (void)didLongPressActionButton:(UILongPressGestureRecognizer *)gestureRecognizer {
-    if ([BHTManager tweetToImage]) {
-        if (gestureRecognizer.state == UIGestureRecognizerStateBegan) {
-            id delegate = self.delegate;
-            if (![delegate isKindOfClass:%c(T1StatusInlineActionsView)]) {
-                return %orig;
-            }
-            T1StatusInlineActionsView *actionsView = (T1StatusInlineActionsView *)delegate;
-            T1StatusCell *tweetView;
-            
-            if ([actionsView.superview isKindOfClass:%c(T1StandardStatusView)]) { // normal tweet in the time line
-                tweetView = (T1StatusCell *)[(T1StandardStatusView *)actionsView.superview eventHandler];
-            } else if ([actionsView.superview isKindOfClass:%c(T1TweetDetailsFocalStatusView)]) { // Focus tweet
-                tweetView = (T1StatusCell *)[(T1TweetDetailsFocalStatusView *)actionsView.superview eventHandler];
-            } else if ([actionsView.superview isKindOfClass:%c(T1ConversationFocalStatusView)]) { // Focus tweet
-                tweetView = (T1StatusCell *)[(T1ConversationFocalStatusView *)actionsView.superview eventHandler];
-            } else {
-                return %orig;
-            }
-            
-            UIImage *tweetImage = BH_imageFromView(tweetView);
-            UIActivityViewController *acVC = [[UIActivityViewController alloc] initWithActivityItems:@[tweetImage] applicationActivities:nil];
-            if (is_iPad()) {
-                acVC.popoverPresentationController.sourceView = self;
-                acVC.popoverPresentationController.sourceRect = self.frame;
-            }
-            [topMostController() presentViewController:acVC animated:true completion:nil];
-            return;
-        }
-    }
-    return %orig;
-}
-%end
-
 // MARK: Timeline download
-// THIS SOLUTION WAS TAKEN FROM Translomatic AFTER DISASSEMBLING THE DYLIB
-// SO THANKS: @foxfortmobile
-// Twitter 9.31 and higher
+
 %hook TTAStatusInlineActionsView
 + (NSArray *)_t1_inlineActionViewClassesForViewModel:(id)arg1 options:(NSUInteger)arg2 displayType:(NSUInteger)arg3 account:(id)arg4 {
     NSArray *_orig = %orig;
@@ -1060,7 +1016,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 
 // MARK: Always open in Safrai
-// Thanks nyuszika7h https://github.com/nyuszika7h/noinappsafari/
+
 %hook SFSafariViewController
 - (void)viewWillAppear:(BOOL)animated {
     if (![BHTManager alwaysOpenSafari]) {
@@ -1284,15 +1240,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %end
 
 %hook TFNTwitterAccount
-- (_Bool)isDownloadVideoEnabled {
-    return false;
-}
-- (_Bool)isVideoSettingsPlaybackRateEnabled {
-    return false;
-}
-- (_Bool)continueWatchingEnabled {
-    return false;
-}
 - (_Bool)isEditProfileUsernameEnabled {
     return true;
 }
@@ -1477,20 +1424,19 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                 iconColor = [UIColor secondaryLabelColor];
             }
         } else {
-            iconColor = [UIColor systemGray2Color];
+            iconColor = [UIColor secondaryLabelColor];
         }
         
-        // Try to get the Twitter vector image - use appropriate sizing for icon
+        // Twitter vector image
         twitterIcon = [UIImage tfn_vectorImageNamed:@"twitter" fitsSize:CGSizeMake(20, 20) fillColor:iconColor];
         
-        // Create the settings item - don't specify an icon name to avoid the system icon
+        // Create the settings item
         TFNSettingsNavigationItem *bhtwitter = [[%c(TFNSettingsNavigationItem) alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"] detail:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_DETAIL"] iconName:nil controllerFactory:^UIViewController *{
             return [BHTManager BHTSettingsWithAccount:self.account];
         }];
         
         // Set our Twitter icon
         if (twitterIcon) {
-            NSLog(@"[BHTwitter] Successfully loaded Twitter icon");
             [bhtwitter setValue:twitterIcon forKey:@"_icon"];
         }
         
@@ -1696,7 +1642,6 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
     // Only log in debug mode to reduce log spam
 #if BHT_DEBUG
     if (message) {
-        NSLog(@"[BHTwitter SourceLabel] %@", message);
     }
 #endif
 }
@@ -3926,9 +3871,9 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 // MARK: - Combined constructor to initialize all hooks and features
 // MARK: - Restore Pull-To-Refresh Sounds
 
-// Helper function to play sounds since we can't directly call methods on TFNPullToRefreshControl
+// Helper function to play sounds using AVAudioPlayer for better volume control
 static void PlayRefreshSound(int soundType) {
-    static SystemSoundID sounds[2] = {0, 0};
+    static AVAudioPlayer *soundPlayers[2] = {nil, nil};
     static BOOL soundsInitialized[2] = {NO, NO};
     
     // Ensure the sounds are only initialized once per type
@@ -3945,11 +3890,13 @@ static void PlayRefreshSound(int soundType) {
         if (soundFile) {
             NSURL *soundURL = [[BHTBundle sharedBundle] pathForFile:soundFile];
             if (soundURL) {
-                OSStatus status = AudioServicesCreateSystemSoundID((__bridge CFURLRef)soundURL, &sounds[soundType]);
-                if (status == kAudioServicesNoError) {
+                NSError *error = nil;
+                soundPlayers[soundType] = [[AVAudioPlayer alloc] initWithContentsOfURL:soundURL error:&error];
+                if (soundPlayers[soundType] && !error) {
+                    [soundPlayers[soundType] prepareToPlay];
                     soundsInitialized[soundType] = YES;
                 } else {
-                    NSLog(@"[BHTwitter] Failed to initialize sound %@ (type %d), status: %d", soundFile, soundType, (int)status);
+                    NSLog(@"[BHTwitter] Failed to initialize AVAudioPlayer for %@ (type %d), error: %@", soundFile, soundType, error.localizedDescription);
                 }
             } else {
                 NSLog(@"[BHTwitter] Could not find sound file: %@", soundFile);
@@ -3958,9 +3905,39 @@ static void PlayRefreshSound(int soundType) {
     }
     
     // Play the sound if it was successfully initialized
-    if (soundsInitialized[soundType]) {
+    if (soundsInitialized[soundType] && soundPlayers[soundType]) {
         dispatch_async(dispatch_get_main_queue(), ^{
-            AudioServicesPlaySystemSound(sounds[soundType]);
+            // Configure audio session to play over video/other audio
+            NSError *sessionError = nil;
+            AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+            
+            // Set category to allow playback over other audio
+            [audioSession setCategory:AVAudioSessionCategoryPlayback 
+                          withOptions:AVAudioSessionCategoryOptionMixWithOthers | AVAudioSessionCategoryOptionDuckOthers 
+                                error:&sessionError];
+            
+            if (sessionError) {
+                NSLog(@"[BHTwitter] Audio session setup error: %@", sessionError.localizedDescription);
+            }
+            
+            // Set volume to maximum for these UI sounds
+            soundPlayers[soundType].volume = 1.0;
+            
+            // Stop any currently playing instance and restart
+            if (soundPlayers[soundType].isPlaying) {
+                [soundPlayers[soundType] stop];
+            }
+            soundPlayers[soundType].currentTime = 0;
+            [soundPlayers[soundType] play];
+            
+            // Restore previous audio session after a short delay
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                NSError *restoreError = nil;
+                [audioSession setActive:NO withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:&restoreError];
+                if (restoreError) {
+                    NSLog(@"[BHTwitter] Audio session restore error: %@", restoreError.localizedDescription);
+                }
+            });
         });
     }
 }
@@ -4487,7 +4464,6 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
     }
     
     if (isInImmersiveContext) {
-        NSLog(@"[BHTwitter Timestamp] Styling timestamp label: %@", self.text);
         
         // Apply styling - ONLY styling, not visibility
         self.font = [UIFont systemFontOfSize:14.0];
