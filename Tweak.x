@@ -4128,10 +4128,7 @@ static char kTranslateButtonKey;
             [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:originalOverrideDir];
         }
         
-        // Fallback to system image if custom icon fails to load
-        if (!translateIcon) {
-            translateIcon = [UIImage systemImageNamed:@"translate"];
-        }
+
         
         [translateButton setImage:translateIcon forState:UIControlStateNormal];
         
@@ -5352,25 +5349,19 @@ static NSSet *customVectorImages() {
     return customImages;
 }
 
-// Get path to BHTwitter bundle using exact same logic as BHTBundle.m
+// Get path to BHTwitter bundle using BHTBundle class directly
 static NSString *getBHTwitterBundlePath() {
     static NSString *bundlePath = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        NSFileManager *fileManager = [NSFileManager defaultManager];
-        NSURL *bundleURL = [NSURL new];
-        if ([fileManager fileExistsAtPath:@"/Library/Application Support/BHT/BHTwitter.bundle"]) {
-            bundleURL = [NSURL fileURLWithPath:@"/Library/Application Support/BHT/BHTwitter.bundle"];
-        } else if ([fileManager fileExistsAtPath:@"/var/jb/Library/Application Support/BHT/BHTwitter.bundle"]) {
-            bundleURL = [NSURL fileURLWithPath:@"/var/jb/Library/Application Support/BHT/BHTwitter.bundle"];
-        } else {
-            bundleURL = [[NSBundle mainBundle] URLForResource:@"BHTwitter" withExtension:@"bundle"];
-        }
-        bundlePath = [bundleURL path];
+        id bhtBundle = [objc_getClass("BHTBundle") sharedBundle];
+        NSBundle *bundle = [bhtBundle valueForKey:@"mainBundle"];
+        bundlePath = [bundle bundlePath];
     });
     return bundlePath;
 }
 
+// meow meow
 %hook UIImage
 
 // Hook the main tfn_vectorImageNamed method to selectively redirect custom images
