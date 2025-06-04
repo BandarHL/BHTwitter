@@ -320,7 +320,7 @@
 
 + (NSString *)translateEndpoint {
     NSString *endpoint = [[NSUserDefaults standardUserDefaults] stringForKey:@"translate_endpoint"];
-    return endpoint ?: @"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+    return endpoint ?: @"https://generativelanguage.googleapis.com/v1beta/models";
 }
 
 + (NSString *)translateAPIKey {
