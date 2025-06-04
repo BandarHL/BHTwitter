@@ -981,7 +981,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
                                                             preferredStyle:UIAlertControllerStyleAlert];
     
     [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
-        textField.placeholder = @"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+        textField.placeholder = @"https://generativelanguage.googleapis.com/v1beta/models";
         textField.text = currentValue;
         textField.keyboardType = UIKeyboardTypeURL;
     }];

@@ -4784,6 +4784,7 @@ static GeminiTranslator *_sharedInstance;
         // Get configurable API settings from BHTManager
         NSString *apiKey = [BHTManager translateAPIKey];
         NSString *apiUrl = [BHTManager translateEndpoint];
+        NSString *model = [BHTManager translateModel];
         
         // Check if we have a valid API key
         if (!apiKey || apiKey.length == 0 || [apiKey isEqualToString:@"YOUR_API_KEY"]) {
@@ -4796,8 +4797,20 @@ static GeminiTranslator *_sharedInstance;
             return;
         }
         
-        // Construct the request URL with API key
-        NSString *fullUrlString = [NSString stringWithFormat:@"%@?key=%@", apiUrl, apiKey];
+        // Construct the request URL properly using the user's model setting
+        NSString *fullUrlString;
+        if ([apiUrl containsString:@"generativelanguage.googleapis.com"] && ![apiUrl containsString:@":generateContent"]) {
+            // For default Gemini API base URL, construct full URL with the user's chosen model
+            fullUrlString = [NSString stringWithFormat:@"%@/%@:generateContent?key=%@", apiUrl, model, apiKey];
+        } else {
+            // For custom endpoints or already complete URLs, just append the API key
+            if ([apiUrl containsString:@"?"]) {
+                fullUrlString = [NSString stringWithFormat:@"%@&key=%@", apiUrl, apiKey];
+            } else {
+                fullUrlString = [NSString stringWithFormat:@"%@?key=%@", apiUrl, apiKey];
+            }
+        }
+        
         NSURL *url = [NSURL URLWithString:fullUrlString];
         
         // Create request
