@@ -3871,10 +3871,48 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 // MARK: - Combined constructor to initialize all hooks and features
 // MARK: - Restore Pull-To-Refresh Sounds
 
-// Helper function to play sounds using AVAudioPlayer for better volume control
+// Audio session configured once at startup
+static BOOL audioSessionConfigured = NO;
+
+// Helper function to configure audio session once for better performance
+static void ConfigureAudioSessionForSounds(void) {
+    if (audioSessionConfigured) return;
+    
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        NSError *error = nil;
+        AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+        
+        // Set category to allow playback over other audio without complex session management
+        [audioSession setCategory:AVAudioSessionCategoryAmbient 
+                      withOptions:AVAudioSessionCategoryOptionMixWithOthers 
+                            error:&error];
+        
+        if (!error) {
+            audioSessionConfigured = YES;
+        } else {
+            NSLog(@"[BHTwitter] Audio session configuration error: %@", error.localizedDescription);
+        }
+    });
+}
+
+// Lightweight helper function to play sounds
 static void PlayRefreshSound(int soundType) {
-    static AVAudioPlayer *soundPlayers[2] = {nil, nil};
+    static SystemSoundID sounds[2] = {0, 0};
     static BOOL soundsInitialized[2] = {NO, NO};
+    
+    // Respect iOS silent switch by checking if system sounds should play
+    // AVAudioSessionCategoryAmbient automatically respects silent switch,
+    // but we can add an additional check for volume
+    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+    if (audioSession.outputVolume == 0.0) {
+        // Device volume is at 0 or device is muted
+        return;
+    }
+    
+    // Ensure audio session is configured
+    if (!audioSessionConfigured) {
+        ConfigureAudioSessionForSounds();
+    }
     
     // Ensure the sounds are only initialized once per type
     if (!soundsInitialized[soundType]) {
@@ -3890,13 +3928,11 @@ static void PlayRefreshSound(int soundType) {
         if (soundFile) {
             NSURL *soundURL = [[BHTBundle sharedBundle] pathForFile:soundFile];
             if (soundURL) {
-                NSError *error = nil;
-                soundPlayers[soundType] = [[AVAudioPlayer alloc] initWithContentsOfURL:soundURL error:&error];
-                if (soundPlayers[soundType] && !error) {
-                    [soundPlayers[soundType] prepareToPlay];
+                OSStatus status = AudioServicesCreateSystemSoundID((__bridge CFURLRef)soundURL, &sounds[soundType]);
+                if (status == kAudioServicesNoError) {
                     soundsInitialized[soundType] = YES;
                 } else {
-                    NSLog(@"[BHTwitter] Failed to initialize AVAudioPlayer for %@ (type %d), error: %@", soundFile, soundType, error.localizedDescription);
+                    NSLog(@"[BHTwitter] Failed to initialize sound %@ (type %d), status: %d", soundFile, soundType, (int)status);
                 }
             } else {
                 NSLog(@"[BHTwitter] Could not find sound file: %@", soundFile);
@@ -3905,40 +3941,9 @@ static void PlayRefreshSound(int soundType) {
     }
     
     // Play the sound if it was successfully initialized
-    if (soundsInitialized[soundType] && soundPlayers[soundType]) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            // Configure audio session to play over video/other audio
-            NSError *sessionError = nil;
-            AVAudioSession *audioSession = [AVAudioSession sharedInstance];
-            
-            // Set category to allow playback over other audio
-            [audioSession setCategory:AVAudioSessionCategoryPlayback 
-                          withOptions:AVAudioSessionCategoryOptionMixWithOthers | AVAudioSessionCategoryOptionDuckOthers 
-                                error:&sessionError];
-            
-            if (sessionError) {
-                NSLog(@"[BHTwitter] Audio session setup error: %@", sessionError.localizedDescription);
-            }
-            
-            // Set volume to maximum for these UI sounds
-            soundPlayers[soundType].volume = 1.0;
-            
-            // Stop any currently playing instance and restart
-            if (soundPlayers[soundType].isPlaying) {
-                [soundPlayers[soundType] stop];
-            }
-            soundPlayers[soundType].currentTime = 0;
-            [soundPlayers[soundType] play];
-            
-            // Restore previous audio session after a short delay
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                NSError *restoreError = nil;
-                [audioSession setActive:NO withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:&restoreError];
-                if (restoreError) {
-                    NSLog(@"[BHTwitter] Audio session restore error: %@", restoreError.localizedDescription);
-                }
-            });
-        });
+    if (soundsInitialized[soundType]) {
+        // Simple, lightweight playback that respects silent switch
+        AudioServicesPlaySystemSound(sounds[soundType]);
     }
 }
 
@@ -4020,6 +4025,9 @@ static char kManualRefreshInProgressKey;
 %ctor {
     // Import AudioServices framework
     dlopen("/System/Library/Frameworks/AudioToolbox.framework/AudioToolbox", RTLD_LAZY);
+    
+    // Configure audio session for pull-to-refresh sounds early
+    ConfigureAudioSessionForSounds();
     
     NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
     NSOperationQueue *mainQueue = [NSOperationQueue mainQueue];
