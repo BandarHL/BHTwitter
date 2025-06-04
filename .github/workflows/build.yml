@@ -122,6 +122,38 @@ jobs:
         env:
           IPA_URL: ${{ inputs.decrypted_ipa_url }}
 
+      - name: Inject Custom Vector Images
+        if: inputs.deploy_format == 'sideloaded' || inputs.deploy_format == 'trollstore'
+        run: |
+          # Create custom directory in Twitter's vector bundle
+          TWITTER_BUNDLE_PATH="main/tmp/Payload/Twitter.app/TwitterAppearance_TwitterAppearance.bundle"
+          CUSTOM_DIR="${TWITTER_BUNDLE_PATH}/custom"
+          
+          if [ -d "${TWITTER_BUNDLE_PATH}" ]; then
+            echo "Found TwitterAppearance bundle at: ${TWITTER_BUNDLE_PATH}"
+            
+            # Create custom directory
+            mkdir -p "${CUSTOM_DIR}"
+            echo "Created custom directory: ${CUSTOM_DIR}"
+            
+            # Copy our SVG files from BHTwitter bundle to Twitter's custom directory
+            SVG_SOURCE="main/layout/Library/Application Support/BHT/BHTwitter.bundle"
+            if [ -f "${SVG_SOURCE}/translate.svg" ]; then
+              cp "${SVG_SOURCE}/translate.svg" "${CUSTOM_DIR}/"
+              echo "Copied translate.svg to Twitter bundle"
+              ls -la "${CUSTOM_DIR}/"
+            else
+              echo "Warning: translate.svg not found in BHTwitter bundle"
+            fi
+            
+            # Add any additional SVG files here as needed
+            # cp "${SVG_SOURCE}/other.svg" "${CUSTOM_DIR}/" || true
+            
+          else
+            echo "Warning: TwitterAppearance bundle not found"
+            ls -la main/tmp/Payload/Twitter.app/ | head -20
+          fi
+
       - name: Build Package
         run: |
           cd ${{ github.workspace }}/main

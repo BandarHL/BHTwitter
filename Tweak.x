@@ -5349,67 +5349,46 @@ static NSSet *customVectorImages() {
     return customImages;
 }
 
-// Initialize custom vector images by copying them to Twitter's bundle
+// Initialize custom vector images by adding our custom directory to search paths
 static void initializeCustomVectorImages() {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         @try {
-            // Find Twitter's vector image directory
+            // Find Twitter's custom vector directory (injected during build)
             NSBundle *mainBundle = [NSBundle mainBundle];
             NSString *appPath = [mainBundle bundlePath];
-            NSString *twitterVectorDir = [appPath stringByAppendingPathComponent:@"TwitterAppearance_TwitterAppearance.bundle"];
+            NSString *customVectorDir = [appPath stringByAppendingPathComponent:@"TwitterAppearance_TwitterAppearance.bundle/custom"];
             
-            // Check if the directory exists
+            // Check if our custom directory exists (from build injection)
             BOOL isDirectory;
-            if (![[NSFileManager defaultManager] fileExistsAtPath:twitterVectorDir isDirectory:&isDirectory] || !isDirectory) {
-                NSLog(@"[BHTwitter] Twitter vector directory not found at: %@", twitterVectorDir);
+            if (![[NSFileManager defaultManager] fileExistsAtPath:customVectorDir isDirectory:&isDirectory] || !isDirectory) {
+                NSLog(@"[BHTwitter] Custom vector directory not found at: %@", customVectorDir);
+                NSLog(@"[BHTwitter] This means the build process didn't inject our SVGs correctly");
                 return;
             }
             
-            // Get our BHTwitter bundle
-            id bhtBundle = [objc_getClass("BHTBundle") sharedBundle];
-            if (!bhtBundle) {
-                NSLog(@"[BHTwitter] Could not get BHTBundle");
-                return;
-            }
+            NSLog(@"[BHTwitter] Found custom vector directory: %@", customVectorDir);
             
-            // Copy our SVG files to Twitter's directory
-            NSArray *imageNames = @[@"translate"]; // Add more as needed
-            for (NSString *imageName in imageNames) {
-                NSURL *sourceURL = [bhtBundle pathForFile:[NSString stringWithFormat:@"%@.svg", imageName]];
-                if (!sourceURL || ![[NSFileManager defaultManager] fileExistsAtPath:[sourceURL path]]) {
-                    NSLog(@"[BHTwitter] Source SVG not found: %@.svg", imageName);
-                    continue;
-                }
-                
-                NSString *destPath = [twitterVectorDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.svg", imageName]];
-                
-                // Check if already exists and is same size (avoid unnecessary copying)
-                NSDictionary *sourceAttrs = [[NSFileManager defaultManager] attributesOfItemAtPath:[sourceURL path] error:nil];
-                NSDictionary *destAttrs = [[NSFileManager defaultManager] attributesOfItemAtPath:destPath error:nil];
-                
-                if (destAttrs && [sourceAttrs[NSFileSize] isEqual:destAttrs[NSFileSize]]) {
-                    NSLog(@"[BHTwitter] %@.svg already exists in Twitter bundle", imageName);
-                    continue; // Already copied and same size
-                }
-                
-                // Copy the file
-                NSError *copyError = nil;
-                if ([[NSFileManager defaultManager] fileExistsAtPath:destPath]) {
-                    [[NSFileManager defaultManager] removeItemAtPath:destPath error:nil];
-                }
-                
-                if ([[NSFileManager defaultManager] copyItemAtPath:[sourceURL path] toPath:destPath error:&copyError]) {
-                    NSLog(@"[BHTwitter] Successfully copied %@.svg to Twitter vector bundle", imageName);
-                } else {
-                    NSLog(@"[BHTwitter] Failed to copy %@.svg: %@", imageName, copyError.localizedDescription);
-                }
+            // List what's in our custom directory
+            NSArray *customFiles = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:customVectorDir error:nil];
+            NSLog(@"[BHTwitter] Custom directory contents: %@", customFiles);
+            
+            // Add our custom directory to Twitter's search paths
+            NSURL *customDirURL = [NSURL fileURLWithPath:customVectorDir];
+            NSArray *currentSearchDirs = [UIImage tfn_vectorImageSearchDirectoryURLs];
+            NSMutableArray *newSearchDirs = [NSMutableArray arrayWithArray:currentSearchDirs ?: @[]];
+            
+            // Add our custom directory if not already present
+            if (![newSearchDirs containsObject:customDirURL]) {
+                [newSearchDirs insertObject:customDirURL atIndex:0]; // Insert at beginning for priority
+                [UIImage tfn_vectorImageSetSearchDirectoryURLs:[newSearchDirs copy]];
+                NSLog(@"[BHTwitter] Added custom directory to vector image search paths");
             }
             
             // Test if Twitter can now find our SVG
             CGSize testSize;
             BOOL exists = [UIImage tfn_vectorImageExistsNamed:@"translate" fitsSize:CGSizeMake(24, 24) size:&testSize];
-            NSLog(@"[BHTwitter] After copying, translate.svg exists: %@ (size: %.1fx%.1f)", exists ? @"YES" : @"NO", testSize.width, testSize.height);
+            NSLog(@"[BHTwitter] translate.svg exists: %@ (size: %.1fx%.1f)", exists ? @"YES" : @"NO", testSize.width, testSize.height);
             
         } @catch (NSException *exception) {
             NSLog(@"[BHTwitter] Exception in initializeCustomVectorImages: %@", exception);
@@ -5421,10 +5400,10 @@ static void initializeCustomVectorImages() {
 
 // Hook the main tfn_vectorImageNamed method to initialize our system
 + (id)tfn_vectorImageNamed:(NSString *)imageName fitsSize:(CGSize)size fillColor:(UIColor *)fillColor {
-    // Initialize our vector system on first call (copies SVGs to Twitter's bundle)
+    // Initialize our vector system on first call (adds custom directory to search paths)
     initializeCustomVectorImages();
     
-    // Just proceed with normal behavior - our SVGs are now in Twitter's bundle
+    // Just proceed with normal behavior - our SVGs are in custom directory in search paths
     return %orig(imageName, size, fillColor);
 }
 
