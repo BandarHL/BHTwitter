@@ -14,6 +14,7 @@
 #import "ThemeColor/BHColorThemeViewController.h"
 #import "CustomTabBar/BHCustomTabBarViewController.h"
 #import "BHTManager.h"
+#import "BHDimPalette.h"
 
 // Import external function to get theme color
 extern UIColor *BHTCurrentAccentColor(void);
@@ -98,6 +99,11 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     } else {
         primaryColor = nil;
     }
+    
+    // Use the primaryColor to update UI elements
+    if (primaryColor) {
+        self.view.tintColor = primaryColor;
+    }
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
@@ -129,7 +135,6 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     }
 }
 
-// Add this method to configure the table view appearance
 - (void)viewDidLoad {
     if (self.twAccount != nil) {
         self.navigationItem.titleView = [objc_getClass("TFNTitleView") titleViewWithTitle:[[BHTBundle sharedBundle]
@@ -141,11 +146,11 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
     [super viewDidLoad];
     
-    // Set the background color to match system background
-    self.view.backgroundColor = [UIColor systemBackgroundColor];
+    // Set the background color based on the theme mode using BHDimPalette
+    UIColor *backgroundColor = [BHDimPalette currentBackgroundColor];
+    self.view.backgroundColor = backgroundColor;
+    self.table.backgroundColor = backgroundColor;
     
-    // Configure the table view to blend with background
-    self.table.backgroundColor = [UIColor systemBackgroundColor];
     self.table.separatorColor = [UIColor separatorColor];
     
     // Apply theme color to table
@@ -167,6 +172,11 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
     if (section == 0) {
         UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 40)];
+
+        // Set background color for dim mode if needed
+        if ([BHDimPalette isDimMode]) {
+            header.backgroundColor = [BHDimPalette dimModeColor];
+        }
 
         UILabel *detail = [UILabel new];
         detail.translatesAutoresizingMaskIntoConstraints = NO;
@@ -193,6 +203,11 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     
     UIView *headerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 52)];
     
+    // Set background color for dim mode if needed
+    if ([BHDimPalette isDimMode]) {
+        headerView.backgroundColor = [BHDimPalette dimModeColor];
+    }
+    
     // Top separator - modified to extend full width
     if (section != 1) {
         UIView *topSeparator = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 0.5)];
@@ -215,13 +230,13 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     
     return headerView;
 }
+
 - (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
     if (section == 0) {
         return 52; // or whatever height you prefer
     }
     return 52; // or your default
 }
-
 
 - (UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section {
     NSString *footerText = [self tableView:tableView titleForFooterInSection:section];
@@ -230,6 +245,11 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     }
     
     UIView *footerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 44)];
+    
+    // Set background color for dim mode if needed
+    if ([BHDimPalette isDimMode]) {
+        footerView.backgroundColor = [BHDimPalette dimModeColor];
+    }
     
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(16, 8, tableView.frame.size.width - 32, 36)];
     label.text = footerText;
@@ -257,13 +277,12 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     return ceil(rect.size.height) + 24; // Top/bottom padding
 }
 
-// And replace with this single implementation:
 - (void)tableView:(UITableView *)tableView willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath {
     // Remove any default separator insets
     cell.separatorInset = UIEdgeInsetsMake(0, 0, 0, CGRectGetWidth(tableView.bounds));
     
-    // Set cell background
-    cell.backgroundColor = [UIColor systemBackgroundColor];
+    // Set cell background color using BHDimPalette
+    cell.backgroundColor = [BHDimPalette currentBackgroundColor];
     
     // Remove selection highlight if needed
     cell.selectionStyle = UITableViewCellSelectionStyleDefault;
@@ -271,7 +290,6 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     // Only apply tint color, don't modify other aspects
     cell.tintColor = BHTCurrentAccentColor();
 }
-
 
 - (UITableViewStyle)tableViewStyle {
     return UITableViewStyleGrouped;
@@ -367,7 +385,8 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         PSSpecifier *layoutSection = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"LAYOUT_CUS_SECTION_HEADER_TITLE"] footer:[[BHTBundle sharedBundle] localizedStringForKey:@"LAYOUT_CUS_SECTION_FOOTER_TITLE"]];
         PSSpecifier *debug = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DEBUG_SECTION_HEADER_TITLE"] footer:nil];
         PSSpecifier *legalSection = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"LEGAL_SECTION_HEADER_TITLE"] footer:nil];
-        PSSpecifier *developer = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DEVELOPER_SECTION_HEADER_TITLE"] footer:[NSString stringWithFormat:@"NeoFreeBird-BHTwitter v%@", [[BHTBundle sharedBundle] BHTwitterVersion]]];
+        PSSpecifier *developer = [self newSectionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DEVELOPER_SECTION_HEADER_TITLE"] footer:nil];
+        PSSpecifier *updatesSection = [self newSectionWithTitle:@"Check out our Twitter account!" footer:[NSString stringWithFormat:@"NeoFreeBird-BHTwitter v%@", [[BHTBundle sharedBundle] BHTwitterVersion]]];
         
         PSSpecifier *download = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DOWNLOAD_VIDEOS_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DOWNLOAD_VIDEOS_OPTION_DETAIL_TITLE"] key:@"dw_v" defaultValue:true changeAction:nil];
         
@@ -516,11 +535,6 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         
         PSSpecifier *restoreVideoTimestamp = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTORE_VIDEO_TIMESTAMP_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTORE_VIDEO_TIMESTAMP_DETAIL_TITLE"] key:@"restore_video_timestamp" defaultValue:false changeAction:nil];
 
-        PSSpecifier *biggerActionButtons = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BIGGER_ACTION_BUTTONS_TITLE"] 
-                                                        detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BIGGER_ACTION_BUTTONS_DETAIL_TITLE"]
-                                                                key:@"bigger_action_buttons"
-                                                       defaultValue:false 
-                                                       changeAction:@selector(biggerActionButtonsAction:)];
 
         // debug section
         PSSpecifier *flex = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_DETAIL_TITLE"] key:@"flex_twitter" defaultValue:false changeAction:@selector(FLEXAction:)];
@@ -535,10 +549,18 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         
         // dvelopers section
     
-        PSSpecifier *actuallyaridan = [self newHBTwitterCellWithTitle:@"aridan" twitterUsername:@"actuallyaridan" customAvatarURL:@"https://avatars.githubusercontent.com/u/96298432?v=4"];
-        PSSpecifier *timi2506 = [self newHBTwitterCellWithTitle:@"timi2506" twitterUsername:@"timi2506" customAvatarURL:@"https://avatars.githubusercontent.com/u/172171055?v=4"];
-        PSSpecifier *nyathea = [self newHBTwitterCellWithTitle:@"nyathea" twitterUsername:@"nyaathea" customAvatarURL:@"https://avatars.githubusercontent.com/u/108613931?v=4"];
-        PSSpecifier *bandarHL = [self newHBTwitterCellWithTitle:@"BandarHelal" twitterUsername:@"BandarHL" customAvatarURL:@"https://unavatar.io/twitter/BandarHL"];
+        PSSpecifier *actuallyaridan = [self newHBTwitterCellWithTitle:@"aridan" twitterUsername:@"actuallyaridan" customAvatarURL:@"https://unavatar.io/x/actuallyaridan"];
+        PSSpecifier *timi2506 = [self newHBTwitterCellWithTitle:@"timi2506" twitterUsername:@"timi2506" customAvatarURL:@"https://unavatar.io/x/timi2506"];
+        PSSpecifier *nyathea = [self newHBTwitterCellWithTitle:@"nyathea" twitterUsername:@"nyaathea" customAvatarURL:@"https://unavatar.io/x/nyaathea"];
+        PSSpecifier *bandarHL = [self newHBTwitterCellWithTitle:@"BandarHelal" twitterUsername:@"BandarHL" customAvatarURL:@"https://unavatar.io/x/BandarHL"];
+        PSSpecifier *neoFreeBird = [self newHBTwitterCellWithTitle:@"NeoFreeBird" twitterUsername:@"NeoFreeBird" customAvatarURL:@"https://unavatar.io/x/NeoFreeBird"];
+        
+        // Override button actions to use Twitter URL scheme
+        [actuallyaridan setButtonAction:@selector(openAridanTwitter:)];
+        [timi2506 setButtonAction:@selector(openTimiTwitter:)];
+        [nyathea setButtonAction:@selector(openNyatheaTwitter:)];
+        [bandarHL setButtonAction:@selector(openBandarTwitter:)];
+        [neoFreeBird setButtonAction:@selector(openNeoFreeBirdTwitter:)];
         
         _specifiers = [NSMutableArray arrayWithArray:@[
             subtitleSection,
@@ -611,7 +633,6 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             layoutSection, // 7
             hideSpace,
             stopHidingTabBar,
-            biggerActionButtons,
             tabBarTheming,
             disableRTL,
             showScrollIndicator,
@@ -630,7 +651,10 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             actuallyaridan,
             timi2506,
             nyathea,
-            bandarHL
+            bandarHL,
+            
+            updatesSection, // 11
+            neoFreeBird
         ]];
         
         [self collectDynamicSpecifiersFromArray:_specifiers];
@@ -1118,31 +1142,6 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
     [self presentViewController:alert animated:YES completion:nil];
 }
 
-- (void)biggerActionButtonsAction:(UISwitch *)sender {
-    BOOL enabled = sender.isOn;
-    NSString *key = @"bigger_action_buttons";
-    BOOL previousValue = !enabled; // The value before the switch was flipped
-
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_TITLE"]
-                                                                   message:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_MESSAGE_GENERIC"]
-                                                            preferredStyle:UIAlertControllerStyleAlert];
-
-    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_NOW_BUTTON_TITLE"] style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
-        [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:key];
-        [[NSUserDefaults standardUserDefaults] synchronize];
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            exit(0);
-        });
-    }]];
-
-    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"] style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
-        // Flip the switch back visually if cancelled
-        [sender setOn:previousValue animated:YES];
-    }]];
-
-    [self presentViewController:alert animated:YES completion:nil];
-}
-
 // Need helper to find specifier by key for switch actions
 - (PSSpecifier *)specifierForID:(NSString *)identifier {
     for (PSSpecifier *specifier in [self specifiers]) {
@@ -1151,6 +1150,27 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         }
     }
     return nil;
+}
+
+// Custom Twitter opening methods
+- (void)openAridanTwitter:(PSSpecifier *)specifier {
+    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"twitter://user?id=1351218086649720837"] options:@{} completionHandler:nil];
+}
+
+- (void)openTimiTwitter:(PSSpecifier *)specifier {
+    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"twitter://user?id=1671731225424195584"] options:@{} completionHandler:nil];
+}
+
+- (void)openNyatheaTwitter:(PSSpecifier *)specifier {
+    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"twitter://user?id=1541742676009226241"] options:@{} completionHandler:nil];
+}
+
+- (void)openBandarTwitter:(PSSpecifier *)specifier {
+    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"twitter://user?id=827842200708853762"] options:@{} completionHandler:nil];
+}
+
+- (void)openNeoFreeBirdTwitter:(PSSpecifier *)specifier {
+    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"twitter://user?id=1878595268255297537"] options:@{} completionHandler:nil];
 }
 
 @end

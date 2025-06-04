@@ -12,7 +12,11 @@
 #import "../BHTBundle/BHTBundle.h"
 #import "../Colours/Colours.h"
 #import "../TWHeaders.h"
+#import "../BHDimPalette.h"
 #import <UIKit/UIKit.h>
+
+// Key for storing last selected color theme
+#define kBHLastSelectedColorThemeKey @"bh_last_selected_color_theme"
 
 typedef NS_ENUM(NSInteger, TwitterFontStyle) {
     TwitterFontStyleRegular,
@@ -82,6 +86,9 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     self.colorCollectionView.delegate   = self;
     self.colorCollectionView.dataSource = self;
     self.colorCollectionView.translatesAutoresizingMaskIntoConstraints = NO;
+    
+    // Apply background color from BHDimPalette
+    self.colorCollectionView.backgroundColor = [BHDimPalette currentBackgroundColor];
 
     // Data source
     self.colors = [NSMutableArray new];
@@ -117,7 +124,10 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
                    color:[UIColor colorFromHexString:@"#00BA7C"]]];
 
     self.navigationController.navigationBar.prefersLargeTitles = NO;
-    self.view.backgroundColor = [UIColor systemBackgroundColor];
+    
+    // Use BHDimPalette for background color
+    self.view.backgroundColor = [BHDimPalette currentBackgroundColor];
+    
     [self.view addSubview:self.headerLabel];
     [self.view addSubview:self.colorCollectionView];
 
@@ -165,15 +175,16 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     // background as item.color
     cell.colorLabel.backgroundColor = item.color;
 
-    // checkmark logic
-    NSInteger selected = [[NSUserDefaults standardUserDefaults]
-                           integerForKey:@"bh_color_theme_selectedColor"];
-    [collectionView.visibleCells
-      enumerateObjectsUsingBlock:^(__kindof UICollectionViewCell *c, NSUInteger idx, BOOL *stop) {
-        ((BHColorThemeCell*)c).checkIMG.image =
-          [UIImage systemImageNamed:@"circle"];
-    }];
-    if (item.colorID == selected) {
+    // Check both the regular theme key and our tracking key
+    NSInteger currentlySelectedID = [[NSUserDefaults standardUserDefaults] integerForKey:@"bh_color_theme_selectedColor"];
+    NSInteger savedSelectionID = [[NSUserDefaults standardUserDefaults] integerForKey:kBHLastSelectedColorThemeKey];
+    
+    // Clear checkmark by default
+    cell.checkIMG.image = [UIImage systemImageNamed:@"circle"];
+    
+    // Set checkmark if this is the current selection or saved selection
+    if (item.colorID == currentlySelectedID || 
+        (savedSelectionID > 0 && item.colorID == savedSelectionID)) {
         cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
     }
 
@@ -196,8 +207,11 @@ didSelectItemAtIndexPath:(NSIndexPath *)indexPath {
       (BHColorThemeCell*)[collectionView cellForItemAtIndexPath:indexPath];
     cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
 
-    [[NSUserDefaults standardUserDefaults]
-      setInteger:item.colorID forKey:@"bh_color_theme_selectedColor"];
+    // Save selection to both regular theme key and our tracking key
+    [[NSUserDefaults standardUserDefaults] setInteger:item.colorID forKey:@"bh_color_theme_selectedColor"];
+    [[NSUserDefaults standardUserDefaults] setInteger:item.colorID forKey:kBHLastSelectedColorThemeKey];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+    
     BH_changeTwitterColor(item.colorID);
 
     // trigger tab bar refresh (unchanged)…

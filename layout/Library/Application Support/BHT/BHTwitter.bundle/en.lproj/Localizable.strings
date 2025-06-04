@@ -90,7 +90,7 @@
 "RESTORE_REPLY_CONTEXT_TITLE" = "Restore Reply Context";
 "RESTORE_REPLY_CONTEXT_DETAIL_TITLE" = "Shows the people that are being replied to under tweets.";
 
-"ENABLE_TRANSLATE_OPTION_TITLE" = "AI translate button";
+"ENABLE_TRANSLATE_OPTION_TITLE" = "AI translate button (beta)";
 "ENABLE_TRANSLATE_OPTION_DETAIL_TITLE" = "Adds an AI translate button to Tweets that are not in your language. Requires an API key.";
 
 "TRANSLATE_ENDPOINT_OPTION_TITLE" = "API endpoint";
@@ -161,9 +161,6 @@
 
 "RESTORE_VIDEO_TIMESTAMP_TITLE" = "Video Timestamp";
 "RESTORE_VIDEO_TIMESTAMP_DETAIL_TITLE" = "Shows timestamp on immersive player.";
-
-"BIGGER_ACTION_BUTTONS_TITLE" = "Bigger action buttons";
-"BIGGER_ACTION_BUTTONS_DETAIL_TITLE" = "Makes like, retweet, and reply buttons bigger throughout the app.";
 
 /*Twitter Blue*/
 "TWITTER_BLUE_SECTION_HEADER_TITLE" = "Twitter Blue";

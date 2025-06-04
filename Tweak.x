@@ -63,7 +63,7 @@ static void BH_EnumerateSubviewsRecursively(UIView *view, void (^block)(UIView *
     recursionDepth--;
 }
 
-// Add this before the hooks, after the imports
+// MARK: imports to hook into Twitters TAE color system
 
 UIColor *BHTCurrentAccentColor(void) {
     Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
@@ -87,6 +87,46 @@ UIColor *BHTCurrentAccentColor(void) {
     }
 
     return [UIColor systemBlueColor];
+}
+
+// Helper function to get Twitter's current dark mode state
+static BOOL BHT_isTwitterDarkThemeActive() {
+    Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
+    if (!TAEColorSettingsCls) {
+        if (@available(iOS 13.0, *)) {
+            return UITraitCollection.currentTraitCollection.userInterfaceStyle == UIUserInterfaceStyleDark;
+        }
+        return NO; // Default to light mode if essential classes are missing
+    }
+
+    id settings = [TAEColorSettingsCls sharedSettings];
+    if (!settings || ![settings respondsToSelector:@selector(currentColorPalette)]) {
+        if (@available(iOS 13.0, *)) {
+            return UITraitCollection.currentTraitCollection.userInterfaceStyle == UIUserInterfaceStyleDark;
+        }
+        return NO;
+    }
+    
+    id currentPaletteContainer = [settings currentColorPalette]; // This is TAEThemeColorPalette
+    // TAETwitterColorPaletteSettingInfo is returned by [TAEThemeColorPalette colorPalette]
+    if (!currentPaletteContainer || ![currentPaletteContainer respondsToSelector:@selector(colorPalette)]) { 
+         if (@available(iOS 13.0, *)) {
+            return UITraitCollection.currentTraitCollection.userInterfaceStyle == UIUserInterfaceStyleDark;
+        }
+        return NO;
+    }
+
+    id actualPaletteInfo = [currentPaletteContainer colorPalette]; 
+    if (actualPaletteInfo && [actualPaletteInfo respondsToSelector:@selector(isDark)]) {
+        // Use objc_msgSend to call the isDark method
+        return ((BOOL (*)(id, SEL))objc_msgSend)(actualPaletteInfo, @selector(isDark));
+    }
+
+    // Fallback to system trait if Twitter's internal state is inaccessible
+    if (@available(iOS 13.0, *)) {
+        return UITraitCollection.currentTraitCollection.userInterfaceStyle == UIUserInterfaceStyleDark;
+    }
+    return NO;
 }
 
 static UIFont * _Nullable TAEStandardFontGroupReplacement(UIFont *self, SEL _cmd, CGFloat arg1, CGFloat arg2) {
@@ -125,8 +165,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     }
 }
 
-// MARK: Clean cache and Padlock
-// MARK: - Core Theme Engine Hooks
+// MARK: - Core TAE Color hooks
 %hook TAEColorSettings
 
 - (instancetype)init {
@@ -198,13 +237,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             for (UIWindow *window in UIApplication.sharedApplication.windows) {
                 if (window.isHidden || !window.isOpaque) continue;
                 
-                if (window.rootViewController && window.rootViewController.isViewLoaded) {
-                    BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
-                        if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
-                            [(TFNNavigationBar *)currentView updateLogoTheme];
-                        }
-                    });
-                }
+                // Navigation bar logo theme updates removed - no longer needed
             }
         });
     }
@@ -212,7 +245,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 %end
 
-// Hook T1ColorSettings to intercept Twitter's internal theme application
 %hook T1ColorSettings
 
 + (void)_t1_applyPrimaryColorOption {
@@ -240,7 +272,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 %end
 
-// This replaces the multiple NSUserDefaults method of protecting our theme key
 %hook NSUserDefaults
 
 - (void)setObject:(id)value forKey:(NSString *)defaultName {
@@ -264,6 +295,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 %end
 
+// MARK: App Delegate hooks
 %hook T1AppDelegate
 - (_Bool)application:(UIApplication *)application didFinishLaunchingWithOptions:(id)arg2 {
     _Bool orig = %orig;
@@ -282,8 +314,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"disableSensitiveTweetWarnings"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"disable_immersive_player"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"custom_voice_upload"];
-        [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"dm_avatars"];
-        [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"tab_bar_theming"];
     }
     [BHTManager cleanCache];
     if ([BHTManager FLEX]) {
@@ -316,16 +346,11 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         BHT_ensureThemingEngineSynchronized(YES);
     }
 
-    // Check if we need to initialize cookies
+    // Initialize cookies if tweet labels are enabled
     if ([BHTManager RestoreTweetLabels]) {
-        // Check if we have valid cookies
-        NSDictionary *cachedCookies = [TweetSourceHelper loadCachedCookies];
-        if (!cachedCookies || cachedCookies.count == 0 || !cachedCookies[@"ct0"] || !cachedCookies[@"auth_token"]) {
-            // If not, start the initialization process
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [TweetSourceHelper initializeCookiesWithRetry];
-            });
-        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [TweetSourceHelper initializeCookiesWithRetry];
+        });
     }
 
     if ([BHTManager Padlock]) {
@@ -365,42 +390,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
-// MARK: Custom Tab bar
+// MARK: prevent tab bar fade 
 %hook T1TabBarViewController
-- (void)loadView {
-    %orig;
-    NSArray <NSString *> *hiddenBars = [BHCustomTabBarUtility getHiddenTabBars];
-    for (T1TabView *tabView in self.tabViews) {
-        if ([hiddenBars containsObject:tabView.scribePage]) {
-            [tabView setHidden:true];
-        }
-    }
-}
 
-- (void)setTabBarHidden:(BOOL)arg1 withDuration:(CGFloat)arg2 {
-    if ([BHTManager stopHidingTabBar]) {
-        return;
-    }
-    
-    return %orig;
-}
-- (void)setTabBarHidden:(BOOL)arg1 {
-    if ([BHTManager stopHidingTabBar]) {
-        return;
-    }
-    
-    return %orig;
-}
-
-- (void)setTabBarOpacity:(double)opacity {
-    if ([BHTManager stopHidingTabBar]) {
-        %orig(1.0);
-    } else {
-        %orig(opacity);
-    }
-}
-
-// Combined with stopHidingTabBar
 - (void)setTabBarScrolling:(BOOL)scrolling {
     if ([BHTManager stopHidingTabBar]) {
         %orig(NO); // Force scrolling to NO if fading is prevented
@@ -555,18 +547,18 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             return originalResult;
         }
         
-        // Format the number with commas
+        // Format the number with the current locale's formatting
         NSNumberFormatter *formatter = [[NSNumberFormatter alloc] init];
         [formatter setNumberStyle:NSNumberFormatterDecimalStyle];
-        [formatter setGroupingSeparator:@","];
         [formatter setUsesGroupingSeparator:YES];
         NSString *formattedCount = [formatter stringFromNumber:number];
         
         // If original result is an NSString, find and replace abbreviated numbers
         if ([originalResult isKindOfClass:[NSString class]]) {
             NSString *originalString = (NSString *)originalResult;
-            // Use regex to find patterns like "1.7K", "6.7K", etc.
-            NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"\\d+(\\.\\d+)?[KMB]" options:0 error:nil];
+            // Updated regex to match patterns like "1.7K", "1,7K", "6.2K", "6,2K", etc.
+            // This handles both period and comma as decimal separators
+            NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"\\d+[.,]\\d+[KMB]|\\d+[KMB]" options:0 error:nil];
             NSString *result = [regex stringByReplacingMatchesInString:originalString options:0 range:NSMakeRange(0, originalString.length) withTemplate:formattedCount];
             return result;
         }
@@ -575,8 +567,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             NSMutableAttributedString *mutableResult = [[NSMutableAttributedString alloc] initWithAttributedString:(NSAttributedString *)originalResult];
             NSString *originalText = mutableResult.string;
             
-            // Use regex to find and replace abbreviated numbers while preserving formatting
-            NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"\\d+(\\.\\d+)?[KMB]" options:0 error:nil];
+            // Updated regex to match patterns like "1.7K", "1,7K", "6.2K", "6,2K", etc.
+            // This handles both period and comma as decimal separators
+            NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"\\d+[.,]\\d+[KMB]|\\d+[KMB]" options:0 error:nil];
             NSArray *matches = [regex matchesInString:originalText options:0 range:NSMakeRange(0, originalText.length)];
             
             // Replace matches in reverse order to maintain correct indices
@@ -586,14 +579,11 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             return [mutableResult copy];
         }
     }
-    
-    NSLog(@"[BHTwitter] Returning original result: %@", originalResult);
-    // Return original result if we couldn't modify it safely
     return originalResult;
 }
 %end
 
-// MARK: hide ADs - New Implementation
+// MARK: hide ADS - New Implementation
 %hook TFNItemsDataViewAdapterRegistry
 - (id)dataViewAdapterForItem:(id)item {
     if ([BHTManager HidePromoted]) {
@@ -945,107 +935,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
-
-// MARK: Color theme
-// Previous view controller hooks for theme re-application have been removed
-// We now use a centralized theme management approach through our TAEColorSettings hooks
-
-%hook TFNNavigationBar
-- (void)setPrefersLargeTitles:(BOOL)largeTitles {
-    largeTitles = false;
-    return %orig(largeTitles);
-}
-
-%new
-- (BOOL)shouldThemeIcon {
-    UIViewController *ancestor = [self _viewControllerForAncestor];
-    if (!ancestor) {
-        return NO;
-    }
-    
-    // Always allow onboarding
-    if ([ancestor isKindOfClass:NSClassFromString(@"ONBSignedOutViewController")]) {
-        return YES;
-    }
-    
-    // Get navigation controller
-    UINavigationController *navController = nil;
-    if ([ancestor isKindOfClass:[UINavigationController class]]) {
-        navController = (UINavigationController *)ancestor;
-    } else {
-        navController = ancestor.navigationController;
-    }
-    
-    // Check if we're on a detail view
-    if (navController && navController.viewControllers.count > 1) {
-        return NO;
-    }
-    
-    // Show on timeline navigation controller with single view
-    if ([NSStringFromClass([ancestor class]) containsString:@"TimelineNavigationController"]) {
-        return YES;
-    }
-    
-    // Show on home timeline views
-    if ([NSStringFromClass([ancestor class]) containsString:@"HomeTimelineViewController"] || 
-        [NSStringFromClass([ancestor class]) containsString:@"FeedTimelineViewController"]) {
-        return YES;
-    }
-    
-    return NO;
-}
-
-- (void)didMoveToWindow {
-    %orig;
-    [self updateLogoTheme];
-}
-
-- (void)didMoveToSuperview {
-    %orig;
-    [self updateLogoTheme];
-}
-
-%new
-- (void)updateLogoTheme {
-    BOOL shouldTheme = [self shouldThemeIcon];
-    
-    // ONLY look at DIRECT subviews of the navigation bar
-    for (UIView *subview in self.subviews) {
-        if ([subview isKindOfClass:[UIImageView class]]) {
-            UIImageView *imageView = (UIImageView *)subview;
-            
-            // VERY specific size check to only match Twitter logo
-            CGFloat width = imageView.frame.size.width;
-            CGFloat height = imageView.frame.size.height;
-            
-            // Twitter logo is EXACTLY 29x29 with minimal tolerance
-            BOOL isLikelyTwitterLogo = fabs(width - 29.0) < 2.0 && fabs(height - 29.0) < 2.0 && fabs(width - height) < 1.0;
-            
-            if (isLikelyTwitterLogo) {
-                // MODIFIED: Use classicTabBarEnabled
-                if (shouldTheme && [BHTManager classicTabBarEnabled]) { 
-                    // Get the original image
-                    UIImage *originalImage = imageView.image;
-                    if (originalImage && originalImage.renderingMode != UIImageRenderingModeAlwaysTemplate) {
-                        // Create template image from original
-                        UIImage *templateImage = [originalImage imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-                        imageView.image = templateImage; // Setting image might trigger layout, potentially re-calling this. Guard needed?
-                        imageView.tintColor = BHTCurrentAccentColor();
-                    }
-                }
-                // If classicTabBarEnabled is false, the bird icon should naturally revert
-                // or be handled by BHT_forceRefreshAllWindowAppearances if needed.
-                // For now, no explicit 'else' to revert here, assuming default behavior is okay
-                // or other refresh mechanisms will handle it.
-            }
-        }
-    }
-}
-
-%end
-
 // MARK: Save tweet as an image
-// Twitter 9.31 and higher
+
 %hook TTAStatusInlineShareButton
 - (void)didLongPressActionButton:(UILongPressGestureRecognizer *)gestureRecognizer {
     if ([BHTManager tweetToImage]) {
@@ -1081,46 +972,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
-// Twitter 9.30 and lower
-%hook T1StatusInlineShareButton
-- (void)didLongPressActionButton:(UILongPressGestureRecognizer *)gestureRecognizer {
-    if ([BHTManager tweetToImage]) {
-        if (gestureRecognizer.state == UIGestureRecognizerStateBegan) {
-            id delegate = self.delegate;
-            if (![delegate isKindOfClass:%c(T1StatusInlineActionsView)]) {
-                return %orig;
-            }
-            T1StatusInlineActionsView *actionsView = (T1StatusInlineActionsView *)delegate;
-            T1StatusCell *tweetView;
-            
-            if ([actionsView.superview isKindOfClass:%c(T1StandardStatusView)]) { // normal tweet in the time line
-                tweetView = (T1StatusCell *)[(T1StandardStatusView *)actionsView.superview eventHandler];
-            } else if ([actionsView.superview isKindOfClass:%c(T1TweetDetailsFocalStatusView)]) { // Focus tweet
-                tweetView = (T1StatusCell *)[(T1TweetDetailsFocalStatusView *)actionsView.superview eventHandler];
-            } else if ([actionsView.superview isKindOfClass:%c(T1ConversationFocalStatusView)]) { // Focus tweet
-                tweetView = (T1StatusCell *)[(T1ConversationFocalStatusView *)actionsView.superview eventHandler];
-            } else {
-                return %orig;
-            }
-            
-            UIImage *tweetImage = BH_imageFromView(tweetView);
-            UIActivityViewController *acVC = [[UIActivityViewController alloc] initWithActivityItems:@[tweetImage] applicationActivities:nil];
-            if (is_iPad()) {
-                acVC.popoverPresentationController.sourceView = self;
-                acVC.popoverPresentationController.sourceRect = self.frame;
-            }
-            [topMostController() presentViewController:acVC animated:true completion:nil];
-            return;
-        }
-    }
-    return %orig;
-}
-%end
-
 // MARK: Timeline download
-// THIS SOLUTION WAS TAKEN FROM Translomatic AFTER DISASSEMBLING THE DYLIB
-// SO THANKS: @foxfortmobile
-// Twitter 9.31 and higher
+
 %hook TTAStatusInlineActionsView
 + (NSArray *)_t1_inlineActionViewClassesForViewModel:(id)arg1 options:(NSUInteger)arg2 displayType:(NSUInteger)arg3 account:(id)arg4 {
     NSArray *_orig = %orig;
@@ -1158,7 +1011,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 
 // MARK: Always open in Safrai
-// Thanks nyuszika7h https://github.com/nyuszika7h/noinappsafari/
+
 %hook SFSafariViewController
 - (void)viewWillAppear:(BOOL)animated {
     if (![BHTManager alwaysOpenSafari]) {
@@ -1382,18 +1235,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %end
 
 %hook TFNTwitterAccount
-- (_Bool)areSmallerVideoThumbnailsEnabled {
-    return false;
-}
-- (_Bool)isDownloadVideoEnabled {
-    return false;
-}
-- (_Bool)isVideoSettingsPlaybackRateEnabled {
-    return false;
-}
-- (_Bool)continueWatchingEnabled {
-    return false;
-}
 - (_Bool)isEditProfileUsernameEnabled {
     return true;
 }
@@ -1578,20 +1419,19 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                 iconColor = [UIColor secondaryLabelColor];
             }
         } else {
-            iconColor = [UIColor systemGray2Color];
+            iconColor = [UIColor secondaryLabelColor];
         }
         
-        // Try to get the Twitter vector image - use appropriate sizing for icon
+        // Twitter vector image
         twitterIcon = [UIImage tfn_vectorImageNamed:@"twitter" fitsSize:CGSizeMake(20, 20) fillColor:iconColor];
         
-        // Create the settings item - don't specify an icon name to avoid the system icon
+        // Create the settings item
         TFNSettingsNavigationItem *bhtwitter = [[%c(TFNSettingsNavigationItem) alloc] initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"] detail:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_DETAIL"] iconName:nil controllerFactory:^UIViewController *{
             return [BHTManager BHTSettingsWithAccount:self.account];
         }];
         
         // Set our Twitter icon
         if (twitterIcon) {
-            NSLog(@"[BHTwitter] Successfully loaded Twitter icon");
             [bhtwitter setValue:twitterIcon forKey:@"_icon"];
         }
         
@@ -1786,10 +1626,6 @@ static NSDate *lastCookieRefresh              = nil;
 // Static variables for cookie retry mechanism
 static BOOL isInitializingCookies = NO;
 static NSTimer *cookieRetryTimer = nil;
-static int cookieRetryCount = 0;
-static const int MAX_COOKIE_RETRIES = 8; // Reduced maximum retry attempts
-static const NSTimeInterval INITIAL_RETRY_DELAY = 3.0; // Start with a short delay
-static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 seconds
 
 @implementation TweetSourceHelper
 
@@ -1797,186 +1633,27 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
     // Only log in debug mode to reduce log spam
 #if BHT_DEBUG
     if (message) {
-        NSLog(@"[BHTwitter SourceLabel] %@", message);
     }
 #endif
 }
 
 + (void)initializeCookiesWithRetry {
-    if (isInitializingCookies) {
-        return; // Prevent multiple initializations
-    }
+    // Simplified initialization - just load hardcoded cookies
     isInitializingCookies = YES;
-    cookieRetryCount = 0;
     
-    // First, try to load any cached cookies
-    NSDictionary *cachedCookies = [self loadCachedCookies];
-    BOOL hasValidCachedCookies = cachedCookies && cachedCookies.count > 0 && 
-                                cachedCookies[@"ct0"] && cachedCookies[@"auth_token"];
-                                
-    if (hasValidCachedCookies) {
-        // IMPROVED: Verify cached cookies are still valid by checking their expiration
-        BOOL cookiesStillValid = YES;
-        
-        // Check if cookies are too old (older than 6 hours)
-        if (lastCookieRefresh) {
-            NSTimeInterval timeSinceRefresh = [[NSDate date] timeIntervalSinceDate:lastCookieRefresh];
-            if (timeSinceRefresh > (6 * 60 * 60)) { // 6 hours
-                cookiesStillValid = NO;
-                [self logDebugInfo:@"Cached cookies are too old, forcing refresh"];
-            }
-        } else {
-            cookiesStillValid = NO; // No refresh date means uncertain validity
-        }
-        
-        if (cookiesStillValid) {
-            // We have valid cookies from cache
-            // Make them immediately available for pending tweets
-            dispatch_async(dispatch_get_main_queue(), ^{
-                // Direct notification - more reliable than delayed polling
-                [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
-            });
-            
-            isInitializingCookies = NO;
-            return;
-        }
-    }
+    NSDictionary *hardcodedCookies = [self fetchCookies];
+    [self cacheCookies:hardcodedCookies];
     
-    // IMPROVED: Try multiple attempts immediately before starting timer-based retries
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        NSDictionary *freshCookies = nil;
-        
-        // PERFORMANCE: Reduce to 2 attempts with shorter delay
-        for (int attempt = 0; attempt < 2; attempt++) {
-            freshCookies = [self fetchCookies];
-            BOOL hasValidFreshCookies = freshCookies && freshCookies.count > 0 && 
-                                       freshCookies[@"ct0"] && freshCookies[@"auth_token"];
-            
-            if (hasValidFreshCookies) {
-                break; // Got valid cookies, stop trying
-            }
-            
-            // PERFORMANCE: Reduce delay to 200ms for faster response
-            if (attempt < 1) {
-                [NSThread sleepForTimeInterval:0.2];
-            }
-        }
-        
-        BOOL hasValidFreshCookies = freshCookies && freshCookies.count > 0 && 
-                                   freshCookies[@"ct0"] && freshCookies[@"auth_token"];
-                                   
-        if (hasValidFreshCookies) {
-            // Got fresh cookies - cache them and notify
-            [self cacheCookies:freshCookies];
-            
-            dispatch_async(dispatch_get_main_queue(), ^{
-                // Direct notification
-                [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
-                
-                // Mark initialization as complete
-                isInitializingCookies = NO;
-            });
-        } else {
-            // If couldn't get cookies after multiple attempts, start the retry process
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [self retryFetchCookies];
-            });
-        }
+    // Immediately notify that cookies are ready
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
+        isInitializingCookies = NO;
     });
 }
 
 + (void)retryFetchCookies {
-    if (cookieRetryCount >= MAX_COOKIE_RETRIES) {
-        isInitializingCookies = NO;
-        
-        // Invalidate any existing timer
-        if (cookieRetryTimer) {
-            [cookieRetryTimer invalidate];
-            cookieRetryTimer = nil;
-        }
-        
-        // Update any stuck tweets to "Source Unavailable"
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-            @autoreleasepool {
-                // Build a list of tweets to update
-                NSMutableArray *tweetsToUpdate = [NSMutableArray array];
-                for (NSString *tweetID in tweetSources) {
-                    NSString *source = tweetSources[tweetID];
-                    if ([source isEqualToString:@"Fetching..."]) {
-                        [tweetsToUpdate addObject:tweetID];
-                        tweetSources[tweetID] = @"Source Unavailable";
-                    }
-                }
-                
-                // Only process in batches if we have a significant number of tweets
-                if (tweetsToUpdate.count > 0) {
-                    NSUInteger batchSize = tweetsToUpdate.count < 20 ? tweetsToUpdate.count : 10;
-                    
-                    for (NSUInteger i = 0; i < tweetsToUpdate.count; i += batchSize) {
-                        @autoreleasepool {
-                            NSUInteger end = MIN(i + batchSize, tweetsToUpdate.count);
-                            NSArray *batchTweets = [tweetsToUpdate subarrayWithRange:NSMakeRange(i, end - i)];
-                            
-                            dispatch_async(dispatch_get_main_queue(), ^{
-                                for (NSString *tweetID in batchTweets) {
-                                    [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" 
-                                                                                       object:nil 
-                                                                                     userInfo:@{@"tweetID": tweetID}];
-                                }
-                            });
-                        }
-                    }
-                }
-            }
-        });
-        return;
-    }
-    
-    // Try to fetch cookies in background to avoid blocking UI
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        NSDictionary *freshCookies = [self fetchCookies];
-        BOOL hasCriticalCookies = freshCookies && freshCookies.count > 0 && 
-                                  freshCookies[@"ct0"] && freshCookies[@"auth_token"];
-        
-        dispatch_async(dispatch_get_main_queue(), ^{
-            if (hasCriticalCookies) {
-                // Success! Cache cookies and notify
-                [self cacheCookies:freshCookies];
-                
-                // Cleanup timer
-                if (cookieRetryTimer) {
-                    [cookieRetryTimer invalidate];
-                    cookieRetryTimer = nil;
-                }
-                
-                // Complete initialization
-                isInitializingCookies = NO;
-                
-                // Directly notify to update pending tweets
-                [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
-                return;
-            }
-            
-            // Failed to get cookies - try again if not maxed out
-            cookieRetryCount++;
-            
-            // Use increasing delays to reduce resource usage
-            // Start with short delays and increase over time
-            NSTimeInterval nextDelay = MIN(INITIAL_RETRY_DELAY * pow(1.5, cookieRetryCount - 1), MAX_RETRY_DELAY);
-            
-            // Clean up existing timer
-            if (cookieRetryTimer) {
-                [cookieRetryTimer invalidate];
-            }
-            
-            // Schedule next retry with increased delay
-            cookieRetryTimer = [NSTimer scheduledTimerWithTimeInterval:nextDelay 
-                                                                target:self 
-                                                              selector:@selector(retryFetchCookies) 
-                                                              userInfo:nil 
-                                                               repeats:NO];
-        });
-    });
+    // No need to retry with hardcoded cookies - just call initialize
+    [self initializeCookiesWithRetry];
 }
 
 + (void)pruneSourceCachesIfNeeded {
@@ -2028,472 +1705,287 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
 }
 
 + (NSDictionary *)fetchCookies {
-    NSMutableDictionary *cookiesDict = [NSMutableDictionary dictionary];
-    NSArray *domains = @[@"api.twitter.com", @".twitter.com", @"x.com", @"api.x.com"]; // Added x.com domains
-    NSArray *requiredCookies = @[@"ct0", @"auth_token"]; // Simplified to only ct0 and auth_token
+    // First try to get real cookies from the user's actual account
+    NSMutableDictionary *realCookies = [NSMutableDictionary dictionary];
+    NSArray *domains = @[@"api.twitter.com", @".twitter.com", @"x.com", @"api.x.com"];
+    NSArray *requiredCookies = @[@"ct0", @"auth_token"];
     
     for (NSString *domain in domains) {
         NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"https://%@", domain]];
         NSArray *cookies = [[NSHTTPCookieStorage sharedHTTPCookieStorage] cookiesForURL:url];
         for (NSHTTPCookie *cookie in cookies) {
             if ([requiredCookies containsObject:cookie.name]) {
-                cookiesDict[cookie.name] = cookie.value;
+                realCookies[cookie.name] = cookie.value;
             }
         }
     }
     
-    NSLog(@"TweetSourceTweak: Fetched cookies: %@", cookiesDict);
-    return cookiesDict;
+    // Check if we have valid real cookies
+    BOOL hasValidRealCookies = realCookies.count > 0 && 
+                               realCookies[@"ct0"] && realCookies[@"auth_token"] &&
+                               [realCookies[@"ct0"] length] > 10 && 
+                               [realCookies[@"auth_token"] length] > 10;
+    
+    if (hasValidRealCookies) {
+        [self logDebugInfo:@"Using real user cookies"];
+        return [realCookies copy];
+    } else {
+        // Fall back to hardcoded cookies for reliability
+        [self logDebugInfo:@"Falling back to hardcoded alt cookies"];
+        return @{
+            @"ct0": @"91cc6876b96a35f91adeedc4ef149947c4d58907ca10fc2b17f64b17db0cccfb714ae61ede34cf34866166dcaf8e1c3a86085fa35c41aacc3e3927f7aa1f9b850b49139ad7633344059ff04af302d5d3",
+            @"auth_token": @"71fc90d6010d76ec4473b3e42c6802a8f1185316",
+            @"twid": @"u%3D1930115366878871552"
+        };
+    }
 }
 
 + (void)cacheCookies:(NSDictionary *)cookies {
-    if (!cookies || cookies.count == 0) {
-        return;
-    }
-    
+    // Simplified caching - just store in memory since we're using hardcoded values
     cookieCache = [cookies mutableCopy];
     lastCookieRefresh = [NSDate date];
-    
-    // Persist to NSUserDefaults using async to avoid blocking
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
-        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-        [defaults setObject:cookies forKey:@"TweetSourceTweak_CookieCache"];
-        [defaults setObject:lastCookieRefresh forKey:@"TweetSourceTweak_LastCookieRefresh"];
-        [defaults synchronize];
-    });
 }
 
 + (NSDictionary *)loadCachedCookies {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    NSDictionary *cachedCookies = [defaults dictionaryForKey:@"TweetSourceTweak_CookieCache"];
-    lastCookieRefresh = [defaults objectForKey:@"TweetSourceTweak_LastCookieRefresh"];
-    
-    if (cachedCookies) {
-        cookieCache = [cachedCookies mutableCopy];
-    }
-    
-    return cachedCookies;
+    // Always return hardcoded cookies
+    NSDictionary *hardcodedCookies = [self fetchCookies];
+    cookieCache = [hardcodedCookies mutableCopy];
+    lastCookieRefresh = [NSDate date];
+    return hardcodedCookies;
 }
 
 + (BOOL)shouldRefreshCookies {
-    if (!lastCookieRefresh) {
+    // Allow refresh if we don't have cookies cached, or if we're using real cookies that might expire
+    if (!cookieCache || cookieCache.count == 0) {
         return YES;
     }
-    NSTimeInterval timeSinceLastRefresh = [[NSDate date] timeIntervalSinceDate:lastCookieRefresh];
-    return timeSinceLastRefresh >= COOKIE_REFRESH_INTERVAL;
+    
+    // Check if we're using real cookies (not hardcoded)
+    BOOL usingRealCookies = ![cookieCache[@"ct0"] isEqualToString:@"91cc6876b96a35f91adeedc4ef149947c4d58907ca10fc2b17f64b17db0cccfb714ae61ede34cf34866166dcaf8e1c3a86085fa35c41aacc3e3927f7aa1f9b850b49139ad7633344059ff04af302d5d3"];
+    
+    if (usingRealCookies && lastCookieRefresh) {
+        // Refresh real cookies every 4 hours
+        NSTimeInterval timeSinceRefresh = [[NSDate date] timeIntervalSinceDate:lastCookieRefresh];
+        return timeSinceRefresh >= (4 * 60 * 60);
+    }
+    
+    // Never refresh hardcoded cookies
+    return NO;
 }
 
 + (void)fetchSourceForTweetID:(NSString *)tweetID {
     if (!tweetID) return;
     @try {
-        // Initialize dictionaries if they are nil (important after a cache clear)
-        if (!tweetSources)   tweetSources   = [NSMutableDictionary dictionary];
-        if (!fetchTimeouts)  fetchTimeouts  = [NSMutableDictionary dictionary];
-        if (!fetchRetries)   fetchRetries   = [NSMutableDictionary dictionary];
-        if (!updateRetries)  updateRetries  = [NSMutableDictionary dictionary];
-        if (!updateCompleted) updateCompleted = [NSMutableDictionary dictionary];
-        if (!fetchPending)   fetchPending   = [NSMutableDictionary dictionary];
+        // Initialize dictionaries if needed
+        if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
+        if (!fetchTimeouts) fetchTimeouts = [NSMutableDictionary dictionary];
+        if (!fetchRetries) fetchRetries = [NSMutableDictionary dictionary];
+        if (!fetchPending) fetchPending = [NSMutableDictionary dictionary];
 
-        [self pruneSourceCachesIfNeeded]; // Prune before potentially adding a new entry
-
-        // Reset fetch pending flag after a certain time to prevent tweets from 
-        // being stuck if a previous fetch didn't complete properly
-        static NSTimeInterval maxPendingTime = 15.0; // 15 seconds max pending time
-        
-        NSNumber *pendingStartTime = objc_getAssociatedObject(fetchPending[tweetID], "pendingStartTime");
-        if (fetchPending[tweetID] && [fetchPending[tweetID] boolValue] && pendingStartTime) {
-            NSTimeInterval elapsed = [[NSDate date] timeIntervalSinceDate:(NSDate *)pendingStartTime];
-            if (elapsed > maxPendingTime) {
-                // Force reset of stuck pending state
-                [fetchPending setObject:@NO forKey:tweetID];
-            } else {
-                // Still legitimately pending, skip
-                return;
+        // Simple cache size management
+        if (tweetSources.count > MAX_SOURCE_CACHE_SIZE) {
+            // Remove 25% of entries to free up space
+            NSArray *keysToRemove = [[tweetSources allKeys] subarrayWithRange:NSMakeRange(0, tweetSources.count / 4)];
+            for (NSString *key in keysToRemove) {
+                [tweetSources removeObjectForKey:key];
+                [fetchRetries removeObjectForKey:key];
+                [fetchPending removeObjectForKey:key];
+                
+                NSTimer *timer = fetchTimeouts[key];
+                if (timer) {
+                    [timer invalidate];
+                    [fetchTimeouts removeObjectForKey:key];
+                }
             }
         }
-        
-        // Check if we already have a valid source cached
-        if (tweetSources[tweetID] && 
-            ![tweetSources[tweetID] isEqualToString:@""] &&
-            ![tweetSources[tweetID] isEqualToString:@"Source Unavailable"] &&
-            ![tweetSources[tweetID] isEqualToString:@"Fetching..."]) {
-            [self logDebugInfo:[NSString stringWithFormat:@"Using cached source for tweet %@: %@", 
-                              tweetID, tweetSources[tweetID]]];
-            
-            // Still announce we have a source, but don't refetch
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" 
-                                                                    object:nil 
-                                                                  userInfo:@{@"tweetID": tweetID}];
-                
-                // Make sure this tweet source appears in the UI by retrying the update
-                [self performSelector:@selector(retryUpdateForTweetID:) withObject:tweetID afterDelay:0.2];
-            });
+
+        // Skip if already pending or has valid result
+        if ([fetchPending[tweetID] boolValue] || 
+            (tweetSources[tweetID] && ![tweetSources[tweetID] isEqualToString:@""] && ![tweetSources[tweetID] isEqualToString:@"Source Unavailable"])) {
+            return;
+        }
+
+        // Check retry limit
+        NSInteger retryCount = [fetchRetries[tweetID] integerValue];
+        if (retryCount >= MAX_CONSECUTIVE_FAILURES) {
+            tweetSources[tweetID] = @"Source Unavailable";
             return;
         }
 
         fetchPending[tweetID] = @(YES);
-        // Store the start time of this pending fetch
-        objc_setAssociatedObject(fetchPending[tweetID], "pendingStartTime", [NSDate date], OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        fetchRetries[tweetID] = @(retryCount + 1);
 
-        // Initialize or increment retry count
-        NSInteger retryCount = 0;
-        if (fetchRetries[tweetID]) {
-            retryCount = [fetchRetries[tweetID] integerValue];
-        }
-        fetchRetries[tweetID] = @(retryCount);
-        
-        // Check if we've exceeded max retries
-        if (retryCount >= MAX_CONSECUTIVE_FAILURES) {
-            [self logDebugInfo:[NSString stringWithFormat:@"Exceeded max retries (%d) for tweet %@", 
-                              MAX_CONSECUTIVE_FAILURES, tweetID]];
-            tweetSources[tweetID] = @"Source Unavailable";
-            fetchPending[tweetID] = @(NO);
-            
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" 
-                                                                    object:nil 
-                                                                  userInfo:@{@"tweetID": tweetID}];
-            });
-            return;
-        }
-
-        // Set timeout timer
-        NSTimer *timeoutTimer = [NSTimer scheduledTimerWithTimeInterval:6.0
+        // Set simple timeout
+        NSTimer *timeoutTimer = [NSTimer scheduledTimerWithTimeInterval:8.0
                                                                  target:self
                                                                selector:@selector(timeoutFetchForTweetID:)
                                                                userInfo:@{@"tweetID": tweetID}
                                                                 repeats:NO];
         fetchTimeouts[tweetID] = timeoutTimer;
 
-        // Build request URL
+        // Build request
         NSString *urlString = [NSString stringWithFormat:@"https://api.twitter.com/2/timeline/conversation/%@.json?include_ext_alt_text=true&include_reply_count=true&tweet_mode=extended", tweetID];
         NSURL *url = [NSURL URLWithString:urlString];
         if (!url) {
-            [self logDebugInfo:@"Invalid URL string"];
-            tweetSources[tweetID] = @"Source Unavailable";
-            fetchPending[tweetID] = @(NO);
-            [fetchTimeouts removeObjectForKey:tweetID];
-            [timeoutTimer invalidate];
+            [self handleFetchFailure:tweetID];
             return;
         }
 
         NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
         request.HTTPMethod = @"GET";
-        request.timeoutInterval = 5.0;
+        request.timeoutInterval = 7.0;
 
-        // Load cached cookies or start initialization if needed
+        // Get cookies
         if (!cookieCache) {
             [self loadCachedCookies];
         }
-
         NSDictionary *cookiesToUse = cookieCache;
         
-        // IMPROVED: Better validation of critical cookies
-        BOOL hasCriticalCookies = cookiesToUse && cookiesToUse.count > 0 && 
-                                  cookiesToUse[@"ct0"] && cookiesToUse[@"auth_token"] &&
-                                  [cookiesToUse[@"ct0"] length] > 10 && // ct0 should be reasonably long
-                                  [cookiesToUse[@"auth_token"] length] > 10; // auth_token should be reasonably long
-        
-        // Force cookie refresh if we're retrying and previous attempts failed
-        BOOL forceRefresh = (retryCount >= COOKIE_FORCE_REFRESH_RETRY_COUNT);
-        
-        // PERFORMANCE: Simplified age check to reduce overhead
-        if (!forceRefresh && hasCriticalCookies && lastCookieRefresh) {
-            NSTimeInterval timeSinceRefresh = [[NSDate date] timeIntervalSinceDate:lastCookieRefresh];
-            if (timeSinceRefresh > (4 * 60 * 60)) { // Force refresh after 4 hours
-                forceRefresh = YES;
-                [self logDebugInfo:@"Forcing cookie refresh due to age"];
-            }
-        }
-        
-        // If we don't have critical cookies, try to fetch them or initiate retry mechanism
-        if (!hasCriticalCookies || forceRefresh || [self shouldRefreshCookies]) {
-            [self logDebugInfo:@"Fetching fresh cookies"];
-            
-            // PERFORMANCE: Reduce to single attempt with quick fallback
-            NSDictionary *freshCookies = [self fetchCookies];
-            
-            // Check if the fresh cookies are valid
-            BOOL freshCookiesValid = freshCookies && freshCookies.count > 0 && 
-                                     freshCookies[@"ct0"] && freshCookies[@"auth_token"] &&
-                                     [freshCookies[@"ct0"] length] > 10 &&
-                                     [freshCookies[@"auth_token"] length] > 10;
-            
-            if (freshCookiesValid) {
-                [self cacheCookies:freshCookies];
-                cookiesToUse = freshCookies;
-                
-                // If we just got valid cookies, notify listeners that cookies are ready
-                if (!hasCriticalCookies) {
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" 
-                                                                          object:nil];
-                    });
-                }
-            } else {
-                // If we couldn't get cookies and don't have cached ones, start the retry process
-                if (!hasCriticalCookies) {
-                    [self logDebugInfo:[NSString stringWithFormat:@"No cookies available for tweet %@, starting initialization", tweetID]];
-                    
-                    // Start cookie initialization if it's not already running
-                    if (!isInitializingCookies) {
-                        dispatch_async(dispatch_get_main_queue(), ^{
-                            [self initializeCookiesWithRetry];
-                        });
-                    }
-                    
-                    // Mark this tweet as "Fetching..." instead of unavailable
-                    tweetSources[tweetID] = @"Fetching...";
-                    fetchPending[tweetID] = @(NO);
-                    [fetchTimeouts removeObjectForKey:tweetID];
-                    [timeoutTimer invalidate];
-                    
-                    // Notify UI that we're waiting for login
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" 
-                                                                            object:nil 
-                                                                          userInfo:@{@"tweetID": tweetID}];
-                    });
-                return;
-                }
-            }
-        }
+        // Check if using real cookies
+        BOOL usingRealCookies = cookiesToUse && 
+                               ![cookiesToUse[@"ct0"] isEqualToString:@"91cc6876b96a35f91adeedc4ef149947c4d58907ca10fc2b17f64b17db0cccfb714ae61ede34cf34866166dcaf8e1c3a86085fa35c41aacc3e3927f7aa1f9b850b49139ad7633344059ff04af302d5d3"];
 
-        // Build cookie header string
+        // Build headers
         NSMutableArray *cookieStrings = [NSMutableArray array];
-        NSString *ct0Value = cookiesToUse[@"ct0"];
         for (NSString *cookieName in cookiesToUse) {
-            NSString *cookieValue = cookiesToUse[cookieName];
-            [cookieStrings addObject:[NSString stringWithFormat:@"%@=%@", cookieName, cookieValue]];
+            [cookieStrings addObject:[NSString stringWithFormat:@"%@=%@", cookieName, cookiesToUse[cookieName]]];
         }
 
-        // Set required HTTP headers
         [request setValue:@"Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA" forHTTPHeaderField:@"Authorization"];
         [request setValue:@"OAuth2Session" forHTTPHeaderField:@"x-twitter-auth-type"];
-        [request setValue:@"Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1" forHTTPHeaderField:@"User-Agent"];
+        [request setValue:@"CFNetwork/1331.0.7 Darwin/25.2.0" forHTTPHeaderField:@"User-Agent"];
         [request setValue:@"gzip" forHTTPHeaderField:@"Accept-Encoding"];
-        [request setValue:@"application/json" forHTTPHeaderField:@"Accept"];
+        [request setValue:cookiesToUse[@"ct0"] forHTTPHeaderField:@"x-csrf-token"];
+        [request setValue:[cookieStrings componentsJoinedByString:@"; "] forHTTPHeaderField:@"Cookie"];
 
-        // Set CSRF token if available
-        if (ct0Value) {
-            [request setValue:ct0Value forHTTPHeaderField:@"x-csrf-token"];
-        } else {
-            [self logDebugInfo:[NSString stringWithFormat:@"No ct0 cookie available for tweet %@", tweetID]];
-            // Still proceed with request - it might work without ct0 in some cases
-        }
-
-        // Set cookie header
-        if (cookieStrings.count > 0) {
-            NSString *cookieHeader = [cookieStrings componentsJoinedByString:@"; "];
-            [request setValue:cookieHeader forHTTPHeaderField:@"Cookie"];
-        } else {
-            [self logDebugInfo:[NSString stringWithFormat:@"No cookies to set for tweet %@", tweetID]];
-            // Still proceed with request - it might work without cookies in some cases
-        }
-
-        // Execute network request
+        // Execute request
         NSURLSession *session = [NSURLSession sharedSession];
         NSURLSessionDataTask *task = [session dataTaskWithRequest:request
                                                 completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
             @try {
-                // Cancel timeout timer
+                // Cleanup timeout
                 NSTimer *timer = fetchTimeouts[tweetID];
                 if (timer) {
                     [timer invalidate];
                     [fetchTimeouts removeObjectForKey:tweetID];
                 }
-
                 fetchPending[tweetID] = @(NO);
 
-                if (error) {
-                    [self logDebugInfo:[NSString stringWithFormat:@"Fetch error for tweet %@: %@", tweetID, error]];
-                    fetchRetries[tweetID] = @(retryCount + 1);
-                    
-                    // Retry with exponential backoff
-                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(pow(2, retryCount) * 0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                        if (retryCount < MAX_CONSECUTIVE_FAILURES) {
-                        [self fetchSourceForTweetID:tweetID];
-                    } else {
-                        tweetSources[tweetID] = @"Source Unavailable";
-                        [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
-                    }
-                    });
+                // Handle errors
+                if (error || !data) {
+                    [self handleFetchFailure:tweetID];
                     return;
                 }
 
-                // Check HTTP status code
                 NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
-                if (httpResponse.statusCode != 200) {
-                    [self logDebugInfo:[NSString stringWithFormat:@"Fetch failed for tweet %@ with status code %ld", tweetID, (long)httpResponse.statusCode]];
-                    fetchRetries[tweetID] = @(retryCount + 1);
-                    
-                    // Special handling for auth errors - force cookie refresh
-                        if (httpResponse.statusCode == 401 || httpResponse.statusCode == 403) {
-                            NSDictionary *freshCookies = [self fetchCookies];
-                            if (freshCookies.count > 0) {
-                                [self cacheCookies:freshCookies];
-                            }
-                        }
-                    
-                    // Retry with exponential backoff
-                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(pow(2, retryCount) * 0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                        if (retryCount < MAX_CONSECUTIVE_FAILURES) {
+                
+                // Handle auth errors with fallback
+                if ((httpResponse.statusCode == 401 || httpResponse.statusCode == 403) && usingRealCookies && retryCount == 1) {
+                    // Try hardcoded cookies once
+                    NSDictionary *hardcodedCookies = @{
+                        @"ct0": @"91cc6876b96a35f91adeedc4ef149947c4d58907ca10fc2b17f64b17db0cccfb714ae61ede34cf34866166dcaf8e1c3a86085fa35c41aacc3e3927f7aa1f9b850b49139ad7633344059ff04af302d5d3",
+                        @"auth_token": @"71fc90d6010d76ec4473b3e42c6802a8f1185316",
+                        @"twid": @"u%3D1930115366878871552"
+                    };
+                    [self cacheCookies:hardcodedCookies];
+                    dispatch_async(dispatch_get_main_queue(), ^{
                         [self fetchSourceForTweetID:tweetID];
-                    } else {
-                        tweetSources[tweetID] = @"Source Unavailable";
-                        [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
-                    }
                     });
                     return;
                 }
 
-                // Parse JSON response
+                if (httpResponse.statusCode != 200) {
+                    [self handleFetchFailure:tweetID];
+                    return;
+                }
+
+                // Parse JSON
                 NSError *jsonError;
                 NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:0 error:&jsonError];
-                if (jsonError) {
-                    [self logDebugInfo:[NSString stringWithFormat:@"JSON parse error for tweet %@: %@", tweetID, jsonError]];
-                    fetchRetries[tweetID] = @(retryCount + 1);
-                    
-                    // Retry with exponential backoff
-                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(pow(2, retryCount) * 0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                        if (retryCount < MAX_CONSECUTIVE_FAILURES) {
-                        [self fetchSourceForTweetID:tweetID];
-                    } else {
-                        tweetSources[tweetID] = @"Source Unavailable";
-                        [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
-                    }
-                    });
+                if (jsonError || !json) {
+                    [self handleFetchFailure:tweetID];
                     return;
                 }
 
-                // Extract tweet source from JSON
+                // Extract source
                 NSDictionary *tweets = json[@"globalObjects"][@"tweets"];
-                if (!tweets || ![tweets isKindOfClass:[NSDictionary class]]) {
-                    [self logDebugInfo:[NSString stringWithFormat:@"No tweets object in response for tweet %@", tweetID]];
-                    tweetSources[tweetID] = @"Source Unavailable";
-                    [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
-                    return;
-                }
-                
                 NSDictionary *tweetData = tweets[tweetID];
+                
+                // Try alternate ID format if not found
                 if (!tweetData) {
-                    [self logDebugInfo:[NSString stringWithFormat:@"Tweet %@ not found in response", tweetID]];
-                    
-                    // Try to find the tweet in response by iterating through tweets
                     for (NSString *key in tweets) {
-                        // If the ID is numeric and matches our tweetID (allowing for string/number conversion issues)
                         if ([key longLongValue] == [tweetID longLongValue]) {
                             tweetData = tweets[key];
-                            [self logDebugInfo:[NSString stringWithFormat:@"Found tweet with alternate ID format: %@", key]];
                             break;
                         }
                     }
-                    
-                    if (!tweetData) {
-                        tweetSources[tweetID] = @"Source Unavailable";
-                        [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
-                        return;
-                    }
                 }
-                
-                NSString *sourceHTML = tweetData[@"source"];
 
+                NSString *sourceHTML = tweetData[@"source"];
+                NSString *sourceText = @"Unknown Source";
+                
                 if (sourceHTML) {
-                    [self logDebugInfo:[NSString stringWithFormat:@"Found source HTML: %@", sourceHTML]];
-                    NSString *sourceText = sourceHTML;
-                    
-                    // Extract the source text from HTML
                     NSRange startRange = [sourceHTML rangeOfString:@">"];
                     NSRange endRange = [sourceHTML rangeOfString:@"</a>"];
                     if (startRange.location != NSNotFound && endRange.location != NSNotFound && startRange.location + 1 < endRange.location) {
                         sourceText = [sourceHTML substringWithRange:NSMakeRange(startRange.location + 1, endRange.location - startRange.location - 1)];
-                        
-                        // Clean up sourceText by removing leading numeric string
-                        NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"^\\d+" options:0 error:nil];
-                        if (regex) {
-                        sourceText = [regex stringByReplacingMatchesInString:sourceText options:0 range:NSMakeRange(0, sourceText.length) withTemplate:@""];
-                    }
-                        
-                        // Trim any whitespace
                         sourceText = [sourceText stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
                     }
-                    
-                    // Store the source
-                    tweetSources[tweetID] = sourceText;
-                    [self logDebugInfo:[NSString stringWithFormat:@"Extracted source for tweet %@: %@", tweetID, sourceText]];
-                    
-                    // Reset retries on success
-                    fetchRetries[tweetID] = @(0);
-                    
-                    // Update footer text views directly instead of using notifications
-                    [self updateFooterTextViewsForTweetID:tweetID];
-                } else {
-                    [self logDebugInfo:[NSString stringWithFormat:@"No source field in tweet %@", tweetID]];
-                    tweetSources[tweetID] = @"Unknown Source";
-                    
-                    // Update footer text views directly instead of using notifications
-                    [self updateFooterTextViewsForTweetID:tweetID];
                 }
-            } @catch (NSException *e) {
-                [self logDebugInfo:[NSString stringWithFormat:@"Exception in fetch completion for tweet %@: %@", tweetID, e]];
-                tweetSources[tweetID] = @"Source Unavailable";
-                fetchPending[tweetID] = @(NO);
+
+                // Store and notify
+                tweetSources[tweetID] = sourceText;
+                fetchRetries[tweetID] = @(0); // Reset on success
                 
-                // Notify with error
                 dispatch_async(dispatch_get_main_queue(), ^{
-                [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
+                    [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
+                    [self updateFooterTextViewsForTweetID:tweetID];
                 });
+                
+            } @catch (NSException *e) {
+                [self handleFetchFailure:tweetID];
             }
         }];
         [task resume];
         
     } @catch (NSException *e) {
-        [self logDebugInfo:[NSString stringWithFormat:@"Exception in fetch setup for tweet %@: %@", tweetID, e]];
+        [self handleFetchFailure:tweetID];
+    }
+}
+
++ (void)handleFetchFailure:(NSString *)tweetID {
+    if (!tweetID) return;
+    
+    // Cleanup
+    fetchPending[tweetID] = @(NO);
+    NSTimer *timer = fetchTimeouts[tweetID];
+    if (timer) {
+        [timer invalidate];
+        [fetchTimeouts removeObjectForKey:tweetID];
+    }
+    
+    NSInteger retryCount = [fetchRetries[tweetID] integerValue];
+    if (retryCount < MAX_CONSECUTIVE_FAILURES) {
+        // Simple retry after delay
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [self fetchSourceForTweetID:tweetID];
+        });
+    } else {
+        // Mark as unavailable
         tweetSources[tweetID] = @"Source Unavailable";
-        fetchPending[tweetID] = @(NO);
-        
-        NSTimer *timer = fetchTimeouts[tweetID];
-        if (timer) {
-            [timer invalidate];
-            [fetchTimeouts removeObjectForKey:tweetID];
-        }
-        
-        // Notify with error
         dispatch_async(dispatch_get_main_queue(), ^{
-        [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
         });
     }
 }
 
 + (void)timeoutFetchForTweetID:(NSTimer *)timer {
-    NSDictionary *userInfo = timer.userInfo;
-    NSString *tweetID = userInfo[@"tweetID"];
-    
+    NSString *tweetID = timer.userInfo[@"tweetID"];
     if (!tweetID) return;
     
-    [self logDebugInfo:[NSString stringWithFormat:@"Timeout for tweet %@", tweetID]];
-    
-    if (tweetID && fetchPending[tweetID] && [fetchPending[tweetID] boolValue]) {
-        NSNumber *retryCount = fetchRetries[tweetID] ?: @(0);
-        fetchRetries[tweetID] = @(retryCount.integerValue + 1);
-        fetchPending[tweetID] = @(NO);
-        [fetchTimeouts removeObjectForKey:tweetID];
-        
-        if (retryCount.integerValue < MAX_CONSECUTIVE_FAILURES) {
-            // Retry with exponential backoff
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(pow(2, retryCount.integerValue) * 0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            [self fetchSourceForTweetID:tweetID];
-            });
-        } else {
-            tweetSources[tweetID] = @"Source Unavailable";
-            
-            dispatch_async(dispatch_get_main_queue(), ^{
-            [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
-            [self performSelector:@selector(retryUpdateForTweetID:) withObject:tweetID afterDelay:0.3];
-            });
-        }
-    }
+    [timer invalidate];
+    [fetchTimeouts removeObjectForKey:tweetID];
+    [self handleFetchFailure:tweetID];
 }
 
 + (void)retryUpdateForTweetID:(NSString *)tweetID {
@@ -2572,118 +2064,48 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
 
 + (void)pollForPendingUpdates {
     @try {
-        if (!tweetSources || !updateCompleted) return;
+        if (!tweetSources || tweetSources.count == 0) return;
         
-        static NSUInteger pollCounter = 0;
-        pollCounter++;
-        
-        // Only process every 3rd poll to reduce CPU usage (interval is now 15 seconds)
-        if (pollCounter % 3 != 0) {
-            // Just schedule next poll and return
-            [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:5.0];
-            return;
-        }
-        
-        NSArray *allTweetIDs = [tweetSources allKeys];
-        NSMutableArray *pendingTweets = [NSMutableArray array];
-        
-        // First pass: just collect IDs that need updating (no UI work)
-        for (NSString *tweetID in allTweetIDs) {
+        // Find tweets that might need updates
+        NSMutableArray *tweetsToCheck = [NSMutableArray array];
+        for (NSString *tweetID in tweetSources) {
             NSString *source = tweetSources[tweetID];
-            if (source && ![source isEqualToString:@""] && ![source isEqualToString:@"Source Unavailable"] &&
-                (!updateCompleted[tweetID] || ![updateCompleted[tweetID] boolValue])) {
-                [pendingTweets addObject:tweetID];
-                if (pendingTweets.count >= 10) break; // Limit batch size
+            if (!source || [source isEqualToString:@""] || [source isEqualToString:@"Fetching..."]) {
+                [tweetsToCheck addObject:tweetID];
             }
         }
         
-        // Now process them in batches to reduce UI work
-        if (pendingTweets.count > 0) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                for (NSUInteger i = 0; i < MIN(5, pendingTweets.count); i++) {
-                    NSString *tweetID = pendingTweets[i];
-                    [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" 
-                                                                        object:nil 
-                                                                      userInfo:@{@"tweetID": tweetID}];
-                    
-                    if (!updateRetries[tweetID] || [updateRetries[tweetID] integerValue] < 3) {
-                        [self performSelector:@selector(retryUpdateForTweetID:) withObject:tweetID afterDelay:0.5];
-                    }
-                }
-                
-                // Process the rest with a delay
-                if (pendingTweets.count > 5) {
-                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                        for (NSUInteger i = 5; i < pendingTweets.count; i++) {
-                            NSString *tweetID = pendingTweets[i];
-                            [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" 
-                                                                                object:nil 
-                                                                              userInfo:@{@"tweetID": tweetID}];
-                            
-                            if (!updateRetries[tweetID] || [updateRetries[tweetID] integerValue] < 3) {
-                                [self performSelector:@selector(retryUpdateForTweetID:) withObject:tweetID afterDelay:0.5];
-                            }
-                        }
-                    });
-                }
-            });
+        // Update a few tweets at a time to avoid overwhelming
+        NSInteger maxUpdates = MIN(tweetsToCheck.count, 3);
+        for (NSInteger i = 0; i < maxUpdates; i++) {
+            NSString *tweetID = tweetsToCheck[i];
+            [self updateFooterTextViewsForTweetID:tweetID];
         }
         
-        // Schedule next poll
-        [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:5.0];
-        
-    } @catch (__unused NSException *e) {
-        // Minimize logging in production
+        // Schedule next poll if needed
+        if (tweetsToCheck.count > 0) {
+            [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:3.0];
+        }
+    } @catch (NSException *e) {
+        // Silent fail
     }
 }
 
 + (void)handleAppForeground:(NSNotification *)notification {
     @try {
-        // PERFORMANCE: More efficient cookie refresh check on app foreground
-        BOOL shouldRefreshCookies = NO;
-        
-        if (!cookieCache || cookieCache.count == 0 || !cookieCache[@"ct0"] || !cookieCache[@"auth_token"]) {
-            shouldRefreshCookies = YES;
-            [self logDebugInfo:@"Missing critical cookies, forcing refresh"];
-        } else if (lastCookieRefresh) {
-            // PERFORMANCE: Only force refresh if cookies are more than 3 hours old on app foreground
-            NSTimeInterval timeSinceRefresh = [[NSDate date] timeIntervalSinceDate:lastCookieRefresh];
-            if (timeSinceRefresh > (3 * 60 * 60)) {
-                shouldRefreshCookies = YES;
-                [self logDebugInfo:@"Cached cookies are more than 3 hours old, forcing refresh"];
-            }
-        } else {
-            shouldRefreshCookies = YES; // No refresh date means we should refresh
-        }
-        
-        if (shouldRefreshCookies) {
-            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-                // PERFORMANCE: Single attempt with quick fallback
-                NSDictionary *freshCookies = [self fetchCookies];
-                
-                BOOL cookiesValid = freshCookies && freshCookies.count > 0 && 
-                                    freshCookies[@"ct0"] && freshCookies[@"auth_token"];
-                
-                if (cookiesValid) {
-                    [self cacheCookies:freshCookies];
-                    
-                    // Notify that cookies are ready
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" 
-                                                                          object:nil];
-                    });
-                } else {
-                    // If we couldn't get cookies, start the initialization process (but don't block)
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        if (!isInitializingCookies) {
-                            [self initializeCookiesWithRetry];
-                        }
-                    });
-                }
+        // With hardcoded cookies, just ensure they're loaded
+        if (!cookieCache || cookieCache.count == 0) {
+            NSDictionary *hardcodedCookies = [self fetchCookies];
+            [self cacheCookies:hardcodedCookies];
+            
+            // Notify that cookies are ready
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" 
+                                                                      object:nil];
             });
         }
         
-        // PERFORMANCE: Slightly longer delay to reduce immediate overhead
+        // Start polling for pending updates
         [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:2.0];
         
     } @catch (__unused NSException *e) {
@@ -2692,122 +2114,32 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
 }
 
 + (void)handleClearCacheNotification:(NSNotification *)notification {
-    [self logDebugInfo:@"Clearing source label cache via notification"];
-    
-    // Invalidate all pending timeout timers
+    // Clear all dictionaries
+    if (tweetSources) [tweetSources removeAllObjects];
     if (fetchTimeouts) {
         for (NSTimer *timer in [fetchTimeouts allValues]) {
             [timer invalidate];
         }
         [fetchTimeouts removeAllObjects];
     }
-
-    // Clear all dictionaries
-    if (tweetSources) [tweetSources removeAllObjects];
-    if (viewToTweetID) [viewToTweetID removeAllObjects];
-    if (viewInstances) [viewInstances removeAllObjects];
-    if (fetchPending) [fetchPending removeAllObjects];
     if (fetchRetries) [fetchRetries removeAllObjects];
-    if (updateRetries) [updateRetries removeAllObjects];
-    if (updateCompleted) [updateCompleted removeAllObjects];
+    if (fetchPending) [fetchPending removeAllObjects];
 
-    // Force cookie refresh
-    if (cookieCache) [cookieCache removeAllObjects];
-    lastCookieRefresh = nil;
-    
-    // Clear persistent storage
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    [defaults removeObjectForKey:@"TweetSourceTweak_CookieCache"];
-    [defaults removeObjectForKey:@"TweetSourceTweak_LastCookieRefresh"];
-    [defaults synchronize];
-    
-    // Re-initialize dictionaries
-    if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
-    if (!viewToTweetID) viewToTweetID = [NSMutableDictionary dictionary];
-    if (!viewInstances) viewInstances = [NSMutableDictionary dictionary];
-    if (!fetchTimeouts) fetchTimeouts = [NSMutableDictionary dictionary];
-    if (!fetchPending) fetchPending = [NSMutableDictionary dictionary];
-    if (!fetchRetries) fetchRetries = [NSMutableDictionary dictionary];
-    if (!updateRetries) updateRetries = [NSMutableDictionary dictionary];
-    if (!updateCompleted) updateCompleted = [NSMutableDictionary dictionary];
-    if (!cookieCache) cookieCache = [NSMutableDictionary dictionary];
-
-    // Fetch fresh cookies
-    NSDictionary *freshCookies = [self fetchCookies];
-    if (freshCookies.count > 0) {
-        [self cacheCookies:freshCookies];
-    }
-    
-    // Restart polling
-    [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:0.5];
+    // Reload cookies
+    [self initializeCookiesWithRetry];
 }
 
 + (void)updateFooterTextViewsForTweetID:(NSString *)tweetID {
     @try {
-        // Find all T1ConversationFooterTextView instances and update them
-        dispatch_async(dispatch_get_main_queue(), ^{
-            // Get all windows and search for footer text views
-            NSArray *windows = [UIApplication sharedApplication].windows;
-            for (UIWindow *window in windows) {
-                [self searchAndUpdateFooterTextViewsInView:window forTweetID:tweetID];
-            }
-        });
-    } @catch (NSException *e) {
-        NSLog(@"[BHTwitter] Exception in updateFooterTextViewsForTweetID: %@", e);
-    }
-}
-
-+ (void)searchAndUpdateFooterTextViewsInView:(UIView *)view forTweetID:(NSString *)tweetID {
-    @try {
-        // Check if this view is a T1ConversationFooterTextView
-        if ([view isKindOfClass:%c(T1ConversationFooterTextView)]) {
-            T1ConversationFooterTextView *footerView = (T1ConversationFooterTextView *)view;
-            
-            // Check if this footer view is for the tweet we're updating
-            if (footerView.viewModel) {
-                id tweetObject = nil;
-                if ([footerView.viewModel respondsToSelector:@selector(tweet)]) {
-                    tweetObject = [footerView.viewModel performSelector:@selector(tweet)];
-                } else if ([footerView.viewModel respondsToSelector:@selector(status)]) {
-                    tweetObject = [footerView.viewModel performSelector:@selector(status)];
-                }
-                
-                if (tweetObject) {
-                    NSString *viewTweetID = nil;
-                    @try {
-                        id statusIDVal = [tweetObject valueForKey:@"statusID"];
-                        if (statusIDVal && [statusIDVal respondsToSelector:@selector(longLongValue)] && [statusIDVal longLongValue] > 0) {
-                            viewTweetID = [statusIDVal stringValue];
-                        }
-                    } @catch (NSException *e) {}
-                    
-                    if (!viewTweetID || viewTweetID.length == 0) {
-                        @try {
-                            viewTweetID = [tweetObject valueForKey:@"rest_id"];
-                            if (!viewTweetID || viewTweetID.length == 0) {
-                                viewTweetID = [tweetObject valueForKey:@"id_str"];
-                            }
-                            if (!viewTweetID || viewTweetID.length == 0) {
-                                id genericID = [tweetObject valueForKey:@"id"];
-                                if (genericID) viewTweetID = [genericID description];
-                            }
-                        } @catch (NSException *e) {}
-                    }
-                    
-                    // If this footer view is for the tweet we're updating, refresh it
-                    if (viewTweetID && [viewTweetID isEqualToString:tweetID]) {
-                        [footerView updateFooterTextView];
-                    }
-                }
-            }
-        }
+        NSString *sourceText = tweetSources[tweetID];
+        if (!sourceText || [sourceText isEqualToString:@""]) return;
         
-        // Recursively search subviews
-        for (UIView *subview in view.subviews) {
-            [self searchAndUpdateFooterTextViewsInView:subview forTweetID:tweetID];
-        }
+        // Post notification for any listeners
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" 
+                                                            object:nil 
+                                                          userInfo:@{@"tweetID": tweetID}];
     } @catch (NSException *e) {
-        NSLog(@"[BHTwitter] Exception in searchAndUpdateFooterTextViewsInView: %@", e);
+        // Silent fail
     }
 }
 
@@ -2860,50 +2192,44 @@ static const NSTimeInterval MAX_RETRY_DELAY = 30.0; // Reduced max delay to 30 s
             return;
         }
         
-        // Process all tweets that need source labels - performance optimized
+        // Process all tweets that need source labels
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-            // Pre-fetch cookies once for all tweets (avoid repeated fetches)
-            NSDictionary *cookiesToUse = cookieCache;
-            if (!cookiesToUse || cookiesToUse.count == 0 || !cookiesToUse[@"ct0"] || !cookiesToUse[@"auth_token"]) {
-                cookiesToUse = [self fetchCookies];
-                if (cookiesToUse && cookiesToUse.count > 0 && cookiesToUse[@"ct0"] && cookiesToUse[@"auth_token"]) {
-                    [self cacheCookies:cookiesToUse];
-                }
+            // Use hardcoded cookies (always available)
+            NSDictionary *cookiesToUse = cookieCache ?: [self fetchCookies];
+            if (!cookieCache) {
+                [self cacheCookies:cookiesToUse];
             }
             
-            // Only proceed if we have valid cookies
-            if (cookiesToUse && cookiesToUse.count > 0 && cookiesToUse[@"ct0"] && cookiesToUse[@"auth_token"]) {
-                // Calculate optimal batch size based on number of tweets
-                NSUInteger totalTweets = tweetsToRetry.count;
-                NSUInteger batchSize = totalTweets < 10 ? totalTweets : (totalTweets < 30 ? 5 : 10);
-                
-                // Process in batches to balance performance and responsiveness
-                for (NSUInteger i = 0; i < tweetsToRetry.count; i += batchSize) {
-                    @autoreleasepool {
-                        NSUInteger end = MIN(i + batchSize, tweetsToRetry.count);
-                        NSArray *currentBatch = [tweetsToRetry subarrayWithRange:NSMakeRange(i, end - i)];
-                        
-                        // Process current batch immediately
-                        dispatch_async(dispatch_get_main_queue(), ^{
-                            for (NSString *tweetID in currentBatch) {
-                                // Only force fetch if it's still in Fetching state (it might have updated already)
-                                if ([tweetSources[tweetID] isEqualToString:@"Fetching..."] || 
-                                    [tweetSources[tweetID] isEqualToString:@""]) {
-                                    // Reset counters and clear pending flags
-                                    [fetchRetries setObject:@0 forKey:tweetID];
-                                    [updateRetries setObject:@0 forKey:tweetID];
-                                    [fetchPending setObject:@NO forKey:tweetID]; // Clear any stuck pending flags
-                                    
-                                    // Force a fresh fetch with the known-good cookies
-                                    [TweetSourceHelper fetchSourceForTweetID:tweetID];
-                                }
+            // Calculate optimal batch size based on number of tweets
+            NSUInteger totalTweets = tweetsToRetry.count;
+            NSUInteger batchSize = totalTweets < 10 ? totalTweets : (totalTweets < 30 ? 5 : 10);
+            
+            // Process in batches to balance performance and responsiveness
+            for (NSUInteger i = 0; i < tweetsToRetry.count; i += batchSize) {
+                @autoreleasepool {
+                    NSUInteger end = MIN(i + batchSize, tweetsToRetry.count);
+                    NSArray *currentBatch = [tweetsToRetry subarrayWithRange:NSMakeRange(i, end - i)];
+                    
+                    // Process current batch immediately
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        for (NSString *tweetID in currentBatch) {
+                            // Only force fetch if it's still in Fetching state (it might have updated already)
+                            if ([tweetSources[tweetID] isEqualToString:@"Fetching..."] || 
+                                [tweetSources[tweetID] isEqualToString:@""]) {
+                                // Reset counters and clear pending flags
+                                [fetchRetries setObject:@0 forKey:tweetID];
+                                [updateRetries setObject:@0 forKey:tweetID];
+                                [fetchPending setObject:@NO forKey:tweetID]; // Clear any stuck pending flags
+                                
+                                // Force a fresh fetch with the hardcoded cookies
+                                [TweetSourceHelper fetchSourceForTweetID:tweetID];
                             }
-                        });
-                        
-                        // Small delay between batches but only if more batches exist
-                        if (i + batchSize < tweetsToRetry.count) {
-                            [NSThread sleepForTimeInterval:0.1]; // Minimal delay between batches
                         }
+                    });
+                    
+                    // Small delay between batches but only if more batches exist
+                    if (i + batchSize < tweetsToRetry.count) {
+                        [NSThread sleepForTimeInterval:0.1];
                     }
                 }
             }
@@ -4347,25 +3673,8 @@ static char kManualRefreshInProgressKey;
 
 %hook T1TabBarViewController
 
-// + (void)load { // REMOVED
-    // Initialize the hash table once
-    // static dispatch_once_t onceToken;
-    // dispatch_once(&onceToken, ^{
-        // gTabBarControllers = [NSHashTable hashTableWithOptions:NSPointerFunctionsWeakMemory];
-        // [[NSNotificationCenter defaultCenter] addObserverForName:NSUserDefaultsDidChangeNotification 
-                                                          // object:nil 
-                                                           // queue:[NSOperationQueue mainQueue] 
-                                                      // usingBlock:^(NSNotification * _Nonnull note) {
-            // BHTTabBarAccentColorChanged(NULL, NULL, NULL, NULL, NULL); 
-        // }];
-    // });
-// }
-
 - (void)viewDidLoad {
     %orig;
-    // if (gTabBarControllers) { // REMOVED
-        // [gTabBarControllers addObject:self]; // REMOVED
-    // }
     // Apply theme on initial load
     if ([self respondsToSelector:@selector(tabViews)]) {
         NSArray *tabViews = [self valueForKey:@"tabViews"];
@@ -4375,13 +3684,6 @@ static char kManualRefreshInProgressKey;
             }
         }
     }
-}
-
-- (void)dealloc {
-    // if (gTabBarControllers) { // REMOVED
-        // [gTabBarControllers removeObject:self]; // REMOVED
-    // }
-    %orig;
 }
 
 %end
@@ -4418,38 +3720,20 @@ static void BHT_UpdateAllTabBarIcons(void) {
 static void BHT_applyThemeToWindow(UIWindow *window) {
     if (!window) return;
 
-    // 1. Update our custom themed elements first
-    // Update our custom tab bar icons
     if ([window.rootViewController isKindOfClass:NSClassFromString(@"T1TabBarViewController")]) {
-        // Ensure BHT_UpdateAllTabBarIcons properly targets the tabViews of this specific window's rootVC
-        // If BHT_UpdateAllTabBarIcons iterates all T1TabBarViewControllers globally, this direct call might be okay,
-        // but targeting is safer if possible.
         BHT_UpdateAllTabBarIcons(); 
     }
 
-    // Update our custom nav bar bird icon by recursively finding TFNNavigationBars
-    BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
-        if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
-            // updateLogoTheme should internally use BHTCurrentAccentColor()
-            [(TFNNavigationBar *)currentView updateLogoTheme];
-        }
-    });
-
-    // 2. Force a refresh of the currently visible content view hierarchy.
-    // This is an attempt to make Twitter's own views re-evaluate the (now changed) accent color.
     UIViewController *rootVC = window.rootViewController;
     if (rootVC) {
         UIViewController *currentContentVC = rootVC;
         // Traverse to the most relevant visible content view controller
         if ([rootVC isKindOfClass:NSClassFromString(@"T1TabBarViewController")]) {
-            // T1TabBarViewController is a UITabBarController subclass.
-            // Cast to UITabBarController to access standard 'selectedViewController' property.
             if ([rootVC isKindOfClass:[UITabBarController class]]) {
                 currentContentVC = ((UITabBarController *)rootVC).selectedViewController;
             }
         }
         
-        // If the selected VC in a tab bar is a Nav controller, go to its visible VC
         if ([currentContentVC isKindOfClass:[UINavigationController class]]) {
             currentContentVC = [(UINavigationController *)currentContentVC visibleViewController];
         }
@@ -4458,8 +3742,6 @@ static void BHT_applyThemeToWindow(UIWindow *window) {
         if (currentContentVC && currentContentVC.isViewLoaded) {
             [currentContentVC.view setNeedsDisplay];
             [currentContentVC.view setNeedsLayout];
-            // Optionally, for a more immediate effect, though it can be costly if overused:
-            // [currentContentVC.view layoutIfNeeded]; 
         }
     }
 }
@@ -4524,13 +3806,7 @@ static void BHT_forceRefreshAllWindowAppearances(void) {
 
         // Update our custom nav bar bird icon for this window
         if (window.rootViewController && window.rootViewController.isViewLoaded) {
-            BH_EnumerateSubviewsRecursively(window.rootViewController.view, ^(UIView *currentView) {
-                if ([currentView isKindOfClass:NSClassFromString(@"TFNNavigationBar")]) {
-                    if ([BHTManager classicTabBarEnabled]) {
-                        [(TFNNavigationBar *)currentView updateLogoTheme];
-                    }
-                }
-            });
+            // Navigation bar logo theme updates removed - no longer needed
         }
 
         // Trigger UI refresh hierarchy
@@ -4554,24 +3830,7 @@ static void BHT_forceRefreshAllWindowAppearances(void) {
     }
 }
 
-// MARK: Theme TFNBarButtonItemButtonV1
-%hook TFNBarButtonItemButtonV1
-- (void)didMoveToWindow {
-    %orig;
-    if (self.window) {
-        self.tintColor = BHTCurrentAccentColor();
-    }
-}
-
-- (void)setTintColor:(UIColor *)tintColor {
-    %orig(BHTCurrentAccentColor());
-}
-%end
-
 // MARK: - Timestamp Label Styling via UILabel -setText:
-
-// Global reference to the timestamp label for the active immersive player
-// static UILabel *gVideoTimestampLabel = nil; // REMOVED
 
 // Helper method to determine if a text is likely a timestamp
 static BOOL isTimestampText(NSString *text) {
@@ -4630,11 +3889,6 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
         return;
     }
     
-    // Skip if already our target label
-    // if (self == gVideoTimestampLabel) {
-    //     return;
-    // }
-    
     // Skip if text doesn't match timestamp pattern
     if (!isTimestampText(self.text)) {
         return;
@@ -4660,7 +3914,6 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
     }
     
     if (isInImmersiveContext) {
-        NSLog(@"[BHTwitter Timestamp] Styling timestamp label: %@", self.text);
         
         // Apply styling - ONLY styling, not visibility
         self.font = [UIFont systemFontOfSize:14.0];
@@ -4771,6 +4024,7 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 
 @interface _UINavigationBarContentView (BHTwitter)
 - (void)BHT_addTranslateButtonIfNeeded;
+- (BOOL)BHT_findConversationViewInView:(UIView *)view;
 - (TFNTwitterStatus *)BHT_findStatusObjectInController:(UIViewController *)controller;
 - (UITextView *)BHT_findTweetTextViewInController:(UIViewController *)controller;
 - (NSString *)BHT_extractTextFromStatusObjectInController:(UIViewController *)controller;
@@ -4831,28 +4085,21 @@ static char kTranslateButtonKey;
         }
     }
     
-    // Check if this is a conversation/tweet view by examining both title and controller class
+    // Check if this is a conversation/tweet view by looking for T1ConversationFocalStatusView
     BOOL isTweetView = NO;
     UILabel *titleLabel = nil;
     
+    // Get the first label as our title label reference (for positioning)
     for (UIView *subview in self.subviews) {
         if ([subview isKindOfClass:%c(UILabel)]) {
-            UILabel *label = (UILabel *)subview;
-            if ([label.text isEqualToString:@"Post"] || [label.text isEqualToString:@"Tweet"]) {
-                titleLabel = label;
-                break;
-            }
+            titleLabel = (UILabel *)subview;
+            break;
         }
     }
     
-    if (titleLabel && actualContentVC) {
-        NSString *vcClassName = NSStringFromClass([actualContentVC class]);
-        if ([vcClassName containsString:@"Conversation"] || 
-            [vcClassName containsString:@"Tweet"] || 
-            [vcClassName containsString:@"Status"] || 
-            [vcClassName containsString:@"Detail"]) {
-            isTweetView = YES;
-        }
+    // Simple and reliable check: look for T1ConversationFocalStatusView in the view hierarchy
+    if (actualContentVC && actualContentVC.isViewLoaded) {
+        isTweetView = [self BHT_findConversationViewInView:actualContentVC.view];
     }
     
     // Only proceed if this is a valid tweet view
@@ -4887,25 +4134,48 @@ static char kTranslateButtonKey;
         [translateButton addTarget:self action:@selector(BHT_translateCurrentTweetAction:) forControlEvents:UIControlEventTouchUpInside];
         translateButton.tag = 12345; // Unique tag
         
-        // Add button with higher z-index
-        [self insertSubview:translateButton aboveSubview:titleLabel];
+        // Add button with higher z-index - defensive insertion
+        if (titleLabel) {
+            [self insertSubview:translateButton aboveSubview:titleLabel];
+        } else {
+            [self addSubview:translateButton];
+        }
         translateButton.translatesAutoresizingMaskIntoConstraints = NO;
         
         // Store button reference in associated object
         objc_setAssociatedObject(self, &kTranslateButtonKey, translateButton, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         
-        // Place the button on the right with a moderate offset to avoid collisions
-        NSArray *constraints = @[
-            [translateButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
-            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-10],
-            [translateButton.widthAnchor constraintEqualToConstant:44],
-            [translateButton.heightAnchor constraintEqualToConstant:44]
-        ];
-        
-        // Store constraints reference to prevent deallocation
-        objc_setAssociatedObject(translateButton, "translateButtonConstraints", constraints, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        
-        [NSLayoutConstraint activateConstraints:constraints];
+        // Defensive constraint creation - ensure views are in same hierarchy
+        @try {
+            // Verify the button is actually in our view hierarchy
+            if (translateButton.superview == self) {
+                NSArray *constraints = @[
+                    [translateButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
+                    [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-10],
+                    [translateButton.widthAnchor constraintEqualToConstant:44],
+                    [translateButton.heightAnchor constraintEqualToConstant:44]
+                ];
+                
+                // Store constraints reference to prevent deallocation
+                objc_setAssociatedObject(translateButton, "translateButtonConstraints", constraints, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                
+                [NSLayoutConstraint activateConstraints:constraints];
+            } else {
+                // Fallback to frame-based positioning if constraints fail
+                CGRect selfBounds = self.bounds;
+                translateButton.frame = CGRectMake(selfBounds.size.width - 54, 
+                                                 (selfBounds.size.height - 44) / 2, 
+                                                 44, 44);
+                translateButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
+            }
+        } @catch (NSException *exception) {
+            // Last resort: use frame-based positioning
+            CGRect selfBounds = self.bounds;
+            translateButton.frame = CGRectMake(selfBounds.size.width - 54, 
+                                             (selfBounds.size.height - 44) / 2, 
+                                             44, 44);
+            translateButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
+        }
     } else {
         // If this is not a tweet view but we have a button, remove it
         UIButton *existingButton = objc_getAssociatedObject(self, &kTranslateButtonKey);
@@ -4938,6 +4208,19 @@ static char kTranslateButtonKey;
 }
 
 // Handle dark/light mode changes
+%new
+- (BOOL)BHT_findConversationViewInView:(UIView *)view {
+    if ([view isKindOfClass:%c(T1ConversationFocalStatusView)]) {
+        return YES;
+    }
+    for (UIView *subview in view.subviews) {
+        if ([self BHT_findConversationViewInView:subview]) {
+            return YES;
+        }
+    }
+    return NO;
+}
+
 %new
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
     if ([keyPath isEqualToString:@"traitCollection"] && [object isKindOfClass:[UIButton class]]) {
@@ -5368,8 +4651,6 @@ static void findTextView(UIView *view, UITextView **tweetTextView) {
     
     return nil;
 }
-
-
 
 %end
 
@@ -5821,7 +5102,6 @@ static GeminiTranslator *_sharedInstance;
 %end
 
 // MARK: Change Pill text.
-
 %hook TFNPillControl
 - (id)text {
     NSString *localizedText = [[BHTBundle sharedBundle] localizedStringForKey:@"REFRESH_PILL_TEXT"];
@@ -5833,98 +5113,7 @@ static GeminiTranslator *_sharedInstance;
 }
 %end
 
-// MARK: Restore Action Button size
-
-%hook TTAStatusInlineActionButton
-- (NSUInteger)buttonSize {
-    // Check if bigger action buttons is enabled
-    BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
-    if (!biggerButtons) {
-        return %orig; // Use original size when disabled
-    }
-    
-    // Check if button is inside T1ConversationFocalStatusView - if so, use default size
-    UIView *parentView = self.superview;
-    while (parentView) {
-        if ([parentView isKindOfClass:objc_getClass("T1ConversationFocalStatusView")]) {
-            return %orig; // Return original/default size
-        }
-        parentView = parentView.superview;
-    }
-    
-    return 1; // Use modified size for other views
-}
-- (NSUInteger)_buttonSize {
-    // Check if bigger action buttons is enabled
-    BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
-    if (!biggerButtons) {
-        return %orig; // Use original size when disabled
-    }
-    
-    // Check if button is inside T1ConversationFocalStatusView - if so, use default size
-    UIView *parentView = self.superview;
-    while (parentView) {
-        if ([parentView isKindOfClass:objc_getClass("T1ConversationFocalStatusView")]) {
-            return %orig; // Return original/default size
-        }
-        parentView = parentView.superview;
-    }
-    
-    return 1; // Use modified size for other views
-}
-
-- (void)setFrame:(CGRect)frame {
-    // Check if bigger action buttons is enabled
-    BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
-    if (!biggerButtons) {
-        %orig(frame); // Use original frame when disabled
-        return;
-    }
-    
-    // Check if we're inside T1ImmersiveController - if so, move button up
-    UIView *parentView = self.superview;
-    
-    while (parentView) {
-        NSString *className = NSStringFromClass([parentView class]);
-        
-        if ([className containsString:@"ImmersiveCardView"] || 
-            [className containsString:@"ImmersiveAccessibleContainerView"]) {
-            CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
-            frame.origin.y -= upwardOffset;
-            break;
-        }
-        parentView = parentView.superview;
-    }
-    
-    %orig(frame);
-}
-
-- (instancetype)initWithFrame:(CGRect)frame {
-    // Check if bigger action buttons is enabled
-    BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
-    if (!biggerButtons) {
-        return %orig(frame); // Use original frame when disabled
-    }
-    
-    // Check if we're inside T1ImmersiveController - if so, move button up
-    UIView *parentView = self.superview;
-    while (parentView) {
-        NSString *className = NSStringFromClass([parentView class]);
-        if ([className containsString:@"ImmersiveCardView"] || 
-            [className containsString:@"ImmersiveAccessibleContainerView"]) {
-            CGFloat upwardOffset = 6.0; // Move buttons up more in immersive view
-            frame.origin.y -= upwardOffset;
-            break;
-        }
-        parentView = parentView.superview;
-    }
-    
-    return %orig(frame);
-}
-%end
-
 // MARK: Remove all sections from the Explore "for you" tab except the trending cells.
-// Helper function to check if we're in the GuideContainerViewController hierarchy
 static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
     if (!viewController) return NO;
     
@@ -6021,64 +5210,6 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 
 %end
 
-// MARK: bigger action buttons
-%hook TTAStatusInlineActionsView
-- (void)setFrame:(CGRect)frame {
-    // Check if bigger action buttons is enabled
-    BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
-    if (!biggerButtons) {
-        %orig(frame); // Use original frame when disabled
-        return;
-    }
-    
-    // Check if we're inside T1ConversationFocalStatusView - if so, don't adjust
-    UIView *parentView = self.superview;
-    while (parentView) {
-        if ([parentView isKindOfClass:objc_getClass("T1ConversationFocalStatusView")]) {
-            %orig(frame); // No adjustment for focal views
-            return;
-        }
-        if ([parentView isKindOfClass:objc_getClass("T1ImmersiveViewController")] || 
-            [NSStringFromClass([parentView class]) containsString:@"T1Immersive"]) {
-            %orig(frame); // No adjustment for immersive views (buttons will handle it)
-            return;
-        }
-        parentView = parentView.superview;
-    }
-    
-    // Default offset for other views
-    CGFloat upwardOffset = 5.0;
-    frame.origin.y -= upwardOffset;
-    %orig(frame);
-}
-
-- (instancetype)initWithFrame:(CGRect)frame {
-    // Check if bigger action buttons is enabled
-    BOOL biggerButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"bigger_action_buttons"];
-    if (!biggerButtons) {
-        return %orig(frame); // Use original frame when disabled
-    }
-    
-    // Check if we're inside T1ConversationFocalStatusView - if so, don't adjust
-    UIView *parentView = self.superview;
-    while (parentView) {
-        if ([parentView isKindOfClass:objc_getClass("T1ConversationFocalStatusView")]) {
-            return %orig(frame); // No adjustment for focal views
-        }
-        if ([parentView isKindOfClass:objc_getClass("T1ImmersiveViewController")] || 
-            [NSStringFromClass([parentView class]) containsString:@"T1Immersive"]) {
-            return %orig(frame); // No adjustment for immersive views (buttons will handle it)
-        }
-        parentView = parentView.superview;
-    }
-    
-    // Default offset for other views
-    CGFloat upwardOffset = 5.0;
-    frame.origin.y -= upwardOffset;
-    return %orig(frame);
-}
-%end
-
 // MARK: should hopefully remove reply boost upsells
 %hook T1SubscriptionJourneyManager
 - (_Bool)shouldShowReplyBoostUpsellWithAccount {
@@ -6124,7 +5255,7 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 // Override the method that determines which buttons to show based on width
 - (void)_t1_updateArrangedButtonItemsForContentWidth:(double)arg1 {
     if ([BHTManager restoreFollowButton]) {
-        %orig(1000.0);
+        %orig(5000.0);
     } else {
         %orig(arg1);
     }
@@ -6135,3 +5266,164 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 static NSBundle *BHBundle() {
     return [NSBundle bundleWithIdentifier:@"com.bandarhelal.BHTwitter"];
 }
+
+%hook TFSAccountFeatureSwitches
+- (_Bool)videoFeaturesUpsellEnabled {
+    return false;
+}
+%end
+
+%hook TPSDeviceFeatureSwitches
+- (_Bool)deviceAttestationClientEventsEnabled {
+    return false;
+}
+- (_Bool)deviceGuestAttestationTokensEnabled {
+    return false;
+}
+- (_Bool)deviceAttestationTokensEnabled {
+    return false;
+}
+%end
+
+// MARK: Theme TFNBarButtonItemButtonV1
+%hook TFNBarButtonItemButtonV1
+
+- (void)didMoveToWindow {
+    %orig;
+    if (self.window) {
+        // Trigger our setTintColor logic
+        self.tintColor = [UIColor blackColor];
+    }
+}
+
+- (void)setTintColor:(UIColor *)tintColor {
+    BOOL isDark = BHT_isTwitterDarkThemeActive();
+    UIColor *correctColor = isDark ? [UIColor whiteColor] : [UIColor blackColor];
+    %orig(correctColor);
+}
+
+- (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
+    %orig(previousTraitCollection);
+        if ([self.traitCollection hasDifferentColorAppearanceComparedToTraitCollection:previousTraitCollection]) {
+            // Trigger our setTintColor logic
+            self.tintColor = [UIColor blackColor];
+        }
+    }
+%end
+
+// MARK: - Custom Vector Image Loading System
+
+// Define which images should load from BHTwitter bundle
+static NSSet *customVectorImages() {
+    static NSSet *customImages = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        customImages = [NSSet setWithObjects:@"translate", nil]; // Add more image names as needed
+    });
+    return customImages;
+}
+
+// Get path to BHTwitter bundle
+static NSString *getBHTwitterBundlePath() {
+    static NSString *bundlePath = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        bundlePath = @"/Library/Application Support/BHT/BHTwitter.bundle";
+    });
+    return bundlePath;
+}
+
+%hook UIImage
+
+// Hook the main tfn_vectorImageNamed method to selectively redirect custom images
++ (id)tfn_vectorImageNamed:(NSString *)imageName fitsSize:(CGSize)size fillColor:(UIColor *)fillColor {
+    // Check if this is one of our custom images
+    if ([customVectorImages() containsObject:imageName]) {
+        NSString *bundlePath = getBHTwitterBundlePath();
+        NSString *svgPath = [bundlePath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.svg", imageName]];
+        
+        // Check if our custom SVG exists
+        if ([[NSFileManager defaultManager] fileExistsAtPath:svgPath]) {
+            // Use Twitter's internal vector image loading but from our bundle
+            // First, temporarily set the override directory to our bundle
+            NSURL *originalOverrideDir = [UIImage tfn_vectorImageOverrideContainersDirectoryURL];
+            [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:[NSURL fileURLWithPath:bundlePath]];
+            
+            // Load the image using Twitter's internal method
+            UIImage *customImage = %orig(imageName, size, fillColor);
+            
+            // Restore original override directory
+            [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:originalOverrideDir];
+            
+            // Return our custom image if it loaded successfully
+            if (customImage) {
+                return customImage;
+            }
+        }
+    }
+    
+    // For all other images or if custom loading failed, use original method
+    return %orig(imageName, size, fillColor);
+}
+
+// Also hook the variant that includes high contrast
++ (id)tfn_vectorImageNamed:(NSString *)imageName highContrastVariantNamed:(NSString *)highContrastName fitsSize:(CGSize)size fillColor:(UIColor *)fillColor {
+    // Check if this is one of our custom images
+    if ([customVectorImages() containsObject:imageName]) {
+        NSString *bundlePath = getBHTwitterBundlePath();
+        NSString *svgPath = [bundlePath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.svg", imageName]];
+        
+        // Check if our custom SVG exists
+        if ([[NSFileManager defaultManager] fileExistsAtPath:svgPath]) {
+            // Use Twitter's internal vector image loading but from our bundle
+            NSURL *originalOverrideDir = [UIImage tfn_vectorImageOverrideContainersDirectoryURL];
+            [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:[NSURL fileURLWithPath:bundlePath]];
+            
+            // Load the image using Twitter's internal method
+            UIImage *customImage = %orig(imageName, highContrastName, size, fillColor);
+            
+            // Restore original override directory
+            [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:originalOverrideDir];
+            
+            // Return our custom image if it loaded successfully
+            if (customImage) {
+                return customImage;
+            }
+        }
+    }
+    
+    // For all other images or if custom loading failed, use original method
+    return %orig(imageName, highContrastName, size, fillColor);
+}
+
+// Hook the height-based variant as well
++ (id)tfn_vectorImageNamed:(NSString *)imageName height:(double)height fillColor:(UIColor *)fillColor {
+    // Check if this is one of our custom images
+    if ([customVectorImages() containsObject:imageName]) {
+        NSString *bundlePath = getBHTwitterBundlePath();
+        NSString *svgPath = [bundlePath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.svg", imageName]];
+        
+        // Check if our custom SVG exists
+        if ([[NSFileManager defaultManager] fileExistsAtPath:svgPath]) {
+            // Use Twitter's internal vector image loading but from our bundle
+            NSURL *originalOverrideDir = [UIImage tfn_vectorImageOverrideContainersDirectoryURL];
+            [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:[NSURL fileURLWithPath:bundlePath]];
+            
+            // Load the image using Twitter's internal method
+            UIImage *customImage = %orig(imageName, height, fillColor);
+            
+            // Restore original override directory
+            [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:originalOverrideDir];
+            
+            // Return our custom image if it loaded successfully
+            if (customImage) {
+                return customImage;
+            }
+        }
+    }
+    
+    // For all other images or if custom loading failed, use original method
+    return %orig(imageName, height, fillColor);
+}
+
+%end

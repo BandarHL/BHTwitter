@@ -9,6 +9,7 @@
 #import "BHCustomTabBarUtility.h"
 #import "../BHTBundle/BHTBundle.h"
 #import "Colours/Colours.h"
+#import "../BHDimPalette.h"
 
 // Import external function to get theme color
 extern UIColor *BHTCurrentAccentColor(void);
@@ -83,7 +84,10 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.view.backgroundColor = [UIColor systemBackgroundColor];
+    
+    // Use BHDimPalette for background color
+    self.view.backgroundColor = [BHDimPalette currentBackgroundColor];
+    
     self.hasChanges = NO;
     [self setupScrollView];
     
@@ -162,7 +166,10 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
     self.collectionView = [[UICollectionView alloc] initWithFrame:CGRectZero collectionViewLayout:layout];
     self.collectionView.translatesAutoresizingMaskIntoConstraints = NO;
-    self.collectionView.backgroundColor = [UIColor systemBackgroundColor];
+    
+    // Use BHDimPalette for collection view background color
+    self.collectionView.backgroundColor = [BHDimPalette currentBackgroundColor];
+    
     self.collectionView.delegate = self;
     self.collectionView.dataSource = self;
     [self.collectionView registerClass:[UICollectionViewCell class] forCellWithReuseIdentifier:@"tabItemCell"];
@@ -177,7 +184,10 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     [self.restoreButton setTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_RESET_BUTTON"] forState:UIControlStateNormal];
     self.restoreButton.titleLabel.font = [TwitterChirpFont(TwitterFontStyleSemibold) fontWithSize:16];
     [self.restoreButton setTitleColor:[UIColor labelColor] forState:UIControlStateNormal];
-    self.restoreButton.backgroundColor = [UIColor systemBackgroundColor];
+    
+    // Use BHDimPalette for restore button background color
+    self.restoreButton.backgroundColor = [BHDimPalette currentBackgroundColor];
+    
     self.restoreButton.layer.cornerRadius = 26;
     self.restoreButton.layer.borderWidth = 2.0;
     self.restoreButton.layer.borderColor = [UIColor.systemGray6Color resolvedColorWithTraitCollection:self.traitCollection].CGColor;

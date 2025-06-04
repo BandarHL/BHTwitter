@@ -10,7 +10,11 @@
 #import "BHAppIconItem.h"
 #import "BHAppIconCell.h"
 #import "../BHTBundle/BHTBundle.h"
+#import "../BHDimPalette.h"
 #import <UIKit/UIKit.h>
+
+// Key for storing last selected app icon
+#define kBHLastSelectedAppIconKey @"bh_last_selected_app_icon"
 
 typedef NS_ENUM(NSInteger, TwitterFontStyle) {
     TwitterFontStyleRegular,
@@ -69,8 +73,13 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     self.appIconCollectionView.delegate   = self;
     self.appIconCollectionView.dataSource = self;
     self.appIconCollectionView.translatesAutoresizingMaskIntoConstraints = NO;
+    
+    // Apply background color from BHDimPalette to collection view
+    self.appIconCollectionView.backgroundColor = [BHDimPalette currentBackgroundColor];
 
-    self.view.backgroundColor = [UIColor systemBackgroundColor];
+    // Use BHDimPalette for background color
+    self.view.backgroundColor = [BHDimPalette currentBackgroundColor];
+    
     [self.view addSubview:self.appIconCollectionView];
 
     [NSLayoutConstraint activateConstraints:@[
@@ -238,16 +247,47 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
       }
     }
     cell.imageView.image = img;
-
-    // Update checkmark state
-    NSString *curr = [UIApplication sharedApplication].alternateIconName;
-    BOOL active = curr ? [curr isEqualToString:item.bundleIconName] : item.isPrimaryIcon;
-    [cv.visibleCells enumerateObjectsUsingBlock:^(UICollectionViewCell *c, NSUInteger idx, BOOL *stop) {
-        ((BHAppIconCell*)c).checkIMG.image = [UIImage systemImageNamed:@"circle"];
-    }];
-    if (active) {
-      cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
+    
+    // Create a background view for the icon with shadow
+    if (!cell.backgroundView) {
+        UIView *shadowView = [[UIView alloc] init];
+        shadowView.backgroundColor = [UIColor clearColor];
+        shadowView.layer.shadowColor = [UIColor blackColor].CGColor;
+        shadowView.layer.shadowOffset = CGSizeMake(0, 4);
+        shadowView.layer.shadowOpacity = 0.15;
+        shadowView.layer.shadowRadius = 8;
+        shadowView.layer.shadowPath = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(0, 0, 98, 98) cornerRadius:22].CGPath;
+        cell.backgroundView = shadowView;
     }
+    
+    // Make sure the image view has correct corner radius
+    cell.imageView.layer.cornerRadius = 22;
+    cell.imageView.clipsToBounds = YES;
+
+    // Update checkmark state - first check system state, then our saved state
+    NSString *curr = [UIApplication sharedApplication].alternateIconName;
+    BOOL isCurrentlyActive = curr ? [curr isEqualToString:item.bundleIconName] : item.isPrimaryIcon;
+    
+    // Check if this item matches our saved selection
+    NSString *savedIconIdentifier = [[NSUserDefaults standardUserDefaults] objectForKey:kBHLastSelectedAppIconKey];
+    BOOL isSavedSelection = NO;
+    
+    if (savedIconIdentifier) {
+        if ([savedIconIdentifier isEqualToString:@"PrimaryIcon"] && item.isPrimaryIcon) {
+            isSavedSelection = YES;
+        } else if ([savedIconIdentifier isEqualToString:item.bundleIconName]) {
+            isSavedSelection = YES;
+        }
+    }
+    
+    // Clear all checkmarks first
+    cell.checkIMG.image = [UIImage systemImageNamed:@"circle"];
+    
+    // Highlight if it's the active icon or our saved selection
+    if (isCurrentlyActive || isSavedSelection) {
+        cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
+    }
+    
     return cell;
 }
 
@@ -260,6 +300,12 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     }];
     BHAppIconCell *cell = (BHAppIconCell*)[cv cellForItemAtIndexPath:ip];
     NSString *toSet = item.isPrimaryIcon ? nil : item.bundleIconName;
+    
+    // Save selection to NSUserDefaults
+    NSString *iconIdentifier = item.isPrimaryIcon ? @"PrimaryIcon" : item.bundleIconName;
+    [[NSUserDefaults standardUserDefaults] setObject:iconIdentifier forKey:kBHLastSelectedAppIconKey];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+    
     [[UIApplication sharedApplication] setAlternateIconName:toSet completionHandler:^(NSError *_Nullable error) {
       if (!error) {
         cell.checkIMG.image = [UIImage systemImageNamed:@"checkmark.circle"];
