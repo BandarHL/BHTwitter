@@ -5349,108 +5349,88 @@ static NSSet *customVectorImages() {
     return customImages;
 }
 
-// Get path to BHTwitter bundle using BHTBundle class directly
-static NSString *getBHTwitterBundlePath() {
-    static NSString *bundlePath = nil;
+// Initialize our custom vector image search path
+static void initializeCustomVectorImagePath() {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
+        // Get BHTwitter bundle path
         id bhtBundle = [objc_getClass("BHTBundle") sharedBundle];
         NSBundle *bundle = [bhtBundle valueForKey:@"mainBundle"];
-        bundlePath = [bundle bundlePath];
+        NSString *bundlePath = [bundle bundlePath];
+        
+        if (bundlePath) {
+            NSURL *bundleURL = [NSURL fileURLWithPath:bundlePath];
+            
+            // Get current search directories
+            NSArray *currentSearchDirs = [UIImage tfn_vectorImageSearchDirectoryURLs];
+            NSMutableArray *newSearchDirs = [NSMutableArray arrayWithArray:currentSearchDirs ?: @[]];
+            
+            // Add our bundle to the search directories if not already present
+            if (![newSearchDirs containsObject:bundleURL]) {
+                [newSearchDirs insertObject:bundleURL atIndex:0]; // Insert at beginning for priority
+            }
+            
+            // Update the search directories
+            [UIImage tfn_vectorImageSetSearchDirectoryURLs:[newSearchDirs copy]];
+        }
     });
-    return bundlePath;
 }
 
 %hook UIImage
 
-// Hook the main tfn_vectorImageNamed method to selectively redirect custom images
+// Hook the main tfn_vectorImageNamed method to ensure our path is initialized
 + (id)tfn_vectorImageNamed:(NSString *)imageName fitsSize:(CGSize)size fillColor:(UIColor *)fillColor {
-    // Check if this is one of our custom images
+    // Initialize our custom search path
+    initializeCustomVectorImagePath();
+    
+    // Check if this is one of our custom images and if it exists
     if ([customVectorImages() containsObject:imageName]) {
-        NSString *bundlePath = getBHTwitterBundlePath();
-        NSString *svgPath = [bundlePath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.svg", imageName]];
-        
-        // Check if our custom SVG exists
-        if ([[NSFileManager defaultManager] fileExistsAtPath:svgPath]) {
-            // Use Twitter's internal vector image loading but from our bundle
-            // First, temporarily set the override directory to our bundle
-            NSURL *originalOverrideDir = [UIImage tfn_vectorImageOverrideContainersDirectoryURL];
-            [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:[NSURL fileURLWithPath:bundlePath]];
-            
-            // Load the image using Twitter's internal method
-            UIImage *customImage = %orig(imageName, size, fillColor);
-            
-            // Restore original override directory
-            [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:originalOverrideDir];
-            
-            // Return our custom image if it loaded successfully
-            if (customImage) {
-                return customImage;
-            }
+        CGSize outSize;
+        if ([UIImage tfn_vectorImageExistsNamed:imageName fitsSize:size size:&outSize]) {
+            // The image exists in our search path, let Twitter's system handle it
+            return %orig(imageName, size, fillColor);
         }
     }
     
-    // For all other images or if custom loading failed, use original method
+    // For all other images, use original method
     return %orig(imageName, size, fillColor);
 }
 
-// Also hook the variant that includes high contrast
+// Hook the variant that includes high contrast
 + (id)tfn_vectorImageNamed:(NSString *)imageName highContrastVariantNamed:(NSString *)highContrastName fitsSize:(CGSize)size fillColor:(UIColor *)fillColor {
+    // Initialize our custom search path
+    initializeCustomVectorImagePath();
+    
     // Check if this is one of our custom images
     if ([customVectorImages() containsObject:imageName]) {
-        NSString *bundlePath = getBHTwitterBundlePath();
-        NSString *svgPath = [bundlePath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.svg", imageName]];
-        
-        // Check if our custom SVG exists
-        if ([[NSFileManager defaultManager] fileExistsAtPath:svgPath]) {
-            // Use Twitter's internal vector image loading but from our bundle
-            NSURL *originalOverrideDir = [UIImage tfn_vectorImageOverrideContainersDirectoryURL];
-            [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:[NSURL fileURLWithPath:bundlePath]];
-            
-            // Load the image using Twitter's internal method
-            UIImage *customImage = %orig(imageName, highContrastName, size, fillColor);
-            
-            // Restore original override directory
-            [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:originalOverrideDir];
-            
-            // Return our custom image if it loaded successfully
-            if (customImage) {
-                return customImage;
-            }
+        CGSize outSize;
+        if ([UIImage tfn_vectorImageExistsNamed:imageName fitsSize:size size:&outSize]) {
+            // The image exists in our search path, let Twitter's system handle it
+            return %orig(imageName, highContrastName, size, fillColor);
         }
     }
     
-    // For all other images or if custom loading failed, use original method
+    // For all other images, use original method
     return %orig(imageName, highContrastName, size, fillColor);
 }
 
 // Hook the height-based variant as well
 + (id)tfn_vectorImageNamed:(NSString *)imageName height:(double)height fillColor:(UIColor *)fillColor {
+    // Initialize our custom search path
+    initializeCustomVectorImagePath();
+    
     // Check if this is one of our custom images
     if ([customVectorImages() containsObject:imageName]) {
-        NSString *bundlePath = getBHTwitterBundlePath();
-        NSString *svgPath = [bundlePath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.svg", imageName]];
-        
-        // Check if our custom SVG exists
-        if ([[NSFileManager defaultManager] fileExistsAtPath:svgPath]) {
-            // Use Twitter's internal vector image loading but from our bundle
-            NSURL *originalOverrideDir = [UIImage tfn_vectorImageOverrideContainersDirectoryURL];
-            [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:[NSURL fileURLWithPath:bundlePath]];
-            
-            // Load the image using Twitter's internal method
-            UIImage *customImage = %orig(imageName, height, fillColor);
-            
-            // Restore original override directory
-            [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:originalOverrideDir];
-            
-            // Return our custom image if it loaded successfully
-            if (customImage) {
-                return customImage;
-            }
+        // Convert height to size for existence check
+        CGSize checkSize = CGSizeMake(height, height);
+        CGSize outSize;
+        if ([UIImage tfn_vectorImageExistsNamed:imageName fitsSize:checkSize size:&outSize]) {
+            // The image exists in our search path, let Twitter's system handle it
+            return %orig(imageName, height, fillColor);
         }
     }
     
-    // For all other images or if custom loading failed, use original method
+    // For all other images, use original method
     return %orig(imageName, height, fillColor);
 }
 
