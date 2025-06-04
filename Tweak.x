@@ -4134,25 +4134,48 @@ static char kTranslateButtonKey;
         [translateButton addTarget:self action:@selector(BHT_translateCurrentTweetAction:) forControlEvents:UIControlEventTouchUpInside];
         translateButton.tag = 12345; // Unique tag
         
-        // Add button with higher z-index
-        [self insertSubview:translateButton aboveSubview:titleLabel];
+        // Add button with higher z-index - defensive insertion
+        if (titleLabel) {
+            [self insertSubview:translateButton aboveSubview:titleLabel];
+        } else {
+            [self addSubview:translateButton];
+        }
         translateButton.translatesAutoresizingMaskIntoConstraints = NO;
         
         // Store button reference in associated object
         objc_setAssociatedObject(self, &kTranslateButtonKey, translateButton, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         
-        // Place the button on the right with a moderate offset to avoid collisions
-        NSArray *constraints = @[
-            [translateButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
-            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-10],
-            [translateButton.widthAnchor constraintEqualToConstant:44],
-            [translateButton.heightAnchor constraintEqualToConstant:44]
-        ];
-        
-        // Store constraints reference to prevent deallocation
-        objc_setAssociatedObject(translateButton, "translateButtonConstraints", constraints, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        
-        [NSLayoutConstraint activateConstraints:constraints];
+        // Defensive constraint creation - ensure views are in same hierarchy
+        @try {
+            // Verify the button is actually in our view hierarchy
+            if (translateButton.superview == self) {
+                NSArray *constraints = @[
+                    [translateButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
+                    [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-10],
+                    [translateButton.widthAnchor constraintEqualToConstant:44],
+                    [translateButton.heightAnchor constraintEqualToConstant:44]
+                ];
+                
+                // Store constraints reference to prevent deallocation
+                objc_setAssociatedObject(translateButton, "translateButtonConstraints", constraints, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                
+                [NSLayoutConstraint activateConstraints:constraints];
+            } else {
+                // Fallback to frame-based positioning if constraints fail
+                CGRect selfBounds = self.bounds;
+                translateButton.frame = CGRectMake(selfBounds.size.width - 54, 
+                                                 (selfBounds.size.height - 44) / 2, 
+                                                 44, 44);
+                translateButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
+            }
+        } @catch (NSException *exception) {
+            // Last resort: use frame-based positioning
+            CGRect selfBounds = self.bounds;
+            translateButton.frame = CGRectMake(selfBounds.size.width - 54, 
+                                             (selfBounds.size.height - 44) / 2, 
+                                             44, 44);
+            translateButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
+        }
     } else {
         // If this is not a tweet view but we have a button, remove it
         UIButton *existingButton = objc_getAssociatedObject(self, &kTranslateButtonKey);
