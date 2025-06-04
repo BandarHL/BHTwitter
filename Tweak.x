@@ -5349,37 +5349,67 @@ static NSSet *customVectorImages() {
     return customImages;
 }
 
-// Initialize custom vector images by setting up the proper container
+// Initialize custom vector images by copying them to Twitter's bundle
 static void initializeCustomVectorImages() {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         @try {
-            // Get our BHTwitter bundle path
+            // Find Twitter's vector image directory
+            NSBundle *mainBundle = [NSBundle mainBundle];
+            NSString *appPath = [mainBundle bundlePath];
+            NSString *twitterVectorDir = [appPath stringByAppendingPathComponent:@"TwitterAppearance_TwitterAppearance.bundle"];
+            
+            // Check if the directory exists
+            BOOL isDirectory;
+            if (![[NSFileManager defaultManager] fileExistsAtPath:twitterVectorDir isDirectory:&isDirectory] || !isDirectory) {
+                NSLog(@"[BHTwitter] Twitter vector directory not found at: %@", twitterVectorDir);
+                return;
+            }
+            
+            // Get our BHTwitter bundle
             id bhtBundle = [objc_getClass("BHTBundle") sharedBundle];
             if (!bhtBundle) {
+                NSLog(@"[BHTwitter] Could not get BHTBundle");
                 return;
             }
             
-            NSBundle *bundle = [bhtBundle valueForKey:@"mainBundle"];
-            NSString *bundlePath = [bundle bundlePath];
-            if (!bundlePath) {
-                return;
+            // Copy our SVG files to Twitter's directory
+            NSArray *imageNames = @[@"translate"]; // Add more as needed
+            for (NSString *imageName in imageNames) {
+                NSURL *sourceURL = [bhtBundle pathForFile:[NSString stringWithFormat:@"%@.svg", imageName]];
+                if (!sourceURL || ![[NSFileManager defaultManager] fileExistsAtPath:[sourceURL path]]) {
+                    NSLog(@"[BHTwitter] Source SVG not found: %@.svg", imageName);
+                    continue;
+                }
+                
+                NSString *destPath = [twitterVectorDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.svg", imageName]];
+                
+                // Check if already exists and is same size (avoid unnecessary copying)
+                NSDictionary *sourceAttrs = [[NSFileManager defaultManager] attributesOfItemAtPath:[sourceURL path] error:nil];
+                NSDictionary *destAttrs = [[NSFileManager defaultManager] attributesOfItemAtPath:destPath error:nil];
+                
+                if (destAttrs && [sourceAttrs[NSFileSize] isEqual:destAttrs[NSFileSize]]) {
+                    NSLog(@"[BHTwitter] %@.svg already exists in Twitter bundle", imageName);
+                    continue; // Already copied and same size
+                }
+                
+                // Copy the file
+                NSError *copyError = nil;
+                if ([[NSFileManager defaultManager] fileExistsAtPath:destPath]) {
+                    [[NSFileManager defaultManager] removeItemAtPath:destPath error:nil];
+                }
+                
+                if ([[NSFileManager defaultManager] copyItemAtPath:[sourceURL path] toPath:destPath error:&copyError]) {
+                    NSLog(@"[BHTwitter] Successfully copied %@.svg to Twitter vector bundle", imageName);
+                } else {
+                    NSLog(@"[BHTwitter] Failed to copy %@.svg: %@", imageName, copyError.localizedDescription);
+                }
             }
             
-                         // Set up Twitter's vector image system to look in our bundle
-             // Use the proper container name that Twitter expects
-             NSURL *bundleURL = [NSURL fileURLWithPath:bundlePath];
-             
-             // Set our bundle as the container source
-             [UIImage tfn_vectorImageSetOverrideContainerName:@"BHTwitter"];
-             [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:bundleURL];
-            
-            NSLog(@"[BHTwitter] Initialized vector image system with container: BHTwitter at path: %@", bundlePath);
-            
-            // Test if our translate.svg can be found
+            // Test if Twitter can now find our SVG
             CGSize testSize;
             BOOL exists = [UIImage tfn_vectorImageExistsNamed:@"translate" fitsSize:CGSizeMake(24, 24) size:&testSize];
-            NSLog(@"[BHTwitter] translate.svg exists: %@ (size: %.1fx%.1f)", exists ? @"YES" : @"NO", testSize.width, testSize.height);
+            NSLog(@"[BHTwitter] After copying, translate.svg exists: %@ (size: %.1fx%.1f)", exists ? @"YES" : @"NO", testSize.width, testSize.height);
             
         } @catch (NSException *exception) {
             NSLog(@"[BHTwitter] Exception in initializeCustomVectorImages: %@", exception);
@@ -5389,42 +5419,12 @@ static void initializeCustomVectorImages() {
 
 %hook UIImage
 
-// Hook the main tfn_vectorImageNamed method to redirect custom images
+// Hook the main tfn_vectorImageNamed method to initialize our system
 + (id)tfn_vectorImageNamed:(NSString *)imageName fitsSize:(CGSize)size fillColor:(UIColor *)fillColor {
-    // Initialize our vector system on first call
+    // Initialize our vector system on first call (copies SVGs to Twitter's bundle)
     initializeCustomVectorImages();
     
-    // Check if this is one of our custom images
-    if ([customVectorImages() containsObject:imageName]) {
-        // Temporarily set our container and try to load
-        NSString *originalContainerName = [UIImage tfn_vectorImageOverrideContainerName];
-        NSURL *originalContainerDir = [UIImage tfn_vectorImageOverrideContainersDirectoryURL];
-        
-        // Get our bundle path
-        id bhtBundle = [objc_getClass("BHTBundle") sharedBundle];
-        if (bhtBundle) {
-            NSBundle *bundle = [bhtBundle valueForKey:@"mainBundle"];
-            NSString *bundlePath = [bundle bundlePath];
-            if (bundlePath) {
-                NSURL *bundleURL = [NSURL fileURLWithPath:bundlePath];
-                
-                [UIImage tfn_vectorImageSetOverrideContainerName:@"BHTwitter"];
-                [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:bundleURL];
-                
-                UIImage *customImage = %orig(imageName, size, fillColor);
-                
-                // Restore original settings
-                [UIImage tfn_vectorImageSetOverrideContainerName:originalContainerName];
-                [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:originalContainerDir];
-                
-                if (customImage) {
-                    return customImage;
-                }
-            }
-        }
-    }
-    
-    // For all other images, use original method
+    // Just proceed with normal behavior - our SVGs are now in Twitter's bundle
     return %orig(imageName, size, fillColor);
 }
 
@@ -5433,37 +5433,7 @@ static void initializeCustomVectorImages() {
     // Initialize our vector system on first call
     initializeCustomVectorImages();
     
-    // Check if this is one of our custom images
-    if ([customVectorImages() containsObject:imageName]) {
-        // Temporarily set our container and try to load
-        NSString *originalContainerName = [UIImage tfn_vectorImageOverrideContainerName];
-        NSURL *originalContainerDir = [UIImage tfn_vectorImageOverrideContainersDirectoryURL];
-        
-        // Get our bundle path
-        id bhtBundle = [objc_getClass("BHTBundle") sharedBundle];
-        if (bhtBundle) {
-            NSBundle *bundle = [bhtBundle valueForKey:@"mainBundle"];
-            NSString *bundlePath = [bundle bundlePath];
-            if (bundlePath) {
-                NSURL *bundleURL = [NSURL fileURLWithPath:bundlePath];
-                
-                [UIImage tfn_vectorImageSetOverrideContainerName:@"BHTwitter"];
-                [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:bundleURL];
-                
-                UIImage *customImage = %orig(imageName, highContrastName, size, fillColor);
-                
-                // Restore original settings
-                [UIImage tfn_vectorImageSetOverrideContainerName:originalContainerName];
-                [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:originalContainerDir];
-                
-                if (customImage) {
-                    return customImage;
-                }
-            }
-        }
-    }
-    
-    // For all other images, use original method
+    // Just proceed with normal behavior
     return %orig(imageName, highContrastName, size, fillColor);
 }
 
@@ -5472,37 +5442,7 @@ static void initializeCustomVectorImages() {
     // Initialize our vector system on first call
     initializeCustomVectorImages();
     
-    // Check if this is one of our custom images
-    if ([customVectorImages() containsObject:imageName]) {
-        // Temporarily set our container and try to load
-        NSString *originalContainerName = [UIImage tfn_vectorImageOverrideContainerName];
-        NSURL *originalContainerDir = [UIImage tfn_vectorImageOverrideContainersDirectoryURL];
-        
-        // Get our bundle path
-        id bhtBundle = [objc_getClass("BHTBundle") sharedBundle];
-        if (bhtBundle) {
-            NSBundle *bundle = [bhtBundle valueForKey:@"mainBundle"];
-            NSString *bundlePath = [bundle bundlePath];
-            if (bundlePath) {
-                NSURL *bundleURL = [NSURL fileURLWithPath:bundlePath];
-                
-                [UIImage tfn_vectorImageSetOverrideContainerName:@"BHTwitter"];
-                [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:bundleURL];
-                
-                UIImage *customImage = %orig(imageName, height, fillColor);
-                
-                // Restore original settings
-                [UIImage tfn_vectorImageSetOverrideContainerName:originalContainerName];
-                [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:originalContainerDir];
-                
-                if (customImage) {
-                    return customImage;
-                }
-            }
-        }
-    }
-    
-    // For all other images, use original method
+    // Just proceed with normal behavior
     return %orig(imageName, height, fillColor);
 }
 
