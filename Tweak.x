@@ -5349,46 +5349,65 @@ static NSSet *customVectorImages() {
     return customImages;
 }
 
-// Initialize our custom vector image search path
-static void initializeCustomVectorImagePath() {
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        // Get BHTwitter bundle path
-        id bhtBundle = [objc_getClass("BHTBundle") sharedBundle];
-        NSBundle *bundle = [bhtBundle valueForKey:@"mainBundle"];
-        NSString *bundlePath = [bundle bundlePath];
-        
-        if (bundlePath) {
-            NSURL *bundleURL = [NSURL fileURLWithPath:bundlePath];
-            
-            // Get current search directories
-            NSArray *currentSearchDirs = [UIImage tfn_vectorImageSearchDirectoryURLs];
-            NSMutableArray *newSearchDirs = [NSMutableArray arrayWithArray:currentSearchDirs ?: @[]];
-            
-            // Add our bundle to the search directories if not already present
-            if (![newSearchDirs containsObject:bundleURL]) {
-                [newSearchDirs insertObject:bundleURL atIndex:0]; // Insert at beginning for priority
-            }
-            
-            // Update the search directories
-            [UIImage tfn_vectorImageSetSearchDirectoryURLs:[newSearchDirs copy]];
-        }
-    });
+// Load custom SVG directly from BHTwitter bundle
+static UIImage *loadCustomVectorImage(NSString *imageName, CGSize size, UIColor *fillColor) {
+    // Get the SVG file from BHTwitter bundle
+    NSURL *svgURL = [[objc_getClass("BHTBundle") sharedBundle] pathForFile:[NSString stringWithFormat:@"%@.svg", imageName]];
+    if (!svgURL) {
+        return nil;
+    }
+    
+    // Try using Twitter's vector system with override directory first
+    NSString *bundlePath = [[svgURL path] stringByDeletingLastPathComponent];
+    NSURL *bundleURL = [NSURL fileURLWithPath:bundlePath];
+    NSURL *originalOverrideDir = [UIImage tfn_vectorImageOverrideContainersDirectoryURL];
+    
+    [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:bundleURL];
+    UIImage *vectorImage = [UIImage tfn_vectorImageNamed:imageName fitsSize:size fillColor:fillColor];
+    [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:originalOverrideDir];
+    
+    if (vectorImage) {
+        return vectorImage;
+    }
+    
+    // Fallback: Create a simple circular icon as backup
+    UIGraphicsBeginImageContextWithOptions(size, NO, 0.0);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    
+    // Set fill color
+    [fillColor setFill];
+    
+    // Create a circle
+    CGFloat radius = MIN(size.width, size.height) / 2.0 - 2.0;
+    CGPoint center = CGPointMake(size.width / 2.0, size.height / 2.0);
+    CGRect circleRect = CGRectMake(center.x - radius, center.y - radius, radius * 2, radius * 2);
+    CGContextFillEllipseInRect(context, circleRect);
+    
+    // Add "T" text for translate
+    NSString *text = @"T";
+    NSDictionary *attributes = @{
+        NSFontAttributeName: [UIFont boldSystemFontOfSize:size.width * 0.4],
+        NSForegroundColorAttributeName: [UIColor whiteColor]
+    };
+    CGSize textSize = [text sizeWithAttributes:attributes];
+    CGPoint textOrigin = CGPointMake(center.x - textSize.width / 2.0, center.y - textSize.height / 2.0);
+    [text drawAtPoint:textOrigin withAttributes:attributes];
+    
+    UIImage *fallbackImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    
+    return fallbackImage;
 }
 
 %hook UIImage
 
-// Hook the main tfn_vectorImageNamed method to ensure our path is initialized
+// Hook the main tfn_vectorImageNamed method to redirect custom images
 + (id)tfn_vectorImageNamed:(NSString *)imageName fitsSize:(CGSize)size fillColor:(UIColor *)fillColor {
-    // Initialize our custom search path
-    initializeCustomVectorImagePath();
-    
-    // Check if this is one of our custom images and if it exists
+    // Check if this is one of our custom images
     if ([customVectorImages() containsObject:imageName]) {
-        CGSize outSize;
-        if ([UIImage tfn_vectorImageExistsNamed:imageName fitsSize:size size:&outSize]) {
-            // The image exists in our search path, let Twitter's system handle it
-            return %orig(imageName, size, fillColor);
+        UIImage *customImage = loadCustomVectorImage(imageName, size, fillColor);
+        if (customImage) {
+            return customImage;
         }
     }
     
@@ -5398,15 +5417,11 @@ static void initializeCustomVectorImagePath() {
 
 // Hook the variant that includes high contrast
 + (id)tfn_vectorImageNamed:(NSString *)imageName highContrastVariantNamed:(NSString *)highContrastName fitsSize:(CGSize)size fillColor:(UIColor *)fillColor {
-    // Initialize our custom search path
-    initializeCustomVectorImagePath();
-    
     // Check if this is one of our custom images
     if ([customVectorImages() containsObject:imageName]) {
-        CGSize outSize;
-        if ([UIImage tfn_vectorImageExistsNamed:imageName fitsSize:size size:&outSize]) {
-            // The image exists in our search path, let Twitter's system handle it
-            return %orig(imageName, highContrastName, size, fillColor);
+        UIImage *customImage = loadCustomVectorImage(imageName, size, fillColor);
+        if (customImage) {
+            return customImage;
         }
     }
     
@@ -5416,17 +5431,13 @@ static void initializeCustomVectorImagePath() {
 
 // Hook the height-based variant as well
 + (id)tfn_vectorImageNamed:(NSString *)imageName height:(double)height fillColor:(UIColor *)fillColor {
-    // Initialize our custom search path
-    initializeCustomVectorImagePath();
-    
     // Check if this is one of our custom images
     if ([customVectorImages() containsObject:imageName]) {
-        // Convert height to size for existence check
-        CGSize checkSize = CGSizeMake(height, height);
-        CGSize outSize;
-        if ([UIImage tfn_vectorImageExistsNamed:imageName fitsSize:checkSize size:&outSize]) {
-            // The image exists in our search path, let Twitter's system handle it
-            return %orig(imageName, height, fillColor);
+        // Convert height to a square size
+        CGSize size = CGSizeMake(height, height);
+        UIImage *customImage = loadCustomVectorImage(imageName, size, fillColor);
+        if (customImage) {
+            return customImage;
         }
     }
     
