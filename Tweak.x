@@ -5343,21 +5343,15 @@ static NSSet *customVectorImages() {
     return customImages;
 }
 
-// Get path to BHTwitter bundle - use the exact same logic as BHTBundle
+// Get path to BHTwitter bundle using BHTBundle class
 static NSString *getBHTwitterBundlePath() {
     static NSString *bundlePath = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        NSFileManager *fileManager = [NSFileManager defaultManager];
-        NSURL *bundleURL = [NSURL new];
-        if ([fileManager fileExistsAtPath:@"/Library/Application Support/BHT/BHTwitter.bundle"]) {
-            bundleURL = [NSURL fileURLWithPath:@"/Library/Application Support/BHT/BHTwitter.bundle"];
-        } else if ([fileManager fileExistsAtPath:@"/var/jb/Library/Application Support/BHT/BHTwitter.bundle"]) {
-            bundleURL = [NSURL fileURLWithPath:@"/var/jb/Library/Application Support/BHT/BHTwitter.bundle"];
-        } else {
-            bundleURL = [[NSBundle mainBundle] URLForResource:@"BHTwitter" withExtension:@"bundle"];
+        NSURL *pathURL = [[objc_getClass("BHTBundle") sharedBundle] pathForFile:@"translate.svg"];
+        if (pathURL) {
+            bundlePath = [[pathURL path] stringByDeletingLastPathComponent];
         }
-        bundlePath = [bundleURL path];
     });
     return bundlePath;
 }
