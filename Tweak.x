@@ -5349,54 +5349,100 @@ static NSSet *customVectorImages() {
     return customImages;
 }
 
-// Load custom SVG directly from BHTwitter bundle
+// Thread-local flag to prevent infinite recursion
+static __thread BOOL isLoadingCustomVector = NO;
+
+// Load custom SVG using Twitter's vector system
 static UIImage *loadCustomVectorImage(NSString *imageName, CGSize size, UIColor *fillColor) {
-    // Get the SVG file from BHTwitter bundle
-    NSURL *svgURL = [[objc_getClass("BHTBundle") sharedBundle] pathForFile:[NSString stringWithFormat:@"%@.svg", imageName]];
-    if (!svgURL) {
+    @try {
+        // Prevent infinite recursion
+        if (isLoadingCustomVector) {
+            return nil;
+        }
+        
+        // Validate inputs
+        if (!imageName || size.width <= 0 || size.height <= 0) {
+            return nil;
+        }
+        
+        // Get the SVG file from BHTwitter bundle
+        id bhtBundle = [objc_getClass("BHTBundle") sharedBundle];
+        if (!bhtBundle) {
+            return nil;
+        }
+        
+        NSURL *svgURL = [bhtBundle pathForFile:[NSString stringWithFormat:@"%@.svg", imageName]];
+        if (!svgURL || ![[NSFileManager defaultManager] fileExistsAtPath:[svgURL path]]) {
+            return nil;
+        }
+        
+        // Use Twitter's vector system with override directory
+        NSString *bundlePath = [[svgURL path] stringByDeletingLastPathComponent];
+        if (!bundlePath) {
+            return nil;
+        }
+        
+        NSURL *bundleURL = [NSURL fileURLWithPath:bundlePath];
+        NSURL *originalOverrideDir = [UIImage tfn_vectorImageOverrideContainersDirectoryURL];
+        
+        // Set recursion flag and load using Twitter's system
+        isLoadingCustomVector = YES;
+        [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:bundleURL];
+        
+        // Now call the original implementation - the flag will prevent our hook from interfering
+        UIImage *vectorImage = [UIImage tfn_vectorImageNamed:imageName fitsSize:size fillColor:fillColor];
+        
+        // Restore state
+        [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:originalOverrideDir];
+        isLoadingCustomVector = NO;
+        
+        if (vectorImage) {
+            return vectorImage;
+        }
+        
+        // Fallback if Twitter's system couldn't load it: Create a simple circular icon
+        UIGraphicsBeginImageContextWithOptions(size, NO, 0.0);
+        CGContextRef context = UIGraphicsGetCurrentContext();
+        if (!context) {
+            UIGraphicsEndImageContext();
+            return nil;
+        }
+        
+        // Use a default color if fillColor is nil
+        UIColor *safeColor = fillColor ?: [UIColor systemGrayColor];
+        [safeColor setFill];
+        
+        // Create a circle
+        CGFloat radius = MIN(size.width, size.height) / 2.0 - 2.0;
+        if (radius <= 0) {
+            UIGraphicsEndImageContext();
+            return nil;
+        }
+        
+        CGPoint center = CGPointMake(size.width / 2.0, size.height / 2.0);
+        CGRect circleRect = CGRectMake(center.x - radius, center.y - radius, radius * 2, radius * 2);
+        CGContextFillEllipseInRect(context, circleRect);
+        
+        // Add "T" text for translate
+        NSString *text = @"T";
+        CGFloat fontSize = MAX(8.0, size.width * 0.4);
+        NSDictionary *attributes = @{
+            NSFontAttributeName: [UIFont boldSystemFontOfSize:fontSize],
+            NSForegroundColorAttributeName: [UIColor whiteColor]
+        };
+        CGSize textSize = [text sizeWithAttributes:attributes];
+        CGPoint textOrigin = CGPointMake(center.x - textSize.width / 2.0, center.y - textSize.height / 2.0);
+        [text drawAtPoint:textOrigin withAttributes:attributes];
+        
+        UIImage *fallbackImage = UIGraphicsGetImageFromCurrentImageContext();
+        UIGraphicsEndImageContext();
+        
+        return fallbackImage;
+    } @catch (NSException *exception) {
+        // Reset flag in case of exception
+        isLoadingCustomVector = NO;
         return nil;
     }
-    
-    // Try using Twitter's vector system with override directory first
-    NSString *bundlePath = [[svgURL path] stringByDeletingLastPathComponent];
-    NSURL *bundleURL = [NSURL fileURLWithPath:bundlePath];
-    NSURL *originalOverrideDir = [UIImage tfn_vectorImageOverrideContainersDirectoryURL];
-    
-    [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:bundleURL];
-    UIImage *vectorImage = [UIImage tfn_vectorImageNamed:imageName fitsSize:size fillColor:fillColor];
-    [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:originalOverrideDir];
-    
-    if (vectorImage) {
-        return vectorImage;
-    }
-    
-    // Fallback: Create a simple circular icon as backup
-    UIGraphicsBeginImageContextWithOptions(size, NO, 0.0);
-    CGContextRef context = UIGraphicsGetCurrentContext();
-    
-    // Set fill color
-    [fillColor setFill];
-    
-    // Create a circle
-    CGFloat radius = MIN(size.width, size.height) / 2.0 - 2.0;
-    CGPoint center = CGPointMake(size.width / 2.0, size.height / 2.0);
-    CGRect circleRect = CGRectMake(center.x - radius, center.y - radius, radius * 2, radius * 2);
-    CGContextFillEllipseInRect(context, circleRect);
-    
-    // Add "T" text for translate
-    NSString *text = @"T";
-    NSDictionary *attributes = @{
-        NSFontAttributeName: [UIFont boldSystemFontOfSize:size.width * 0.4],
-        NSForegroundColorAttributeName: [UIColor whiteColor]
-    };
-    CGSize textSize = [text sizeWithAttributes:attributes];
-    CGPoint textOrigin = CGPointMake(center.x - textSize.width / 2.0, center.y - textSize.height / 2.0);
-    [text drawAtPoint:textOrigin withAttributes:attributes];
-    
-    UIImage *fallbackImage = UIGraphicsGetImageFromCurrentImageContext();
-    UIGraphicsEndImageContext();
-    
-    return fallbackImage;
 }
 
 %hook UIImage
