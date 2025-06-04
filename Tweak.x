@@ -4123,7 +4123,7 @@ static char kTranslateButtonKey;
         UIButton *translateButton = [UIButton buttonWithType:UIButtonTypeSystem];
         
         // Use Twitter's internal vector image system for the icon
-        [translateButton setImage:[UIImage imageNamed:@"translate.png" inBundle:[NSBundle bundleForClass:[self class]] compatibleWithTraitCollection:nil] forState:UIControlStateNormal];
+        [translateButton setImage:[UIImage tfn_vectorImageNamed:@"translate" fitsSize:CGSizeMake(24, 24) fillColor:[UIColor systemGray2Color]] forState:UIControlStateNormal];
         
         // Set proper tint color based on appearance
         if (@available(iOS 12.0, *)) {
@@ -5279,4 +5279,121 @@ static NSBundle *BHBundle() {
             self.tintColor = [UIColor blackColor];
         }
     }
+%end
+
+// MARK: - Custom Vector Image Loading System
+
+// Define which images should load from BHTwitter bundle
+static NSSet *customVectorImages() {
+    static NSSet *customImages = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        customImages = [NSSet setWithObjects:@"translate", nil]; // Add more image names as needed
+    });
+    return customImages;
+}
+
+// Get path to BHTwitter bundle
+static NSString *getBHTwitterBundlePath() {
+    static NSString *bundlePath = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        bundlePath = @"/Library/Application Support/BHT/BHTwitter.bundle";
+    });
+    return bundlePath;
+}
+
+%hook UIImage
+
+// Hook the main tfn_vectorImageNamed method to selectively redirect custom images
++ (id)tfn_vectorImageNamed:(NSString *)imageName fitsSize:(CGSize)size fillColor:(UIColor *)fillColor {
+    // Check if this is one of our custom images
+    if ([customVectorImages() containsObject:imageName]) {
+        NSString *bundlePath = getBHTwitterBundlePath();
+        NSString *svgPath = [bundlePath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.svg", imageName]];
+        
+        // Check if our custom SVG exists
+        if ([[NSFileManager defaultManager] fileExistsAtPath:svgPath]) {
+            // Use Twitter's internal vector image loading but from our bundle
+            // First, temporarily set the override directory to our bundle
+            NSURL *originalOverrideDir = [UIImage tfn_vectorImageOverrideContainersDirectoryURL];
+            [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:[NSURL fileURLWithPath:bundlePath]];
+            
+            // Load the image using Twitter's internal method
+            UIImage *customImage = %orig(imageName, size, fillColor);
+            
+            // Restore original override directory
+            [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:originalOverrideDir];
+            
+            // Return our custom image if it loaded successfully
+            if (customImage) {
+                return customImage;
+            }
+        }
+    }
+    
+    // For all other images or if custom loading failed, use original method
+    return %orig(imageName, size, fillColor);
+}
+
+// Also hook the variant that includes high contrast
++ (id)tfn_vectorImageNamed:(NSString *)imageName highContrastVariantNamed:(NSString *)highContrastName fitsSize:(CGSize)size fillColor:(UIColor *)fillColor {
+    // Check if this is one of our custom images
+    if ([customVectorImages() containsObject:imageName]) {
+        NSString *bundlePath = getBHTwitterBundlePath();
+        NSString *svgPath = [bundlePath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.svg", imageName]];
+        
+        // Check if our custom SVG exists
+        if ([[NSFileManager defaultManager] fileExistsAtPath:svgPath]) {
+            // Use Twitter's internal vector image loading but from our bundle
+            NSURL *originalOverrideDir = [UIImage tfn_vectorImageOverrideContainersDirectoryURL];
+            [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:[NSURL fileURLWithPath:bundlePath]];
+            
+            // Load the image using Twitter's internal method
+            UIImage *customImage = %orig(imageName, highContrastName, size, fillColor);
+            
+            // Restore original override directory
+            [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:originalOverrideDir];
+            
+            // Return our custom image if it loaded successfully
+            if (customImage) {
+                return customImage;
+            }
+        }
+    }
+    
+    // For all other images or if custom loading failed, use original method
+    return %orig(imageName, highContrastName, size, fillColor);
+}
+
+// Hook the height-based variant as well
++ (id)tfn_vectorImageNamed:(NSString *)imageName height:(double)height fillColor:(UIColor *)fillColor {
+    // Check if this is one of our custom images
+    if ([customVectorImages() containsObject:imageName]) {
+        NSString *bundlePath = getBHTwitterBundlePath();
+        NSString *svgPath = [bundlePath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.svg", imageName]];
+        
+        // Check if our custom SVG exists
+        if ([[NSFileManager defaultManager] fileExistsAtPath:svgPath]) {
+            // Use Twitter's internal vector image loading but from our bundle
+            NSURL *originalOverrideDir = [UIImage tfn_vectorImageOverrideContainersDirectoryURL];
+            [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:[NSURL fileURLWithPath:bundlePath]];
+            
+            // Load the image using Twitter's internal method
+            UIImage *customImage = %orig(imageName, height, fillColor);
+            
+            // Restore original override directory
+            [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:originalOverrideDir];
+            
+            // Return our custom image if it loaded successfully
+            if (customImage) {
+                return customImage;
+            }
+        }
+    }
+    
+    // For all other images or if custom loading failed, use original method
+    return %orig(imageName, height, fillColor);
+}
+
 %end

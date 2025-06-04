@@ -702,6 +702,10 @@ extern UIColor *BHTCurrentAccentColor(void);
 @interface UIImage (TFNAdditions)
 + (id)tfn_vectorImageNamed:(id)arg1 fitsSize:(struct CGSize)arg2 fillColor:(id)arg3;
 + (BOOL)tfn_vectorImageExistsNamed:(id)arg1 fitsSize:(struct CGSize)arg2 size:(out struct CGSize *)arg3;
++ (id)tfn_vectorImageNamed:(id)arg1 highContrastVariantNamed:(id)arg2 fitsSize:(struct CGSize)arg3 fillColor:(id)arg4;
++ (id)tfn_vectorImageNamed:(id)arg1 height:(double)arg2 fillColor:(id)arg3;
++ (void)tfn_vectorImageSetOverrideContainersDirectoryURL:(NSURL *)arg1;
++ (NSURL *)tfn_vectorImageOverrideContainersDirectoryURL;
 @end
 
 @interface TFNFlexibleLayoutView : UIView
