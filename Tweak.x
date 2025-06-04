@@ -4024,6 +4024,7 @@ static UIView *findPlayerControlsInHierarchy(UIView *startView) {
 
 @interface _UINavigationBarContentView (BHTwitter)
 - (void)BHT_addTranslateButtonIfNeeded;
+- (BOOL)BHT_findConversationViewInView:(UIView *)view;
 - (TFNTwitterStatus *)BHT_findStatusObjectInController:(UIViewController *)controller;
 - (UITextView *)BHT_findTweetTextViewInController:(UIViewController *)controller;
 - (NSString *)BHT_extractTextFromStatusObjectInController:(UIViewController *)controller;
@@ -4084,28 +4085,21 @@ static char kTranslateButtonKey;
         }
     }
     
-    // Check if this is a conversation/tweet view by examining both title and controller class
+    // Check if this is a conversation/tweet view by looking for T1ConversationFocalStatusView
     BOOL isTweetView = NO;
     UILabel *titleLabel = nil;
     
+    // Get the first label as our title label reference (for positioning)
     for (UIView *subview in self.subviews) {
         if ([subview isKindOfClass:%c(UILabel)]) {
-            UILabel *label = (UILabel *)subview;
-            if ([label.text isEqualToString:@"Post"] || [label.text isEqualToString:@"Tweet"]) {
-                titleLabel = label;
-                break;
-            }
+            titleLabel = (UILabel *)subview;
+            break;
         }
     }
     
-    if (titleLabel && actualContentVC) {
-        NSString *vcClassName = NSStringFromClass([actualContentVC class]);
-        if ([vcClassName containsString:@"Conversation"] || 
-            [vcClassName containsString:@"Tweet"] || 
-            [vcClassName containsString:@"Status"] || 
-            [vcClassName containsString:@"Detail"]) {
-            isTweetView = YES;
-        }
+    // Simple and reliable check: look for T1ConversationFocalStatusView in the view hierarchy
+    if (actualContentVC && actualContentVC.isViewLoaded) {
+        isTweetView = [self BHT_findConversationViewInView:actualContentVC.view];
     }
     
     // Only proceed if this is a valid tweet view
@@ -4191,6 +4185,19 @@ static char kTranslateButtonKey;
 }
 
 // Handle dark/light mode changes
+%new
+- (BOOL)BHT_findConversationViewInView:(UIView *)view {
+    if ([view isKindOfClass:%c(T1ConversationFocalStatusView)]) {
+        return YES;
+    }
+    for (UIView *subview in view.subviews) {
+        if ([self BHT_findConversationViewInView:subview]) {
+            return YES;
+        }
+    }
+    return NO;
+}
+
 %new
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
     if ([keyPath isEqualToString:@"traitCollection"] && [object isKindOfClass:[UIButton class]]) {
