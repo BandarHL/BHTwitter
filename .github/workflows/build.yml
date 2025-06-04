@@ -127,7 +127,7 @@ jobs:
         run: |
           # Create custom directory in Twitter's vector bundle
           TWITTER_BUNDLE_PATH="main/tmp/Payload/Twitter.app/TwitterAppearance_TwitterAppearance.bundle"
-          CUSTOM_DIR="${TWITTER_BUNDLE_PATH}/custom"
+          CUSTOM_DIR="${TWITTER_BUNDLE_PATH}/VectorImages/custom"
           
           if [ -d "${TWITTER_BUNDLE_PATH}" ]; then
             echo "Found TwitterAppearance bundle at: ${TWITTER_BUNDLE_PATH}"

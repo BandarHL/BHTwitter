@@ -5354,10 +5354,33 @@ static void initializeCustomVectorImages() {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         @try {
-            // Find Twitter's custom vector directory (injected during build)
+            // First, let's debug Twitter's current vector image configuration
+            NSString *currentContainerName = [UIImage tfn_vectorImageOverrideContainerName];
+            NSURL *currentContainerDir = [UIImage tfn_vectorImageOverrideContainersDirectoryURL];
+            NSArray *currentSearchDirs = [UIImage tfn_vectorImageSearchDirectoryURLs];
+            
+            NSLog(@"[BHTwitter] === Current Twitter Vector Image Configuration ===");
+            NSLog(@"[BHTwitter] Container name: %@", currentContainerName ?: @"(none)");
+            NSLog(@"[BHTwitter] Container directory: %@", currentContainerDir ?: @"(none)");
+            NSLog(@"[BHTwitter] Search directories (%lu): %@", (unsigned long)[currentSearchDirs count], currentSearchDirs);
+            
+            // Check what's in the main TwitterAppearance bundle
             NSBundle *mainBundle = [NSBundle mainBundle];
             NSString *appPath = [mainBundle bundlePath];
-            NSString *customVectorDir = [appPath stringByAppendingPathComponent:@"TwitterAppearance_TwitterAppearance.bundle/custom"];
+            NSString *twitterBundlePath = [appPath stringByAppendingPathComponent:@"TwitterAppearance_TwitterAppearance.bundle"];
+            NSString *vectorImagesPath = [twitterBundlePath stringByAppendingPathComponent:@"VectorImages"];
+            
+            NSLog(@"[BHTwitter] App path: %@", appPath);
+            NSLog(@"[BHTwitter] Twitter bundle exists: %@", [[NSFileManager defaultManager] fileExistsAtPath:twitterBundlePath] ? @"YES" : @"NO");
+            NSLog(@"[BHTwitter] VectorImages dir exists: %@", [[NSFileManager defaultManager] fileExistsAtPath:vectorImagesPath] ? @"YES" : @"NO");
+            
+            if ([[NSFileManager defaultManager] fileExistsAtPath:vectorImagesPath]) {
+                NSArray *vectorContents = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:vectorImagesPath error:nil];
+                NSLog(@"[BHTwitter] VectorImages contents: %@", vectorContents);
+            }
+            
+            // Find Twitter's custom vector directory (injected during build)
+            NSString *customVectorDir = [appPath stringByAppendingPathComponent:@"TwitterAppearance_TwitterAppearance.bundle/VectorImages/custom"];
             
             // Check if our custom directory exists (from build injection)
             BOOL isDirectory;
