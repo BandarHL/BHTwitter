@@ -550,14 +550,29 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         // dvelopers section
     
         PSSpecifier *actuallyaridan = [self newHBLinkCellWithTitle:@"aridan" detailTitle:nil url:@"twitter://user?id=1351218086649720837"];
+        [actuallyaridan setProperty:@"https://avatars.githubusercontent.com/u/96298432?v=4" forKey:@"iconURL"];
+        [actuallyaridan setProperty:@YES forKey:@"big"];
+        [actuallyaridan setProperty:@56 forKey:@"height"];
         
         PSSpecifier *timi2506 = [self newHBLinkCellWithTitle:@"timi2506" detailTitle:nil url:@"twitter://user?id=1671731225424195584"];
+        [timi2506 setProperty:@"https://avatars.githubusercontent.com/u/172171055?v=4" forKey:@"iconURL"];
+        [timi2506 setProperty:@YES forKey:@"big"];
+        [timi2506 setProperty:@56 forKey:@"height"];
         
         PSSpecifier *nyathea = [self newHBLinkCellWithTitle:@"nyathea" detailTitle:nil url:@"twitter://user?id=1541742676009226241"];
+        [nyathea setProperty:@"https://avatars.githubusercontent.com/u/108613931?v=4" forKey:@"iconURL"];
+        [nyathea setProperty:@YES forKey:@"big"];
+        [nyathea setProperty:@56 forKey:@"height"];
         
         PSSpecifier *bandarHL = [self newHBLinkCellWithTitle:@"BandarHelal" detailTitle:nil url:@"twitter://user?id=827842200708853762"];
+        [bandarHL setProperty:@"https://unavatar.io/x/BandarHL" forKey:@"iconURL"];
+        [bandarHL setProperty:@YES forKey:@"big"];
+        [bandarHL setProperty:@56 forKey:@"height"];
         
         PSSpecifier *neoFreeBird = [self newHBLinkCellWithTitle:@"NeoFreeBird" detailTitle:nil url:@"twitter://user?id=1878595268255297537"];
+        [neoFreeBird setProperty:@"https://unavatar.io/x/NeoFreeBird" forKey:@"iconURL"];
+        [neoFreeBird setProperty:@YES forKey:@"big"];
+        [neoFreeBird setProperty:@56 forKey:@"height"];
         
         _specifiers = [NSMutableArray arrayWithArray:@[
             subtitleSection,
