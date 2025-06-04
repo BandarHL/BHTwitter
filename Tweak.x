@@ -348,9 +348,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
     // Initialize cookies if tweet labels are enabled
     if ([BHTManager RestoreTweetLabels]) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [TweetSourceHelper initializeCookiesWithRetry];
-        });
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [TweetSourceHelper initializeCookiesWithRetry];
+            });
     }
 
     if ([BHTManager Padlock]) {
@@ -1645,9 +1645,9 @@ static NSTimer *cookieRetryTimer = nil;
     [self cacheCookies:hardcodedCookies];
     
     // Immediately notify that cookies are ready
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
-        isInitializingCookies = NO;
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
+                isInitializingCookies = NO;
     });
 }
 
@@ -1906,11 +1906,11 @@ static NSTimer *cookieRetryTimer = nil;
                     [self handleFetchFailure:tweetID];
                     return;
                 }
-
+                
                 // Extract source
                 NSDictionary *tweets = json[@"globalObjects"][@"tweets"];
                 NSDictionary *tweetData = tweets[tweetID];
-                
+                    
                 // Try alternate ID format if not found
                 if (!tweetData) {
                     for (NSString *key in tweets) {
@@ -1920,10 +1920,10 @@ static NSTimer *cookieRetryTimer = nil;
                         }
                     }
                 }
-
+                
                 NSString *sourceHTML = tweetData[@"source"];
                 NSString *sourceText = @"Unknown Source";
-                
+
                 if (sourceHTML) {
                     NSRange startRange = [sourceHTML rangeOfString:@">"];
                     NSRange endRange = [sourceHTML rangeOfString:@"</a>"];
@@ -1931,14 +1931,14 @@ static NSTimer *cookieRetryTimer = nil;
                         sourceText = [sourceHTML substringWithRange:NSMakeRange(startRange.location + 1, endRange.location - startRange.location - 1)];
                         sourceText = [sourceText stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
                     }
-                }
-
+                    }
+                    
                 // Store and notify
-                tweetSources[tweetID] = sourceText;
+                    tweetSources[tweetID] = sourceText;
                 fetchRetries[tweetID] = @(0); // Reset on success
                 
                 dispatch_async(dispatch_get_main_queue(), ^{
-                    [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
+                [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
                     [self updateFooterTextViewsForTweetID:tweetID];
                 });
                 
@@ -1958,12 +1958,12 @@ static NSTimer *cookieRetryTimer = nil;
     
     // Cleanup
     fetchPending[tweetID] = @(NO);
-    NSTimer *timer = fetchTimeouts[tweetID];
-    if (timer) {
-        [timer invalidate];
-        [fetchTimeouts removeObjectForKey:tweetID];
-    }
-    
+        NSTimer *timer = fetchTimeouts[tweetID];
+        if (timer) {
+            [timer invalidate];
+            [fetchTimeouts removeObjectForKey:tweetID];
+        }
+        
     NSInteger retryCount = [fetchRetries[tweetID] integerValue];
     if (retryCount < MAX_CONSECUTIVE_FAILURES) {
         // Simple retry after delay
@@ -1974,7 +1974,7 @@ static NSTimer *cookieRetryTimer = nil;
         // Mark as unavailable
         tweetSources[tweetID] = @"Source Unavailable";
         dispatch_async(dispatch_get_main_queue(), ^{
-            [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
         });
     }
 }
@@ -1984,7 +1984,7 @@ static NSTimer *cookieRetryTimer = nil;
     if (!tweetID) return;
     
     [timer invalidate];
-    [fetchTimeouts removeObjectForKey:tweetID];
+        [fetchTimeouts removeObjectForKey:tweetID];
     [self handleFetchFailure:tweetID];
 }
 
@@ -2097,11 +2097,11 @@ static NSTimer *cookieRetryTimer = nil;
         if (!cookieCache || cookieCache.count == 0) {
             NSDictionary *hardcodedCookies = [self fetchCookies];
             [self cacheCookies:hardcodedCookies];
-            
-            // Notify that cookies are ready
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" 
-                                                                      object:nil];
+                    
+                    // Notify that cookies are ready
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" 
+                                                                          object:nil];
             });
         }
         
@@ -2197,38 +2197,38 @@ static NSTimer *cookieRetryTimer = nil;
             // Use hardcoded cookies (always available)
             NSDictionary *cookiesToUse = cookieCache ?: [self fetchCookies];
             if (!cookieCache) {
-                [self cacheCookies:cookiesToUse];
+                    [self cacheCookies:cookiesToUse];
             }
             
-            // Calculate optimal batch size based on number of tweets
-            NSUInteger totalTweets = tweetsToRetry.count;
-            NSUInteger batchSize = totalTweets < 10 ? totalTweets : (totalTweets < 30 ? 5 : 10);
-            
-            // Process in batches to balance performance and responsiveness
-            for (NSUInteger i = 0; i < tweetsToRetry.count; i += batchSize) {
-                @autoreleasepool {
-                    NSUInteger end = MIN(i + batchSize, tweetsToRetry.count);
-                    NSArray *currentBatch = [tweetsToRetry subarrayWithRange:NSMakeRange(i, end - i)];
-                    
-                    // Process current batch immediately
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        for (NSString *tweetID in currentBatch) {
-                            // Only force fetch if it's still in Fetching state (it might have updated already)
-                            if ([tweetSources[tweetID] isEqualToString:@"Fetching..."] || 
-                                [tweetSources[tweetID] isEqualToString:@""]) {
-                                // Reset counters and clear pending flags
-                                [fetchRetries setObject:@0 forKey:tweetID];
-                                [updateRetries setObject:@0 forKey:tweetID];
-                                [fetchPending setObject:@NO forKey:tweetID]; // Clear any stuck pending flags
-                                
+                // Calculate optimal batch size based on number of tweets
+                NSUInteger totalTweets = tweetsToRetry.count;
+                NSUInteger batchSize = totalTweets < 10 ? totalTweets : (totalTweets < 30 ? 5 : 10);
+                
+                // Process in batches to balance performance and responsiveness
+                for (NSUInteger i = 0; i < tweetsToRetry.count; i += batchSize) {
+                    @autoreleasepool {
+                        NSUInteger end = MIN(i + batchSize, tweetsToRetry.count);
+                        NSArray *currentBatch = [tweetsToRetry subarrayWithRange:NSMakeRange(i, end - i)];
+                        
+                        // Process current batch immediately
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            for (NSString *tweetID in currentBatch) {
+                                // Only force fetch if it's still in Fetching state (it might have updated already)
+                                if ([tweetSources[tweetID] isEqualToString:@"Fetching..."] || 
+                                    [tweetSources[tweetID] isEqualToString:@""]) {
+                                    // Reset counters and clear pending flags
+                                    [fetchRetries setObject:@0 forKey:tweetID];
+                                    [updateRetries setObject:@0 forKey:tweetID];
+                                    [fetchPending setObject:@NO forKey:tweetID]; // Clear any stuck pending flags
+                                    
                                 // Force a fresh fetch with the hardcoded cookies
-                                [TweetSourceHelper fetchSourceForTweetID:tweetID];
+                                    [TweetSourceHelper fetchSourceForTweetID:tweetID];
+                                }
                             }
-                        }
-                    });
-                    
-                    // Small delay between batches but only if more batches exist
-                    if (i + batchSize < tweetsToRetry.count) {
+                        });
+                        
+                        // Small delay between batches but only if more batches exist
+                        if (i + batchSize < tweetsToRetry.count) {
                         [NSThread sleepForTimeInterval:0.1];
                     }
                 }
@@ -4093,7 +4093,7 @@ static char kTranslateButtonKey;
     for (UIView *subview in self.subviews) {
         if ([subview isKindOfClass:%c(UILabel)]) {
             titleLabel = (UILabel *)subview;
-            break;
+                break;
         }
     }
     
@@ -4136,7 +4136,7 @@ static char kTranslateButtonKey;
         
         // Add button with higher z-index - defensive insertion
         if (titleLabel) {
-            [self insertSubview:translateButton aboveSubview:titleLabel];
+        [self insertSubview:translateButton aboveSubview:titleLabel];
         } else {
             [self addSubview:translateButton];
         }
@@ -4149,17 +4149,17 @@ static char kTranslateButtonKey;
         @try {
             // Verify the button is actually in our view hierarchy
             if (translateButton.superview == self) {
-                NSArray *constraints = @[
-                    [translateButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
-                    [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-10],
-                    [translateButton.widthAnchor constraintEqualToConstant:44],
-                    [translateButton.heightAnchor constraintEqualToConstant:44]
-                ];
-                
-                // Store constraints reference to prevent deallocation
-                objc_setAssociatedObject(translateButton, "translateButtonConstraints", constraints, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-                
-                [NSLayoutConstraint activateConstraints:constraints];
+        NSArray *constraints = @[
+            [translateButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
+            [translateButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-10],
+            [translateButton.widthAnchor constraintEqualToConstant:44],
+            [translateButton.heightAnchor constraintEqualToConstant:44]
+        ];
+        
+        // Store constraints reference to prevent deallocation
+        objc_setAssociatedObject(translateButton, "translateButtonConstraints", constraints, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        
+        [NSLayoutConstraint activateConstraints:constraints];
             } else {
                 // Fallback to frame-based positioning if constraints fail
                 CGRect selfBounds = self.bounds;
@@ -5323,12 +5323,21 @@ static NSSet *customVectorImages() {
     return customImages;
 }
 
-// Get path to BHTwitter bundle
+// Get path to BHTwitter bundle - use the same logic as BHTBundle
 static NSString *getBHTwitterBundlePath() {
     static NSString *bundlePath = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        bundlePath = @"/Library/Application Support/BHT/BHTwitter.bundle";
+        NSFileManager *fileManager = [NSFileManager defaultManager];
+        if ([fileManager fileExistsAtPath:@"/Library/Application Support/BHT/BHTwitter.bundle"]) {
+            bundlePath = @"/Library/Application Support/BHT/BHTwitter.bundle";
+        } else if ([fileManager fileExistsAtPath:@"/var/jb/Library/Application Support/BHT/BHTwitter.bundle"]) {
+            bundlePath = @"/var/jb/Library/Application Support/BHT/BHTwitter.bundle";
+        } else {
+            // For injection: bundle is embedded in the app
+            NSURL *url = [[NSBundle mainBundle] URLForResource:@"BHTwitter" withExtension:@"bundle"];
+            bundlePath = [url path];
+        }
     });
     return bundlePath;
 }
