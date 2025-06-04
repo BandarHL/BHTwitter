@@ -5398,7 +5398,6 @@ static void initializeCustomVectorImages() {
             
             // Add our custom directory to Twitter's search paths
             NSURL *customDirURL = [NSURL fileURLWithPath:customVectorDir];
-            NSArray *currentSearchDirs = [UIImage tfn_vectorImageSearchDirectoryURLs];
             NSMutableArray *newSearchDirs = [NSMutableArray arrayWithArray:currentSearchDirs ?: @[]];
             
             // Add our custom directory if not already present
@@ -5406,6 +5405,7 @@ static void initializeCustomVectorImages() {
                 [newSearchDirs insertObject:customDirURL atIndex:0]; // Insert at beginning for priority
                 [UIImage tfn_vectorImageSetSearchDirectoryURLs:[newSearchDirs copy]];
                 NSLog(@"[BHTwitter] Added custom directory to vector image search paths");
+                NSLog(@"[BHTwitter] New search directories: %@", newSearchDirs);
             }
             
             // Test if Twitter can now find our SVG
