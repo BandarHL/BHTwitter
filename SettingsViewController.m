@@ -549,11 +549,11 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         
         // dvelopers section
     
-        PSSpecifier *actuallyaridan = [self newHBTwitterCellWithTitle:@"aridan" twitterUsername:@"1351218086649720837" customAvatarURL:@"https://unavatar.io/x/actuallyaridan"];
-        PSSpecifier *timi2506 = [self newHBTwitterCellWithTitle:@"timi2506" twitterUsername:@"1671731225424195584" customAvatarURL:@"https://unavatar.io/x/timi2506"];
-        PSSpecifier *nyathea = [self newHBTwitterCellWithTitle:@"nyathea" twitterUsername:@"1541742676009226241" customAvatarURL:@"https://unavatar.io/x/nyaathea"];
-        PSSpecifier *bandarHL = [self newHBTwitterCellWithTitle:@"BandarHelal" twitterUsername:@"827842200708853762" customAvatarURL:@"https://unavatar.io/x/BandarHL"];
-        PSSpecifier *neoFreeBird = [self newHBTwitterCellWithTitle:@"NeoFreeBird" twitterUsername:@"1878595268255297537" customAvatarURL:@"https://unavatar.io/x/NeoFreeBird"];
+        PSSpecifier *actuallyaridan = [self newHBTwitterCellWithTitle:@"aridan" twitterUsername:@"actuallyaridan" customAvatarURL:@"https://unavatar.io/x/actuallyaridan"];
+        PSSpecifier *timi2506 = [self newHBTwitterCellWithTitle:@"timi2506" twitterUsername:@"timi2506" customAvatarURL:@"https://unavatar.io/x/timi2506"];
+        PSSpecifier *nyathea = [self newHBTwitterCellWithTitle:@"nyathea" twitterUsername:@"nyaathea" customAvatarURL:@"https://unavatar.io/x/nyaathea"];
+        PSSpecifier *bandarHL = [self newHBTwitterCellWithTitle:@"BandarHelal" twitterUsername:@"BandarHL" customAvatarURL:@"https://unavatar.io/x/BandarHL"];
+        PSSpecifier *neoFreeBird = [self newHBTwitterCellWithTitle:@"NeoFreeBird" twitterUsername:@"NeoFreeBird" customAvatarURL:@"https://unavatar.io/x/NeoFreeBird"];
         
         // Override button actions to use Twitter URL scheme
         [actuallyaridan setButtonAction:@selector(openAridanTwitter:)];
