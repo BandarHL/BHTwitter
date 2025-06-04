@@ -3882,13 +3882,22 @@ static void ConfigureAudioSessionForSounds(void) {
         NSError *error = nil;
         AVAudioSession *audioSession = [AVAudioSession sharedInstance];
         
-        // Set category to allow playback over other audio without complex session management
-        [audioSession setCategory:AVAudioSessionCategoryAmbient 
-                      withOptions:AVAudioSessionCategoryOptionMixWithOthers 
+        // Use AVAudioSessionCategoryPlayback for higher priority over video elements
+        // This ensures our sounds won't get ducked by video content on screen
+        [audioSession setCategory:AVAudioSessionCategoryPlayback 
+                      withOptions:AVAudioSessionCategoryOptionMixWithOthers | 
+                                  AVAudioSessionCategoryOptionDuckOthers |
+                                  AVAudioSessionCategoryOptionInterruptSpokenAudioAndMixWithOthers
                             error:&error];
         
         if (!error) {
-            audioSessionConfigured = YES;
+            // Activate the session to ensure it takes priority
+            [audioSession setActive:YES error:&error];
+            if (!error) {
+                audioSessionConfigured = YES;
+            } else {
+                NSLog(@"[BHTwitter] Audio session activation error: %@", error.localizedDescription);
+            }
         } else {
             NSLog(@"[BHTwitter] Audio session configuration error: %@", error.localizedDescription);
         }
@@ -3944,6 +3953,17 @@ static void PlayRefreshSound(int soundType) {
     if (soundsInitialized[soundType]) {
         // Simple, lightweight playback that respects silent switch
         AudioServicesPlaySystemSound(sounds[soundType]);
+        
+        // Deactivate our audio session after a brief delay to restore normal behavior
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            NSError *deactivateError = nil;
+            [[AVAudioSession sharedInstance] setActive:NO 
+                                         withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation 
+                                               error:&deactivateError];
+            if (deactivateError) {
+                NSLog(@"[BHTwitter] Audio session deactivation error: %@", deactivateError.localizedDescription);
+            }
+        });
     }
 }
 
