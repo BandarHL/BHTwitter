@@ -549,30 +549,18 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         
         // dvelopers section
     
-        PSSpecifier *actuallyaridan = [self newHBLinkCellWithTitle:@"aridan" detailTitle:nil url:@"twitter://user?id=1351218086649720837"];
-        [actuallyaridan setProperty:@"https://avatars.githubusercontent.com/u/96298432?v=4" forKey:@"iconURL"];
-        [actuallyaridan setProperty:@YES forKey:@"big"];
-        [actuallyaridan setProperty:@56 forKey:@"height"];
+        PSSpecifier *actuallyaridan = [self newHBTwitterCellWithTitle:@"aridan" twitterUsername:@"1351218086649720837" customAvatarURL:@"https://unavatar.io/x/actuallyaridan"];
+        PSSpecifier *timi2506 = [self newHBTwitterCellWithTitle:@"timi2506" twitterUsername:@"1671731225424195584" customAvatarURL:@"https://unavatar.io/x/timi2506"];
+        PSSpecifier *nyathea = [self newHBTwitterCellWithTitle:@"nyathea" twitterUsername:@"1541742676009226241" customAvatarURL:@"https://unavatar.io/x/nyaathea"];
+        PSSpecifier *bandarHL = [self newHBTwitterCellWithTitle:@"BandarHelal" twitterUsername:@"827842200708853762" customAvatarURL:@"https://unavatar.io/x/BandarHL"];
+        PSSpecifier *neoFreeBird = [self newHBTwitterCellWithTitle:@"NeoFreeBird" twitterUsername:@"1878595268255297537" customAvatarURL:@"https://unavatar.io/x/NeoFreeBird"];
         
-        PSSpecifier *timi2506 = [self newHBLinkCellWithTitle:@"timi2506" detailTitle:nil url:@"twitter://user?id=1671731225424195584"];
-        [timi2506 setProperty:@"https://avatars.githubusercontent.com/u/172171055?v=4" forKey:@"iconURL"];
-        [timi2506 setProperty:@YES forKey:@"big"];
-        [timi2506 setProperty:@56 forKey:@"height"];
-        
-        PSSpecifier *nyathea = [self newHBLinkCellWithTitle:@"nyathea" detailTitle:nil url:@"twitter://user?id=1541742676009226241"];
-        [nyathea setProperty:@"https://avatars.githubusercontent.com/u/108613931?v=4" forKey:@"iconURL"];
-        [nyathea setProperty:@YES forKey:@"big"];
-        [nyathea setProperty:@56 forKey:@"height"];
-        
-        PSSpecifier *bandarHL = [self newHBLinkCellWithTitle:@"BandarHelal" detailTitle:nil url:@"twitter://user?id=827842200708853762"];
-        [bandarHL setProperty:@"https://unavatar.io/x/BandarHL" forKey:@"iconURL"];
-        [bandarHL setProperty:@YES forKey:@"big"];
-        [bandarHL setProperty:@56 forKey:@"height"];
-        
-        PSSpecifier *neoFreeBird = [self newHBLinkCellWithTitle:@"NeoFreeBird" detailTitle:nil url:@"twitter://user?id=1878595268255297537"];
-        [neoFreeBird setProperty:@"https://unavatar.io/x/NeoFreeBird" forKey:@"iconURL"];
-        [neoFreeBird setProperty:@YES forKey:@"big"];
-        [neoFreeBird setProperty:@56 forKey:@"height"];
+        // Override button actions to use Twitter URL scheme
+        [actuallyaridan setButtonAction:@selector(openAridanTwitter:)];
+        [timi2506 setButtonAction:@selector(openTimiTwitter:)];
+        [nyathea setButtonAction:@selector(openNyatheaTwitter:)];
+        [bandarHL setButtonAction:@selector(openBandarTwitter:)];
+        [neoFreeBird setButtonAction:@selector(openNeoFreeBirdTwitter:)];
         
         _specifiers = [NSMutableArray arrayWithArray:@[
             subtitleSection,
@@ -1162,6 +1150,27 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         }
     }
     return nil;
+}
+
+// Custom Twitter opening methods
+- (void)openAridanTwitter:(PSSpecifier *)specifier {
+    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"twitter://user?id=1351218086649720837"] options:@{} completionHandler:nil];
+}
+
+- (void)openTimiTwitter:(PSSpecifier *)specifier {
+    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"twitter://user?id=1671731225424195584"] options:@{} completionHandler:nil];
+}
+
+- (void)openNyatheaTwitter:(PSSpecifier *)specifier {
+    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"twitter://user?id=1541742676009226241"] options:@{} completionHandler:nil];
+}
+
+- (void)openBandarTwitter:(PSSpecifier *)specifier {
+    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"twitter://user?id=827842200708853762"] options:@{} completionHandler:nil];
+}
+
+- (void)openNeoFreeBirdTwitter:(PSSpecifier *)specifier {
+    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"twitter://user?id=1878595268255297537"] options:@{} completionHandler:nil];
 }
 
 @end
