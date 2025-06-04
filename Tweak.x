@@ -4116,8 +4116,15 @@ static char kTranslateButtonKey;
         // If button doesn't exist, create it
         UIButton *translateButton = [UIButton buttonWithType:UIButtonTypeSystem];
         
-        // Use Twitter's internal vector image system for the icon
-        [translateButton setImage:[UIImage tfn_vectorImageNamed:@"translate" fitsSize:CGSizeMake(24, 24) fillColor:[UIColor systemGray2Color]] forState:UIControlStateNormal];
+        // Use Twitter's vector image system - our hook will automatically redirect "translate" to our custom bundle
+        UIImage *translateIcon = [UIImage tfn_vectorImageNamed:@"translate" fitsSize:CGSizeMake(24, 24) fillColor:[UIColor systemGray2Color]];
+        
+        // Fallback to system image if custom icon fails to load
+        if (!translateIcon) {
+            translateIcon = [UIImage systemImageNamed:@"translate"];
+        }
+        
+        [translateButton setImage:translateIcon forState:UIControlStateNormal];
         
         // Set proper tint color based on appearance
         if (@available(iOS 12.0, *)) {
@@ -5336,21 +5343,21 @@ static NSSet *customVectorImages() {
     return customImages;
 }
 
-// Get path to BHTwitter bundle - use the same logic as BHTBundle
+// Get path to BHTwitter bundle - use the exact same logic as BHTBundle
 static NSString *getBHTwitterBundlePath() {
     static NSString *bundlePath = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         NSFileManager *fileManager = [NSFileManager defaultManager];
+        NSURL *bundleURL = [NSURL new];
         if ([fileManager fileExistsAtPath:@"/Library/Application Support/BHT/BHTwitter.bundle"]) {
-            bundlePath = @"/Library/Application Support/BHT/BHTwitter.bundle";
+            bundleURL = [NSURL fileURLWithPath:@"/Library/Application Support/BHT/BHTwitter.bundle"];
         } else if ([fileManager fileExistsAtPath:@"/var/jb/Library/Application Support/BHT/BHTwitter.bundle"]) {
-            bundlePath = @"/var/jb/Library/Application Support/BHT/BHTwitter.bundle";
+            bundleURL = [NSURL fileURLWithPath:@"/var/jb/Library/Application Support/BHT/BHTwitter.bundle"];
         } else {
-            // For injection: bundle is embedded in the app
-            NSURL *url = [[NSBundle mainBundle] URLForResource:@"BHTwitter" withExtension:@"bundle"];
-            bundlePath = [url path];
+            bundleURL = [[NSBundle mainBundle] URLForResource:@"BHTwitter" withExtension:@"bundle"];
         }
+        bundlePath = [bundleURL path];
     });
     return bundlePath;
 }
