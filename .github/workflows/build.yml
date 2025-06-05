@@ -178,19 +178,39 @@ jobs:
                 echo "✗ Copy failed - file not found in destination"
                 exit 1
               fi
-            else
-              echo "✗ translate.svg not found at expected location"
-              echo "Searching for it..."
-              find main -name "*.svg" -type f
-              exit 1
-            fi
-            
+                         else
+               echo "✗ translate.svg not found at expected location"
+               echo "Searching for it..."
+               find main -name "*.svg" -type f
+               exit 1
+             fi
+             
           else
             echo "✗ TwitterAppearance bundle not found"
             echo "Contents of Twitter.app:"
             ls -la main/tmp/Payload/Twitter.app/ | head -20
             exit 1
           fi
+          
+          # Repackage the modified IPA
+          echo "=== Repackaging modified IPA ==="
+          cd main/tmp
+          
+          # Remove the original IPA and create new one with our modifications
+          rm -f ../packages/com.atebits.Tweetie2.ipa
+          
+          # Create new IPA with our custom SVGs included
+          zip -r ../packages/com.atebits.Tweetie2.ipa Payload/
+          
+          if [ -f "../packages/com.atebits.Tweetie2.ipa" ]; then
+            echo "✓ Successfully repackaged IPA with custom vector images"
+            echo "New IPA size: $(stat -f%z "../packages/com.atebits.Tweetie2.ipa" 2>/dev/null || stat -c%s "../packages/com.atebits.Tweetie2.ipa")"
+          else
+            echo "✗ Failed to repackage IPA"
+            exit 1
+          fi
+          
+          cd ../..
 
       - name: Build Package
         run: |
