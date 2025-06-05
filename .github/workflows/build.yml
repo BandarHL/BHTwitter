@@ -125,70 +125,41 @@ jobs:
       - name: Inject Custom Vector Images
         if: inputs.deploy_format == 'sideloaded' || inputs.deploy_format == 'trollstore'
         run: |
-          # Create custom directory in Twitter's vector bundle
+          # Put SVG directly in Twitter's main VectorImages directory
           TWITTER_BUNDLE_PATH="main/tmp/Payload/Twitter.app/TwitterAppearance_TwitterAppearance.bundle"
-          VECTOR_IMAGES_PATH="${TWITTER_BUNDLE_PATH}/VectorImages"
-          CUSTOM_DIR="${VECTOR_IMAGES_PATH}/custom"
+          MAIN_VECTOR_DIR="${TWITTER_BUNDLE_PATH}/VectorImages/main"
           
-          echo "=== Debug: Checking paths ==="
-          echo "Twitter bundle path: ${TWITTER_BUNDLE_PATH}"
-          echo "VectorImages path: ${VECTOR_IMAGES_PATH}"
-          echo "Custom dir path: ${CUSTOM_DIR}"
+          echo "=== Injecting translate.svg into Twitter's main vector directory ==="
+          echo "Target directory: ${MAIN_VECTOR_DIR}"
           
-          if [ -d "${TWITTER_BUNDLE_PATH}" ]; then
-            echo "✓ Found TwitterAppearance bundle"
-            ls -la "${TWITTER_BUNDLE_PATH}" | head -10
-            
-            if [ -d "${VECTOR_IMAGES_PATH}" ]; then
-              echo "✓ Found VectorImages directory"
-              ls -la "${VECTOR_IMAGES_PATH}" | head -10
-            else
-              echo "✗ VectorImages directory not found, creating it"
-              mkdir -p "${VECTOR_IMAGES_PATH}"
-            fi
-            
-            # Create custom directory
-            echo "Creating custom directory: ${CUSTOM_DIR}"
-            mkdir -p "${CUSTOM_DIR}"
-            
-            if [ -d "${CUSTOM_DIR}" ]; then
-              echo "✓ Custom directory created successfully"
-            else
-              echo "✗ Failed to create custom directory"
-              exit 1
-            fi
+          if [ -d "${MAIN_VECTOR_DIR}" ]; then
+            echo "✓ Found Twitter's main vector directory"
             
             # Find our SVG file
-            echo "=== Looking for translate.svg ==="
-            find main -name "translate.svg" -type f
-            
             SVG_SOURCE="main/layout/Library/Application Support/BHT/BHTwitter.bundle/translate.svg"
-            echo "Checking SVG source: ${SVG_SOURCE}"
+            echo "Looking for SVG at: ${SVG_SOURCE}"
             
             if [ -f "${SVG_SOURCE}" ]; then
-              echo "✓ Found translate.svg, copying..."
-              cp -v "${SVG_SOURCE}" "${CUSTOM_DIR}/"
+              echo "✓ Found translate.svg, copying to main vector directory..."
+              cp -v "${SVG_SOURCE}" "${MAIN_VECTOR_DIR}/"
               
               # Verify the copy worked
-              if [ -f "${CUSTOM_DIR}/translate.svg" ]; then
-                echo "✓ Successfully copied translate.svg"
-                ls -la "${CUSTOM_DIR}/"
-                echo "File size: $(stat -f%z "${CUSTOM_DIR}/translate.svg" 2>/dev/null || stat -c%s "${CUSTOM_DIR}/translate.svg")"
+              if [ -f "${MAIN_VECTOR_DIR}/translate.svg" ]; then
+                echo "✓ Successfully injected translate.svg"
+                echo "File size: $(stat -f%z "${MAIN_VECTOR_DIR}/translate.svg" 2>/dev/null || stat -c%s "${MAIN_VECTOR_DIR}/translate.svg")"
               else
                 echo "✗ Copy failed - file not found in destination"
                 exit 1
               fi
-                         else
-               echo "✗ translate.svg not found at expected location"
-               echo "Searching for it..."
-               find main -name "*.svg" -type f
-               exit 1
-             fi
-             
+            else
+              echo "✗ translate.svg not found at expected location"
+              find main -name "*.svg" -type f
+              exit 1
+            fi
           else
-            echo "✗ TwitterAppearance bundle not found"
-            echo "Contents of Twitter.app:"
-            ls -la main/tmp/Payload/Twitter.app/ | head -20
+            echo "✗ Twitter's main vector directory not found"
+            echo "VectorImages contents:"
+            ls -la "${TWITTER_BUNDLE_PATH}/VectorImages/" 2>/dev/null || echo "VectorImages directory doesn't exist"
             exit 1
           fi
           
@@ -199,11 +170,11 @@ jobs:
           # Remove the original IPA and create new one with our modifications
           rm -f ../packages/com.atebits.Tweetie2.ipa
           
-          # Create new IPA with our custom SVGs included
+          # Create new IPA with translate.svg in main vector directory
           zip -r ../packages/com.atebits.Tweetie2.ipa Payload/
           
           if [ -f "../packages/com.atebits.Tweetie2.ipa" ]; then
-            echo "✓ Successfully repackaged IPA with custom vector images"
+            echo "✓ Successfully repackaged IPA with translate.svg"
             echo "New IPA size: $(stat -f%z "../packages/com.atebits.Tweetie2.ipa" 2>/dev/null || stat -c%s "../packages/com.atebits.Tweetie2.ipa")"
           else
             echo "✗ Failed to repackage IPA"
