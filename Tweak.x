@@ -2589,38 +2589,10 @@ static NSTimer *cookieRetryTimer = nil;
          NSString *newTimeAgo = [NSString stringWithFormat:@"%@ · %@", currentTimeAgo, sourceText];
          NSLog(@"[BHTwitter SourceLabel] Setting new timeAgo: '%@'", newTimeAgo);
          
-         // Create colored attributed string for the footer
-         NSMutableAttributedString *coloredTimeAgo = [[NSMutableAttributedString alloc] initWithString:newTimeAgo];
-         
-         // Get base text color - use gray for timestamp
-         UIColor *timestampColor = [UIColor systemGrayColor];
-         if (BHT_isTwitterDarkThemeActive()) {
-             timestampColor = [UIColor lightGrayColor];
-         }
-         
-         // Apply timestamp color to the whole string first
-         [coloredTimeAgo addAttribute:NSForegroundColorAttributeName 
-                                value:timestampColor 
-                                range:NSMakeRange(0, newTimeAgo.length)];
-         
-         // Apply accent color to just the source part (after " · ")
-         NSRange separatorRange = [newTimeAgo rangeOfString:@" · "];
-         if (separatorRange.location != NSNotFound) {
-             NSRange sourceRange = NSMakeRange(separatorRange.location + separatorRange.length, 
-                                             newTimeAgo.length - (separatorRange.location + separatorRange.length));
-             if (sourceRange.length > 0) {
-                 UIColor *accentColor = BHTCurrentAccentColor();
-                 [coloredTimeAgo addAttribute:NSForegroundColorAttributeName 
-                                        value:accentColor 
-                                        range:sourceRange];
-                 NSLog(@"[BHTwitter SourceLabel] Applied accent color to source text");
-             }
-         }
-         
-         // Set the colored timeAgo and hide view count
+         // Set the new timeAgo and hide view count
          if ([footerItem respondsToSelector:@selector(setTimeAgo:)]) {
-             [footerItem performSelector:@selector(setTimeAgo:) withObject:coloredTimeAgo];
-             NSLog(@"[BHTwitter SourceLabel] Successfully set colored timeAgo");
+             [footerItem performSelector:@selector(setTimeAgo:) withObject:newTimeAgo];
+             NSLog(@"[BHTwitter SourceLabel] Successfully set new timeAgo");
              
              // Hide view count by setting it to nil
              if ([footerItem respondsToSelector:@selector(setViewCount:)]) {
@@ -2659,6 +2631,50 @@ static NSTimer *cookieRetryTimer = nil;
     NSString *currentText = model.attributedString.string;
     NSMutableAttributedString *newString = nil;
     BOOL modified = NO;
+    
+    // Check if this looks like a footer with appended source (contains " · " at the end of a timeline entry)
+    if ([currentText containsString:@" · "] && [currentText length] > 10) {
+        @try {
+            // Find the last occurrence of " · " - this is likely our appended source
+            NSRange lastSeparatorRange = [currentText rangeOfString:@" · " options:NSBackwardsSearch];
+            if (lastSeparatorRange.location != NSNotFound) {
+                // Check if this looks like a timeline footer (not a notification or other text)
+                // The text after " · " should be relatively short (source names are typically < 50 chars)
+                NSUInteger sourceLength = currentText.length - (lastSeparatorRange.location + lastSeparatorRange.length);
+                if (sourceLength > 0 && sourceLength < 50) {
+                    // This looks like our appended source, apply coloring
+                    newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
+                    
+                    // Get colors
+                    UIColor *timestampColor = [UIColor systemGrayColor];
+                    if (BHT_isTwitterDarkThemeActive()) {
+                        timestampColor = [UIColor lightGrayColor];
+                    }
+                    UIColor *accentColor = BHTCurrentAccentColor();
+                    
+                    // Apply timestamp color to everything before and including " · "
+                    NSRange timestampRange = NSMakeRange(0, lastSeparatorRange.location + lastSeparatorRange.length);
+                    [newString addAttribute:NSForegroundColorAttributeName 
+                                       value:timestampColor 
+                                       range:timestampRange];
+                    
+                    // Apply accent color to the source part (everything after " · ")
+                    NSRange sourceRange = NSMakeRange(lastSeparatorRange.location + lastSeparatorRange.length, sourceLength);
+                    [newString addAttribute:NSForegroundColorAttributeName 
+                                       value:accentColor 
+                                       range:sourceRange];
+                    
+                    NSLog(@"[BHTwitter SourceLabel] Applied coloring to footer: timestamp='%@', source='%@'", 
+                          [currentText substringToIndex:lastSeparatorRange.location + lastSeparatorRange.length],
+                          [currentText substringFromIndex:lastSeparatorRange.location + lastSeparatorRange.length]);
+                    
+                    modified = YES;
+                }
+            }
+        } @catch (NSException *e) {
+            NSLog(@"[BHTwitter SourceLabel] Exception applying footer coloring: %@", e);
+        }
+    }
     
     // Handle notification text replacements (your post -> your Tweet, etc.)
     if ([currentText containsString:@"your post"] || [currentText containsString:@"your Post"] ||
