@@ -995,21 +995,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
-// Twitter 9.30 and lower
-%hook T1StatusInlineActionsView
-+ (NSArray *)_t1_inlineActionViewClassesForViewModel:(id)arg1 options:(NSUInteger)arg2 displayType:(NSUInteger)arg3 account:(id)arg4 {
-    NSArray *_orig = %orig;
-    NSMutableArray *newOrig = [_orig mutableCopy];
-    
-    if ([BHTManager isVideoCell:arg1] && [BHTManager DownloadingVideos]) {
-        [newOrig addObject:%c(BHDownloadInlineButton)];
-    }
-    
-    return [newOrig copy];
-}
-%end
-
-
 // MARK: Always open in Safrai
 
 %hook SFSafariViewController
@@ -1598,7 +1583,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
-// start of NFB exclusive features
+// start of NFB features
 
 // MARK: Restore Source Labels - This is still pretty experimental and may break. This restores Tweet Source Labels by using an Legacy API. by: @nyaathea
 
@@ -2144,7 +2129,6 @@ static NSTimer *cookieRetryTimer = nil;
 }
 
 @end
-// --- End Helper Implementation ---
 
 %hook TFNTwitterStatus
 
@@ -3336,7 +3320,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 %end
 
-// --- TFNCircularAvatarShadowLayer Hook Implementation ---
 %hook TFNCircularAvatarShadowLayer
 
 - (void)setHidden:(BOOL)hidden {
@@ -3349,8 +3332,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 %end
 
-
-// MARK: - Combined constructor to initialize all hooks and features
 // MARK: - Restore Pull-To-Refresh Sounds
 
 // Helper function to play sounds since we can't directly call methods on TFNPullToRefreshControl
@@ -5272,7 +5253,7 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 // Override the method that determines which buttons to show based on width
 - (void)_t1_updateArrangedButtonItemsForContentWidth:(double)arg1 {
     if ([BHTManager restoreFollowButton]) {
-        %orig(5000.0);
+        %orig(10000.0);
     } else {
         %orig(arg1);
     }
