@@ -404,6 +404,18 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 - (void)viewDidLoad {
     %orig;
+    
+    // Apply theme on initial load
+    if ([self respondsToSelector:@selector(tabViews)]) {
+        NSArray *tabViews = [self valueForKey:@"tabViews"];
+        for (id tabView in tabViews) {
+            if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
+                [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
+            }
+        }
+    }
+    
+    // Apply custom tab bar configuration
     [self bh_applyCustomTabBarConfiguration];
 }
 
@@ -453,19 +465,12 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         }
     }
     
-    // Apply the filtered tab items back to the controller
+    // Apply the filtered tab items back to the controller using appropriate methods
     if (filteredTabItems.count > 0) {
         if ([self respondsToSelector:@selector(setTabViews:)]) {
             [self setValue:filteredTabItems forKey:@"tabViews"];
         } else if ([self respondsToSelector:@selector(setTabBarItems:)]) {
             [self setValue:filteredTabItems forKey:@"tabBarItems"];
-        }
-        
-        // Force a refresh of the tab bar UI
-        if ([self respondsToSelector:@selector(reloadTabBar)]) {
-            [self performSelector:@selector(reloadTabBar)];
-        } else if ([self respondsToSelector:@selector(viewDidLayoutSubviews)]) {
-            [self performSelector:@selector(viewDidLayoutSubviews)];
         }
     }
 }
@@ -3757,22 +3762,7 @@ static char kManualRefreshInProgressKey;
 
 %end
 
-%hook T1TabBarViewController
 
-- (void)viewDidLoad {
-    %orig;
-    // Apply theme on initial load
-    if ([self respondsToSelector:@selector(tabViews)]) {
-        NSArray *tabViews = [self valueForKey:@"tabViews"];
-        for (id tabView in tabViews) {
-            if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
-                [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
-            }
-        }
-    }
-}
-
-%end
 
 // Helper: Update all tab bar icons
 static void BHT_UpdateAllTabBarIcons(void) {
