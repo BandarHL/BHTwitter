@@ -2632,47 +2632,24 @@ static NSTimer *cookieRetryTimer = nil;
     NSMutableAttributedString *newString = nil;
     BOOL modified = NO;
     
-    // Check if this looks like a footer with appended source (contains " · " at the end of a timeline entry)
-    if ([currentText containsString:@" · "] && [currentText length] > 10) {
-        @try {
-            // Find the last occurrence of " · " - this is likely our appended source
-            NSRange lastSeparatorRange = [currentText rangeOfString:@" · " options:NSBackwardsSearch];
-            if (lastSeparatorRange.location != NSNotFound) {
-                // Check if this looks like a timeline footer (not a notification or other text)
-                // The text after " · " should be relatively short (source names are typically < 50 chars)
-                NSUInteger sourceLength = currentText.length - (lastSeparatorRange.location + lastSeparatorRange.length);
-                if (sourceLength > 0 && sourceLength < 50) {
-                    // This looks like our appended source, apply coloring
-                    newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
-                    
-                    // Get colors
-                    UIColor *timestampColor = [UIColor systemGrayColor];
-                    if (BHT_isTwitterDarkThemeActive()) {
-                        timestampColor = [UIColor lightGrayColor];
-                    }
-                    UIColor *accentColor = BHTCurrentAccentColor();
-                    
-                    // Apply timestamp color to everything before and including " · "
-                    NSRange timestampRange = NSMakeRange(0, lastSeparatorRange.location + lastSeparatorRange.length);
+    // Check if this text contains any of our cached source labels
+    if (tweetSources && [tweetSources count] > 0) {
+        for (NSString *sourceText in [tweetSources allValues]) {
+            if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@""] && 
+                ![sourceText isEqualToString:@"Source Unavailable"] && [currentText containsString:sourceText]) {
+                
+                newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
+                
+                // Find and color the source text
+                NSRange sourceRange = [currentText rangeOfString:sourceText];
+                if (sourceRange.location != NSNotFound) {
                     [newString addAttribute:NSForegroundColorAttributeName 
-                                       value:timestampColor 
-                                       range:timestampRange];
-                    
-                    // Apply accent color to the source part (everything after " · ")
-                    NSRange sourceRange = NSMakeRange(lastSeparatorRange.location + lastSeparatorRange.length, sourceLength);
-                    [newString addAttribute:NSForegroundColorAttributeName 
-                                       value:accentColor 
+                                       value:BHTCurrentAccentColor() 
                                        range:sourceRange];
-                    
-                    NSLog(@"[BHTwitter SourceLabel] Applied coloring to footer: timestamp='%@', source='%@'", 
-                          [currentText substringToIndex:lastSeparatorRange.location + lastSeparatorRange.length],
-                          [currentText substringFromIndex:lastSeparatorRange.location + lastSeparatorRange.length]);
-                    
                     modified = YES;
+                    break;
                 }
             }
-        } @catch (NSException *e) {
-            NSLog(@"[BHTwitter SourceLabel] Exception applying footer coloring: %@", e);
         }
     }
     
