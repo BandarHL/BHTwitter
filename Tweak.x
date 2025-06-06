@@ -6125,7 +6125,7 @@ static BOOL containsFocalStatusView(UIView *view) {
 }
 
 %hook TFNNavigationController
-- (void)_tfn_getNavigationBarHeightAdjustment:(double *)heightAdjustment yOffset:(double *)yOffset {
+- (double)_tfn_systemNavigationBarYOffsetAdjustment {
     // Check if this instance is specifically T1TimelineNavigationController
     // But exclude if it contains T1ConversationFocalStatusView (tweet view)
     if ([self isKindOfClass:NSClassFromString(@"T1TimelineNavigationController")]) {
@@ -6139,16 +6139,36 @@ static BOOL containsFocalStatusView(UIView *view) {
         }
         
         if (!isTweetView) {
-            // Force the height adjustment to make navbar 44px
-            %orig(heightAdjustment, yOffset);
-            if (heightAdjustment) {
-                *heightAdjustment = 0.0; // No adjustment needed for 44px
-            }
-            return;
+            // Adjust Y offset to make navbar appear at 44px position
+            double originalOffset = %orig;
+            return originalOffset + (44.0 - 96.0); // Assuming default is ~96px, adjust to 44px
         }
     }
     
-    %orig(heightAdjustment, yOffset);
+    return %orig;
+}
+
+- (double)_tfn_navigationBarInitialOriginY {
+    // Check if this instance is specifically T1TimelineNavigationController
+    // But exclude if it contains T1ConversationFocalStatusView (tweet view)
+    if ([self isKindOfClass:NSClassFromString(@"T1TimelineNavigationController")]) {
+        // Check if we're in a tweet conversation view
+        BOOL isTweetView = NO;
+        for (UIViewController *vc in self.viewControllers) {
+            if (containsFocalStatusView(vc.view)) {
+                isTweetView = YES;
+                break;
+            }
+        }
+        
+        if (!isTweetView) {
+            // Adjust initial Y origin for 44px height
+            double originalY = %orig;
+            return originalY + 52.0; // Move down to compress to 44px
+        }
+    }
+    
+    return %orig;
 }
 %end
 
