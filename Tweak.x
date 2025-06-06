@@ -6116,5 +6116,33 @@ static BOOL isHomeTimelinePagingScrollView(UIView *instance) {
     
     return %orig;
 }
+
+- (double)_tfn_computedNavigationBarHeight {
+    // Check if this instance is specifically T1TimelineNavigationController
+    if ([self isKindOfClass:NSClassFromString(@"T1TimelineNavigationController")]) {
+        return 44.0;
+    }
+    
+    return %orig;
+}
+
+- (void)_tfn_setCurrentNavigationBarSimulatedHeight:(double)height {
+    // Check if this instance is specifically T1TimelineNavigationController
+    if ([self isKindOfClass:NSClassFromString(@"T1TimelineNavigationController")]) {
+        %orig(44.0);
+        return;
+    }
+    
+    %orig(height);
+}
+
+- (double)_tfn_currentNavigationBarSimulatedHeight {
+    // Check if this instance is specifically T1TimelineNavigationController
+    if ([self isKindOfClass:NSClassFromString(@"T1TimelineNavigationController")]) {
+        return 44.0;
+    }
+    
+    return %orig;
+}
 %end
 
