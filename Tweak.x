@@ -2600,20 +2600,13 @@ static NSTimer *cookieRetryTimer = nil;
                  NSLog(@"[BHTwitter SourceLabel] Hidden view count");
              }
              
-             // Now update the footer text view to refresh the display with proper coloring
+             // Now update the footer text view to refresh the display
              id footerTextView = [self footerTextView];
-             if (footerTextView) {
-                 // Apply colored text model to the footer text view
-                 [self BHT_applyColoredTextToFooterTextView:footerTextView 
-                                               timeAgoText:currentTimeAgo 
-                                                sourceText:sourceText];
-                 
-                 if ([footerTextView respondsToSelector:@selector(updateFooterTextView)]) {
-                     [footerTextView performSelector:@selector(updateFooterTextView)];
-                     NSLog(@"[BHTwitter SourceLabel] Called updateFooterTextView with coloring");
-                 }
+             if (footerTextView && [footerTextView respondsToSelector:@selector(updateFooterTextView)]) {
+                 [footerTextView performSelector:@selector(updateFooterTextView)];
+                 NSLog(@"[BHTwitter SourceLabel] Called updateFooterTextView");
              } else {
-                 NSLog(@"[BHTwitter SourceLabel] ERROR: Could not find footerTextView for coloring");
+                 NSLog(@"[BHTwitter SourceLabel] ERROR: Could not find footerTextView or updateFooterTextView method");
              }
          } else {
              NSLog(@"[BHTwitter SourceLabel] ERROR: footerItem doesn't respond to setTimeAgo:");
@@ -2624,59 +2617,7 @@ static NSTimer *cookieRetryTimer = nil;
      }
 }
 
-%new
-- (void)BHT_applyColoredTextToFooterTextView:(id)footerTextView timeAgoText:(NSString *)timeAgoText sourceText:(NSString *)sourceText {
-    @try {
-        NSLog(@"[BHTwitter SourceLabel] Applying colored text to footer");
-        
-        if (![footerTextView respondsToSelector:@selector(setTextModel:)]) {
-            NSLog(@"[BHTwitter SourceLabel] ERROR: footerTextView doesn't respond to setTextModel:");
-            return;
-        }
-        
-        // Create the full text with source
-        NSString *fullText = [NSString stringWithFormat:@"%@ · %@", timeAgoText, sourceText];
-        
-        // Create attributed string with proper coloring
-        NSMutableAttributedString *attributedText = [[NSMutableAttributedString alloc] initWithString:fullText];
-        
-        // Get base text color - use gray for timestamp
-        UIColor *timestampColor = [UIColor systemGrayColor];
-        if (BHT_isTwitterDarkThemeActive()) {
-            timestampColor = [UIColor lightGrayColor];
-        }
-        
-        // Apply timestamp color to the whole string first
-        [attributedText addAttribute:NSForegroundColorAttributeName 
-                               value:timestampColor 
-                               range:NSMakeRange(0, fullText.length)];
-        
-        // Apply accent color to just the source part
-        NSRange sourceRange = [fullText rangeOfString:sourceText];
-        if (sourceRange.location != NSNotFound) {
-            UIColor *accentColor = BHTCurrentAccentColor();
-            [attributedText addAttribute:NSForegroundColorAttributeName 
-                                   value:accentColor 
-                                   range:sourceRange];
-            NSLog(@"[BHTwitter SourceLabel] Applied accent color to source: %@", sourceText);
-        }
-        
-        // Apply font
-        UIFont *font = [UIFont systemFontOfSize:15.0];
-        [attributedText addAttribute:NSFontAttributeName 
-                               value:font 
-                               range:NSMakeRange(0, fullText.length)];
-        
-        // Create text model and apply it
-        TFNAttributedTextModel *textModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:attributedText];
-        [footerTextView performSelector:@selector(setTextModel:) withObject:textModel];
-        
-        NSLog(@"[BHTwitter SourceLabel] Successfully applied colored text model");
-        
-    } @catch (NSException *e) {
-        NSLog(@"[BHTwitter SourceLabel] Exception applying colored text: %@", e);
-    }
-}
+
 
 %end
 
@@ -2684,10 +2625,51 @@ static NSTimer *cookieRetryTimer = nil;
 - (void)setTextModel:(TFNAttributedTextModel *)model {
     if (![BHTManager RestoreTweetLabels] || !model || !model.attributedString) {
         %orig(model);
-                            return;
-                        }
+        return;
+    }
 
     NSString *currentText = model.attributedString.string;
+    NSMutableAttributedString *newString = nil;
+    BOOL modified = NO;
+    
+    // Check if this is a footer text view with source label (contains " · ")
+    if ([currentText containsString:@" · "] && [currentText containsString:@"Twitter"]) {
+        @try {
+            // This looks like a footer with source label, apply coloring
+            newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
+            
+            // Find the separator position
+            NSRange separatorRange = [currentText rangeOfString:@" · "];
+            if (separatorRange.location != NSNotFound) {
+                // Get base text color - use gray for timestamp
+                UIColor *timestampColor = [UIColor systemGrayColor];
+                if (BHT_isTwitterDarkThemeActive()) {
+                    timestampColor = [UIColor lightGrayColor];
+                }
+                
+                // Apply timestamp color to the part before the separator
+                NSRange timestampRange = NSMakeRange(0, separatorRange.location + separatorRange.length);
+                [newString addAttribute:NSForegroundColorAttributeName 
+                                   value:timestampColor 
+                                   range:timestampRange];
+                
+                // Apply accent color to the source part (everything after " · ")
+                NSRange sourceRange = NSMakeRange(separatorRange.location + separatorRange.length, 
+                                                currentText.length - (separatorRange.location + separatorRange.length));
+                if (sourceRange.length > 0) {
+                    UIColor *accentColor = BHTCurrentAccentColor();
+                    [newString addAttribute:NSForegroundColorAttributeName 
+                                       value:accentColor 
+                                       range:sourceRange];
+                    NSLog(@"[BHTwitter SourceLabel] Applied coloring to footer text: %@", currentText);
+                }
+                
+                modified = YES;
+            }
+        } @catch (NSException *e) {
+            NSLog(@"[BHTwitter SourceLabel] Exception applying footer coloring: %@", e);
+        }
+    }
     
     // Handle notification text replacements (your post -> your Tweet, etc.)
     if ([currentText containsString:@"your post"] || [currentText containsString:@"your Post"] ||
@@ -2708,8 +2690,9 @@ static NSTimer *cookieRetryTimer = nil;
             
             // Only proceed if we're in a notification view
             if (isNotificationView) {
-                NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
-                BOOL modified = NO;
+                if (!newString) {
+                    newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
+                }
                 
                 // Replace "your post" with "your Tweet"
                 NSRange postRange = [currentText rangeOfString:@"your post"];
@@ -2746,15 +2729,15 @@ static NSTimer *cookieRetryTimer = nil;
                     [newString setAttributes:existingAttributes range:NSMakeRange(repostRange.location, [@"Retweeted" length])];
                     modified = YES;
                 }
-                
-                // Update the model only if modifications were made
-                if (modified) {
-                    TFNAttributedTextModel *newModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newString];
-                    %orig(newModel);
-                    return;
-                }
             }
         } @catch (__unused NSException *e) {}
+    }
+    
+    // Apply the modified text model if we made any changes
+    if (modified && newString) {
+        TFNAttributedTextModel *newModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newString];
+        %orig(newModel);
+        return;
     }
     
     %orig(model);
