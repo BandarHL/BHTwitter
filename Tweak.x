@@ -2475,7 +2475,7 @@ static NSTimer *cookieRetryTimer = nil;
         // Get the TFNTwitterStatus - it might be the viewModel itself or a property
         TFNTwitterStatus *status = nil;
         
-        if ([viewModel isKindOfClass:[TFNTwitterStatus class]]) {
+        if ([viewModel isKindOfClass:%c(TFNTwitterStatus)]) {
             status = (TFNTwitterStatus *)viewModel;
             NSLog(@"[BHTwitter SourceLabel] viewModel IS TFNTwitterStatus");
         } else if ([viewModel respondsToSelector:@selector(status)]) {
