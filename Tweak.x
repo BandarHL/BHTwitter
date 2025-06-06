@@ -2458,8 +2458,9 @@ static NSTimer *cookieRetryTimer = nil;
     BOOL isTimestamp = NO;
     BOOL isLikelyTimestampForSourceLabel = NO;
     
-    // More specific regex pattern to identify genuine timestamps in the correct format
-    NSRegularExpression *timeRegex = [NSRegularExpression regularExpressionWithPattern:@"^\\d{1,2}:\\d{2}(\\s(AM|PM))?\\s·\\s" options:0 error:nil];
+    // Comprehensive time pattern: handles both 12-hour (AM/PM) and 24-hour formats
+    // Matches: "12:34 AM · ", "22:39 · ", "8:15 PM · ", "14:23 · "
+    NSRegularExpression *timeRegex = [NSRegularExpression regularExpressionWithPattern:@"^\\d{1,2}:\\d{2}(\\s(AM|PM))?\\s·\\s" options:NSRegularExpressionCaseInsensitive error:nil];
     if (timeRegex) {
         NSRange range = [timeRegex rangeOfFirstMatchInString:currentText options:0 range:NSMakeRange(0, currentText.length)];
         if (range.location != NSNotFound) {
@@ -2468,22 +2469,29 @@ static NSTimer *cookieRetryTimer = nil;
         }
     }
 
-    // Check for date formats like "May 11, 2023 · "
-    NSRegularExpression *dateRegex = [NSRegularExpression regularExpressionWithPattern:@"^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s\\d{1,2}(,\\s\\d{4})?\\s·\\s" options:0 error:nil];
-    if (dateRegex && !isTimestamp) {
-        NSRange range = [dateRegex rangeOfFirstMatchInString:currentText options:0 range:NSMakeRange(0, currentText.length)];
-        if (range.location != NSNotFound) {
-            isTimestamp = YES;
-            isLikelyTimestampForSourceLabel = YES;
+    // International date pattern: more flexible to handle various formats
+    // Matches: "May 11, 2023 · ", "11 May 2023 · ", "2023-05-11 · ", "11.05.2023 · "
+    if (!isTimestamp) {
+        NSRegularExpression *dateRegex = [NSRegularExpression regularExpressionWithPattern:@"^([A-Za-z]{3,9}\\s\\d{1,2}(,\\s\\d{4})?|\\d{1,2}\\s[A-Za-z]{3,9}\\s\\d{4}|\\d{4}[-./]\\d{1,2}[-./]\\d{1,2}|\\d{1,2}[-./]\\d{1,2}[-./]\\d{4})\\s·\\s" options:0 error:nil];
+        if (dateRegex) {
+            NSRange range = [dateRegex rangeOfFirstMatchInString:currentText options:0 range:NSMakeRange(0, currentText.length)];
+            if (range.location != NSNotFound) {
+                isTimestamp = YES;
+                isLikelyTimestampForSourceLabel = YES;
+            }
         }
     }
 
-    // More general check but less certain
-    if (!isTimestamp && ([currentText containsString:@"PM"] || [currentText containsString:@"AM"])) {
-        isTimestamp = YES;
-        // Double check for correct format with dot separator
-        if ([currentText containsString:@" · "]) {
-            isLikelyTimestampForSourceLabel = YES;
+    // Fallback: detect any time-like pattern with separator (works for both 12h and 24h)
+    if (!isTimestamp && [currentText containsString:@" · "]) {
+        // Look for time pattern at start: digits:digits followed by separator
+        NSRegularExpression *genericTimeRegex = [NSRegularExpression regularExpressionWithPattern:@"^\\d{1,2}:\\d{2}" options:0 error:nil];
+        if (genericTimeRegex) {
+            NSRange range = [genericTimeRegex rangeOfFirstMatchInString:currentText options:0 range:NSMakeRange(0, currentText.length)];
+            if (range.location != NSNotFound) {
+                isTimestamp = YES;
+                isLikelyTimestampForSourceLabel = YES;
+            }
         }
     }
 
