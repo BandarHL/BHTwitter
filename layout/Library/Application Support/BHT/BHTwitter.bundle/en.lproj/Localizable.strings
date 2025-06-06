@@ -26,9 +26,6 @@
 /*General*/
 "MAIN_SECTION_HEADER_TITLE" = "General";
 
-"VOICE_OPTION_TITLE" = "Voice Tweets";
-"VOICE_OPTION_DETAIL_TITLE" = "Turn Voice Tweets on or off (iOS only).";
-
 "UPLOAD_CUSTOM_VOICE_OPTION_TITLE" = "Voice Tweets";
 "UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE" = "Turn Voice Tweets on or off (iOS only).";
 
@@ -153,7 +150,8 @@
 "PHOTOS_VIDEOS_SECTION_HEADER_TITLE" = "Photos and videos";
 
 "AUTO_HIGHEST_LOAD_OPTION_TITLE" = "High-quality media";
-"AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE" = "Upload and view media in the best quality available.";
+"AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE" = "Always load photos and videos in the highest resolution possible.";
+
 
 "DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "No video captions";
 
@@ -175,6 +173,9 @@
 "READER_MODE_OPTION_TITLE" = "Reader mode";
 "READER_MODE_OPTION_DETAIL_TITLE" = "Read long threads with less clutter.";
 
+"MEDIA_UPLOAD_4K_ENABLED_OPTION_TITLE" = "Upload in 4K";
+"MEDIA_UPLOAD_4K_ENABLED_OPTION_DETAIL_TITLE" = "Upload photos and videos in 4K.";
+
 "DOWNLOAD_VIDEOS_OPTION_TITLE" = "Download media";
 "DOWNLOAD_VIDEOS_OPTION_DETAIL_TITLE" = "Save videos or GIFs right from Tweets.";
 
@@ -190,7 +191,7 @@
 "APP_ICON_TITLE" = "Change app icon";
 "APP_ICON_DETAIL_TITLE" = "Choose a different app icon.";
 
-"CUSTOM_TAB_BAR_OPTION_TITLE" = "Edit tab bar";
+"CUSTOM_TAB_BAR_OPTION_TITLE" = "Edit navigation bar";
 
 
 /*Layout*/
@@ -202,8 +203,8 @@
 
 "HIDE_SPACE_OPTION_TITLE" = "Hide the Spaces bar";
 
-"STOP_HIDING_TAB_BAR_TITLE" = "Keep the tab bar visible";
-"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "Don't fade the tab bar when you scroll.";
+"STOP_HIDING_TAB_BAR_TITLE" = "Keep the navigation bar visible";
+"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "Don't fade the navigation bar when you scroll.";
 
 "CLASSIC_TAB_BAR_SETTINGS_TITLE" = "Classic Tab Icons";
 "CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "Applies accent color to the current selected tab. Restart required.";
@@ -311,8 +312,7 @@
 "CUSTOM_TAB_BAR_RESET_MESSAGE" = "Are you sure you'd like to restore the navigation bar to its default state?";
 
 
-
-/* Classic tab bar */
+/* Classic navigation bar */
 "RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_ON" = "You will need to restart Twitter for this to take effect.";
 "RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_OFF" = "To disable and restore default icons, please restart Twitter.";
 "CLASSIC_TAB_BAR_DISABLED_NOTIFICATION_NAME" = "BHTClassicTabBarSettingChangedNotification";
@@ -339,3 +339,6 @@
 
 "VIDEO_ZOOM_OPTION_TITLE" = "Zoom on videos";
 "VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "Double-tap to zoom in and out.";
+
+"VOICE_OPTION_TITLE" = "Voice mode";
+"VOICE_OPTION_DETAIL_TITLE" = "Reply to Tweets and replies using your voice.";
