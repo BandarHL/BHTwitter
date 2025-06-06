@@ -122,7 +122,6 @@ static NSString *_lastCopiedURL;
 
 @interface T1TabBarViewController : UIViewController
 @property(copy, nonatomic) NSArray *tabViews;
-- (void)bh_applyCustomTabBarConfiguration;
 @end
 
 @interface T1GenericSettingsViewController: UIViewController

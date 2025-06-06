@@ -402,6 +402,29 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     }
 }
 
+- (NSArray *)tabViews {
+    NSArray *originalTabs = %orig;
+    NSArray<NSString *> *allowedTabs = [BHCustomTabBarUtility getAllowedTabBars];
+    
+    if (!allowedTabs) {
+        return originalTabs; // No custom configuration
+    }
+    
+    NSMutableArray *filteredTabs = [NSMutableArray array];
+    for (id tabView in originalTabs) {
+        NSString *pageID = [tabView valueForKey:@"scribePage"];
+        if (!pageID) {
+            pageID = [tabView valueForKey:@"pageID"];
+        }
+        
+        if (pageID && [allowedTabs containsObject:pageID]) {
+            [filteredTabs addObject:tabView];
+        }
+    }
+    
+    return filteredTabs.count > 0 ? [filteredTabs copy] : originalTabs;
+}
+
 - (void)viewDidLoad {
     %orig;
     
@@ -413,54 +436,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
                 [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
             }
         }
-    }
-    
-    // Apply custom tab bar configuration
-    [self bh_applyCustomTabBarConfiguration];
-}
-
-- (void)viewWillAppear:(BOOL)animated {
-    %orig(animated);
-    [self bh_applyCustomTabBarConfiguration];
-}
-
-%new
-- (void)bh_applyCustomTabBarConfiguration {
-    // Get allowed tabs from settings
-    NSArray<NSString *> *allowedTabs = [BHCustomTabBarUtility getAllowedTabBars];
-    if (!allowedTabs) {
-        return; // No custom configuration saved, use default
-    }
-    
-    // Get current tab views
-    NSArray *currentTabViews = [self valueForKey:@"tabViews"];
-    if (!currentTabViews) {
-        return;
-    }
-    
-    // Filter to only include allowed tabs
-    NSMutableArray *filteredTabViews = [NSMutableArray array];
-    for (id tabView in currentTabViews) {
-        NSString *pageID = nil;
-        
-        // Try different property names to get the page ID
-        if ([tabView respondsToSelector:@selector(pageID)]) {
-            pageID = [tabView valueForKey:@"pageID"];
-        } else if ([tabView respondsToSelector:@selector(scribePageID)]) {
-            pageID = [tabView valueForKey:@"scribePageID"];
-        } else if ([tabView respondsToSelector:@selector(identifier)]) {
-            pageID = [tabView valueForKey:@"identifier"];
-        }
-        
-        // Keep tab if it's in the allowed list
-        if (pageID && [allowedTabs containsObject:pageID]) {
-            [filteredTabViews addObject:tabView];
-        }
-    }
-    
-    // Apply the filtered tabs
-    if (filteredTabViews.count > 0 && filteredTabViews.count != currentTabViews.count) {
-        [self setValue:[filteredTabViews copy] forKey:@"tabViews"];
     }
 }
 %end
