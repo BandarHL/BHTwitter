@@ -2460,161 +2460,103 @@ static NSTimer *cookieRetryTimer = nil;
 - (void)setViewModel:(id)viewModel options:(unsigned long long)options account:(id)account {
     %orig(viewModel, options, account);
     
-    if (![BHTManager RestoreTweetLabels]) {
-        NSLog(@"[BHTwitter SourceLabel] RestoreTweetLabels is disabled");
+    if (![BHTManager RestoreTweetLabels] || !viewModel) {
         return;
     }
     
-    if (!viewModel) {
-        NSLog(@"[BHTwitter SourceLabel] viewModel is nil");
+    // Get the TFNTwitterStatus - it might be the viewModel itself or a property
+    TFNTwitterStatus *status = nil;
+    
+    if ([viewModel isKindOfClass:%c(TFNTwitterStatus)]) {
+        status = (TFNTwitterStatus *)viewModel;
+    } else if ([viewModel respondsToSelector:@selector(status)]) {
+        status = [viewModel performSelector:@selector(status)];
+    }
+    
+    if (!status) {
         return;
     }
     
-    NSLog(@"[BHTwitter SourceLabel] Processing viewModel: %@", NSStringFromClass([viewModel class]));
+    // Get the tweet ID
+    long long statusID = [status statusID];
+    if (statusID <= 0) {
+        return;
+    }
     
-        @try {
-        // Get the TFNTwitterStatus - it might be the viewModel itself or a property
-        TFNTwitterStatus *status = nil;
-        
-        if ([viewModel isKindOfClass:%c(TFNTwitterStatus)]) {
-            status = (TFNTwitterStatus *)viewModel;
-            NSLog(@"[BHTwitter SourceLabel] viewModel IS TFNTwitterStatus");
-        } else if ([viewModel respondsToSelector:@selector(status)]) {
-            status = [viewModel performSelector:@selector(status)];
-            NSLog(@"[BHTwitter SourceLabel] Got status from viewModel: %@", status ? @"YES" : @"NO");
-        } else {
-            NSLog(@"[BHTwitter SourceLabel] viewModel doesn't respond to status selector and isn't TFNTwitterStatus");
-        }
-        
-        if (!status) {
-            NSLog(@"[BHTwitter SourceLabel] status is nil");
-            return;
-        }
-        
-        // Get the tweet ID
-        NSString *tweetIDStr = nil;
-        long long statusID = [status statusID];
-        NSLog(@"[BHTwitter SourceLabel] Got statusID: %lld", statusID);
-        
-        if (statusID > 0) {
-            tweetIDStr = [NSString stringWithFormat:@"%lld", statusID];
-            NSLog(@"[BHTwitter SourceLabel] tweetIDStr: %@", tweetIDStr);
-        }
-        
-        if (!tweetIDStr || tweetIDStr.length == 0) {
-            NSLog(@"[BHTwitter SourceLabel] tweetIDStr is empty");
-                return;
-            }
+    NSString *tweetIDStr = [NSString stringWithFormat:@"%lld", statusID];
+    if (!tweetIDStr || tweetIDStr.length == 0) {
+        return;
+    }
 
-        // Initialize tweet sources if needed
-        if (!tweetSources) {
-            tweetSources = [NSMutableDictionary dictionary];
-            NSLog(@"[BHTwitter SourceLabel] Initialized tweetSources dictionary");
-        }
-        
-        // Fetch source if not cached
-        if (!tweetSources[tweetIDStr]) {
-            NSLog(@"[BHTwitter SourceLabel] Source not cached, fetching for tweet: %@", tweetIDStr);
-            tweetSources[tweetIDStr] = @""; // Placeholder
-            [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
-        } else {
-            NSLog(@"[BHTwitter SourceLabel] Source already cached for tweet: %@", tweetIDStr);
-        }
-        
-        // Update footer text immediately if we have the source
-        NSString *sourceText = tweetSources[tweetIDStr];
-        NSLog(@"[BHTwitter SourceLabel] Cached source for %@: '%@'", tweetIDStr, sourceText);
-        
-        if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@"Source Unavailable"] && ![sourceText isEqualToString:@""]) {
-            NSLog(@"[BHTwitter SourceLabel] Source available, scheduling footer update");
-            // Delay the update to ensure the view is fully configured
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [self BHT_updateFooterTextWithSource:sourceText tweetID:tweetIDStr];
-            });
-        } else {
-            NSLog(@"[BHTwitter SourceLabel] Source not ready yet");
-        }
-        
-    } @catch (NSException *e) {
-        NSLog(@"[BHTwitter SourceLabel] Exception in T1ConversationFocalStatusView: %@", e);
+    // Initialize tweet sources if needed
+    if (!tweetSources) {
+        tweetSources = [NSMutableDictionary dictionary];
+    }
+    
+    // Fetch source if not cached
+    if (!tweetSources[tweetIDStr]) {
+        tweetSources[tweetIDStr] = @""; // Placeholder
+        [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
+    }
+    
+    // Update footer text immediately if we have the source
+    NSString *sourceText = tweetSources[tweetIDStr];
+    if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@"Source Unavailable"] && ![sourceText isEqualToString:@""]) {
+        // Delay the update to ensure the view is fully configured
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self BHT_updateFooterTextWithSource:sourceText tweetID:tweetIDStr];
+        });
     }
 }
 
 %new
 - (void)BHT_updateFooterTextWithSource:(NSString *)sourceText tweetID:(NSString *)tweetID {
-    @try {
-        NSLog(@"[BHTwitter SourceLabel] Attempting to update footer for tweet %@ with source: %@", tweetID, sourceText);
+    // Look for T1ConversationFooterItem in the view hierarchy
+    __block id footerItem = nil;
+    BH_EnumerateSubviewsRecursively(self, ^(UIView *view) {
+        if (footerItem) return;
         
-        // Look for T1ConversationFooterItem in the view hierarchy
-        __block id footerItem = nil;
-        BH_EnumerateSubviewsRecursively(self, ^(UIView *view) {
-            if (footerItem) return;
-            
-            // Check if this view has a footerItem property
-            if ([view respondsToSelector:@selector(footerItem)]) {
-                id item = [view performSelector:@selector(footerItem)];
-                if (item && [item isKindOfClass:%c(T1ConversationFooterItem)]) {
-                    footerItem = item;
-                    NSLog(@"[BHTwitter SourceLabel] Found footerItem: %@", NSStringFromClass([item class]));
-                }
+        // Check if this view has a footerItem property
+        if ([view respondsToSelector:@selector(footerItem)]) {
+            id item = [view performSelector:@selector(footerItem)];
+            if (item && [item isKindOfClass:%c(T1ConversationFooterItem)]) {
+                footerItem = item;
             }
-        });
-        
-        if (!footerItem) {
-            NSLog(@"[BHTwitter SourceLabel] ERROR: Could not find T1ConversationFooterItem");
-                return;
-            }
+        }
+    });
+    
+    if (!footerItem || ![footerItem respondsToSelector:@selector(timeAgo)]) {
+        return;
+    }
 
-        // Get current timeAgo text
-        if (![footerItem respondsToSelector:@selector(timeAgo)]) {
-            NSLog(@"[BHTwitter SourceLabel] ERROR: footerItem doesn't respond to timeAgo");
-            return;
+    NSString *currentTimeAgo = [footerItem performSelector:@selector(timeAgo)];
+    if (!currentTimeAgo || currentTimeAgo.length == 0) {
+        return;
+    }
+    
+    // Don't append if source is already there
+    if ([currentTimeAgo containsString:sourceText] || [currentTimeAgo containsString:@"Twitter for"] || [currentTimeAgo containsString:@"via "]) {
+        return;
+    }
+    
+    // Create new timeAgo with source appended
+    NSString *newTimeAgo = [NSString stringWithFormat:@"%@ · %@", currentTimeAgo, sourceText];
+    
+    // Set the new timeAgo and hide view count
+    if ([footerItem respondsToSelector:@selector(setTimeAgo:)]) {
+        [footerItem performSelector:@selector(setTimeAgo:) withObject:newTimeAgo];
+        
+        // Hide view count by setting it to nil
+        if ([footerItem respondsToSelector:@selector(setViewCount:)]) {
+            [footerItem performSelector:@selector(setViewCount:) withObject:nil];
         }
         
-        NSString *currentTimeAgo = [footerItem performSelector:@selector(timeAgo)];
-        if (!currentTimeAgo || currentTimeAgo.length == 0) {
-            NSLog(@"[BHTwitter SourceLabel] ERROR: timeAgo is nil or empty");
-            return;
+        // Now update the footer text view to refresh the display
+        id footerTextView = [self footerTextView];
+        if (footerTextView && [footerTextView respondsToSelector:@selector(updateFooterTextView)]) {
+            [footerTextView performSelector:@selector(updateFooterTextView)];
         }
-        
-        NSLog(@"[BHTwitter SourceLabel] Current timeAgo: '%@'", currentTimeAgo);
-        
-        // Don't append if source is already there
-        if ([currentTimeAgo containsString:sourceText] || [currentTimeAgo containsString:@"Twitter for"] || [currentTimeAgo containsString:@"via "]) {
-            NSLog(@"[BHTwitter SourceLabel] Source already present in timeAgo, skipping");
-            return;
-        }
-        
-                 // Create new timeAgo with source appended
-         NSString *newTimeAgo = [NSString stringWithFormat:@"%@ · %@", currentTimeAgo, sourceText];
-         NSLog(@"[BHTwitter SourceLabel] Setting new timeAgo: '%@'", newTimeAgo);
-         
-         // Set the new timeAgo and hide view count
-         if ([footerItem respondsToSelector:@selector(setTimeAgo:)]) {
-             [footerItem performSelector:@selector(setTimeAgo:) withObject:newTimeAgo];
-             NSLog(@"[BHTwitter SourceLabel] Successfully set new timeAgo");
-             
-             // Hide view count by setting it to nil
-             if ([footerItem respondsToSelector:@selector(setViewCount:)]) {
-                 [footerItem performSelector:@selector(setViewCount:) withObject:nil];
-                 NSLog(@"[BHTwitter SourceLabel] Hidden view count");
-             }
-             
-             // Now update the footer text view to refresh the display
-             id footerTextView = [self footerTextView];
-             if (footerTextView && [footerTextView respondsToSelector:@selector(updateFooterTextView)]) {
-                 [footerTextView performSelector:@selector(updateFooterTextView)];
-                 NSLog(@"[BHTwitter SourceLabel] Called updateFooterTextView");
-             } else {
-                 NSLog(@"[BHTwitter SourceLabel] ERROR: Could not find footerTextView or updateFooterTextView method");
-             }
-         } else {
-             NSLog(@"[BHTwitter SourceLabel] ERROR: footerItem doesn't respond to setTimeAgo:");
-         }
-        
-         } @catch (NSException *e) {
-         NSLog(@"[BHTwitter SourceLabel] Exception updating footer: %@", e);
-     }
+    }
 }
 
 
@@ -2663,63 +2605,61 @@ static NSTimer *cookieRetryTimer = nil;
     // Handle notification text replacements (your post -> your Tweet, etc.)
     if ([currentText containsString:@"your post"] || [currentText containsString:@"your Post"] ||
         [currentText containsString:@"reposted"] || [currentText containsString:@"Reposted"]) {
-        @try {
-            UIView *view = self;
-            BOOL isNotificationView = NO;
-            
-            // Walk up the view hierarchy to find notification context
-            while (view && !isNotificationView) {
-                if ([NSStringFromClass([view class]) containsString:@"Notification"] ||
-                    [NSStringFromClass([view class]) containsString:@"T1NotificationsTimeline"]) {
-                    isNotificationView = YES;
-                    break;
-                }
-                view = view.superview;
+        UIView *view = self;
+        BOOL isNotificationView = NO;
+        
+        // Walk up the view hierarchy to find notification context
+        while (view && !isNotificationView) {
+            if ([NSStringFromClass([view class]) containsString:@"Notification"] ||
+                [NSStringFromClass([view class]) containsString:@"T1NotificationsTimeline"]) {
+                isNotificationView = YES;
+                break;
+            }
+            view = view.superview;
+        }
+        
+        // Only proceed if we're in a notification view
+        if (isNotificationView) {
+            if (!newString) {
+                newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
             }
             
-            // Only proceed if we're in a notification view
-            if (isNotificationView) {
-                if (!newString) {
-                    newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
-                }
-                
-                // Replace "your post" with "your Tweet"
-                NSRange postRange = [currentText rangeOfString:@"your post"];
-                if (postRange.location != NSNotFound) {
-                    NSDictionary *existingAttributes = [newString attributesAtIndex:postRange.location effectiveRange:NULL];
-                    [newString replaceCharactersInRange:postRange withString:@"your Tweet"];
-                    [newString setAttributes:existingAttributes range:NSMakeRange(postRange.location, [@"your Tweet" length])];
-                    modified = YES;
-                }
-                
-                // Also check for capitalized "Post"
-                postRange = [currentText rangeOfString:@"your Post"];
-                if (postRange.location != NSNotFound) {
-                    NSDictionary *existingAttributes = [newString attributesAtIndex:postRange.location effectiveRange:NULL];
-                    [newString replaceCharactersInRange:postRange withString:@"your Tweet"];
-                    [newString setAttributes:existingAttributes range:NSMakeRange(postRange.location, [@"your Tweet" length])];
-                    modified = YES;
-                }
-                
-                // Replace "reposted" with "Retweeted"
-                NSRange repostRange = [currentText rangeOfString:@"reposted"];
-                if (repostRange.location != NSNotFound) {
-                    NSDictionary *existingAttributes = [newString attributesAtIndex:repostRange.location effectiveRange:NULL];
-                    [newString replaceCharactersInRange:repostRange withString:@"Retweeted"];
-                    [newString setAttributes:existingAttributes range:NSMakeRange(repostRange.location, [@"Retweeted" length])];
-                    modified = YES;
-                }
-                
-                // Also check for capitalized "Reposted"
-                repostRange = [currentText rangeOfString:@"Reposted"];
-                if (repostRange.location != NSNotFound) {
-                    NSDictionary *existingAttributes = [newString attributesAtIndex:repostRange.location effectiveRange:NULL];
-                    [newString replaceCharactersInRange:repostRange withString:@"Retweeted"];
-                    [newString setAttributes:existingAttributes range:NSMakeRange(repostRange.location, [@"Retweeted" length])];
-                    modified = YES;
-                }
+            // Replace "your post" with "your Tweet"
+            NSRange postRange = [currentText rangeOfString:@"your post"];
+            if (postRange.location != NSNotFound) {
+                NSDictionary *existingAttributes = [newString attributesAtIndex:postRange.location effectiveRange:NULL];
+                [newString replaceCharactersInRange:postRange withString:@"your Tweet"];
+                [newString setAttributes:existingAttributes range:NSMakeRange(postRange.location, [@"your Tweet" length])];
+                modified = YES;
             }
-        } @catch (__unused NSException *e) {}
+            
+            // Also check for capitalized "Post"
+            postRange = [currentText rangeOfString:@"your Post"];
+            if (postRange.location != NSNotFound) {
+                NSDictionary *existingAttributes = [newString attributesAtIndex:postRange.location effectiveRange:NULL];
+                [newString replaceCharactersInRange:postRange withString:@"your Tweet"];
+                [newString setAttributes:existingAttributes range:NSMakeRange(postRange.location, [@"your Tweet" length])];
+                modified = YES;
+            }
+            
+            // Replace "reposted" with "Retweeted"
+            NSRange repostRange = [currentText rangeOfString:@"reposted"];
+            if (repostRange.location != NSNotFound) {
+                NSDictionary *existingAttributes = [newString attributesAtIndex:repostRange.location effectiveRange:NULL];
+                [newString replaceCharactersInRange:repostRange withString:@"Retweeted"];
+                [newString setAttributes:existingAttributes range:NSMakeRange(repostRange.location, [@"Retweeted" length])];
+                modified = YES;
+            }
+            
+            // Also check for capitalized "Reposted"
+            repostRange = [currentText rangeOfString:@"Reposted"];
+            if (repostRange.location != NSNotFound) {
+                NSDictionary *existingAttributes = [newString attributesAtIndex:repostRange.location effectiveRange:NULL];
+                [newString replaceCharactersInRange:repostRange withString:@"Retweeted"];
+                [newString setAttributes:existingAttributes range:NSMakeRange(repostRange.location, [@"Retweeted" length])];
+                modified = YES;
+            }
+        }
     }
     
     // Apply the modified text model if we made any changes
