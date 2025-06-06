@@ -2496,25 +2496,10 @@ static NSTimer *cookieRetryTimer = nil;
             [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
         }
         
-        // Check if we have the source and update footer text if available
+        // Update footer text immediately if we have the source
         NSString *sourceText = tweetSources[tweetIDStr];
         if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@"Source Unavailable"] && ![sourceText isEqualToString:@""]) {
-            // Find the footer text view and update its text
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [self BHT_updateFooterTextWithSource:sourceText tweetID:tweetIDStr];
-            });
-        } else if ([sourceText isEqualToString:@""]) {
-            // Source is being fetched, set up a notification listener for this specific tweet
-            [[NSNotificationCenter defaultCenter] addObserverForName:@"BHTTweetSourceUpdated"
-                                                             object:nil
-                                                              queue:[NSOperationQueue mainQueue]
-                                                         usingBlock:^(NSNotification *note) {
-                NSString *updatedTweetID = note.userInfo[@"tweetID"];
-                NSString *updatedSource = note.userInfo[@"source"];
-                if ([updatedTweetID isEqualToString:tweetIDStr] && updatedSource && updatedSource.length > 0) {
-                    [self BHT_updateFooterTextWithSource:updatedSource tweetID:tweetIDStr];
-                }
-            }];
+            [self BHT_updateFooterTextWithSource:sourceText tweetID:tweetIDStr];
         }
         
     } @catch (NSException *e) {
@@ -2525,18 +2510,24 @@ static NSTimer *cookieRetryTimer = nil;
 %new
 - (void)BHT_updateFooterTextWithSource:(NSString *)sourceText tweetID:(NSString *)tweetID {
     @try {
-        // Find the footer text view  
         id footerTextView = [self footerTextView];
-        if (footerTextView && [footerTextView respondsToSelector:@selector(text)]) {
-            NSString *currentText = [footerTextView performSelector:@selector(text)];
-            if (currentText && currentText.length > 0) {
-                // Check if source is already appended
-                if (![currentText containsString:sourceText] && ![currentText containsString:@"Twitter for"] && ![currentText containsString:@"via "]) {
-                    NSString *newText = [NSString stringWithFormat:@"%@ · %@", currentText, sourceText];
-                    [footerTextView performSelector:@selector(setText:) withObject:newText];
-                }
-            }
+        if (!footerTextView || ![footerTextView respondsToSelector:@selector(text)] || ![footerTextView respondsToSelector:@selector(setText:)]) {
+            return;
         }
+        
+        NSString *currentText = [footerTextView performSelector:@selector(text)];
+        if (!currentText || currentText.length == 0) {
+            return;
+        }
+        
+        // Don't append if source is already there
+        if ([currentText containsString:sourceText] || [currentText containsString:@"Twitter for"] || [currentText containsString:@"via "]) {
+            return;
+        }
+        
+        NSString *newText = [NSString stringWithFormat:@"%@ · %@", currentText, sourceText];
+        [footerTextView performSelector:@selector(setText:) withObject:newText];
+        
     } @catch (NSException *e) {
         NSLog(@"[BHTwitter SourceLabel] Exception updating footer text: %@", e);
     }
