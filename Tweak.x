@@ -6107,3 +6107,24 @@ static BOOL isHomeTimelinePagingScrollView(UIView *instance) {
 }
 %end
 
+%hook TFNNavigationController
+- (double)navigationBarExpandedHeight {
+    // Check if this navigation controller is being used in T1TimelineNavigationController
+    UIResponder *nextResponder = self.nextResponder;
+    BOOL isInTimelineNavController = NO;
+    while (nextResponder) {
+        if ([nextResponder isKindOfClass:NSClassFromString(@"T1TimelineNavigationController")]) {
+            isInTimelineNavController = YES;
+            break;
+        }
+        nextResponder = nextResponder.nextResponder;
+    }
+    
+    if (isInTimelineNavController) {
+        return 44.0;
+    }
+    
+    return %orig;
+}
+%end
+
