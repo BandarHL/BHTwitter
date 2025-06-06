@@ -2638,15 +2638,22 @@ static NSTimer *cookieRetryTimer = nil;
             if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@""] && 
                 ![sourceText isEqualToString:@"Source Unavailable"] && [currentText containsString:sourceText]) {
                 
-                newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
-                
-                // Find and color the source text
+                // Check if the source text is already colored to avoid redundant updates
                 NSRange sourceRange = [currentText rangeOfString:sourceText];
                 if (sourceRange.location != NSNotFound) {
-                    [newString addAttribute:NSForegroundColorAttributeName 
-                                       value:BHTCurrentAccentColor() 
-                                       range:sourceRange];
-                    modified = YES;
+                    UIColor *existingColor = [model.attributedString attribute:NSForegroundColorAttributeName 
+                                                                       atIndex:sourceRange.location 
+                                                                effectiveRange:NULL];
+                    UIColor *accentColor = BHTCurrentAccentColor();
+                    
+                    // Only apply coloring if it's not already colored with our accent color
+                    if (!existingColor || ![existingColor isEqual:accentColor]) {
+                        newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
+                        [newString addAttribute:NSForegroundColorAttributeName 
+                                           value:accentColor 
+                                           range:sourceRange];
+                        modified = YES;
+                    }
                     break;
                 }
             }
