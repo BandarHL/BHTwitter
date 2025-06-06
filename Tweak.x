@@ -2459,47 +2459,72 @@ static NSTimer *cookieRetryTimer = nil;
 - (void)setViewModel:(id)viewModel options:(unsigned long long)options account:(id)account {
     %orig(viewModel, options, account);
     
-    if (![BHTManager RestoreTweetLabels] || !viewModel) {
+    if (![BHTManager RestoreTweetLabels]) {
+        NSLog(@"[BHTwitter SourceLabel] RestoreTweetLabels is disabled");
         return;
     }
+    
+    if (!viewModel) {
+        NSLog(@"[BHTwitter SourceLabel] viewModel is nil");
+        return;
+    }
+    
+    NSLog(@"[BHTwitter SourceLabel] Processing viewModel: %@", NSStringFromClass([viewModel class]));
     
     @try {
         // Get the TFNTwitterStatus from the view model
         TFNTwitterStatus *status = nil;
         if ([viewModel respondsToSelector:@selector(status)]) {
             status = [viewModel performSelector:@selector(status)];
+            NSLog(@"[BHTwitter SourceLabel] Got status from viewModel: %@", status ? @"YES" : @"NO");
+        } else {
+            NSLog(@"[BHTwitter SourceLabel] viewModel doesn't respond to status selector");
         }
         
         if (!status) {
+            NSLog(@"[BHTwitter SourceLabel] status is nil");
             return;
         }
         
         // Get the tweet ID
         NSString *tweetIDStr = nil;
         long long statusID = [status statusID];
+        NSLog(@"[BHTwitter SourceLabel] Got statusID: %lld", statusID);
+        
         if (statusID > 0) {
             tweetIDStr = [NSString stringWithFormat:@"%lld", statusID];
+            NSLog(@"[BHTwitter SourceLabel] tweetIDStr: %@", tweetIDStr);
         }
         
-
-        
         if (!tweetIDStr || tweetIDStr.length == 0) {
+            NSLog(@"[BHTwitter SourceLabel] tweetIDStr is empty");
             return;
         }
         
         // Initialize tweet sources if needed
-        if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
+        if (!tweetSources) {
+            tweetSources = [NSMutableDictionary dictionary];
+            NSLog(@"[BHTwitter SourceLabel] Initialized tweetSources dictionary");
+        }
         
         // Fetch source if not cached
         if (!tweetSources[tweetIDStr]) {
+            NSLog(@"[BHTwitter SourceLabel] Source not cached, fetching for tweet: %@", tweetIDStr);
             tweetSources[tweetIDStr] = @""; // Placeholder
             [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
+        } else {
+            NSLog(@"[BHTwitter SourceLabel] Source already cached for tweet: %@", tweetIDStr);
         }
         
         // Update footer text immediately if we have the source
         NSString *sourceText = tweetSources[tweetIDStr];
+        NSLog(@"[BHTwitter SourceLabel] Cached source for %@: '%@'", tweetIDStr, sourceText);
+        
         if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@"Source Unavailable"] && ![sourceText isEqualToString:@""]) {
+            NSLog(@"[BHTwitter SourceLabel] Source available, updating footer");
             [self BHT_updateFooterTextWithSource:sourceText tweetID:tweetIDStr];
+        } else {
+            NSLog(@"[BHTwitter SourceLabel] Source not ready yet");
         }
         
     } @catch (NSException *e) {
@@ -2510,23 +2535,80 @@ static NSTimer *cookieRetryTimer = nil;
 %new
 - (void)BHT_updateFooterTextWithSource:(NSString *)sourceText tweetID:(NSString *)tweetID {
     @try {
+        NSLog(@"[BHTwitter SourceLabel] Attempting to update footer for tweet %@ with source: %@", tweetID, sourceText);
+        
         id footerTextView = [self footerTextView];
-        if (!footerTextView || ![footerTextView respondsToSelector:@selector(text)] || ![footerTextView respondsToSelector:@selector(setText:)]) {
+        if (!footerTextView) {
+            NSLog(@"[BHTwitter SourceLabel] ERROR: footerTextView is nil");
             return;
         }
         
-        NSString *currentText = [footerTextView performSelector:@selector(text)];
-        if (!currentText || currentText.length == 0) {
+        NSLog(@"[BHTwitter SourceLabel] Found footerTextView: %@", NSStringFromClass([footerTextView class]));
+        
+        // Get the current text model
+        if (![footerTextView respondsToSelector:@selector(textModel)]) {
+            NSLog(@"[BHTwitter SourceLabel] ERROR: footerTextView doesn't respond to textModel");
             return;
         }
+        
+        id textModel = [footerTextView performSelector:@selector(textModel)];
+        if (!textModel) {
+            NSLog(@"[BHTwitter SourceLabel] ERROR: textModel is nil");
+            return;
+        }
+        
+        NSLog(@"[BHTwitter SourceLabel] Found textModel: %@", NSStringFromClass([textModel class]));
+        
+        if (![textModel respondsToSelector:@selector(attributedString)]) {
+            NSLog(@"[BHTwitter SourceLabel] ERROR: textModel doesn't respond to attributedString");
+            return;
+        }
+        
+        NSAttributedString *currentAttributedString = [textModel performSelector:@selector(attributedString)];
+        if (!currentAttributedString) {
+            NSLog(@"[BHTwitter SourceLabel] ERROR: attributedString is nil");
+            return;
+        }
+        
+        NSString *currentText = currentAttributedString.string;
+        NSLog(@"[BHTwitter SourceLabel] Current text: '%@'", currentText);
         
         // Don't append if source is already there
         if ([currentText containsString:sourceText] || [currentText containsString:@"Twitter for"] || [currentText containsString:@"via "]) {
+            NSLog(@"[BHTwitter SourceLabel] Source already present, skipping");
             return;
         }
         
-        NSString *newText = [NSString stringWithFormat:@"%@ · %@", currentText, sourceText];
-        [footerTextView performSelector:@selector(setText:) withObject:newText];
+        // Create new attributed string with source appended
+        NSMutableAttributedString *newAttributedString = [[NSMutableAttributedString alloc] initWithAttributedString:currentAttributedString];
+        NSString *sourceString = [NSString stringWithFormat:@" · %@", sourceText];
+        
+        // Get base attributes from the original string
+        NSDictionary *baseAttributes = @{};
+        if (currentAttributedString.length > 0) {
+            baseAttributes = [currentAttributedString attributesAtIndex:0 effectiveRange:NULL];
+        }
+        
+        NSAttributedString *sourceAttributedString = [[NSAttributedString alloc] initWithString:sourceString attributes:baseAttributes];
+        [newAttributedString appendAttributedString:sourceAttributedString];
+        
+        // Create new text model
+        TFNAttributedTextModel *newTextModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newAttributedString];
+        
+        NSLog(@"[BHTwitter SourceLabel] Setting new text model with: '%@'", newAttributedString.string);
+        
+        // Set the new text model
+        [footerTextView performSelector:@selector(setTextModel:) withObject:newTextModel];
+        
+        // Update the view
+        if ([self respondsToSelector:@selector(updateTimestamp)]) {
+            NSLog(@"[BHTwitter SourceLabel] Calling updateTimestamp");
+            [self performSelector:@selector(updateTimestamp)];
+        } else {
+            NSLog(@"[BHTwitter SourceLabel] updateTimestamp not available");
+        }
+        
+        NSLog(@"[BHTwitter SourceLabel] Successfully updated footer text");
         
     } @catch (NSException *e) {
         NSLog(@"[BHTwitter SourceLabel] Exception updating footer text: %@", e);
