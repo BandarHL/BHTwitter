@@ -2447,6 +2447,103 @@ static NSTimer *cookieRetryTimer = nil;
 
 %end
 
+// MARK: - Source Labels via T1ConversationFocalStatusView (Clean Approach)
+
+@interface T1ConversationFocalStatusView (BHTSourceLabels)
+- (void)BHT_updateFooterTextWithSource:(NSString *)sourceText tweetID:(NSString *)tweetID;
+- (id)footerTextView;
+@end
+
+%hook T1ConversationFocalStatusView
+
+- (void)setViewModel:(id)viewModel options:(unsigned long long)options account:(id)account {
+    %orig(viewModel, options, account);
+    
+    if (![BHTManager RestoreTweetLabels] || !viewModel) {
+        return;
+    }
+    
+    @try {
+        // Get the TFNTwitterStatus from the view model
+        TFNTwitterStatus *status = nil;
+        if ([viewModel respondsToSelector:@selector(status)]) {
+            status = [viewModel performSelector:@selector(status)];
+        }
+        
+        if (!status) {
+            return;
+        }
+        
+        // Get the tweet ID
+        NSString *tweetIDStr = nil;
+        long long statusID = [status statusID];
+        if (statusID > 0) {
+            tweetIDStr = [NSString stringWithFormat:@"%lld", statusID];
+        }
+        
+
+        
+        if (!tweetIDStr || tweetIDStr.length == 0) {
+            return;
+        }
+        
+        // Initialize tweet sources if needed
+        if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
+        
+        // Fetch source if not cached
+        if (!tweetSources[tweetIDStr]) {
+            tweetSources[tweetIDStr] = @""; // Placeholder
+            [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
+        }
+        
+        // Check if we have the source and update footer text if available
+        NSString *sourceText = tweetSources[tweetIDStr];
+        if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@"Source Unavailable"] && ![sourceText isEqualToString:@""]) {
+            // Find the footer text view and update its text
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self BHT_updateFooterTextWithSource:sourceText tweetID:tweetIDStr];
+            });
+        } else if ([sourceText isEqualToString:@""]) {
+            // Source is being fetched, set up a notification listener for this specific tweet
+            [[NSNotificationCenter defaultCenter] addObserverForName:@"BHTTweetSourceUpdated"
+                                                             object:nil
+                                                              queue:[NSOperationQueue mainQueue]
+                                                         usingBlock:^(NSNotification *note) {
+                NSString *updatedTweetID = note.userInfo[@"tweetID"];
+                NSString *updatedSource = note.userInfo[@"source"];
+                if ([updatedTweetID isEqualToString:tweetIDStr] && updatedSource && updatedSource.length > 0) {
+                    [self BHT_updateFooterTextWithSource:updatedSource tweetID:tweetIDStr];
+                }
+            }];
+        }
+        
+    } @catch (NSException *e) {
+        NSLog(@"[BHTwitter SourceLabel] Exception in T1ConversationFocalStatusView: %@", e);
+    }
+}
+
+%new
+- (void)BHT_updateFooterTextWithSource:(NSString *)sourceText tweetID:(NSString *)tweetID {
+    @try {
+        // Find the footer text view  
+        id footerTextView = [self footerTextView];
+        if (footerTextView && [footerTextView respondsToSelector:@selector(text)]) {
+            NSString *currentText = [footerTextView performSelector:@selector(text)];
+            if (currentText && currentText.length > 0) {
+                // Check if source is already appended
+                if (![currentText containsString:sourceText] && ![currentText containsString:@"Twitter for"] && ![currentText containsString:@"via "]) {
+                    NSString *newText = [NSString stringWithFormat:@"%@ · %@", currentText, sourceText];
+                    [footerTextView performSelector:@selector(setText:) withObject:newText];
+                }
+            }
+        }
+    } @catch (NSException *e) {
+        NSLog(@"[BHTwitter SourceLabel] Exception updating footer text: %@", e);
+    }
+}
+
+%end
+
 %hook TFNAttributedTextView
 - (void)setTextModel:(TFNAttributedTextModel *)model {
     if (![BHTManager RestoreTweetLabels] || !model || !model.attributedString) {
@@ -2455,216 +2552,10 @@ static NSTimer *cookieRetryTimer = nil;
     }
 
     NSString *currentText = model.attributedString.string;
-    BOOL isTimestamp = NO;
-    BOOL isLikelyTimestampForSourceLabel = NO;
     
-    // Comprehensive time pattern: handles both 12-hour (AM/PM) and 24-hour formats
-    // Matches: "12:34 AM · ", "22:39 · ", "8:15 PM · ", "14:23 · "
-    NSRegularExpression *timeRegex = [NSRegularExpression regularExpressionWithPattern:@"^\\d{1,2}:\\d{2}(\\s(AM|PM))?\\s·\\s" options:NSRegularExpressionCaseInsensitive error:nil];
-    if (timeRegex) {
-        NSRange range = [timeRegex rangeOfFirstMatchInString:currentText options:0 range:NSMakeRange(0, currentText.length)];
-        if (range.location != NSNotFound) {
-            isTimestamp = YES;
-            isLikelyTimestampForSourceLabel = YES;
-        }
-    }
-
-    // International date pattern: more flexible to handle various formats
-    // Matches: "May 11, 2023 · ", "11 May 2023 · ", "2023-05-11 · ", "11.05.2023 · "
-    if (!isTimestamp) {
-        NSRegularExpression *dateRegex = [NSRegularExpression regularExpressionWithPattern:@"^([A-Za-z]{3,9}\\s\\d{1,2}(,\\s\\d{4})?|\\d{1,2}\\s[A-Za-z]{3,9}\\s\\d{4}|\\d{4}[-./]\\d{1,2}[-./]\\d{1,2}|\\d{1,2}[-./]\\d{1,2}[-./]\\d{4})\\s·\\s" options:0 error:nil];
-        if (dateRegex) {
-            NSRange range = [dateRegex rangeOfFirstMatchInString:currentText options:0 range:NSMakeRange(0, currentText.length)];
-            if (range.location != NSNotFound) {
-                isTimestamp = YES;
-                isLikelyTimestampForSourceLabel = YES;
-            }
-        }
-    }
-
-    // Fallback: detect any time-like pattern with separator (works for both 12h and 24h)
-    if (!isTimestamp && [currentText containsString:@" · "]) {
-        // Look for time pattern at start: digits:digits followed by separator
-        NSRegularExpression *genericTimeRegex = [NSRegularExpression regularExpressionWithPattern:@"^\\d{1,2}:\\d{2}" options:0 error:nil];
-        if (genericTimeRegex) {
-            NSRange range = [genericTimeRegex rangeOfFirstMatchInString:currentText options:0 range:NSMakeRange(0, currentText.length)];
-            if (range.location != NSNotFound) {
-                isTimestamp = YES;
-                isLikelyTimestampForSourceLabel = YES;
-            }
-        }
-    }
-
-    // Only proceed if we believe this is a proper timestamp header
-    if (isTimestamp && isLikelyTimestampForSourceLabel) {
-        @try {
-            BOOL isInQuotedStatusView = NO;
-            id mainTweetObject = nil; // The actual tweet model (e.g., TFNTwitterStatus)
-
-            // Get ancestor hierarchy to determine if this is in a valid location
-            UIView *ancestorView = self;
-            BOOL isInValidContainer = NO;
-            
-            while (ancestorView) {
-                NSString *className = NSStringFromClass([ancestorView class]);
-                
-                // Skip source labels in quoted tweets
-                if ([className isEqualToString:@"T1QuotedStatusView"]) {
-                    isInQuotedStatusView = YES;
-                    break;
-                }
-                
-                // Check if this is inside a reply container
-                if ([className containsString:@"ReplyView"] || 
-                    [className containsString:@"CommentView"] ||
-                    [className containsString:@"RepliesTableView"]) {
-                    // This is likely a reply timestamp, not the main tweet timestamp
-                    isInValidContainer = NO;
-                    break;
-                }
-                
-                // These are the main valid containers for tweet headers
-                if ([className containsString:@"TweetDetailsFocalStatusView"] ||
-                    [className containsString:@"ConversationFocalStatusView"] ||
-                    [className containsString:@"T1StandardStatusView"] ||
-                    [className containsString:@"StatusHeaderView"]) {
-                    isInValidContainer = YES;
-                    break;
-                }
-                
-                ancestorView = ancestorView.superview;
-            }
-            
-            // Exit if this is not in a valid container or is in a quoted tweet
-            if (isInQuotedStatusView || !isInValidContainer) {
-                %orig(model);
-                return;
-            }
-
-            // Continue with existing code to find mainTweetObject...
-            ancestorView = self;
-            while (ancestorView) {
-                if ([NSStringFromClass([ancestorView class]) isEqualToString:@"T1QuotedStatusView"]) {
-                    isInQuotedStatusView = YES;
-                    break; 
-                }
-                // Check if this ancestor is the main tweet container and can provide the tweet model
-                // T1ConversationFocalStatusView, T1TweetDetailsFocalStatusView often hold the primary view model
-                if ([NSStringFromClass([ancestorView class]) containsString:@"ConversationFocalStatusView"] ||
-                    [NSStringFromClass([ancestorView class]) containsString:@"TweetDetailsFocalStatusView"] ||
-                    [NSStringFromClass([ancestorView class]) isEqualToString:@"T1StandardStatusView"]) { // Also check T1StandardStatusView which might be the top-level in some contexts
-                    
-                    id hostViewModel = nil;
-                    if ([ancestorView respondsToSelector:@selector(viewModel)]) {
-                         hostViewModel = [ancestorView performSelector:@selector(viewModel)];
-                    } else if ([ancestorView respondsToSelector:@selector(statusViewModel)]) { // Some views use statusViewModel
-                         hostViewModel = [ancestorView performSelector:@selector(statusViewModel)];
-                            }
-                            
-                    if ([hostViewModel respondsToSelector:@selector(tweet)]) {
-                        mainTweetObject = [hostViewModel performSelector:@selector(tweet)];
-                    } else if ([hostViewModel respondsToSelector:@selector(status)]) { // Some view models have a 'status' property
-                         mainTweetObject = [hostViewModel performSelector:@selector(status)];
-            }
-            
-                    if (mainTweetObject) {
-                        break;
-                    }
-                }
-                ancestorView = ancestorView.superview;
-            }
-
-            if (isInQuotedStatusView) {
-                %orig(model);
-                return;
-            }
-
-            if (mainTweetObject) {
-                NSString *tweetIDStr = nil;
-                    @try {
-                    id statusIDVal = [mainTweetObject valueForKey:@"statusID"];
-                    if (statusIDVal && [statusIDVal respondsToSelector:@selector(longLongValue)] && [statusIDVal longLongValue] > 0) {
-                        tweetIDStr = [statusIDVal stringValue];
-                    }
-                } @catch (NSException *e) { NSLog(@"TweetSourceTweak: Exception getting statusID: %@", e); }
-                            
-                if (!tweetIDStr || tweetIDStr.length == 0) {
-                    @try {
-                        tweetIDStr = [mainTweetObject valueForKey:@"rest_id"];
-                        if (!tweetIDStr || tweetIDStr.length == 0) {
-                             tweetIDStr = [mainTweetObject valueForKey:@"id_str"];
-                                }
-                        if (!tweetIDStr || tweetIDStr.length == 0) {
-                            id genericID = [mainTweetObject valueForKey:@"id"];
-                            if (genericID) tweetIDStr = [genericID description];
-                            }
-                    } @catch (NSException *e) { NSLog(@"TweetSourceTweak: Exception getting alt tweet ID: %@", e); }
-                    }
-                    
-                if (tweetIDStr && tweetIDStr.length > 0) {
-                        if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
-                        if (!tweetSources[tweetIDStr]) {
-                        // [TweetSourceHelper pruneSourceCachesIfNeeded]; // This was correctly added by the model already in TFNAttributedTextView
-                        tweetSources[tweetIDStr] = @""; // Placeholder
-                            [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
-                        }
-                        
-                            NSString *sourceText = tweetSources[tweetIDStr];
-                    if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@"Source Unavailable"] && ![sourceText isEqualToString:@""]) {
-                        NSString *separator = @" · ";
-                        NSString *fullSourceStringWithSeparator = [separator stringByAppendingString:sourceText];
-                            
-                        // Check if the source string (with separator) is already part of the current text
-                        if ([model.attributedString.string rangeOfString:fullSourceStringWithSeparator].location == NSNotFound) {
-                            NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
-                            NSString *originalContentForRegex = newString.string;
-
-                            // Remove " · X Views" before appending source label
-                            NSRegularExpression *viewCountRegex = [NSRegularExpression regularExpressionWithPattern:@"\\s·\\s*\\d{1,3}(?:,\\d{3})*(?:\\.\\d+)?[KMGT]?\\s*View(s)?"
-                                                                                                           options:NSRegularExpressionCaseInsensitive
-                                                                                                             error:nil];
-                            if (viewCountRegex) {
-                                NSArray<NSTextCheckingResult *> *matches = [viewCountRegex matchesInString:originalContentForRegex
-                                                                                                  options:0
-                                                                                                    range:NSMakeRange(0, originalContentForRegex.length)];
-                                if (matches.count > 0) {
-                                    NSTextCheckingResult *lastMatch = [matches lastObject];
-                                    [newString replaceCharactersInRange:lastMatch.range withString:@""];
-                                }
-                            }
-                            
-                            NSDictionary *baseAttributes;
-                            if (model.attributedString.length > 0) {
-                                 baseAttributes = [model.attributedString attributesAtIndex:0 effectiveRange:NULL];
-                            } else {
-                                 baseAttributes = @{NSFontAttributeName: [UIFont systemFontOfSize:12], NSForegroundColorAttributeName: [UIColor grayColor]};
-                            }
-                            
-                            NSMutableAttributedString *sourceSuffix = [[NSMutableAttributedString alloc] init];
-                            [sourceSuffix appendAttributedString:[[NSAttributedString alloc] initWithString:separator attributes:baseAttributes]];
-                            
-                            NSMutableDictionary *sourceAttributes = [baseAttributes mutableCopy];
-                            [sourceAttributes setObject:BHTCurrentAccentColor() forKey:NSForegroundColorAttributeName];
-                            [sourceSuffix appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttributes]];
-                            
-                            [newString appendAttributedString:sourceSuffix];
-                           
-                            // Use standard initializer without trying to handle activeRanges
-                            // The activeRanges property is likely private and not accessible via KVC
-                            TFNAttributedTextModel *newModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newString];
-                            %orig(newModel);
-                            return;
-                        }
-                    }
-                }
-            }
-        } @catch (NSException *e) {
-             NSLog(@"TweetSourceTweak: Exception in TFNAttributedTextView -setTextModel: %@", e);
-        }
-    } else if ([currentText containsString:@"your post"] || 
-             [currentText containsString:@"your Post"] ||
-             [currentText containsString:@"reposted"] ||
-             [currentText containsString:@"Reposted"]) {
+    // Handle notification text replacements (your post -> your Tweet, etc.)
+    if ([currentText containsString:@"your post"] || [currentText containsString:@"your Post"] ||
+        [currentText containsString:@"reposted"] || [currentText containsString:@"Reposted"]) {
         @try {
             UIView *view = self;
             BOOL isNotificationView = NO;
@@ -2674,7 +2565,7 @@ static NSTimer *cookieRetryTimer = nil;
                 if ([NSStringFromClass([view class]) containsString:@"Notification"] ||
                     [NSStringFromClass([view class]) containsString:@"T1NotificationsTimeline"]) {
                     isNotificationView = YES;
-                    break; // Exit loop once found
+                    break;
                 }
                 view = view.superview;
             }
@@ -2722,11 +2613,9 @@ static NSTimer *cookieRetryTimer = nil;
                 
                 // Update the model only if modifications were made
                 if (modified) {
-                    // Create a new model instance with the modified attributed string 
-                    // Avoid trying to access private properties
                     TFNAttributedTextModel *newModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newString];
                     %orig(newModel);
-                    return; // Important: return here to avoid calling %orig again at the end
+                    return;
                 }
             }
         } @catch (__unused NSException *e) {}
