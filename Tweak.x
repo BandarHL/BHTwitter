@@ -2447,60 +2447,11 @@ static NSTimer *cookieRetryTimer = nil;
 
 %end
 
-// MARK: - Source Labels via T1ConversationFooterItem Hook (Robust Approach)
-
-// Store tweet ID mapping for footer items
-static NSMapTable *footerItemToTweetIDMap = nil;
-
-%hook T1ConversationFooterItem
-
-- (void)setTimeAgo:(NSString *)timeAgo {
-    if (![BHTManager RestoreTweetLabels] || !timeAgo || timeAgo.length == 0) {
-        %orig(timeAgo);
-        return;
-    }
-    
-    // Initialize mapping if needed
-    if (!footerItemToTweetIDMap) {
-        footerItemToTweetIDMap = [NSMapTable weakToStrongObjectsMapTable];
-    }
-    
-    // Get the tweet ID associated with this footer item
-    NSString *tweetID = [footerItemToTweetIDMap objectForKey:self];
-    
-    NSLog(@"[BHTwitter SourceLabel] T1ConversationFooterItem setTimeAgo called with: '%@', tweetID: %@", timeAgo, tweetID);
-    
-    if (tweetID && tweetID.length > 0) {
-        // Check if we have a source for this tweet
-        if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
-        
-        NSString *sourceText = tweetSources[tweetID];
-        if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@"Source Unavailable"] && ![sourceText isEqualToString:@""]) {
-            // Check if source is already appended
-            if (![timeAgo containsString:sourceText] && ![timeAgo containsString:@"Twitter for"] && ![timeAgo containsString:@"via "]) {
-                NSString *newTimeAgo = [NSString stringWithFormat:@"%@ · %@", timeAgo, sourceText];
-                NSLog(@"[BHTwitter SourceLabel] Appending source to timeAgo: '%@'", newTimeAgo);
-                %orig(newTimeAgo);
-                return;
-            } else {
-                NSLog(@"[BHTwitter SourceLabel] Source already present in timeAgo");
-            }
-        } else {
-            NSLog(@"[BHTwitter SourceLabel] No source available for tweet: %@", tweetID);
-        }
-    } else {
-        NSLog(@"[BHTwitter SourceLabel] No tweetID mapped for this footer item");
-    }
-    
-    %orig(timeAgo);
-}
-
-%end
-
-// MARK: - Source Labels via T1ConversationFocalStatusView (Store Tweet ID Mapping)
+// MARK: - Source Labels via T1ConversationFocalStatusView (Clean Approach)
 
 @interface T1ConversationFocalStatusView (BHTSourceLabels)
-- (void)BHT_mapTweetIDToFooterItems:(NSString *)tweetID;
+- (void)BHT_updateFooterTextWithSource:(NSString *)sourceText tweetID:(NSString *)tweetID;
+- (id)footerTextView;
 @end
 
 %hook T1ConversationFocalStatusView
@@ -2520,7 +2471,7 @@ static NSMapTable *footerItemToTweetIDMap = nil;
     
     NSLog(@"[BHTwitter SourceLabel] Processing viewModel: %@", NSStringFromClass([viewModel class]));
     
-    @try {
+        @try {
         // Get the TFNTwitterStatus - it might be the viewModel itself or a property
         TFNTwitterStatus *status = nil;
         
@@ -2551,9 +2502,9 @@ static NSMapTable *footerItemToTweetIDMap = nil;
         
         if (!tweetIDStr || tweetIDStr.length == 0) {
             NSLog(@"[BHTwitter SourceLabel] tweetIDStr is empty");
-            return;
-        }
-        
+                return;
+            }
+
         // Initialize tweet sources if needed
         if (!tweetSources) {
             tweetSources = [NSMutableDictionary dictionary];
@@ -2569,10 +2520,19 @@ static NSMapTable *footerItemToTweetIDMap = nil;
             NSLog(@"[BHTwitter SourceLabel] Source already cached for tweet: %@", tweetIDStr);
         }
         
-        // Map the tweet ID to any footer items in this view
-        [self BHT_mapTweetIDToFooterItems:tweetIDStr];
+        // Update footer text immediately if we have the source
+        NSString *sourceText = tweetSources[tweetIDStr];
+        NSLog(@"[BHTwitter SourceLabel] Cached source for %@: '%@'", tweetIDStr, sourceText);
         
-        NSLog(@"[BHTwitter SourceLabel] Mapped tweet ID %@ to footer items", tweetIDStr);
+        if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@"Source Unavailable"] && ![sourceText isEqualToString:@""]) {
+            NSLog(@"[BHTwitter SourceLabel] Source available, scheduling footer update");
+            // Delay the update to ensure the view is fully configured
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self BHT_updateFooterTextWithSource:sourceText tweetID:tweetIDStr];
+            });
+        } else {
+            NSLog(@"[BHTwitter SourceLabel] Source not ready yet");
+        }
         
     } @catch (NSException *e) {
         NSLog(@"[BHTwitter SourceLabel] Exception in T1ConversationFocalStatusView: %@", e);
@@ -2580,27 +2540,109 @@ static NSMapTable *footerItemToTweetIDMap = nil;
 }
 
 %new
-- (void)BHT_mapTweetIDToFooterItems:(NSString *)tweetID {
+- (void)BHT_updateFooterTextWithSource:(NSString *)sourceText tweetID:(NSString *)tweetID {
     @try {
-        if (!footerItemToTweetIDMap) {
-            footerItemToTweetIDMap = [NSMapTable weakToStrongObjectsMapTable];
-        }
+        NSLog(@"[BHTwitter SourceLabel] Attempting to update footer for tweet %@ with source: %@", tweetID, sourceText);
         
-        // Look for T1ConversationFooterItem in the view hierarchy and map the tweet ID
+        // Look for T1ConversationFooterItem in the view hierarchy
+        __block id footerItem = nil;
         BH_EnumerateSubviewsRecursively(self, ^(UIView *view) {
+            if (footerItem) return;
+            
             // Check if this view has a footerItem property
             if ([view respondsToSelector:@selector(footerItem)]) {
                 id item = [view performSelector:@selector(footerItem)];
                 if (item && [item isKindOfClass:%c(T1ConversationFooterItem)]) {
-                    [footerItemToTweetIDMap setObject:tweetID forKey:item];
-                    NSLog(@"[BHTwitter SourceLabel] Mapped footerItem %p to tweet ID: %@", item, tweetID);
+                    footerItem = item;
+                    NSLog(@"[BHTwitter SourceLabel] Found footerItem: %@", NSStringFromClass([item class]));
                 }
             }
         });
         
+        if (!footerItem) {
+            NSLog(@"[BHTwitter SourceLabel] ERROR: Could not find T1ConversationFooterItem");
+                return;
+            }
+
+        // Get current timeAgo text
+        if (![footerItem respondsToSelector:@selector(timeAgo)]) {
+            NSLog(@"[BHTwitter SourceLabel] ERROR: footerItem doesn't respond to timeAgo");
+            return;
+        }
+        
+        NSString *currentTimeAgo = [footerItem performSelector:@selector(timeAgo)];
+        if (!currentTimeAgo || currentTimeAgo.length == 0) {
+            NSLog(@"[BHTwitter SourceLabel] ERROR: timeAgo is nil or empty");
+            return;
+        }
+        
+        NSLog(@"[BHTwitter SourceLabel] Current timeAgo: '%@'", currentTimeAgo);
+        
+        // Don't append if source is already there
+        if ([currentTimeAgo containsString:sourceText] || [currentTimeAgo containsString:@"Twitter for"] || [currentTimeAgo containsString:@"via "]) {
+            NSLog(@"[BHTwitter SourceLabel] Source already present in timeAgo, skipping");
+            return;
+        }
+        
+        // Create new timeAgo with source appended
+        NSString *newTimeAgo = [NSString stringWithFormat:@"%@ · %@", currentTimeAgo, sourceText];
+        NSLog(@"[BHTwitter SourceLabel] Setting new timeAgo: '%@'", newTimeAgo);
+        
+        // Set the new timeAgo
+        if ([footerItem respondsToSelector:@selector(setTimeAgo:)]) {
+            [footerItem performSelector:@selector(setTimeAgo:) withObject:newTimeAgo];
+            NSLog(@"[BHTwitter SourceLabel] Successfully set new timeAgo");
+            
+            // Update the timestamp view
+            if ([self respondsToSelector:@selector(updateTimestamp)]) {
+                [self performSelector:@selector(updateTimestamp)];
+                NSLog(@"[BHTwitter SourceLabel] Called updateTimestamp");
+            }
+        } else {
+            NSLog(@"[BHTwitter SourceLabel] ERROR: footerItem doesn't respond to setTimeAgo:");
+        }
+        
     } @catch (NSException *e) {
-        NSLog(@"[BHTwitter SourceLabel] Exception mapping tweet ID to footer items: %@", e);
+        NSLog(@"[BHTwitter SourceLabel] Exception updating footer: %@", e);
     }
+}
+
+- (void)updateTimestamp {
+    %orig;
+    
+    if (![BHTManager RestoreTweetLabels]) {
+        return;
+    }
+    
+    // Check if we have a tweet ID stored for this view and reapply source if needed
+    dispatch_async(dispatch_get_main_queue(), ^{
+        @try {
+            // Get the current viewModel to extract tweet ID
+            id currentViewModel = [self valueForKey:@"_viewModel"];
+            if (!currentViewModel || ![currentViewModel isKindOfClass:%c(TFNTwitterStatus)]) {
+                return;
+            }
+            
+            TFNTwitterStatus *status = (TFNTwitterStatus *)currentViewModel;
+            long long statusID = [status statusID];
+            if (statusID <= 0) {
+                return;
+            }
+            
+            NSString *tweetIDStr = [NSString stringWithFormat:@"%lld", statusID];
+            if (!tweetSources || !tweetSources[tweetIDStr]) {
+                return;
+            }
+            
+            NSString *sourceText = tweetSources[tweetIDStr];
+            if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@"Source Unavailable"] && ![sourceText isEqualToString:@""]) {
+                NSLog(@"[BHTwitter SourceLabel] Reapplying source after updateTimestamp for tweet: %@", tweetIDStr);
+                [self BHT_updateFooterTextWithSource:sourceText tweetID:tweetIDStr];
+            }
+        } @catch (NSException *e) {
+            NSLog(@"[BHTwitter SourceLabel] Exception in updateTimestamp: %@", e);
+        }
+    });
 }
 
 %end
@@ -2609,8 +2651,8 @@ static NSMapTable *footerItemToTweetIDMap = nil;
 - (void)setTextModel:(TFNAttributedTextModel *)model {
     if (![BHTManager RestoreTweetLabels] || !model || !model.attributedString) {
         %orig(model);
-        return;
-    }
+                            return;
+                        }
 
     NSString *currentText = model.attributedString.string;
     
