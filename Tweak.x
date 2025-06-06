@@ -407,21 +407,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     NSArray <NSString *> *hiddenBars = [BHCustomTabBarUtility getHiddenTabBars];
     for (T1TabView *tabView in self.tabViews) {
         if ([hiddenBars containsObject:tabView.scribePage]) {
-            [tabView setHidden:true];
-        }
-    }
-}
-
-- (void)viewDidLoad {
-    %orig;
-    
-    // Apply theme on initial load
-    if ([self respondsToSelector:@selector(tabViews)]) {
-        NSArray *tabViews = [self valueForKey:@"tabViews"];
-        for (id tabView in tabViews) {
-            if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
-                [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
-            }
+            [tabView setHidden:false];
         }
     }
 }
