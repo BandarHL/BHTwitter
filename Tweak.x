@@ -2472,13 +2472,17 @@ static NSTimer *cookieRetryTimer = nil;
     NSLog(@"[BHTwitter SourceLabel] Processing viewModel: %@", NSStringFromClass([viewModel class]));
     
     @try {
-        // Get the TFNTwitterStatus from the view model
+        // Get the TFNTwitterStatus - it might be the viewModel itself or a property
         TFNTwitterStatus *status = nil;
-        if ([viewModel respondsToSelector:@selector(status)]) {
+        
+        if ([viewModel isKindOfClass:[TFNTwitterStatus class]]) {
+            status = (TFNTwitterStatus *)viewModel;
+            NSLog(@"[BHTwitter SourceLabel] viewModel IS TFNTwitterStatus");
+        } else if ([viewModel respondsToSelector:@selector(status)]) {
             status = [viewModel performSelector:@selector(status)];
             NSLog(@"[BHTwitter SourceLabel] Got status from viewModel: %@", status ? @"YES" : @"NO");
         } else {
-            NSLog(@"[BHTwitter SourceLabel] viewModel doesn't respond to status selector");
+            NSLog(@"[BHTwitter SourceLabel] viewModel doesn't respond to status selector and isn't TFNTwitterStatus");
         }
         
         if (!status) {
