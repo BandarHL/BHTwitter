@@ -402,27 +402,14 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     }
 }
 
-- (NSArray *)tabViews {
-    NSArray *originalTabs = %orig;
-    NSArray<NSString *> *allowedTabs = [BHCustomTabBarUtility getAllowedTabBars];
-    
-    if (!allowedTabs) {
-        return originalTabs; // No custom configuration
-    }
-    
-    NSMutableArray *filteredTabs = [NSMutableArray array];
-    for (id tabView in originalTabs) {
-        NSString *pageID = [tabView valueForKey:@"scribePage"];
-        if (!pageID) {
-            pageID = [tabView valueForKey:@"pageID"];
-        }
-        
-        if (pageID && [allowedTabs containsObject:pageID]) {
-            [filteredTabs addObject:tabView];
+- (void)loadView {
+    %orig;
+    NSArray <NSString *> *hiddenBars = [BHCustomTabBarUtility getHiddenTabBars];
+    for (T1TabView *tabView in self.tabViews) {
+        if ([hiddenBars containsObject:tabView.scribePage]) {
+            [tabView setHidden:true];
         }
     }
-    
-    return filteredTabs.count > 0 ? [filteredTabs copy] : originalTabs;
 }
 
 - (void)viewDidLoad {
