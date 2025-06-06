@@ -2588,61 +2588,26 @@ static NSTimer *cookieRetryTimer = nil;
         NSString *newTimeAgo = [NSString stringWithFormat:@"%@ · %@", currentTimeAgo, sourceText];
         NSLog(@"[BHTwitter SourceLabel] Setting new timeAgo: '%@'", newTimeAgo);
         
-        // Set the new timeAgo
-        if ([footerItem respondsToSelector:@selector(setTimeAgo:)]) {
-            [footerItem performSelector:@selector(setTimeAgo:) withObject:newTimeAgo];
-            NSLog(@"[BHTwitter SourceLabel] Successfully set new timeAgo");
-            
-            // Update the timestamp view
-            if ([self respondsToSelector:@selector(updateTimestamp)]) {
-                [self performSelector:@selector(updateTimestamp)];
-                NSLog(@"[BHTwitter SourceLabel] Called updateTimestamp");
-            }
-        } else {
-            NSLog(@"[BHTwitter SourceLabel] ERROR: footerItem doesn't respond to setTimeAgo:");
-        }
+                 // Set the new timeAgo
+         if ([footerItem respondsToSelector:@selector(setTimeAgo:)]) {
+             [footerItem performSelector:@selector(setTimeAgo:) withObject:newTimeAgo];
+             NSLog(@"[BHTwitter SourceLabel] Successfully set new timeAgo");
+             
+             // Now update the footer text view to refresh the display
+             id footerTextView = [self footerTextView];
+             if (footerTextView && [footerTextView respondsToSelector:@selector(updateFooterTextView)]) {
+                 [footerTextView performSelector:@selector(updateFooterTextView)];
+                 NSLog(@"[BHTwitter SourceLabel] Called updateFooterTextView");
+             } else {
+                 NSLog(@"[BHTwitter SourceLabel] ERROR: Could not call updateFooterTextView");
+             }
+         } else {
+             NSLog(@"[BHTwitter SourceLabel] ERROR: footerItem doesn't respond to setTimeAgo:");
+         }
         
     } @catch (NSException *e) {
         NSLog(@"[BHTwitter SourceLabel] Exception updating footer: %@", e);
     }
-}
-
-- (void)updateTimestamp {
-    %orig;
-    
-    if (![BHTManager RestoreTweetLabels]) {
-        return;
-    }
-    
-    // Check if we have a tweet ID stored for this view and reapply source if needed
-    dispatch_async(dispatch_get_main_queue(), ^{
-        @try {
-            // Get the current viewModel to extract tweet ID
-            id currentViewModel = [self valueForKey:@"_viewModel"];
-            if (!currentViewModel || ![currentViewModel isKindOfClass:%c(TFNTwitterStatus)]) {
-                return;
-            }
-            
-            TFNTwitterStatus *status = (TFNTwitterStatus *)currentViewModel;
-            long long statusID = [status statusID];
-            if (statusID <= 0) {
-                return;
-            }
-            
-            NSString *tweetIDStr = [NSString stringWithFormat:@"%lld", statusID];
-            if (!tweetSources || !tweetSources[tweetIDStr]) {
-                return;
-            }
-            
-            NSString *sourceText = tweetSources[tweetIDStr];
-            if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@"Source Unavailable"] && ![sourceText isEqualToString:@""]) {
-                NSLog(@"[BHTwitter SourceLabel] Reapplying source after updateTimestamp for tweet: %@", tweetIDStr);
-                [self BHT_updateFooterTextWithSource:sourceText tweetID:tweetIDStr];
-            }
-        } @catch (NSException *e) {
-            NSLog(@"[BHTwitter SourceLabel] Exception in updateTimestamp: %@", e);
-        }
-    });
 }
 
 %end
