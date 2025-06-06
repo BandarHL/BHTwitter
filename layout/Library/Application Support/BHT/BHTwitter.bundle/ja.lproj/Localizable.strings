@@ -90,7 +90,7 @@
 "RESTORE_REPLY_CONTEXT_TITLE" = "返信コンテキストを復元";
 "RESTORE_REPLY_CONTEXT_DETAIL_TITLE" = "ツイートの下に返信されている人を表示します。";
 
-"ENABLE_TRANSLATE_OPTION_TITLE" = "AI翻訳ボタンを表示";
+"ENABLE_TRANSLATE_OPTION_TITLE" = "AI翻訳ボタンを表示 (ベータ版)";
 "ENABLE_TRANSLATE_OPTION_DETAIL_TITLE" = "システム言語以外のツイートにAI翻訳ボタンを追加します。APIキーが必要です。";
 
 "TRANSLATE_ENDPOINT_OPTION_TITLE" = "APIエンドポイント";
@@ -161,9 +161,6 @@
 
 "RESTORE_VIDEO_TIMESTAMP_TITLE" = "動画のタイムスタンプ";
 "RESTORE_VIDEO_TIMESTAMP_DETAIL_TITLE" = "没入型プレーヤー内にタイムスタンプを表示します。";
-
-"BIGGER_ACTION_BUTTONS_TITLE" = "大きなアクションボタン";
-"BIGGER_ACTION_BUTTONS_DETAIL_TITLE" = "アプリ全体で「いいね」、「リツイート」、「返信」ボタンが大きくなります。";
 
 /*Twitter Blue*/
 "TWITTER_BLUE_SECTION_HEADER_TITLE" = "Twitter Blue";
