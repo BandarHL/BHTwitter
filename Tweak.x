@@ -21,6 +21,7 @@
 #import "BHTBundle/BHTBundle.h"
 #import "TWHeaders.h"
 #import "SAMKeychain/SAMKeychain.h"
+#import "CustomTabBar/BHCustomTabBarUtility.h"
 #import <Preferences/PSListController.h>
 #import <Preferences/PSSpecifier.h>
 
@@ -398,6 +399,74 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         %orig(NO); // Force scrolling to NO if fading is prevented
     } else {
         %orig(scrolling);
+    }
+}
+
+- (void)viewDidLoad {
+    %orig;
+    [self bh_applyCustomTabBarConfiguration];
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    %orig(animated);
+    [self bh_applyCustomTabBarConfiguration];
+}
+
+%new
+- (void)bh_applyCustomTabBarConfiguration {
+    // Get the allowed tab bars from settings
+    NSArray<NSString *> *allowedTabs = [BHCustomTabBarUtility getAllowedTabBars];
+    if (!allowedTabs || allowedTabs.count == 0) {
+        return; // No custom configuration, use default
+    }
+    
+    // Get the tab bar items array
+    NSArray *tabItems = nil;
+    if ([self respondsToSelector:@selector(tabViews)]) {
+        tabItems = [self valueForKey:@"tabViews"];
+    } else if ([self respondsToSelector:@selector(tabBarItems)]) {
+        tabItems = [self valueForKey:@"tabBarItems"];
+    }
+    
+    if (!tabItems) {
+        return;
+    }
+    
+    // Create a mapping of page IDs to tab items for easier filtering
+    NSMutableArray *filteredTabItems = [NSMutableArray array];
+    
+    for (id tabItem in tabItems) {
+        NSString *pageID = nil;
+        
+        // Try to get the page ID from the tab item
+        if ([tabItem respondsToSelector:@selector(pageID)]) {
+            pageID = [tabItem valueForKey:@"pageID"];
+        } else if ([tabItem respondsToSelector:@selector(identifier)]) {
+            pageID = [tabItem valueForKey:@"identifier"];
+        } else if ([tabItem respondsToSelector:@selector(scribePageID)]) {
+            pageID = [tabItem valueForKey:@"scribePageID"];
+        }
+        
+        // If we found a page ID and it's in the allowed list, keep this tab
+        if (pageID && [allowedTabs containsObject:pageID]) {
+            [filteredTabItems addObject:tabItem];
+        }
+    }
+    
+    // Apply the filtered tab items back to the controller
+    if (filteredTabItems.count > 0) {
+        if ([self respondsToSelector:@selector(setTabViews:)]) {
+            [self setValue:filteredTabItems forKey:@"tabViews"];
+        } else if ([self respondsToSelector:@selector(setTabBarItems:)]) {
+            [self setValue:filteredTabItems forKey:@"tabBarItems"];
+        }
+        
+        // Force a refresh of the tab bar UI
+        if ([self respondsToSelector:@selector(reloadTabBar)]) {
+            [self performSelector:@selector(reloadTabBar)];
+        } else if ([self respondsToSelector:@selector(viewDidLayoutSubviews)]) {
+            [self performSelector:@selector(viewDidLayoutSubviews)];
+        }
     }
 }
 %end
@@ -995,7 +1064,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
-// MARK: Always open in Safrai
+// MARK: Always open in Safari
 
 %hook SFSafariViewController
 - (void)viewWillAppear:(BOOL)animated {
@@ -1014,6 +1083,42 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     
     [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
     [self dismissViewControllerAnimated:NO completion:nil];
+}
+
+- (instancetype)initWithURL:(NSURL *)URL configuration:(SFSafariViewControllerConfiguration *)configuration {
+    if (![BHTManager alwaysOpenSafari]) {
+        return %orig;
+    }
+    
+    NSString *urlStr = [URL absoluteString];
+    
+    // In-app browser is used for two-factor authentication with security key,
+    // login will not complete successfully if it's redirected to Safari
+    if ([urlStr containsString:@"twitter.com/account/"] || [urlStr containsString:@"twitter.com/i/flow/"]) {
+        return %orig;
+    }
+    
+    // Open in Safari instead and return nil to prevent SFSafariViewController creation
+    [[UIApplication sharedApplication] openURL:URL options:@{} completionHandler:nil];
+    return nil;
+}
+
+- (instancetype)initWithURL:(NSURL *)URL {
+    if (![BHTManager alwaysOpenSafari]) {
+        return %orig;
+    }
+    
+    NSString *urlStr = [URL absoluteString];
+    
+    // In-app browser is used for two-factor authentication with security key,
+    // login will not complete successfully if it's redirected to Safari
+    if ([urlStr containsString:@"twitter.com/account/"] || [urlStr containsString:@"twitter.com/i/flow/"]) {
+        return %orig;
+    }
+    
+    // Open in Safari instead and return nil to prevent SFSafariViewController creation
+    [[UIApplication sharedApplication] openURL:URL options:@{} completionHandler:nil];
+    return nil;
 }
 %end
 
