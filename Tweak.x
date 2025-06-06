@@ -5415,7 +5415,7 @@ static void AddToggleButtonToNavigationBar(THFHomeTimelineContainerViewControlle
     }
     
     if (gToggleBarButtonItem == nil) { 
-        UIImage *buttonImage = [UIImage tfn_vectorImageNamed:@"sparkle" fitsSize:CGSizeMake(24, 24) fillColor:[UIColor labelColor]];
+        UIImage *buttonImage = [UIImage tfn_vectorImageNamed:@"sparkle" fitsSize:CGSizeMake(24, 24) fillColor:BHTCurrentAccentColor()];
         UIButton *customButton = [UIButton buttonWithType:UIButtonTypeCustom];
         [customButton setImage:buttonImage forState:UIControlStateNormal];
         customButton.frame = CGRectMake(0, 0, 35, 35);
