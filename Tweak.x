@@ -5413,7 +5413,7 @@ static void AddToggleButtonToNavigationBar(THFHomeTimelineContainerViewControlle
     
     if (gToggleBarButtonItem == nil) { 
         UIImage *buttonImage = [UIImage tfn_vectorImageNamed:@"sparkle" fitsSize:CGSizeMake(24, 24) fillColor:[UIColor labelColor]];
-        UIButton *customButton = [UIButton buttonWithType:UIButtonTypeSystem];
+        UIButton *customButton = [UIButton buttonWithType:UIButtonTypeCustom];
         [customButton setImage:buttonImage forState:UIControlStateNormal];
         customButton.frame = CGRectMake(0, 0, 35, 35);
         
@@ -5653,13 +5653,11 @@ static BOOL isHomeTimelinePagingScrollView(UIView *instance) {
 // Add our button when view is loaded
 - (void)viewDidLoad {
     %orig;
-    [self hideTabBar];
 }
 
 // Apply preference and add button when view appears
 - (void)viewWillAppear:(BOOL)animated {
     %orig;
-    [self hideTabBar];
     [self updateTimelineToMatchPreference];
     AddToggleButtonToNavigationBar(self);
 }
@@ -5667,7 +5665,6 @@ static BOOL isHomeTimelinePagingScrollView(UIView *instance) {
 // Also ensure button is there after the view appears
 - (void)viewDidAppear:(BOOL)animated {
     %orig;
-    [self hideTabBar];
     [self updateTimelineToMatchPreference]; 
     AddToggleButtonToNavigationBar(self);
 
@@ -5703,57 +5700,7 @@ static BOOL isHomeTimelinePagingScrollView(UIView *instance) {
 
 %new
 - (void)hideTabBar {
-    // Find and hide the tab bar components
-    for (UIView *subview in self.view.subviews) {
-        NSString *className = NSStringFromClass([subview class]);
-        
-        // Look for segmented control or horizontal scroll view that might contain tabs
-        if ([className containsString:@"Segmented"] || 
-            [className containsString:@"TFNScrolling"] || 
-            [className containsString:@"TabBar"] ||
-            [className containsString:@"HorizontalLabel"]) {
-            
-            // Hide it without removing
-            subview.hidden = YES;
-            subview.alpha = 0;
-            subview.userInteractionEnabled = NO;
-            NSLog(@"[TwitTweak] Hiding tab bar component: %@", className);
-        }
-    }
-    
-    // Also search recursively for the specific class we want to hide
-    [self hideViewOfClass:@"TFNScrollingHorizontalLabelCollectionView" inView:self.view];
-    
-    // Force multiple rechecks over a short period to ensure it stays hidden
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [self hideViewOfClass:@"TFNScrollingHorizontalLabelCollectionView" inView:self.view];
-        NSLog(@"[TwitTweak] Re-checked (1) and hid TFNScrollingHorizontalLabelCollectionView");
-    });
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [self hideViewOfClass:@"TFNScrollingHorizontalLabelCollectionView" inView:self.view];
-        NSLog(@"[TwitTweak] Re-checked (2) and hid TFNScrollingHorizontalLabelCollectionView");
-    });
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [self hideViewOfClass:@"TFNScrollingHorizontalLabelCollectionView" inView:self.view];
-        NSLog(@"[TwitTweak] Re-checked (3) and hid TFNScrollingHorizontalLabelCollectionView");
-    });
-}
-
-%new
-- (void)hideViewOfClass:(NSString *)className inView:(UIView *)view {
-    // Check if this view matches
-    if ([NSStringFromClass([view class]) isEqualToString:className]) {
-        view.hidden = YES;
-        view.alpha = 0;
-        view.userInteractionEnabled = NO;
-        NSLog(@"[TwitTweak] Found and hid %@ in recursive search", className);
-        return;
-    }
-    
-    // Check all subviews
-    for (UIView *subview in view.subviews) {
-        [self hideViewOfClass:className inView:subview];
-    }
+    // Simple approach - just hide TFNScrollingHorizontalLabelCollectionView
 }
 
 %new
