@@ -122,6 +122,67 @@ jobs:
         env:
           IPA_URL: ${{ inputs.decrypted_ipa_url }}
 
+      - name: Inject Custom Vector Images
+        if: inputs.deploy_format == 'sideloaded' || inputs.deploy_format == 'trollstore'
+        run: |
+          # Put SVG directly in Twitter's main VectorImages directory
+          TWITTER_BUNDLE_PATH="main/tmp/Payload/Twitter.app/TwitterAppearance_TwitterAppearance.bundle"
+          MAIN_VECTOR_DIR="${TWITTER_BUNDLE_PATH}/VectorImages/main"
+          
+          echo "=== Injecting translate.svg into Twitter's main vector directory ==="
+          echo "Target directory: ${MAIN_VECTOR_DIR}"
+          
+          if [ -d "${MAIN_VECTOR_DIR}" ]; then
+            echo "✓ Found Twitter's main vector directory"
+            
+            # Find our SVG file
+            SVG_SOURCE="main/layout/Library/Application Support/BHT/BHTwitter.bundle/translate.svg"
+            echo "Looking for SVG at: ${SVG_SOURCE}"
+            
+            if [ -f "${SVG_SOURCE}" ]; then
+              echo "✓ Found translate.svg, copying to main vector directory..."
+              cp -v "${SVG_SOURCE}" "${MAIN_VECTOR_DIR}/"
+              
+              # Verify the copy worked
+              if [ -f "${MAIN_VECTOR_DIR}/translate.svg" ]; then
+                echo "✓ Successfully injected translate.svg"
+                echo "File size: $(stat -f%z "${MAIN_VECTOR_DIR}/translate.svg" 2>/dev/null || stat -c%s "${MAIN_VECTOR_DIR}/translate.svg")"
+              else
+                echo "✗ Copy failed - file not found in destination"
+                exit 1
+              fi
+            else
+              echo "✗ translate.svg not found at expected location"
+              find main -name "*.svg" -type f
+              exit 1
+            fi
+          else
+            echo "✗ Twitter's main vector directory not found"
+            echo "VectorImages contents:"
+            ls -la "${TWITTER_BUNDLE_PATH}/VectorImages/" 2>/dev/null || echo "VectorImages directory doesn't exist"
+            exit 1
+          fi
+          
+          # Repackage the modified IPA
+          echo "=== Repackaging modified IPA ==="
+          cd main/tmp
+          
+          # Remove the original IPA and create new one with our modifications
+          rm -f ../packages/com.atebits.Tweetie2.ipa
+          
+          # Create new IPA with translate.svg in main vector directory
+          zip -r ../packages/com.atebits.Tweetie2.ipa Payload/
+          
+          if [ -f "../packages/com.atebits.Tweetie2.ipa" ]; then
+            echo "✓ Successfully repackaged IPA with translate.svg"
+            echo "New IPA size: $(stat -f%z "../packages/com.atebits.Tweetie2.ipa" 2>/dev/null || stat -c%s "../packages/com.atebits.Tweetie2.ipa")"
+          else
+            echo "✗ Failed to repackage IPA"
+            exit 1
+          fi
+          
+          cd ../..
+
       - name: Build Package
         run: |
           cd ${{ github.workspace }}/main

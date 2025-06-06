@@ -21,6 +21,7 @@
 #import "BHTBundle/BHTBundle.h"
 #import "TWHeaders.h"
 #import "SAMKeychain/SAMKeychain.h"
+#import "CustomTabBar/BHCustomTabBarUtility.h"
 #import <Preferences/PSListController.h>
 #import <Preferences/PSSpecifier.h>
 
@@ -398,6 +399,30 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         %orig(NO); // Force scrolling to NO if fading is prevented
     } else {
         %orig(scrolling);
+    }
+}
+
+- (void)loadView {
+    %orig;
+    NSArray <NSString *> *hiddenBars = [BHCustomTabBarUtility getHiddenTabBars];
+    for (T1TabView *tabView in self.tabViews) {
+        if ([hiddenBars containsObject:tabView.scribePage]) {
+            [tabView setHidden:true];
+        }
+    }
+}
+
+- (void)viewDidLoad {
+    %orig;
+    
+    // Apply theme on initial load
+    if ([self respondsToSelector:@selector(tabViews)]) {
+        NSArray *tabViews = [self valueForKey:@"tabViews"];
+        for (id tabView in tabViews) {
+            if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
+                [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
+            }
+        }
     }
 }
 %end
@@ -995,22 +1020,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
-// Twitter 9.30 and lower
-%hook T1StatusInlineActionsView
-+ (NSArray *)_t1_inlineActionViewClassesForViewModel:(id)arg1 options:(NSUInteger)arg2 displayType:(NSUInteger)arg3 account:(id)arg4 {
-    NSArray *_orig = %orig;
-    NSMutableArray *newOrig = [_orig mutableCopy];
-    
-    if ([BHTManager isVideoCell:arg1] && [BHTManager DownloadingVideos]) {
-        [newOrig addObject:%c(BHDownloadInlineButton)];
-    }
-    
-    return [newOrig copy];
-}
-%end
-
-
-// MARK: Always open in Safrai
+// MARK: Always open in Safari
 
 %hook SFSafariViewController
 - (void)viewWillAppear:(BOOL)animated {
@@ -1029,6 +1039,42 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     
     [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
     [self dismissViewControllerAnimated:NO completion:nil];
+}
+
+- (instancetype)initWithURL:(NSURL *)URL configuration:(SFSafariViewControllerConfiguration *)configuration {
+    if (![BHTManager alwaysOpenSafari]) {
+        return %orig;
+    }
+    
+    NSString *urlStr = [URL absoluteString];
+    
+    // In-app browser is used for two-factor authentication with security key,
+    // login will not complete successfully if it's redirected to Safari
+    if ([urlStr containsString:@"twitter.com/account/"] || [urlStr containsString:@"twitter.com/i/flow/"]) {
+        return %orig;
+    }
+    
+    // Open in Safari instead and return nil to prevent SFSafariViewController creation
+    [[UIApplication sharedApplication] openURL:URL options:@{} completionHandler:nil];
+    return nil;
+}
+
+- (instancetype)initWithURL:(NSURL *)URL {
+    if (![BHTManager alwaysOpenSafari]) {
+        return %orig;
+    }
+    
+    NSString *urlStr = [URL absoluteString];
+    
+    // In-app browser is used for two-factor authentication with security key,
+    // login will not complete successfully if it's redirected to Safari
+    if ([urlStr containsString:@"twitter.com/account/"] || [urlStr containsString:@"twitter.com/i/flow/"]) {
+        return %orig;
+    }
+    
+    // Open in Safari instead and return nil to prevent SFSafariViewController creation
+    [[UIApplication sharedApplication] openURL:URL options:@{} completionHandler:nil];
+    return nil;
 }
 %end
 
@@ -1598,7 +1644,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
-// start of NFB exclusive features
+// start of NFB features
 
 // MARK: Restore Source Labels - This is still pretty experimental and may break. This restores Tweet Source Labels by using an Legacy API. by: @nyaathea
 
@@ -2144,7 +2190,6 @@ static NSTimer *cookieRetryTimer = nil;
 }
 
 @end
-// --- End Helper Implementation ---
 
 %hook TFNTwitterStatus
 
@@ -3336,7 +3381,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 %end
 
-// --- TFNCircularAvatarShadowLayer Hook Implementation ---
 %hook TFNCircularAvatarShadowLayer
 
 - (void)setHidden:(BOOL)hidden {
@@ -3349,8 +3393,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 %end
 
-
-// MARK: - Combined constructor to initialize all hooks and features
 // MARK: - Restore Pull-To-Refresh Sounds
 
 // Helper function to play sounds since we can't directly call methods on TFNPullToRefreshControl
@@ -3671,22 +3713,7 @@ static char kManualRefreshInProgressKey;
 
 %end
 
-%hook T1TabBarViewController
 
-- (void)viewDidLoad {
-    %orig;
-    // Apply theme on initial load
-    if ([self respondsToSelector:@selector(tabViews)]) {
-        NSArray *tabViews = [self valueForKey:@"tabViews"];
-        for (id tabView in tabViews) {
-            if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
-                [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
-            }
-        }
-    }
-}
-
-%end
 
 // Helper: Update all tab bar icons
 static void BHT_UpdateAllTabBarIcons(void) {
@@ -4116,13 +4143,10 @@ static char kTranslateButtonKey;
         // If button doesn't exist, create it
         UIButton *translateButton = [UIButton buttonWithType:UIButtonTypeSystem];
         
-        // Use Twitter's vector image system - our hook will automatically redirect "translate" to our custom bundle
+        // Load translate icon from Twitter's vector bundle (injected during build)
         UIImage *translateIcon = [UIImage tfn_vectorImageNamed:@"translate" fitsSize:CGSizeMake(24, 24) fillColor:[UIColor systemGray2Color]];
         
-        // Fallback to system image if custom icon fails to load
-        if (!translateIcon) {
-            translateIcon = [UIImage systemImageNamed:@"translate"];
-        }
+
         
         [translateButton setImage:translateIcon forState:UIControlStateNormal];
         
@@ -5275,7 +5299,7 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 // Override the method that determines which buttons to show based on width
 - (void)_t1_updateArrangedButtonItemsForContentWidth:(double)arg1 {
     if ([BHTManager restoreFollowButton]) {
-        %orig(5000.0);
+        %orig(10000.0);
     } else {
         %orig(arg1);
     }
@@ -5331,122 +5355,3 @@ static NSBundle *BHBundle() {
     }
 %end
 
-// MARK: - Custom Vector Image Loading System
-
-// Define which images should load from BHTwitter bundle
-static NSSet *customVectorImages() {
-    static NSSet *customImages = nil;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        customImages = [NSSet setWithObjects:@"translate", nil]; // Add more image names as needed
-    });
-    return customImages;
-}
-
-// Get path to BHTwitter bundle using BHTBundle class
-static NSString *getBHTwitterBundlePath() {
-    static NSString *bundlePath = nil;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        NSURL *pathURL = [[objc_getClass("BHTBundle") sharedBundle] pathForFile:@"translate.svg"];
-        if (pathURL) {
-            bundlePath = [[pathURL path] stringByDeletingLastPathComponent];
-        }
-    });
-    return bundlePath;
-}
-
-%hook UIImage
-
-// Hook the main tfn_vectorImageNamed method to selectively redirect custom images
-+ (id)tfn_vectorImageNamed:(NSString *)imageName fitsSize:(CGSize)size fillColor:(UIColor *)fillColor {
-    // Check if this is one of our custom images
-    if ([customVectorImages() containsObject:imageName]) {
-        NSString *bundlePath = getBHTwitterBundlePath();
-        NSString *svgPath = [bundlePath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.svg", imageName]];
-        
-        // Check if our custom SVG exists
-        if ([[NSFileManager defaultManager] fileExistsAtPath:svgPath]) {
-            // Use Twitter's internal vector image loading but from our bundle
-            // First, temporarily set the override directory to our bundle
-            NSURL *originalOverrideDir = [UIImage tfn_vectorImageOverrideContainersDirectoryURL];
-            [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:[NSURL fileURLWithPath:bundlePath]];
-            
-            // Load the image using Twitter's internal method
-            UIImage *customImage = %orig(imageName, size, fillColor);
-            
-            // Restore original override directory
-            [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:originalOverrideDir];
-            
-            // Return our custom image if it loaded successfully
-            if (customImage) {
-                return customImage;
-            }
-        }
-    }
-    
-    // For all other images or if custom loading failed, use original method
-    return %orig(imageName, size, fillColor);
-}
-
-// Also hook the variant that includes high contrast
-+ (id)tfn_vectorImageNamed:(NSString *)imageName highContrastVariantNamed:(NSString *)highContrastName fitsSize:(CGSize)size fillColor:(UIColor *)fillColor {
-    // Check if this is one of our custom images
-    if ([customVectorImages() containsObject:imageName]) {
-        NSString *bundlePath = getBHTwitterBundlePath();
-        NSString *svgPath = [bundlePath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.svg", imageName]];
-        
-        // Check if our custom SVG exists
-        if ([[NSFileManager defaultManager] fileExistsAtPath:svgPath]) {
-            // Use Twitter's internal vector image loading but from our bundle
-            NSURL *originalOverrideDir = [UIImage tfn_vectorImageOverrideContainersDirectoryURL];
-            [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:[NSURL fileURLWithPath:bundlePath]];
-            
-            // Load the image using Twitter's internal method
-            UIImage *customImage = %orig(imageName, highContrastName, size, fillColor);
-            
-            // Restore original override directory
-            [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:originalOverrideDir];
-            
-            // Return our custom image if it loaded successfully
-            if (customImage) {
-                return customImage;
-            }
-        }
-    }
-    
-    // For all other images or if custom loading failed, use original method
-    return %orig(imageName, highContrastName, size, fillColor);
-}
-
-// Hook the height-based variant as well
-+ (id)tfn_vectorImageNamed:(NSString *)imageName height:(double)height fillColor:(UIColor *)fillColor {
-    // Check if this is one of our custom images
-    if ([customVectorImages() containsObject:imageName]) {
-        NSString *bundlePath = getBHTwitterBundlePath();
-        NSString *svgPath = [bundlePath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.svg", imageName]];
-        
-        // Check if our custom SVG exists
-        if ([[NSFileManager defaultManager] fileExistsAtPath:svgPath]) {
-            // Use Twitter's internal vector image loading but from our bundle
-            NSURL *originalOverrideDir = [UIImage tfn_vectorImageOverrideContainersDirectoryURL];
-            [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:[NSURL fileURLWithPath:bundlePath]];
-            
-            // Load the image using Twitter's internal method
-            UIImage *customImage = %orig(imageName, height, fillColor);
-            
-            // Restore original override directory
-            [UIImage tfn_vectorImageSetOverrideContainersDirectoryURL:originalOverrideDir];
-            
-            // Return our custom image if it loaded successfully
-            if (customImage) {
-                return customImage;
-            }
-        }
-    }
-    
-    // For all other images or if custom loading failed, use original method
-    return %orig(imageName, height, fillColor);
-}
-
-%end

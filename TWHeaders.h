@@ -706,6 +706,10 @@ extern UIColor *BHTCurrentAccentColor(void);
 + (id)tfn_vectorImageNamed:(id)arg1 height:(double)arg2 fillColor:(id)arg3;
 + (void)tfn_vectorImageSetOverrideContainersDirectoryURL:(NSURL *)arg1;
 + (NSURL *)tfn_vectorImageOverrideContainersDirectoryURL;
++ (void)tfn_vectorImageSetSearchDirectoryURLs:(NSArray *)arg1;
++ (NSArray *)tfn_vectorImageSearchDirectoryURLs;
++ (void)tfn_vectorImageSetOverrideContainerName:(NSString *)arg1;
++ (NSString *)tfn_vectorImageOverrideContainerName;
 @end
 
 @interface TFNFlexibleLayoutView : UIView
