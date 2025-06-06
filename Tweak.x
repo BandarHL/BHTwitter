@@ -5365,6 +5365,9 @@ static NSBundle *BHBundle() {
 @interface TFNScrollingHorizontalLabelCollectionView : UIView
 @end
 
+@interface TFNScrollingHorizontalLabelView : UIView
+@end
+
 // Static reference to hold our button
 static UIBarButtonItem *gToggleBarButtonItem = nil;
 static BOOL gIsInitialLoadForAnimation = YES;
@@ -6077,6 +6080,29 @@ static BOOL isHomeTimelinePagingScrollView(UIView *instance) {
                 }
             }
         }
+    }
+}
+%end
+
+%hook TFNScrollingHorizontalLabelView
+- (void)didMoveToWindow {
+    %orig;
+    
+    // Check if parent is T1TimelineNavigationController
+    UIResponder *nextResponder = self.nextResponder;
+    BOOL isTimelineNavController = NO;
+    while (nextResponder) {
+        if ([nextResponder isKindOfClass:NSClassFromString(@"T1TimelineNavigationController")]) {
+            isTimelineNavController = YES;
+            break;
+        }
+        nextResponder = nextResponder.nextResponder;
+    }
+    
+    if (isTimelineNavController) {
+        self.hidden = YES;
+        self.alpha = 0;
+        self.userInteractionEnabled = NO;
     }
 }
 %end
