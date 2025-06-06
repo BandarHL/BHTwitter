@@ -2541,81 +2541,66 @@ static NSTimer *cookieRetryTimer = nil;
     @try {
         NSLog(@"[BHTwitter SourceLabel] Attempting to update footer for tweet %@ with source: %@", tweetID, sourceText);
         
-        id footerTextView = [self footerTextView];
-        if (!footerTextView) {
-            NSLog(@"[BHTwitter SourceLabel] ERROR: footerTextView is nil");
+        // Look for T1ConversationFooterItem in the view hierarchy
+        __block id footerItem = nil;
+        BH_EnumerateSubviewsRecursively(self, ^(UIView *view) {
+            if (footerItem) return;
+            
+            // Check if this view has a footerItem property
+            if ([view respondsToSelector:@selector(footerItem)]) {
+                id item = [view performSelector:@selector(footerItem)];
+                if (item && [item isKindOfClass:%c(T1ConversationFooterItem)]) {
+                    footerItem = item;
+                    NSLog(@"[BHTwitter SourceLabel] Found footerItem: %@", NSStringFromClass([item class]));
+                }
+            }
+        });
+        
+        if (!footerItem) {
+            NSLog(@"[BHTwitter SourceLabel] ERROR: Could not find T1ConversationFooterItem");
             return;
         }
         
-        NSLog(@"[BHTwitter SourceLabel] Found footerTextView: %@", NSStringFromClass([footerTextView class]));
-        
-        // Get the current text model
-        if (![footerTextView respondsToSelector:@selector(textModel)]) {
-            NSLog(@"[BHTwitter SourceLabel] ERROR: footerTextView doesn't respond to textModel");
+        // Get current timeAgo text
+        if (![footerItem respondsToSelector:@selector(timeAgo)]) {
+            NSLog(@"[BHTwitter SourceLabel] ERROR: footerItem doesn't respond to timeAgo");
             return;
         }
         
-        id textModel = [footerTextView performSelector:@selector(textModel)];
-        if (!textModel) {
-            NSLog(@"[BHTwitter SourceLabel] ERROR: textModel is nil");
+        NSString *currentTimeAgo = [footerItem performSelector:@selector(timeAgo)];
+        if (!currentTimeAgo || currentTimeAgo.length == 0) {
+            NSLog(@"[BHTwitter SourceLabel] ERROR: timeAgo is nil or empty");
             return;
         }
         
-        NSLog(@"[BHTwitter SourceLabel] Found textModel: %@", NSStringFromClass([textModel class]));
-        
-        if (![textModel respondsToSelector:@selector(attributedString)]) {
-            NSLog(@"[BHTwitter SourceLabel] ERROR: textModel doesn't respond to attributedString");
-            return;
-        }
-        
-        NSAttributedString *currentAttributedString = [textModel performSelector:@selector(attributedString)];
-        if (!currentAttributedString) {
-            NSLog(@"[BHTwitter SourceLabel] ERROR: attributedString is nil");
-            return;
-        }
-        
-        NSString *currentText = currentAttributedString.string;
-        NSLog(@"[BHTwitter SourceLabel] Current text: '%@'", currentText);
+        NSLog(@"[BHTwitter SourceLabel] Current timeAgo: '%@'", currentTimeAgo);
         
         // Don't append if source is already there
-        if ([currentText containsString:sourceText] || [currentText containsString:@"Twitter for"] || [currentText containsString:@"via "]) {
-            NSLog(@"[BHTwitter SourceLabel] Source already present, skipping");
+        if ([currentTimeAgo containsString:sourceText] || [currentTimeAgo containsString:@"Twitter for"] || [currentTimeAgo containsString:@"via "]) {
+            NSLog(@"[BHTwitter SourceLabel] Source already present in timeAgo, skipping");
             return;
         }
         
-        // Create new attributed string with source appended
-        NSMutableAttributedString *newAttributedString = [[NSMutableAttributedString alloc] initWithAttributedString:currentAttributedString];
-        NSString *sourceString = [NSString stringWithFormat:@" · %@", sourceText];
+        // Create new timeAgo with source appended
+        NSString *newTimeAgo = [NSString stringWithFormat:@"%@ · %@", currentTimeAgo, sourceText];
+        NSLog(@"[BHTwitter SourceLabel] Setting new timeAgo: '%@'", newTimeAgo);
         
-        // Get base attributes from the original string
-        NSDictionary *baseAttributes = @{};
-        if (currentAttributedString.length > 0) {
-            baseAttributes = [currentAttributedString attributesAtIndex:0 effectiveRange:NULL];
-        }
-        
-        NSAttributedString *sourceAttributedString = [[NSAttributedString alloc] initWithString:sourceString attributes:baseAttributes];
-        [newAttributedString appendAttributedString:sourceAttributedString];
-        
-        // Create new text model
-        TFNAttributedTextModel *newTextModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newAttributedString];
-        
-        NSLog(@"[BHTwitter SourceLabel] Setting new text model with: '%@'", newAttributedString.string);
-        
-        // Set the new text model
-        [footerTextView performSelector:@selector(setTextModel:) withObject:newTextModel];
-        
-        // Update the view
-        if ([self respondsToSelector:@selector(updateTimestamp)]) {
-            NSLog(@"[BHTwitter SourceLabel] Calling updateTimestamp");
-            [self performSelector:@selector(updateTimestamp)];
+        // Set the new timeAgo
+        if ([footerItem respondsToSelector:@selector(setTimeAgo:)]) {
+            [footerItem performSelector:@selector(setTimeAgo:) withObject:newTimeAgo];
+            NSLog(@"[BHTwitter SourceLabel] Successfully set new timeAgo");
+            
+            // Update the timestamp view
+            if ([self respondsToSelector:@selector(updateTimestamp)]) {
+                [self performSelector:@selector(updateTimestamp)];
+                NSLog(@"[BHTwitter SourceLabel] Called updateTimestamp");
+            }
         } else {
-            NSLog(@"[BHTwitter SourceLabel] updateTimestamp not available");
+            NSLog(@"[BHTwitter SourceLabel] ERROR: footerItem doesn't respond to setTimeAgo:");
         }
-        
-        NSLog(@"[BHTwitter SourceLabel] Successfully updated footer text");
         
     } @catch (NSException *e) {
-        NSLog(@"[BHTwitter SourceLabel] Exception updating footer text: %@", e);
+        NSLog(@"[BHTwitter SourceLabel] Exception updating footer: %@", e);
     }
 }
 
