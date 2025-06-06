@@ -6107,57 +6107,48 @@ static BOOL isHomeTimelinePagingScrollView(UIView *instance) {
 }
 %end
 
+// Helper function to recursively search for T1ConversationFocalStatusView in view hierarchy
+static BOOL containsFocalStatusView(UIView *view) {
+    if (!view) return NO;
+    
+    if ([view isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
+        return YES;
+    }
+    
+    for (UIView *subview in view.subviews) {
+        if (containsFocalStatusView(subview)) {
+            return YES;
+        }
+    }
+    
+    return NO;
+}
+
 %hook TFNNavigationController
-
-- (double)navigationBarExpandedHeight {
+- (void)_tfn_getNavigationBarHeightAdjustment:(double *)heightAdjustment yOffset:(double *)yOffset {
     // Check if this instance is specifically T1TimelineNavigationController
     // But exclude if it contains T1ConversationFocalStatusView (tweet view)
     if ([self isKindOfClass:NSClassFromString(@"T1TimelineNavigationController")]) {
         // Check if we're in a tweet conversation view
+        BOOL isTweetView = NO;
         for (UIViewController *vc in self.viewControllers) {
-            if ([vc.view.subviews firstObject] && 
-                [[vc.view.subviews firstObject] isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-                return %orig; // Return original height for tweet views
+            if (containsFocalStatusView(vc.view)) {
+                isTweetView = YES;
+                break;
             }
         }
-        return 44.0;
-    }
-    
-    return %orig;
-}
-
-- (double)navigationBarCollapsedHeight {
-    // Check if this instance is specifically T1TimelineNavigationController
-    // But exclude if it contains T1ConversationFocalStatusView (tweet view)
-    if ([self isKindOfClass:NSClassFromString(@"T1TimelineNavigationController")]) {
-        // Check if we're in a tweet conversation view
-        for (UIViewController *vc in self.viewControllers) {
-            if ([vc.view.subviews firstObject] && 
-                [[vc.view.subviews firstObject] isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-                return %orig; // Return original height for tweet views
+        
+        if (!isTweetView) {
+            // Force the height adjustment to make navbar 44px
+            %orig(heightAdjustment, yOffset);
+            if (heightAdjustment) {
+                *heightAdjustment = 0.0; // No adjustment needed for 44px
             }
+            return;
         }
-        return 44.0;
     }
     
-    return %orig;
-}
-
-- (double)_tfn_computedNavigationBarHeight {
-    // Check if this instance is specifically T1TimelineNavigationController
-    // But exclude if it contains T1ConversationFocalStatusView (tweet view)
-    if ([self isKindOfClass:NSClassFromString(@"T1TimelineNavigationController")]) {
-        // Check if we're in a tweet conversation view
-        for (UIViewController *vc in self.viewControllers) {
-            if ([vc.view.subviews firstObject] && 
-                [[vc.view.subviews firstObject] isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-                return %orig; // Return original height for tweet views
-            }
-        }
-        return 44.0;
-    }
-    
-    return %orig;
+    %orig(heightAdjustment, yOffset);
 }
 %end
 
