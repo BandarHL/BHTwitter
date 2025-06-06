@@ -6107,64 +6107,122 @@ static BOOL isHomeTimelinePagingScrollView(UIView *instance) {
 }
 %end
 
-// Helper function to recursively search for T1ConversationFocalStatusView in view hierarchy
-static BOOL containsFocalStatusView(UIView *view) {
-    if (!view) return NO;
-    
-    if ([view isKindOfClass:NSClassFromString(@"T1ConversationFocalStatusView")]) {
-        return YES;
-    }
-    
-    for (UIView *subview in view.subviews) {
-        if (containsFocalStatusView(subview)) {
-            return YES;
+// Forward declaration to add missing method signatures
+@interface TFNNavigationController (HeightMethods)
+- (double)navigationBarExpandedHeight;
+- (double)navigationBarCollapsedHeight;
+- (double)_tfn_computedNavigationBarHeight;
+@end
+
+// Helper function to find reference T1TimelineNavigationController with T1ConversationContainerViewController
+static TFNNavigationController* getReferenceTimelineNavigationController() {
+    // Find all windows and search for T1TimelineNavigationController with T1ConversationContainerViewController
+    NSArray *windows = [[UIApplication sharedApplication] windows];
+    for (UIWindow *window in windows) {
+        UIViewController *rootVC = window.rootViewController;
+        if (rootVC) {
+            NSMutableArray *controllersToCheck = [NSMutableArray arrayWithObject:rootVC];
+            
+            while (controllersToCheck.count > 0) {
+                UIViewController *currentVC = [controllersToCheck firstObject];
+                [controllersToCheck removeObjectAtIndex:0];
+                
+                if ([currentVC isKindOfClass:NSClassFromString(@"T1TimelineNavigationController")]) {
+                    TFNNavigationController *timelineNavController = (TFNNavigationController *)currentVC;
+                    
+                    // Check if this has T1ConversationContainerViewController in childViewControllers
+                    for (UIViewController *childVC in timelineNavController.childViewControllers) {
+                        if ([childVC isKindOfClass:NSClassFromString(@"T1ConversationContainerViewController")]) {
+                            NSLog(@"[TwitTweak] Found reference T1TimelineNavigationController with T1ConversationContainerViewController");
+                            return timelineNavController;
+                        }
+                    }
+                }
+                
+                // Add child view controllers to check
+                if (currentVC.childViewControllers) {
+                    [controllersToCheck addObjectsFromArray:currentVC.childViewControllers];
+                }
+                if (currentVC.presentedViewController) {
+                    [controllersToCheck addObject:currentVC.presentedViewController];
+                }
+            }
         }
     }
     
-    return NO;
+    return nil;
 }
 
 %hook TFNNavigationController
-- (double)_tfn_systemNavigationBarYOffsetAdjustment {
-    // Check if this instance is specifically T1TimelineNavigationController
-    // But exclude if it contains T1ConversationFocalStatusView (tweet view)
+- (double)navigationBarExpandedHeight {
     if ([self isKindOfClass:NSClassFromString(@"T1TimelineNavigationController")]) {
-        // Check if we're in a tweet conversation view
-        BOOL isTweetView = NO;
-        for (UIViewController *vc in self.viewControllers) {
-            if (containsFocalStatusView(vc.view)) {
-                isTweetView = YES;
+        // Check if this instance has T1ConversationContainerViewController
+        BOOL hasConversationContainer = NO;
+        for (UIViewController *childVC in self.childViewControllers) {
+            if ([childVC isKindOfClass:NSClassFromString(@"T1ConversationContainerViewController")]) {
+                hasConversationContainer = YES;
                 break;
             }
         }
         
-        if (!isTweetView) {
-            // Adjust Y offset to make navbar appear at 44px position
-            double originalOffset = %orig;
-            return originalOffset + (44.0 - 96.0); // Assuming default is ~96px, adjust to 44px
+        if (!hasConversationContainer) {
+            // This is a regular timeline, find reference and use its height
+            TFNNavigationController *referenceController = getReferenceTimelineNavigationController();
+            if (referenceController && referenceController != self) {
+                double referenceHeight = [referenceController navigationBarExpandedHeight];
+                NSLog(@"[TwitTweak] Using reference navigationBarExpandedHeight: %f", referenceHeight);
+                return referenceHeight;
+            }
         }
     }
     
     return %orig;
 }
 
-- (double)_tfn_navigationBarInitialOriginY {
-    // Check if this instance is specifically T1TimelineNavigationController
-    // But exclude if it contains T1ConversationFocalStatusView (tweet view)
+- (double)navigationBarCollapsedHeight {
     if ([self isKindOfClass:NSClassFromString(@"T1TimelineNavigationController")]) {
-        // Check if we're in a tweet conversation view
-        BOOL isTweetView = NO;
-        for (UIViewController *vc in self.viewControllers) {
-            if (containsFocalStatusView(vc.view)) {
-                isTweetView = YES;
+        // Check if this instance has T1ConversationContainerViewController
+        BOOL hasConversationContainer = NO;
+        for (UIViewController *childVC in self.childViewControllers) {
+            if ([childVC isKindOfClass:NSClassFromString(@"T1ConversationContainerViewController")]) {
+                hasConversationContainer = YES;
                 break;
             }
         }
         
-        if (!isTweetView) {
-            // Adjust initial Y origin for 44px height
-            double originalY = %orig;
-            return originalY + 52.0; // Move down to compress to 44px
+        if (!hasConversationContainer) {
+            // This is a regular timeline, find reference and use its height
+            TFNNavigationController *referenceController = getReferenceTimelineNavigationController();
+            if (referenceController && referenceController != self) {
+                double referenceHeight = [referenceController navigationBarCollapsedHeight];
+                NSLog(@"[TwitTweak] Using reference navigationBarCollapsedHeight: %f", referenceHeight);
+                return referenceHeight;
+            }
+        }
+    }
+    
+    return %orig;
+}
+
+- (double)_tfn_computedNavigationBarHeight {
+    if ([self isKindOfClass:NSClassFromString(@"T1TimelineNavigationController")]) {
+        // Check if this instance has T1ConversationContainerViewController
+        BOOL hasConversationContainer = NO;
+        for (UIViewController *childVC in self.childViewControllers) {
+            if ([childVC isKindOfClass:NSClassFromString(@"T1ConversationContainerViewController")]) {
+                hasConversationContainer = YES;
+                break;
+            }
+        }
+        
+        if (!hasConversationContainer) {
+            // This is a regular timeline, find reference and use its height
+            TFNNavigationController *referenceController = getReferenceTimelineNavigationController();
+            if (referenceController && referenceController != self) {
+                double referenceHeight = [referenceController _tfn_computedNavigationBarHeight];
+                NSLog(@"[TwitTweak] Using reference _tfn_computedNavigationBarHeight: %f", referenceHeight);
+                return referenceHeight;
+            }
         }
     }
     
