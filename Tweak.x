@@ -6108,14 +6108,6 @@ static BOOL isHomeTimelinePagingScrollView(UIView *instance) {
 %end
 
 %hook TFNNavigationController
-- (double)navigationBarExpandedHeight {
-    // Check if this instance is specifically T1TimelineNavigationController
-    if ([self isKindOfClass:NSClassFromString(@"T1TimelineNavigationController")]) {
-        return 44.0;
-    }
-    
-    return %orig;
-}
 
 - (double)_tfn_computedNavigationBarHeight {
     // Check if this instance is specifically T1TimelineNavigationController
