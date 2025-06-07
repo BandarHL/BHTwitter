@@ -5051,55 +5051,6 @@ static GeminiTranslator *_sharedInstance;
     }
 }
 
-%new - (void)BHT_appendSourceToFooter:(NSString *)sourceText {
-    @try {
-        // Access _textModel directly using runtime methods instead of KVC
-        Ivar textModelIvar = class_getInstanceVariable([self class], "_textModel");
-        TFNAttributedTextModel *currentModel = object_getIvar(self, textModelIvar);
-        
-        if (!currentModel || !currentModel.attributedString) {
-            return;
-        }
-        
-        NSString *currentText = currentModel.attributedString.string;
-        NSString *separator = @" · ";
-        NSString *fullSourceStringWithSeparator = [separator stringByAppendingString:sourceText];
-        
-        // Check if source is already present
-        if ([currentText rangeOfString:fullSourceStringWithSeparator].location != NSNotFound) {
-            return;
-        }
-        
-        // Create new attributed string with source appended
-        NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:currentModel.attributedString];
-        
-        // Get base attributes from existing text
-        NSDictionary *baseAttributes;
-        if (currentModel.attributedString.length > 0) {
-            baseAttributes = [currentModel.attributedString attributesAtIndex:0 effectiveRange:NULL];
-        } else {
-            baseAttributes = @{NSFontAttributeName: [UIFont systemFontOfSize:12], NSForegroundColorAttributeName: [UIColor grayColor]};
-        }
-        
-        // Create source suffix with accent color
-        NSMutableAttributedString *sourceSuffix = [[NSMutableAttributedString alloc] init];
-        [sourceSuffix appendAttributedString:[[NSAttributedString alloc] initWithString:separator attributes:baseAttributes]];
-        
-        NSMutableDictionary *sourceAttributes = [baseAttributes mutableCopy];
-        [sourceAttributes setObject:BHTCurrentAccentColor() forKey:NSForegroundColorAttributeName];
-        [sourceSuffix appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttributes]];
-        
-        [newString appendAttributedString:sourceSuffix];
-        
-        // Create new text model and update
-        TFNAttributedTextModel *newModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newString];
-        [self setTextModel:newModel];
-        
-    } @catch (NSException *e) {
-        NSLog(@"[BHTwitter] Exception in BHT_appendSourceToFooter: %@", e);
-    }
-}
-
 %end
 
 // MARK: Change Pill text.
