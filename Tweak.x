@@ -5053,8 +5053,10 @@ static GeminiTranslator *_sharedInstance;
 
 %new - (void)BHT_appendSourceToFooter:(NSString *)sourceText {
     @try {
-        // Get current text model
-        TFNAttributedTextModel *currentModel = [self valueForKey:@"_textModel"];
+        // Access _textModel directly using runtime methods instead of KVC
+        Ivar textModelIvar = class_getInstanceVariable([self class], "_textModel");
+        TFNAttributedTextModel *currentModel = object_getIvar(self, textModelIvar);
+        
         if (!currentModel || !currentModel.attributedString) {
             return;
         }
