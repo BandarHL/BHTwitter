@@ -1178,6 +1178,10 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         return false;
     }
 
+    if ([key isEqualToString:@"ios_subscription_journey_enabled"]) {
+        return false;
+    }
+
     if ([key isEqualToString:@"ios_tweet_detail_conversation_context_removal_enabled"]) {
         return ![BHTManager restoreReplyContext];
     }
@@ -2827,21 +2831,6 @@ static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString 
 @end
 
 %hook TUIFollowControl
-
-- (void)didMoveToWindow {
-    %orig;
-    @try {
-        if ([BHTManager hideFollowButton] && self) {
-            UIViewController *vc = getViewControllerForView(self);
-            if (vc && [vc isKindOfClass:NSClassFromString(@"T1TimelinesItemsCarouselViewController")]) {
-                self.hidden = YES;
-                self.alpha = 0.0;
-            }
-        }
-    } @catch (NSException *exception) {
-        NSLog(@"[BHTwitter] Exception in TUIFollowControl didMoveToWindow: %@", exception);
-    }
-}
 
 - (void)setVariant:(NSUInteger)variant {
     if ([BHTManager restoreFollowButton]) {
@@ -5274,24 +5263,6 @@ static NSBundle *BHBundle() {
     return [NSBundle bundleWithIdentifier:@"com.bandarhelal.BHTwitter"];
 }
 
-%hook TFSAccountFeatureSwitches
-- (_Bool)videoFeaturesUpsellEnabled {
-    return false;
-}
-%end
-
-%hook TPSDeviceFeatureSwitches
-- (_Bool)deviceAttestationClientEventsEnabled {
-    return false;
-}
-- (_Bool)deviceGuestAttestationTokensEnabled {
-    return false;
-}
-- (_Bool)deviceAttestationTokensEnabled {
-    return false;
-}
-%end
-
 // MARK: Theme TFNBarButtonItemButtonV1
 %hook TFNBarButtonItemButtonV1
 
@@ -5317,3 +5288,4 @@ static NSBundle *BHBundle() {
         }
     }
 %end
+
