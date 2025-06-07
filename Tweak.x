@@ -31,6 +31,7 @@ static void BHT_applyThemeToWindow(UIWindow *window);
 static void BHT_ensureTheming(void);
 static void BHT_forceRefreshAllWindowAppearances(void);
 static void BHT_ensureThemingEngineSynchronized(BOOL forceSynchronize);
+static UIViewController* getViewControllerForView(UIView *view);
 
 // Theme state tracking
 static BOOL BHT_themeManagerInitialized = NO;
@@ -2797,43 +2798,6 @@ static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString 
 
 %end
 
-// MARK: - Hide Follow Button (T1TimelineItemsCarouselViewController)
-
-// Minimal interface for T1TimelineItemsCarouselViewController
-@interface T1TimelineItemsCarouselViewController : UIViewController
-@end
-
-%hook T1TimelineItemsCarouselViewController
-
-- (void)viewDidLoad {
-    %orig;
-    if ([BHTManager hideFollowButton]) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            findAndHideButtonWithAccessibilityId(self.view, @"FollowButton");
-        });
-    }
-}
-
-- (void)viewWillAppear:(BOOL)animated {
-    %orig;
-    if ([BHTManager hideFollowButton]) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            findAndHideButtonWithAccessibilityId(self.view, @"FollowButton");
-        });
-    }
-}
-
-- (void)viewDidAppear:(BOOL)animated {
-    %orig;
-    if ([BHTManager hideFollowButton]) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            findAndHideButtonWithAccessibilityId(self.view, @"FollowButton");
-        });
-    }
-}
-
-%end
-
 // MARK: - Restore Follow Button (TUIFollowControl)
 
 @interface TUIFollowControl : UIControl
@@ -2842,6 +2806,17 @@ static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString 
 @end
 
 %hook TUIFollowControl
+
+- (void)didMoveToWindow {
+    %orig;
+    if ([BHTManager hideFollowButton]) {
+        UIViewController *vc = getViewControllerForView(self);
+        if ([vc isKindOfClass:NSClassFromString(@"T1TimelineItemsCarouselViewController")]) {
+            self.hidden = YES;
+            self.alpha = 0.0;
+        }
+    }
+}
 
 - (void)setVariant:(NSUInteger)variant {
     if ([BHTManager restoreFollowButton]) {
@@ -2990,6 +2965,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     }
     return NO;
 }
+
+
 
 // MARK: - Immersive Player Timestamp Visibility Control
 
