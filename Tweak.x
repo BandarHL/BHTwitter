@@ -2808,14 +2808,27 @@ static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString 
 - (void)viewDidLoad {
     %orig;
     if ([BHTManager hideFollowButton]) {
-        findAndHideButtonWithAccessibilityId(self.view, @"FollowButton");
+        dispatch_async(dispatch_get_main_queue(), ^{
+            findAndHideButtonWithAccessibilityId(self.view, @"FollowButton");
+        });
     }
 }
 
 - (void)viewWillAppear:(BOOL)animated {
     %orig;
     if ([BHTManager hideFollowButton]) {
-        findAndHideButtonWithAccessibilityId(self.view, @"FollowButton");
+        dispatch_async(dispatch_get_main_queue(), ^{
+            findAndHideButtonWithAccessibilityId(self.view, @"FollowButton");
+        });
+    }
+}
+
+- (void)viewDidAppear:(BOOL)animated {
+    %orig;
+    if ([BHTManager hideFollowButton]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            findAndHideButtonWithAccessibilityId(self.view, @"FollowButton");
+        });
     }
 }
 
