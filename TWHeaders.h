@@ -625,7 +625,8 @@ static UIViewController * _Nonnull topMostController() {
 @interface TweetSourceHelper : NSObject
 + (void)fetchSourceForTweetID:(NSString *)tweetID;
 + (void)timeoutFetchForTweetID:(NSTimer *)timer;
-// Removed methods: retryUpdateForTweetID, pollForPendingUpdates
++ (void)retryUpdateForTweetID:(NSString *)tweetID;
++ (void)pollForPendingUpdates;
 + (void)handleAppForeground:(NSNotification *)notification;
 + (NSDictionary *)fetchCookies;
 + (void)cacheCookies:(NSDictionary *)cookies;
@@ -636,7 +637,7 @@ static UIViewController * _Nonnull topMostController() {
 + (void)logDebugInfo:(NSString *)message;
 + (void)initializeCookiesWithRetry;
 + (void)retryFetchCookies;
-// Removed method: updateFooterTextViewsForTweetID
++ (void)updateFooterTextViewsForTweetID:(NSString *)tweetID;
 @end
 
 // Forward declaration for WKWebView
