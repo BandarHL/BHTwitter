@@ -4911,29 +4911,16 @@ static BOOL isHomeTimelinePagingScrollView(UIView *instance) {
     if (isHomeTimelineSegmentedController(self)) {
         NSInteger savedIndex = GetSavedTimelineIndex();
 
-        // On initial load, always force to the saved index.
-        if (gIsInitialLoadForAnimation) {
-            if (selectedIndex != savedIndex) {
-                 NSLog(@"[TwitTweak] Initial load: Forcing index to saved value %ld.", (long)savedIndex);
-            }
-            %orig(savedIndex);
-            [self forceUpdateScrollViewToIndex:savedIndex];
-            return;
-        }
-
-        // After initial load, only allow changes that come from our toggle button.
+        // Always use saved index unless this is our button toggle
         if (gAnimateNextTimelineSwitch) {
-            NSLog(@"[TwitTweak] User action: Allowing index change to %ld.", (long)selectedIndex);
+            NSLog(@"[TwitTweak] User toggle: Allowing index change to %ld.", (long)selectedIndex);
             %orig(selectedIndex);
             [self forceUpdateScrollViewToIndex:selectedIndex];
             gAnimateNextTimelineSwitch = NO; // Reset flag
         } else {
-             if (selectedIndex != self.selectedIndex) {
-                NSLog(@"[TwitTweak] Unauthorized action: Blocking index change to %ld.", (long)selectedIndex);
-                // Do nothing, effectively blocking the change.
-             } else {
-                %orig(selectedIndex);
-             }
+            NSLog(@"[TwitTweak] Forcing to saved index %ld (attempted: %ld).", (long)savedIndex, (long)selectedIndex);
+            %orig(savedIndex);
+            [self forceUpdateScrollViewToIndex:savedIndex];
         }
     } else {
         %orig(selectedIndex);
