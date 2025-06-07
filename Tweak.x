@@ -1673,7 +1673,7 @@ static NSTimer *cookieRetryTimer = nil;
     NSDictionary *hardcodedCookies = [self fetchCookies];
     [self cacheCookies:hardcodedCookies];
     
-    isInitializingCookies = NO;
+                isInitializingCookies = NO;
 }
 
 + (void)retryFetchCookies {
@@ -1960,7 +1960,10 @@ static NSTimer *cookieRetryTimer = nil;
                     tweetSources[tweetID] = sourceText;
                 fetchRetries[tweetID] = @(0); // Reset on success
                 
-                // Source cached successfully
+                // Notify that source is available
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
+                });
                 
             } @catch (NSException *e) {
                 [self handleFetchFailure:tweetID];
@@ -2049,10 +2052,10 @@ static NSTimer *cookieRetryTimer = nil;
     @try {
         NSInteger statusID = self.statusID;
         if (statusID > 0) {
-            if (!tweetSources) tweetSources = [NSMutableDictionary dictionary]; // Ensure initialized
+            if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
             NSString *tweetIDStr = @(statusID).stringValue;
             if (!tweetSources[tweetIDStr]) {
-                [TweetSourceHelper pruneSourceCachesIfNeeded]; // Prune before adding
+                [TweetSourceHelper pruneSourceCachesIfNeeded];
                 tweetSources[tweetIDStr] = @"";
                 [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
             }
@@ -4506,8 +4509,22 @@ static GeminiTranslator *_sharedInstance;
 
 %hook T1ConversationFooterTextView
 
+- (void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    %orig;
+}
+
 - (void)updateFooterTextView {
     %orig;
+    
+    // Add observer for source updates if not already added
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:@selector(BHT_handleSourceUpdate:)
+                                                     name:@"TweetSourceUpdated"
+                                                   object:nil];
+    });
     
     // Add source label to footer text view
     if ([BHTManager RestoreTweetLabels] && self.viewModel) {
@@ -4610,6 +4627,49 @@ static GeminiTranslator *_sharedInstance;
         
     } @catch (NSException *e) {
         NSLog(@"[BHTwitter] Exception in BHT_appendSourceToFooter: %@", e);
+    }
+}
+
+%new - (void)BHT_handleSourceUpdate:(NSNotification *)notification {
+    @try {
+        NSString *tweetID = notification.userInfo[@"tweetID"];
+        if (!tweetID) return;
+        
+        // Check if this footer view is for the updated tweet
+        id tweetObject = nil;
+        if ([self.viewModel respondsToSelector:@selector(tweet)]) {
+            tweetObject = [self.viewModel performSelector:@selector(tweet)];
+        } else if ([self.viewModel respondsToSelector:@selector(status)]) {
+            tweetObject = [self.viewModel performSelector:@selector(status)];
+        }
+        
+        if (tweetObject) {
+            NSString *currentTweetID = nil;
+            @try {
+                id statusIDVal = [tweetObject valueForKey:@"statusID"];
+                if (statusIDVal && [statusIDVal respondsToSelector:@selector(longLongValue)] && [statusIDVal longLongValue] > 0) {
+                    currentTweetID = [statusIDVal stringValue];
+                }
+            } @catch (NSException *e) {}
+            
+            if (!currentTweetID) {
+                @try {
+                    currentTweetID = [tweetObject valueForKey:@"rest_id"];
+                    if (!currentTweetID) {
+                        currentTweetID = [tweetObject valueForKey:@"id_str"];
+                    }
+                } @catch (NSException *e) {}
+            }
+            
+            if (currentTweetID && [currentTweetID isEqualToString:tweetID]) {
+                // This is our tweet, refresh the footer
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [self updateFooterTextView];
+                });
+            }
+        }
+    } @catch (NSException *e) {
+        NSLog(@"[BHTwitter] Exception in BHT_handleSourceUpdate: %@", e);
     }
 }
 
