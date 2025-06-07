@@ -2811,7 +2811,7 @@ static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString 
     %orig;
     if ([BHTManager hideFollowButton]) {
         UIViewController *vc = getViewControllerForView(self);
-        if ([vc isKindOfClass:NSClassFromString(@"T1TimelineItemsCarouselViewController")]) {
+        if ([vc isKindOfClass:NSClassFromString(@"T1TimelinesItemsCarouselViewController")]) {
             self.hidden = YES;
             self.alpha = 0.0;
         }
