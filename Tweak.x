@@ -2797,6 +2797,30 @@ static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString 
 
 %end
 
+// MARK: - Hide Follow Button (T1TimelineItemsCarouselViewController)
+
+// Minimal interface for T1TimelineItemsCarouselViewController
+@interface T1TimelineItemsCarouselViewController : UIViewController
+@end
+
+%hook T1TimelineItemsCarouselViewController
+
+- (void)viewDidLoad {
+    %orig;
+    if ([BHTManager hideFollowButton]) {
+        findAndHideButtonWithAccessibilityId(self.view, @"FollowButton");
+    }
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    %orig;
+    if ([BHTManager hideFollowButton]) {
+        findAndHideButtonWithAccessibilityId(self.view, @"FollowButton");
+    }
+}
+
+%end
+
 // MARK: - Restore Follow Button (TUIFollowControl)
 
 @interface TUIFollowControl : UIControl
