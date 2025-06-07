@@ -403,6 +403,10 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     }
 }
 
+- (NSInteger)currentAppearance {
+    return 1;
+}
+
 - (void)loadView {
     %orig;
     NSArray <NSString *> *hiddenBars = [BHCustomTabBarUtility getHiddenTabBars];
@@ -5289,3 +5293,8 @@ static NSBundle *BHBundle() {
     }
 %end
 
+%hook TFNNavigationController
+- (_Bool)_translucentNavigationBarEnabled {
+    return false;
+}
+%end
