@@ -5303,7 +5303,7 @@ static NSBundle *BHBundle() {
 %end
 
 
-// MARK: Timeline Toggle Functionality
+// MARK: Timeline foryou/following toggle switcher
 
 // Define minimal interfaces for used classes
 @interface THFHomeTimelineContainerViewController : UIViewController
@@ -5492,6 +5492,7 @@ static BOOL isHomeTimelinePagingScrollView(UIView *instance) {
               gIsInitialLoadForAnimation ? @"YES" : @"NO");
 
         NSInteger targetIndex = selectedIndex;
+        // Always override to preferred index, especially during initial load
         if (selectedIndex != preferredIndex) {
             NSLog(@"[TwitTweak] HomeTimelineSegmentedVC: Overriding selectedIndex from %ld to preferred %ld", (long)selectedIndex, (long)preferredIndex);
             targetIndex = preferredIndex;
@@ -5585,6 +5586,10 @@ static BOOL isHomeTimelinePagingScrollView(UIView *instance) {
              NSLog(@"[TwitTweak] HomeTimelineSegmentedVC viewDidAppear: Index mismatch (%ld vs %ld). Forcing property set.", (long)self.selectedIndex, (long)preferredIndex);
              self.selectedIndex = preferredIndex; 
         }
+        
+        // Also force the scroll view to match, especially on initial load
+        [self forceUpdateScrollViewToIndex:preferredIndex];
+        NSLog(@"[TwitTweak] HomeTimelineSegmentedVC viewDidAppear: Forced scroll view update to index %ld", (long)preferredIndex);
     }
 }
 %end
@@ -5625,6 +5630,23 @@ static BOOL isHomeTimelinePagingScrollView(UIView *instance) {
     %orig;
     [self updateTimelineToMatchPreference];
     AddToggleButtonToNavigationBar(self);
+    
+    // Ensure preference is applied early, especially on initial load
+    if (gIsInitialLoadForAnimation) {
+        TFNScrollingSegmentedViewController *segmentedVC = nil;
+        for (UIViewController *childVC in [self childViewControllers]) {
+            if ([childVC isKindOfClass:NSClassFromString(@"TFNScrollingSegmentedViewController")]) {
+                segmentedVC = (TFNScrollingSegmentedViewController *)childVC;
+                break;
+            }
+        }
+        if (segmentedVC && isHomeTimelineSegmentedController(segmentedVC)) {
+            BOOL isFollowing = GetFollowingTimelinePreference();
+            NSInteger preferredIndex = isFollowing ? 1 : 0;
+            NSLog(@"[TwitTweak] THFHomeTimelineVC viewWillAppear: Initial load - pre-setting selectedIndex to %ld", (long)preferredIndex);
+            segmentedVC.selectedIndex = preferredIndex;
+        }
+    }
 }
 
 // Also ensure button is there after the view appears
@@ -5644,13 +5666,30 @@ static BOOL isHomeTimelinePagingScrollView(UIView *instance) {
         BOOL isFollowing = GetFollowingTimelinePreference();
         NSInteger preferredIndex = isFollowing ? 1 : 0;
         NSLog(@"[TwitTweak] THFHomeTimelineVC viewDidAppear: Forcing scroll view to index %ld for initial setup.", (long)preferredIndex);
-        [segmentedVC forceUpdateScrollViewToIndex:preferredIndex]; 
+        [segmentedVC forceUpdateScrollViewToIndex:preferredIndex];
+        
+        // Force selectedIndex property to match preference on initial load
+        if (gIsInitialLoadForAnimation && segmentedVC.selectedIndex != preferredIndex) {
+            NSLog(@"[TwitTweak] THFHomeTimelineVC viewDidAppear: Initial load - forcing selectedIndex from %ld to %ld", (long)segmentedVC.selectedIndex, (long)preferredIndex);
+            segmentedVC.selectedIndex = preferredIndex;
+        }
     }
     
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         if (gIsInitialLoadForAnimation) {
             NSLog(@"[TwitTweak] Initial load complete flag SET, tab switch animations now enabled.");
             gIsInitialLoadForAnimation = NO;
+            
+            // Double-check preference is applied after initial load completes
+            if (segmentedVC && isHomeTimelineSegmentedController(segmentedVC)) {
+                BOOL isFollowing = GetFollowingTimelinePreference();
+                NSInteger preferredIndex = isFollowing ? 1 : 0;
+                if (segmentedVC.selectedIndex != preferredIndex) {
+                    NSLog(@"[TwitTweak] Post-initial-load check: Correcting selectedIndex from %ld to %ld", (long)segmentedVC.selectedIndex, (long)preferredIndex);
+                    segmentedVC.selectedIndex = preferredIndex;
+                    [segmentedVC forceUpdateScrollViewToIndex:preferredIndex];
+                }
+            }
         }
     });
 }
