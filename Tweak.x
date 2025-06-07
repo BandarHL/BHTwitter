@@ -5294,7 +5294,7 @@ static NSBundle *BHBundle() {
 %end
 
 %hook TFNNavigationController
-- (_Bool)_translucentNavigationBarEnabled {
+- (_Bool)translucentNavigationBarEnabled {
     return false;
 }
 %end
