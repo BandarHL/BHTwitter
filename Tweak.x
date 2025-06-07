@@ -1987,15 +1987,15 @@ static NSTimer *cookieRetryTimer = nil;
 }
 
 + (void)handleFetchFailure:(NSString *)tweetID {
-    if (!tweetID) return;
+    if (!tweetID || !fetchPending || !fetchTimeouts || !fetchRetries || !tweetSources) return;
     
     // Cleanup
     fetchPending[tweetID] = @(NO);
-        NSTimer *timer = fetchTimeouts[tweetID];
-        if (timer) {
-            [timer invalidate];
-            [fetchTimeouts removeObjectForKey:tweetID];
-        }
+    NSTimer *timer = fetchTimeouts[tweetID];
+    if (timer) {
+        [timer invalidate];
+        [fetchTimeouts removeObjectForKey:tweetID];
+    }
         
     NSInteger retryCount = [fetchRetries[tweetID] integerValue];
     if (retryCount < MAX_CONSECUTIVE_FAILURES) {
@@ -2007,23 +2007,23 @@ static NSTimer *cookieRetryTimer = nil;
         // Mark as unavailable
         tweetSources[tweetID] = @"Source Unavailable";
         dispatch_async(dispatch_get_main_queue(), ^{
-        [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
         });
     }
 }
 
 + (void)timeoutFetchForTweetID:(NSTimer *)timer {
     NSString *tweetID = timer.userInfo[@"tweetID"];
-    if (!tweetID) return;
+    if (!tweetID || !fetchTimeouts) return;
     
     [timer invalidate];
-        [fetchTimeouts removeObjectForKey:tweetID];
+    [fetchTimeouts removeObjectForKey:tweetID];
     [self handleFetchFailure:tweetID];
 }
 
 + (void)retryUpdateForTweetID:(NSString *)tweetID {
     @try {
-        if (!tweetID) return;
+        if (!tweetID || !tweetSources) return;
         
         if (!updateRetries)   updateRetries   = [NSMutableDictionary dictionary];
         if (!updateCompleted) updateCompleted = [NSMutableDictionary dictionary];
@@ -2147,15 +2147,19 @@ static NSTimer *cookieRetryTimer = nil;
 }
 
 + (void)handleClearCacheNotification:(NSNotification *)notification {
-    // Clear all dictionaries
+    // Clear all dictionaries with proper nil checks
     if (tweetSources) [tweetSources removeAllObjects];
+    if (viewToTweetID) [viewToTweetID removeAllObjects];
+    if (viewInstances) [viewInstances removeAllObjects];
     if (fetchTimeouts) {
         for (NSTimer *timer in [fetchTimeouts allValues]) {
-            [timer invalidate];
+            if (timer) [timer invalidate];
         }
         [fetchTimeouts removeAllObjects];
     }
     if (fetchRetries) [fetchRetries removeAllObjects];
+    if (updateRetries) [updateRetries removeAllObjects];
+    if (updateCompleted) [updateCompleted removeAllObjects];
     if (fetchPending) [fetchPending removeAllObjects];
 
     // Reload cookies
@@ -2164,6 +2168,8 @@ static NSTimer *cookieRetryTimer = nil;
 
 + (void)updateFooterTextViewsForTweetID:(NSString *)tweetID {
     @try {
+        if (!tweetID || !tweetSources) return;
+        
         NSString *sourceText = tweetSources[tweetID];
         if (!sourceText || [sourceText isEqualToString:@""]) return;
         
@@ -2224,48 +2230,25 @@ static NSTimer *cookieRetryTimer = nil;
             return;
         }
         
-        // Process all tweets that need source labels
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-            // Use hardcoded cookies (always available)
-            NSDictionary *cookiesToUse = cookieCache ?: [self fetchCookies];
-            if (!cookieCache) {
-                    [self cacheCookies:cookiesToUse];
-            }
-            
-                // Calculate optimal batch size based on number of tweets
-                NSUInteger totalTweets = tweetsToRetry.count;
-                NSUInteger batchSize = totalTweets < 10 ? totalTweets : (totalTweets < 30 ? 5 : 10);
-                
-                // Process in batches to balance performance and responsiveness
-                for (NSUInteger i = 0; i < tweetsToRetry.count; i += batchSize) {
-                    @autoreleasepool {
-                        NSUInteger end = MIN(i + batchSize, tweetsToRetry.count);
-                        NSArray *currentBatch = [tweetsToRetry subarrayWithRange:NSMakeRange(i, end - i)];
+        // Process tweets that need source labels (simplified)
+        if (tweetsToRetry.count > 0) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                for (NSString *tweetID in tweetsToRetry) {
+                    if (!tweetSources || !fetchRetries || !fetchPending) continue;
+                    
+                    // Only retry if still needs updating
+                    NSString *currentSource = tweetSources[tweetID];
+                    if ([currentSource isEqualToString:@"Fetching..."] || [currentSource isEqualToString:@""]) {
+                        // Reset counters and clear pending flags
+                        fetchRetries[tweetID] = @(0);
+                        fetchPending[tweetID] = @(NO);
                         
-                        // Process current batch immediately
-                        dispatch_async(dispatch_get_main_queue(), ^{
-                            for (NSString *tweetID in currentBatch) {
-                                // Only force fetch if it's still in Fetching state (it might have updated already)
-                                if ([tweetSources[tweetID] isEqualToString:@"Fetching..."] || 
-                                    [tweetSources[tweetID] isEqualToString:@""]) {
-                                    // Reset counters and clear pending flags
-                                    [fetchRetries setObject:@0 forKey:tweetID];
-                                    [updateRetries setObject:@0 forKey:tweetID];
-                                    [fetchPending setObject:@NO forKey:tweetID]; // Clear any stuck pending flags
-                                    
-                                // Force a fresh fetch with the hardcoded cookies
-                                    [TweetSourceHelper fetchSourceForTweetID:tweetID];
-                                }
-                            }
-                        });
-                        
-                        // Small delay between batches but only if more batches exist
-                        if (i + batchSize < tweetsToRetry.count) {
-                        [NSThread sleepForTimeInterval:0.1];
+                        // Force a fresh fetch
+                        [TweetSourceHelper fetchSourceForTweetID:tweetID];
                     }
                 }
-            }
-        });
+            });
+        }
     }
 }
 @end
@@ -2330,6 +2313,11 @@ static NSTimer *cookieRetryTimer = nil;
 
 - (void)dealloc {
     @try {
+        if (!viewToTweetID || !viewInstances) {
+            %orig;
+            return;
+        }
+        
         NSString *tweetID = viewToTweetID[@((uintptr_t)self)];
         if (tweetID) {
             [viewToTweetID removeObjectForKey:@((uintptr_t)self)];
@@ -2349,26 +2337,24 @@ static NSTimer *cookieRetryTimer = nil;
     @try {
         NSDictionary *userInfo = notification.userInfo;
         NSString *tweetID      = userInfo[@"tweetID"];
-        if (tweetID && tweetSources[tweetID] && ![tweetSources[tweetID] isEqualToString:@""]) {
-            NSValue *viewValue = viewInstances[tweetID];
-            UIView  *targetView    = viewValue ? [viewValue nonretainedObjectValue] : nil; // Renamed to targetView for clarity
-            if (targetView && targetView == self) { // Ensure we are updating the correct instance
-                NSString *currentTweetID = viewToTweetID[@((uintptr_t)targetView)];
+        if (tweetID && tweetSources && tweetSources[tweetID] && ![tweetSources[tweetID] isEqualToString:@""]) {
+            NSValue *viewValue = viewInstances ? viewInstances[tweetID] : nil;
+            UIView  *targetView    = viewValue ? [viewValue nonretainedObjectValue] : nil;
+            if (targetView && targetView == self) {
+                NSString *currentTweetID = viewToTweetID ? viewToTweetID[@((uintptr_t)targetView)] : nil;
                 if (currentTweetID && [currentTweetID isEqualToString:tweetID]) {
-                    BH_EnumerateSubviewsRecursively(targetView, ^(UIView *subview) { // Use the static helper
+                    BH_EnumerateSubviewsRecursively(targetView, ^(UIView *subview) {
                         if ([subview isKindOfClass:%c(TFNAttributedTextView)]) {
                             TFNAttributedTextView *textView = (TFNAttributedTextView *)subview;
                             TFNAttributedTextModel *model = [textView valueForKey:@"_textModel"];
                             if (model && model.attributedString.string) {
                                 NSString *text = model.attributedString.string;
-                                // Check for typical timestamp patterns or if the source might need to be appended/updated
                                 if ([text containsString:@"PM"] || [text containsString:@"AM"] ||
                                     [text rangeOfString:@"\\\\d{1,2}[:.]\\\\d{1,2}" options:NSRegularExpressionSearch].location != NSNotFound) {
                                     
-                                    // Check if this specific TFNAttributedTextView is NOT part of a quoted status view
                                     BOOL isSafeToUpdate = YES;
                                     UIView *parentCheck = textView;
-                                    while(parentCheck && parentCheck != targetView) { // Traverse up to the main focal view
+                                    while(parentCheck && parentCheck != targetView) {
                                         if ([NSStringFromClass([parentCheck class]) isEqualToString:@"T1QuotedStatusView"]) {
                                             isSafeToUpdate = NO;
                                             break;
@@ -2377,13 +2363,11 @@ static NSTimer *cookieRetryTimer = nil;
                                     }
 
                                     if (isSafeToUpdate) {
-                                        // Force a refresh of the text model.
-                                        // This will trigger setTextModel: again, where the source appending logic resides.
-                                    [textView setTextModel:nil];
-                                    [textView setTextModel:model];
+                                        [textView setTextModel:nil];
+                                        [textView setTextModel:model];
+                                    }
                                 }
                             }
-                        }
                         }
                     });
                 }
@@ -2448,121 +2432,7 @@ static NSTimer *cookieRetryTimer = nil;
 
 %end
 
-// MARK: - Source Labels via T1ConversationFocalStatusView (Clean Approach)
 
-@interface T1ConversationFocalStatusView (BHTSourceLabels)
-- (void)BHT_updateFooterTextWithSource:(NSString *)sourceText tweetID:(NSString *)tweetID;
-- (void)BHT_applyColoredTextToFooterTextView:(id)footerTextView timeAgoText:(NSString *)timeAgoText sourceText:(NSString *)sourceText;
-- (id)footerTextView;
-@end
-
-%hook T1ConversationFocalStatusView
-
-- (void)setViewModel:(id)viewModel options:(unsigned long long)options account:(id)account {
-    %orig(viewModel, options, account);
-    
-    if (![BHTManager RestoreTweetLabels] || !viewModel) {
-        return;
-    }
-    
-    // Get the TFNTwitterStatus - it might be the viewModel itself or a property
-    TFNTwitterStatus *status = nil;
-    
-    if ([viewModel isKindOfClass:%c(TFNTwitterStatus)]) {
-        status = (TFNTwitterStatus *)viewModel;
-    } else if ([viewModel respondsToSelector:@selector(status)]) {
-        status = [viewModel performSelector:@selector(status)];
-    }
-    
-    if (!status) {
-        return;
-    }
-    
-    // Get the tweet ID
-    long long statusID = [status statusID];
-    if (statusID <= 0) {
-        return;
-    }
-    
-    NSString *tweetIDStr = [NSString stringWithFormat:@"%lld", statusID];
-    if (!tweetIDStr || tweetIDStr.length == 0) {
-        return;
-    }
-
-    // Initialize tweet sources if needed
-    if (!tweetSources) {
-        tweetSources = [NSMutableDictionary dictionary];
-    }
-    
-    // Fetch source if not cached
-    if (!tweetSources[tweetIDStr]) {
-        tweetSources[tweetIDStr] = @""; // Placeholder
-        [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
-    }
-    
-    // Update footer text immediately if we have the source
-    NSString *sourceText = tweetSources[tweetIDStr];
-    if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@"Source Unavailable"] && ![sourceText isEqualToString:@""]) {
-        // Delay the update to ensure the view is fully configured
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [self BHT_updateFooterTextWithSource:sourceText tweetID:tweetIDStr];
-        });
-    }
-}
-
-%new
-- (void)BHT_updateFooterTextWithSource:(NSString *)sourceText tweetID:(NSString *)tweetID {
-    // Look for T1ConversationFooterItem in the view hierarchy
-    __block id footerItem = nil;
-    BH_EnumerateSubviewsRecursively(self, ^(UIView *view) {
-        if (footerItem) return;
-        
-        // Check if this view has a footerItem property
-        if ([view respondsToSelector:@selector(footerItem)]) {
-            id item = [view performSelector:@selector(footerItem)];
-            if (item && [item isKindOfClass:%c(T1ConversationFooterItem)]) {
-                footerItem = item;
-            }
-        }
-    });
-    
-    if (!footerItem || ![footerItem respondsToSelector:@selector(timeAgo)]) {
-        return;
-    }
-
-    NSString *currentTimeAgo = [footerItem performSelector:@selector(timeAgo)];
-    if (!currentTimeAgo || currentTimeAgo.length == 0) {
-        return;
-    }
-    
-    // Don't append if source is already there
-    if ([currentTimeAgo containsString:sourceText] || [currentTimeAgo containsString:@"Twitter for"] || [currentTimeAgo containsString:@"via "]) {
-        return;
-    }
-    
-    // Create new timeAgo with source appended
-    NSString *newTimeAgo = [NSString stringWithFormat:@"%@ · %@", currentTimeAgo, sourceText];
-    
-    // Set the new timeAgo and hide view count
-    if ([footerItem respondsToSelector:@selector(setTimeAgo:)]) {
-        [footerItem performSelector:@selector(setTimeAgo:) withObject:newTimeAgo];
-        
-        // Hide view count by setting it to nil
-        if ([footerItem respondsToSelector:@selector(setViewCount:)]) {
-            [footerItem performSelector:@selector(setViewCount:) withObject:nil];
-        }
-        
-        // Now update the footer text view to refresh the display
-        id footerTextView = [self footerTextView];
-        if (footerTextView && [footerTextView respondsToSelector:@selector(updateFooterTextView)]) {
-            [footerTextView performSelector:@selector(updateFooterTextView)];
-        }
-    }
-}
-
-
-
-%end
 
 %hook TFNAttributedTextView
 - (void)setTextModel:(TFNAttributedTextModel *)model {
@@ -2581,15 +2451,13 @@ static NSTimer *cookieRetryTimer = nil;
             if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@""] && 
                 ![sourceText isEqualToString:@"Source Unavailable"] && [currentText containsString:sourceText]) {
                 
-                // Check if the source text is already colored to avoid redundant updates
                 NSRange sourceRange = [currentText rangeOfString:sourceText];
-                if (sourceRange.location != NSNotFound) {
+                if (sourceRange.location != NSNotFound && sourceRange.location < model.attributedString.length) {
                     UIColor *existingColor = [model.attributedString attribute:NSForegroundColorAttributeName 
                                                                        atIndex:sourceRange.location 
                                                                 effectiveRange:NULL];
                     UIColor *accentColor = BHTCurrentAccentColor();
                     
-                    // Only apply coloring if it's not already colored with our accent color
                     if (!existingColor || ![existingColor isEqual:accentColor]) {
                         newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
                         [newString addAttribute:NSForegroundColorAttributeName 
@@ -2606,67 +2474,67 @@ static NSTimer *cookieRetryTimer = nil;
     // Handle notification text replacements (your post -> your Tweet, etc.)
     if ([currentText containsString:@"your post"] || [currentText containsString:@"your Post"] ||
         [currentText containsString:@"reposted"] || [currentText containsString:@"Reposted"]) {
-        UIView *view = self;
-        BOOL isNotificationView = NO;
-        
-        // Walk up the view hierarchy to find notification context
-        while (view && !isNotificationView) {
-            if ([NSStringFromClass([view class]) containsString:@"Notification"] ||
-                [NSStringFromClass([view class]) containsString:@"T1NotificationsTimeline"]) {
-                isNotificationView = YES;
+            UIView *view = self;
+            BOOL isNotificationView = NO;
+            
+            // Walk up the view hierarchy to find notification context
+            while (view && !isNotificationView) {
+                if ([NSStringFromClass([view class]) containsString:@"Notification"] ||
+                    [NSStringFromClass([view class]) containsString:@"T1NotificationsTimeline"]) {
+                    isNotificationView = YES;
                 break;
+                }
+                view = view.superview;
             }
-            view = view.superview;
-        }
-        
-        // Only proceed if we're in a notification view
-        if (isNotificationView) {
+            
+            // Only proceed if we're in a notification view
+            if (isNotificationView) {
             if (!newString) {
                 newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
             }
-            
-            // Replace "your post" with "your Tweet"
-            NSRange postRange = [currentText rangeOfString:@"your post"];
-            if (postRange.location != NSNotFound) {
-                NSDictionary *existingAttributes = [newString attributesAtIndex:postRange.location effectiveRange:NULL];
-                [newString replaceCharactersInRange:postRange withString:@"your Tweet"];
-                [newString setAttributes:existingAttributes range:NSMakeRange(postRange.location, [@"your Tweet" length])];
-                modified = YES;
-            }
-            
-            // Also check for capitalized "Post"
-            postRange = [currentText rangeOfString:@"your Post"];
-            if (postRange.location != NSNotFound) {
-                NSDictionary *existingAttributes = [newString attributesAtIndex:postRange.location effectiveRange:NULL];
-                [newString replaceCharactersInRange:postRange withString:@"your Tweet"];
-                [newString setAttributes:existingAttributes range:NSMakeRange(postRange.location, [@"your Tweet" length])];
-                modified = YES;
-            }
-            
-            // Replace "reposted" with "Retweeted"
-            NSRange repostRange = [currentText rangeOfString:@"reposted"];
-            if (repostRange.location != NSNotFound) {
-                NSDictionary *existingAttributes = [newString attributesAtIndex:repostRange.location effectiveRange:NULL];
-                [newString replaceCharactersInRange:repostRange withString:@"Retweeted"];
-                [newString setAttributes:existingAttributes range:NSMakeRange(repostRange.location, [@"Retweeted" length])];
-                modified = YES;
-            }
-            
-            // Also check for capitalized "Reposted"
-            repostRange = [currentText rangeOfString:@"Reposted"];
-            if (repostRange.location != NSNotFound) {
-                NSDictionary *existingAttributes = [newString attributesAtIndex:repostRange.location effectiveRange:NULL];
-                [newString replaceCharactersInRange:repostRange withString:@"Retweeted"];
-                [newString setAttributes:existingAttributes range:NSMakeRange(repostRange.location, [@"Retweeted" length])];
-                modified = YES;
+                
+                // Replace "your post" with "your Tweet"
+                NSRange postRange = [currentText rangeOfString:@"your post"];
+                if (postRange.location != NSNotFound) {
+                    NSDictionary *existingAttributes = [newString attributesAtIndex:postRange.location effectiveRange:NULL];
+                    [newString replaceCharactersInRange:postRange withString:@"your Tweet"];
+                    [newString setAttributes:existingAttributes range:NSMakeRange(postRange.location, [@"your Tweet" length])];
+                    modified = YES;
+                }
+                
+                // Also check for capitalized "Post"
+                postRange = [currentText rangeOfString:@"your Post"];
+                if (postRange.location != NSNotFound) {
+                    NSDictionary *existingAttributes = [newString attributesAtIndex:postRange.location effectiveRange:NULL];
+                    [newString replaceCharactersInRange:postRange withString:@"your Tweet"];
+                    [newString setAttributes:existingAttributes range:NSMakeRange(postRange.location, [@"your Tweet" length])];
+                    modified = YES;
+                }
+                
+                // Replace "reposted" with "Retweeted"
+                NSRange repostRange = [currentText rangeOfString:@"reposted"];
+                if (repostRange.location != NSNotFound) {
+                    NSDictionary *existingAttributes = [newString attributesAtIndex:repostRange.location effectiveRange:NULL];
+                    [newString replaceCharactersInRange:repostRange withString:@"Retweeted"];
+                    [newString setAttributes:existingAttributes range:NSMakeRange(repostRange.location, [@"Retweeted" length])];
+                    modified = YES;
+                }
+                
+                // Also check for capitalized "Reposted"
+                repostRange = [currentText rangeOfString:@"Reposted"];
+                if (repostRange.location != NSNotFound) {
+                    NSDictionary *existingAttributes = [newString attributesAtIndex:repostRange.location effectiveRange:NULL];
+                    [newString replaceCharactersInRange:repostRange withString:@"Retweeted"];
+                    [newString setAttributes:existingAttributes range:NSMakeRange(repostRange.location, [@"Retweeted" length])];
+                    modified = YES;
             }
         }
     }
     
     // Apply the modified text model if we made any changes
     if (modified && newString) {
-        TFNAttributedTextModel *newModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newString];
-        %orig(newModel);
+                    TFNAttributedTextModel *newModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newString];
+                    %orig(newModel);
         return;
     }
     
