@@ -2748,19 +2748,32 @@ static NSTimer *cookieRetryTimer = nil;
 
 // Helper function to recursively find and hide a TFNButton by accessibilityIdentifier
 static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString *targetAccessibilityId) {
-    if ([viewToSearch isKindOfClass:NSClassFromString(@"TFNButton")]) {
-        TFNButton *button = (TFNButton *)viewToSearch;
-        if ([button.accessibilityIdentifier isEqualToString:targetAccessibilityId]) {
-            button.hidden = YES;
-            return YES;
+    @try {
+        // Safety check: Ensure view and target are valid
+        if (!viewToSearch || !targetAccessibilityId || !viewToSearch.superview) {
+            return NO;
         }
-    }
-    for (UIView *subview in viewToSearch.subviews) {
-        if (findAndHideButtonWithAccessibilityId(subview, targetAccessibilityId)) {
-            return YES;
+        
+        if ([viewToSearch isKindOfClass:NSClassFromString(@"TFNButton")]) {
+            TFNButton *button = (TFNButton *)viewToSearch;
+            if ([button.accessibilityIdentifier isEqualToString:targetAccessibilityId]) {
+                button.hidden = YES;
+                return YES;
+            }
         }
+        
+        // Create a copy of subviews to avoid mutation during iteration
+        NSArray *subviews = [viewToSearch.subviews copy];
+        for (UIView *subview in subviews) {
+            if (findAndHideButtonWithAccessibilityId(subview, targetAccessibilityId)) {
+                return YES;
+            }
+        }
+        return NO;
+    } @catch (NSException *exception) {
+        NSLog(@"[BHTwitter] Exception in findAndHideButtonWithAccessibilityId: %@", exception);
+        return NO;
     }
-    return NO;
 }
 
 %hook T1ConversationFocalStatusView
@@ -2784,15 +2797,23 @@ static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString 
 
 - (void)viewDidLoad {
     %orig;
-    if ([BHTManager hideFollowButton]) {
-        findAndHideButtonWithAccessibilityId(self.view, @"FollowButton");
+    @try {
+        if ([BHTManager hideFollowButton] && self.view) {
+            findAndHideButtonWithAccessibilityId(self.view, @"FollowButton");
+        }
+    } @catch (NSException *exception) {
+        NSLog(@"[BHTwitter] Exception in T1ImmersiveViewController viewDidLoad: %@", exception);
     }
 }
 
 - (void)viewWillAppear:(BOOL)animated {
     %orig;
-    if ([BHTManager hideFollowButton]) {
-        findAndHideButtonWithAccessibilityId(self.view, @"FollowButton");
+    @try {
+        if ([BHTManager hideFollowButton] && self.view) {
+            findAndHideButtonWithAccessibilityId(self.view, @"FollowButton");
+        }
+    } @catch (NSException *exception) {
+        NSLog(@"[BHTwitter] Exception in T1ImmersiveViewController viewWillAppear: %@", exception);
     }
 }
 
@@ -2809,12 +2830,16 @@ static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString 
 
 - (void)didMoveToWindow {
     %orig;
-    if ([BHTManager hideFollowButton]) {
-        UIViewController *vc = getViewControllerForView(self);
-        if ([vc isKindOfClass:NSClassFromString(@"T1TimelinesItemsCarouselViewController")]) {
-            self.hidden = YES;
-            self.alpha = 0.0;
+    @try {
+        if ([BHTManager hideFollowButton] && self) {
+            UIViewController *vc = getViewControllerForView(self);
+            if (vc && [vc isKindOfClass:NSClassFromString(@"T1TimelinesItemsCarouselViewController")]) {
+                self.hidden = YES;
+                self.alpha = 0.0;
+            }
         }
+    } @catch (NSException *exception) {
+        NSLog(@"[BHTwitter] Exception in TUIFollowControl didMoveToWindow: %@", exception);
     }
 }
 
@@ -2875,17 +2900,37 @@ static Class gExploreHeroCellClass = nil;
 
 // Helper function to find the UIViewController managing a UIView
 static UIViewController* getViewControllerForView(UIView *view) {
-    UIResponder *responder = view;
-    while ((responder = [responder nextResponder])) {
-        if ([responder isKindOfClass:[UIViewController class]]) {
-            return (UIViewController *)responder;
+    @try {
+        // Safety check: Ensure view is valid
+        if (!view) {
+            return nil;
         }
-        // Stop if we reach top-level objects like UIWindow or UIApplication without finding a VC
-        if ([responder isKindOfClass:[UIWindow class]] || [responder isKindOfClass:[UIApplication class]]) {
-            break;
+        
+        UIResponder *responder = view;
+        NSInteger maxIterations = 20; // Prevent infinite loops
+        NSInteger currentIteration = 0;
+        
+        while ((responder = [responder nextResponder]) && currentIteration < maxIterations) {
+            currentIteration++;
+            
+            // Safety check: Ensure responder is still valid
+            if (!responder) {
+                break;
+            }
+            
+            if ([responder isKindOfClass:[UIViewController class]]) {
+                return (UIViewController *)responder;
+            }
+            // Stop if we reach top-level objects like UIWindow or UIApplication without finding a VC
+            if ([responder isKindOfClass:[UIWindow class]] || [responder isKindOfClass:[UIApplication class]]) {
+                break;
+            }
         }
+        return nil;
+    } @catch (NSException *exception) {
+        NSLog(@"[BHTwitter] Exception in getViewControllerForView: %@", exception);
+        return nil;
     }
-    return nil;
 }
 
 // Helper function to check if a view is inside T1ProfileHeaderViewController
