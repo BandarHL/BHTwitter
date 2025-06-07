@@ -3641,6 +3641,9 @@ static char kManualRefreshInProgressKey;
 
 // MARK: - Tab Bar Icon Theming
 %hook T1TabView
+- (BOOL)_t1_showsTitle {
+    return true;
+}
 
 %new
 - (void)bh_applyCurrentThemeToIcon {
