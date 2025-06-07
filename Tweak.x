@@ -3645,6 +3645,16 @@ static char kManualRefreshInProgressKey;
     return true;
 }
 
+- (void)_t1_updateTitleLabel {
+    %orig;
+    
+    // Ensure titleLabel is not hidden
+    UILabel *titleLabel = [self valueForKey:@"titleLabel"];
+    if (titleLabel) {
+        titleLabel.hidden = NO;
+    }
+}
+
 %new
 - (void)bh_applyCurrentThemeToIcon {
     UIImageView *imgView = nil;
