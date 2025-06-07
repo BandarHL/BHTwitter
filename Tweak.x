@@ -2773,6 +2773,30 @@ static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString 
 
 %end
 
+// MARK: - Hide Follow Button (T1ImmersiveViewController)
+
+// Minimal interface for T1ImmersiveViewController
+@interface T1ImmersiveViewController : UIViewController
+@end
+
+%hook T1ImmersiveViewController
+
+- (void)viewDidLoad {
+    %orig;
+    if ([BHTManager hideFollowButton]) {
+        findAndHideButtonWithAccessibilityId(self.view, @"FollowButton");
+    }
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    %orig;
+    if ([BHTManager hideFollowButton]) {
+        findAndHideButtonWithAccessibilityId(self.view, @"FollowButton");
+    }
+}
+
+%end
+
 // MARK: - Restore Follow Button (TUIFollowControl)
 
 @interface TUIFollowControl : UIControl
@@ -5014,63 +5038,12 @@ static GeminiTranslator *_sharedInstance;
                         [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
                     }
                     
-                    // Add source to footer if available
-                    NSString *sourceText = tweetSources[tweetIDStr];
-                    if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@"Source Unavailable"] && ![sourceText isEqualToString:@""]) {
-                        [self BHT_appendSourceToFooter:sourceText];
-                    }
+                    // Legacy source code removed
                 }
             }
         } @catch (NSException *e) {
             NSLog(@"[BHTwitter] Exception in T1ConversationFooterTextView updateFooterTextView: %@", e);
         }
-    }
-}
-
-%new - (void)BHT_appendSourceToFooter:(NSString *)sourceText {
-    @try {
-        // Get current text model
-        TFNAttributedTextModel *currentModel = [self valueForKey:@"_textModel"];
-        if (!currentModel || !currentModel.attributedString) {
-            return;
-        }
-        
-        NSString *currentText = currentModel.attributedString.string;
-        NSString *separator = @" · ";
-        NSString *fullSourceStringWithSeparator = [separator stringByAppendingString:sourceText];
-        
-        // Check if source is already present
-        if ([currentText rangeOfString:fullSourceStringWithSeparator].location != NSNotFound) {
-            return;
-        }
-        
-        // Create new attributed string with source appended
-        NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:currentModel.attributedString];
-        
-        // Get base attributes from existing text
-        NSDictionary *baseAttributes;
-        if (currentModel.attributedString.length > 0) {
-            baseAttributes = [currentModel.attributedString attributesAtIndex:0 effectiveRange:NULL];
-        } else {
-            baseAttributes = @{NSFontAttributeName: [UIFont systemFontOfSize:12], NSForegroundColorAttributeName: [UIColor grayColor]};
-        }
-        
-        // Create source suffix with accent color
-        NSMutableAttributedString *sourceSuffix = [[NSMutableAttributedString alloc] init];
-        [sourceSuffix appendAttributedString:[[NSAttributedString alloc] initWithString:separator attributes:baseAttributes]];
-        
-        NSMutableDictionary *sourceAttributes = [baseAttributes mutableCopy];
-        [sourceAttributes setObject:BHTCurrentAccentColor() forKey:NSForegroundColorAttributeName];
-        [sourceSuffix appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttributes]];
-        
-        [newString appendAttributedString:sourceSuffix];
-        
-        // Create new text model and update
-        TFNAttributedTextModel *newModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newString];
-        [self setTextModel:newModel];
-        
-    } @catch (NSException *e) {
-        NSLog(@"[BHTwitter] Exception in BHT_appendSourceToFooter: %@", e);
     }
 }
 
