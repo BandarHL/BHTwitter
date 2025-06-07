@@ -5038,11 +5038,7 @@ static GeminiTranslator *_sharedInstance;
                         [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
                     }
                     
-                    // Add source to footer if available
-                    NSString *sourceText = tweetSources[tweetIDStr];
-                    if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@"Source Unavailable"] && ![sourceText isEqualToString:@""]) {
-                        [self BHT_appendSourceToFooter:sourceText];
-                    }
+                    // Legacy source code removed
                 }
             }
         } @catch (NSException *e) {
