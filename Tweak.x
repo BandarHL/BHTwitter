@@ -4701,7 +4701,582 @@ static void findTextView(UIView *view, UITextView **tweetTextView) {
 
 %end
 
-// Hook TFNBarButtonItemButtonV1
+// Hook TTAStatusBodySelectableContentTextView to prevent text reversion
+%hook TTAStatusBodySelectableContentTextView
+
+static char kIsTranslatedKey;
+static char kOriginalTextKey;
+static char kTranslatedTextKey;
+
+- (void)setAttributedText:(NSAttributedString *)attributedText {
+    // Check if we're currently showing translated text
+    NSNumber *isTranslated = objc_getAssociatedObject(self, &kIsTranslatedKey);
+    
+    if (isTranslated && [isTranslated boolValue]) {
+        // If we're in translated mode, don't allow external updates to override our translation
+        NSAttributedString *currentTranslatedText = objc_getAssociatedObject(self, &kTranslatedTextKey);
+        if (currentTranslatedText && ![attributedText.string isEqualToString:currentTranslatedText.string]) {
+            // External code is trying to revert our translation, ignore it
+            return;
+        }
+    }
+    
+    // Store original text if this is the first time setting text (not translated)
+    if (!isTranslated || ![isTranslated boolValue]) {
+        objc_setAssociatedObject(self, &kOriginalTextKey, attributedText, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    
+    %orig(attributedText);
+}
+
+%new - (void)BHT_setTranslatedText:(NSAttributedString *)translatedText {
+    // Store the translated text and mark as translated
+    objc_setAssociatedObject(self, &kTranslatedTextKey, translatedText, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    objc_setAssociatedObject(self, &kIsTranslatedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    
+    // Set the text directly
+    [self setAttributedText:translatedText];
+}
+
+%new - (void)BHT_restoreOriginalText {
+    NSAttributedString *originalText = objc_getAssociatedObject(self, &kOriginalTextKey);
+    if (originalText) {
+        objc_setAssociatedObject(self, &kIsTranslatedKey, @NO, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        [self setAttributedText:originalText];
+    }
+}
+
+%new - (BOOL)BHT_isShowingTranslatedText {
+    NSNumber *isTranslated = objc_getAssociatedObject(self, &kIsTranslatedKey);
+    return isTranslated && [isTranslated boolValue];
+}
+
+%end
+
+// Hook TFNComposableViewAdapterSet to filter out translate adapters
+%hook TFNComposableViewAdapterSet
+
+- (id)initWithViewAdaptersByIdentifier:(id)arg1 {
+    if ([arg1 isKindOfClass:[NSDictionary class]]) {
+        NSDictionary *originalDict = (NSDictionary *)arg1;
+        NSMutableDictionary *filteredDict = [NSMutableDictionary dictionary];
+        
+        for (id key in originalDict) {
+            id adapter = originalDict[key];
+            NSString *adapterClassName = NSStringFromClass([adapter class]);
+            
+            // Filter out Grok adapter
+            if ([adapterClassName isEqualToString:@"T1StandardStatusAskGrokButtonViewAdapter"]) {
+                continue; // Skip this adapter
+            }
+            
+            // Filter out translate-related adapters if translate is enabled
+            if ([BHTManager enableTranslate] && 
+                ([adapterClassName containsString:@"Translate"] || 
+                 [adapterClassName containsString:@"Translation"])) {
+                continue; // Skip translate adapters
+            }
+            
+            // Keep all other adapters
+            filteredDict[key] = adapter;
+        }
+        
+        return %orig([filteredDict copy]);
+    }
+    
+    return %orig(arg1);
+}
+
+%end
+
+%hook TFNComposableViewSet
+
+- (void)_tfn_addView:(id)arg1 toHostViewWithViewAdapter:(id)arg2 {
+    // Check if this is a translate view and our feature is enabled
+    if ([BHTManager enableTranslate] && [arg1 isKindOfClass:%c(T1StandardStatusTranslateView)]) {
+        // Don't add translate views to the view set
+        return;
+    }
+    
+    %orig(arg1, arg2);
+}
+
+%end
+
+@implementation GeminiTranslator
+
+static GeminiTranslator *_sharedInstance;
+
++ (instancetype)sharedInstance {
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        _sharedInstance = [[GeminiTranslator alloc] init];
+    });
+    return _sharedInstance;
+}
+
+- (void)translateText:(NSString *)text fromLanguage:(NSString *)sourceLanguage toLanguage:(NSString *)targetLanguage completion:(void (^)(NSString *translatedText, NSError *error))completion {
+    @try {
+        // Defensive check for empty text
+        if (!text || text.length == 0) {
+            if (completion) {
+                NSError *error = [NSError errorWithDomain:@"GeminiTranslator" code:400 userInfo:@{NSLocalizedDescriptionKey: @"Empty text to translate"}];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    completion(nil, error);
+                });
+            }
+            return;
+        }
+        
+        // Get configurable API settings from BHTManager
+        NSString *apiKey = [BHTManager translateAPIKey];
+        NSString *apiUrl = [BHTManager translateEndpoint];
+        NSString *model = [BHTManager translateModel];
+        
+        // Check if we have a valid API key
+        if (!apiKey || apiKey.length == 0 || [apiKey isEqualToString:@"YOUR_API_KEY"]) {
+            if (completion) {
+                NSError *error = [NSError errorWithDomain:@"GeminiTranslator" code:401 userInfo:@{NSLocalizedDescriptionKey: @"Invalid or missing API key"}];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    completion(nil, error);
+                });
+            }
+            return;
+        }
+        
+        // Construct the request URL properly using the user's model setting
+        NSString *fullUrlString;
+        if ([apiUrl containsString:@"generativelanguage.googleapis.com"] && ![apiUrl containsString:@":generateContent"]) {
+            // For default Gemini API base URL, construct full URL with the user's chosen model
+            fullUrlString = [NSString stringWithFormat:@"%@/%@:generateContent?key=%@", apiUrl, model, apiKey];
+        } else {
+            // For custom endpoints or already complete URLs, just append the API key
+            if ([apiUrl containsString:@"?"]) {
+                fullUrlString = [NSString stringWithFormat:@"%@&key=%@", apiUrl, apiKey];
+            } else {
+                fullUrlString = [NSString stringWithFormat:@"%@?key=%@", apiUrl, apiKey];
+            }
+        }
+        
+        NSURL *url = [NSURL URLWithString:fullUrlString];
+        
+        // Create request
+        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
+        [request setHTTPMethod:@"POST"];
+        [request setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
+        
+        // Simplified prompt for translation only
+        NSString *prompt = [NSString stringWithFormat:@"Translate this text from %@ to %@: \"%@\" \n\nOnly return the translated text without any explanation or notes. include emojis if in original text.", 
+                            [sourceLanguage isEqualToString:@"auto"] ? @"the original language" : sourceLanguage, 
+                            targetLanguage, 
+                            text];
+        
+        // Create JSON payload
+        NSDictionary *content = @{
+            @"parts": @[
+                @{@"text": prompt}
+            ]
+        };
+        
+        NSDictionary *payload = @{
+            @"contents": @[content],
+            @"generationConfig": @{
+                @"temperature": @0.2,
+                @"topP": @0.8,
+                @"topK": @40
+            }
+        };
+        
+        // Serialize to JSON
+        NSError *jsonError;
+        NSData *jsonData = [NSJSONSerialization dataWithJSONObject:payload options:0 error:&jsonError];
+        
+        if (jsonError) {
+            if (completion) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    completion(nil, jsonError);
+                });
+            }
+            return;
+        }
+        
+        [request setHTTPBody:jsonData];
+        
+        // Create and start task
+        NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+            if (error) {
+                if (completion) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        completion(nil, error);
+                    });
+                }
+                return;
+            }
+            
+            NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
+            if (httpResponse.statusCode != 200) {
+                NSString *errorMsg = [NSString stringWithFormat:@"API request failed with status code: %ld", (long)httpResponse.statusCode];
+                if (data) {
+                    // Try to parse error details from response
+                    NSDictionary *errorInfo = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+                    if (errorInfo[@"error"] && errorInfo[@"error"][@"message"]) {
+                        errorMsg = [NSString stringWithFormat:@"%@: %@", errorMsg, errorInfo[@"error"][@"message"]];
+                    }
+                }
+                
+                NSError *apiError = [NSError errorWithDomain:@"GeminiTranslator" code:httpResponse.statusCode userInfo:@{NSLocalizedDescriptionKey: errorMsg}];
+                if (completion) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        completion(nil, apiError);
+                    });
+                }
+                return;
+            }
+            
+            // Handle successful response
+            if (data) {
+                NSError *parseError;
+                NSDictionary *responseDict = [NSJSONSerialization JSONObjectWithData:data options:0 error:&parseError];
+                
+                if (parseError) {
+                    if (completion) {
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            completion(nil, parseError);
+                        });
+                    }
+                    return;
+                }
+                
+                // Extract the translation text from the response
+                NSString *translatedText = @"";
+                if (responseDict[@"candidates"] && [responseDict[@"candidates"] isKindOfClass:[NSArray class]]) {
+                    NSArray *candidates = responseDict[@"candidates"];
+                    if (candidates.count > 0 && candidates[0][@"content"] && candidates[0][@"content"][@"parts"]) {
+                        NSArray *parts = candidates[0][@"content"][@"parts"];
+                        if (parts.count > 0 && parts[0][@"text"]) {
+                            translatedText = parts[0][@"text"];
+                            // Clean up any lingering quotes from the API's response
+                            translatedText = [translatedText stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"\"' \n"]];
+                        }
+                    }
+                }
+                
+                if (translatedText.length > 0) {
+                    if (completion) {
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            completion(translatedText, nil);
+                        });
+                    }
+                } else {
+                    NSError *noTextError = [NSError errorWithDomain:@"GeminiTranslator" code:500 userInfo:@{NSLocalizedDescriptionKey: @"Could not parse translation from API response"}];
+                    if (completion) {
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            completion(nil, noTextError);
+                        });
+                    }
+                }
+            } else {
+                NSError *noDataError = [NSError errorWithDomain:@"GeminiTranslator" code:500 userInfo:@{NSLocalizedDescriptionKey: @"No data received from API"}];
+                if (completion) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        completion(nil, noDataError);
+                    });
+                }
+            }
+        }];
+        
+        [task resume];
+    } @catch (NSException *exception) {
+        NSError *error = [NSError errorWithDomain:@"GeminiTranslator" code:500 userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat:@"Translation failed with exception: %@", exception.reason]}];
+        if (completion) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                completion(nil, error);
+            });
+        }
+    }
+}
+
+- (void)simplifiedTranslateAndDisplay:(NSString *)text fromViewController:(UIViewController *)viewController {
+    if (!text || text.length == 0 || !viewController) {
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
+                                                                       message:@"No valid text to translate." 
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+        [viewController presentViewController:alert animated:YES completion:nil];
+        return;
+    }
+    
+    [self translateText:text 
+           fromLanguage:@"auto" 
+             toLanguage:@"en" 
+             completion:^(NSString *translatedText, NSError *error) {
+        if (error || !translatedText) {
+            UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation Error" 
+                                                                           message:error ? error.localizedDescription : @"Failed to translate text." 
+                                                                    preferredStyle:UIAlertControllerStyleAlert];
+            [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+            [viewController presentViewController:alert animated:YES completion:nil];
+            return;
+        }
+        
+        // Show translation with Copy and Cancel options
+        UIAlertController *resultAlert = [UIAlertController alertControllerWithTitle:@"Translation" 
+                                                                             message:translatedText 
+                                                                      preferredStyle:UIAlertControllerStyleAlert];
+        
+        [resultAlert addAction:[UIAlertAction actionWithTitle:@"Copy" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            UIPasteboard.generalPasteboard.string = translatedText;
+        }]];
+        
+        [resultAlert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+        
+        [viewController presentViewController:resultAlert animated:YES completion:nil];
+    }];
+}
+
+@end
+
+// MARK: Restore Launch Animation
+
+%hook T1AppDelegate
++ (id)launchTransitionProvider {
+    Class T1AppLaunchTransitionClass = NSClassFromString(@"T1AppLaunchTransition");
+    if (T1AppLaunchTransitionClass) {
+        return [[T1AppLaunchTransitionClass alloc] init];
+    }
+    return nil;
+}
+%end
+
+// MARK: Source Label using T1ConversationFooterTextView
+
+%hook T1ConversationFooterTextView
+
+- (void)updateFooterTextView {
+    %orig;
+    
+    // Add source label to footer text view
+    if ([BHTManager RestoreTweetLabels] && self.viewModel) {
+        @try {
+            // Get the tweet object from the view model
+            id tweetObject = nil;
+            if ([self.viewModel respondsToSelector:@selector(tweet)]) {
+                tweetObject = [self.viewModel performSelector:@selector(tweet)];
+            } else if ([self.viewModel respondsToSelector:@selector(status)]) {
+                tweetObject = [self.viewModel performSelector:@selector(status)];
+            }
+            
+            if (tweetObject) {
+                // Get tweet ID
+                NSString *tweetIDStr = nil;
+                @try {
+                    id statusIDVal = [tweetObject valueForKey:@"statusID"];
+                    if (statusIDVal && [statusIDVal respondsToSelector:@selector(longLongValue)] && [statusIDVal longLongValue] > 0) {
+                        tweetIDStr = [statusIDVal stringValue];
+                    }
+                } @catch (NSException *e) {}
+                
+                if (!tweetIDStr || tweetIDStr.length == 0) {
+                    @try {
+                        tweetIDStr = [tweetObject valueForKey:@"rest_id"];
+                        if (!tweetIDStr || tweetIDStr.length == 0) {
+                            tweetIDStr = [tweetObject valueForKey:@"id_str"];
+                        }
+                        if (!tweetIDStr || tweetIDStr.length == 0) {
+                            id genericID = [tweetObject valueForKey:@"id"];
+                            if (genericID) tweetIDStr = [genericID description];
+                        }
+                    } @catch (NSException *e) {}
+                }
+                
+                if (tweetIDStr && tweetIDStr.length > 0) {
+                    // Initialize source tracking if needed
+                    if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
+                    
+                    // Fetch source if not already available
+                    if (!tweetSources[tweetIDStr]) {
+                        tweetSources[tweetIDStr] = @""; // Placeholder
+                        [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
+                    }
+                    
+                    // Legacy source code removed
+                }
+            }
+        } @catch (NSException *e) {
+            NSLog(@"[BHTwitter] Exception in T1ConversationFooterTextView updateFooterTextView: %@", e);
+        }
+    }
+}
+
+%end
+
+// MARK: Change Pill text.
+%hook TFNPillControl
+- (id)text {
+    NSString *localizedText = [[BHTBundle sharedBundle] localizedStringForKey:@"REFRESH_PILL_TEXT"];
+    return localizedText ?: @"Tweeted";
+}
+- (void)setText:(id)arg1 {
+    NSString *localizedText = [[BHTBundle sharedBundle] localizedStringForKey:@"REFRESH_PILL_TEXT"];
+    %orig(localizedText ?: @"Tweeted");
+}
+%end
+
+// MARK: Remove all sections from the Explore "for you" tab except the trending cells.
+static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
+    if (!viewController) return NO;
+    
+    // Check all view controllers up the hierarchy
+    UIViewController *currentVC = viewController;
+    while (currentVC) {
+        NSString *className = NSStringFromClass([currentVC class]);
+        
+        // Check for GuideContainerViewController (handles both naming variants)
+        if ([className containsString:@"GuideContainerViewController"]) {
+            return YES;
+        }
+        
+        // Move up the hierarchy
+        if (currentVC.parentViewController) {
+            currentVC = currentVC.parentViewController;
+        } else if (currentVC.navigationController) {
+            currentVC = currentVC.navigationController;
+        } else if (currentVC.presentingViewController) {
+            currentVC = currentVC.presentingViewController;
+        } else {
+            break;
+        }
+    }
+    
+    return NO;
+}
+
+// Hook TFNItemsDataViewController to filter sections array
+%hook TFNItemsDataViewController
+
+- (void)setSections:(NSArray *)sections {
+    // Only filter if we're in the GuideContainerViewController hierarchy
+    if (BHT_isInGuideContainerHierarchy(self)) {
+        // Keep only entry 3 (index 2), remove everything else
+        if (sections.count > 2) {
+            sections = @[sections[2]]; // Extract only the 3rd entry
+        }
+    }
+    
+    %orig(sections);
+}
+
+%end
+
+// Helper function to check if we're in the T1ConversationContainerViewController hierarchy
+static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewController) {
+    if (!viewController) return NO;
+    
+    // Check all view controllers up the hierarchy
+    UIViewController *currentVC = viewController;
+    while (currentVC) {
+        NSString *className = NSStringFromClass([currentVC class]);
+        
+        // Check for T1ConversationContainerViewController
+        if ([className isEqualToString:@"T1ConversationContainerViewController"]) {
+            return YES;
+        }
+        
+        // Move up the hierarchy
+        if (currentVC.parentViewController) {
+            currentVC = currentVC.parentViewController;
+        } else if (currentVC.navigationController) {
+            currentVC = currentVC.navigationController;
+        } else if (currentVC.presentingViewController) {
+            currentVC = currentVC.presentingViewController;
+        } else {
+            break;
+        }
+    }
+    
+    return NO;
+}
+
+// MARK : Remove "Discover More" section
+%hook T1URTViewController
+
+- (void)setSections:(NSArray *)sections {
+    
+    // Only filter if we're in the T1ConversationContainerViewController hierarchy
+    BOOL inConversationHierarchy = BHT_isInConversationContainerHierarchy((UIViewController *)self);
+    
+    if (inConversationHierarchy) {
+        // Remove entry 1 (index 1) from sections array
+        if (sections.count > 1) {
+            NSMutableArray *filteredSections = [NSMutableArray arrayWithArray:sections];
+            [filteredSections removeObjectAtIndex:1];
+            sections = [filteredSections copy];
+        }
+    }
+    
+    %orig(sections);
+}
+
+%end
+
+// MARK: should hopefully remove reply boost upsells
+%hook T1SubscriptionJourneyManager
+- (_Bool)shouldShowReplyBoostUpsellWithAccount {
+        return false;
+}
+%end
+
+%hook T1SuperFollowControl
+
+- (id)initWithSizeClass:(long long)arg1 {
+    id result = %orig;
+    if ([BHTManager restoreFollowButton] && result) {
+        [self setHidden:YES];
+        [self setAlpha:0.0];
+    }
+    return result;
+}
+
+- (void)_t1_configureButton {
+    %orig;
+    if ([BHTManager restoreFollowButton]) {
+        [self setHidden:YES];
+        [self setAlpha:0.0];
+        if (self.button) {
+            [self.button setHidden:YES];
+            [self.button setAlpha:0.0];
+        }
+    }
+}
+%end
+
+// MARK : fix for super follower profiles.
+%hook T1ProfileActionButtonsView
+
+// Method that creates the overflow button
+- (id)_t1_overflowButtonForItems:(id)arg1 {
+    if ([BHTManager restoreFollowButton]) {
+        return nil; // Return nil to prevent the overflow button from appearing
+    }
+    return %orig;
+}
+
+// Override the method that determines which buttons to show based on width
+- (void)_t1_updateArrangedButtonItemsForContentWidth:(double)arg1 {
+    if ([BHTManager restoreFollowButton]) {
+        %orig(10000.0);
+    } else {
+        %orig(arg1);
+    }
+}
+
+%end
+
+static NSBundle *BHBundle() {
+    return [NSBundle bundleWithIdentifier:@"com.bandarhelal.BHTwitter"];
+}
+
+// MARK: Theme TFNBarButtonItemButtonV1
 %hook TFNBarButtonItemButtonV1
 
 - (void)didMoveToWindow {
