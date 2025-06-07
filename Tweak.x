@@ -31,6 +31,7 @@ static void BHT_applyThemeToWindow(UIWindow *window);
 static void BHT_ensureTheming(void);
 static void BHT_forceRefreshAllWindowAppearances(void);
 static void BHT_ensureThemingEngineSynchronized(BOOL forceSynchronize);
+static UIViewController* getViewControllerForView(UIView *view);
 
 // Theme state tracking
 static BOOL BHT_themeManagerInitialized = NO;
@@ -2485,8 +2486,8 @@ static NSTimer *cookieRetryTimer = nil;
     
     NSString *tweetIDStr = [NSString stringWithFormat:@"%lld", statusID];
     if (!tweetIDStr || tweetIDStr.length == 0) {
-        return;
-    }
+                return;
+            }
 
     // Initialize tweet sources if needed
     if (!tweetSources) {
@@ -2531,9 +2532,9 @@ static NSTimer *cookieRetryTimer = nil;
 
     NSString *currentTimeAgo = [footerItem performSelector:@selector(timeAgo)];
     if (!currentTimeAgo || currentTimeAgo.length == 0) {
-        return;
-    }
-    
+                return;
+            }
+
     // Don't append if source is already there
     if ([currentTimeAgo containsString:sourceText] || [currentTimeAgo containsString:@"Twitter for"] || [currentTimeAgo containsString:@"via "]) {
         return;
@@ -2605,67 +2606,67 @@ static NSTimer *cookieRetryTimer = nil;
     // Handle notification text replacements (your post -> your Tweet, etc.)
     if ([currentText containsString:@"your post"] || [currentText containsString:@"your Post"] ||
         [currentText containsString:@"reposted"] || [currentText containsString:@"Reposted"]) {
-        UIView *view = self;
-        BOOL isNotificationView = NO;
-        
-        // Walk up the view hierarchy to find notification context
-        while (view && !isNotificationView) {
-            if ([NSStringFromClass([view class]) containsString:@"Notification"] ||
-                [NSStringFromClass([view class]) containsString:@"T1NotificationsTimeline"]) {
-                isNotificationView = YES;
+            UIView *view = self;
+            BOOL isNotificationView = NO;
+            
+            // Walk up the view hierarchy to find notification context
+            while (view && !isNotificationView) {
+                if ([NSStringFromClass([view class]) containsString:@"Notification"] ||
+                    [NSStringFromClass([view class]) containsString:@"T1NotificationsTimeline"]) {
+                    isNotificationView = YES;
                 break;
+                }
+                view = view.superview;
             }
-            view = view.superview;
-        }
-        
-        // Only proceed if we're in a notification view
-        if (isNotificationView) {
+            
+            // Only proceed if we're in a notification view
+            if (isNotificationView) {
             if (!newString) {
                 newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
             }
-            
-            // Replace "your post" with "your Tweet"
-            NSRange postRange = [currentText rangeOfString:@"your post"];
-            if (postRange.location != NSNotFound) {
-                NSDictionary *existingAttributes = [newString attributesAtIndex:postRange.location effectiveRange:NULL];
-                [newString replaceCharactersInRange:postRange withString:@"your Tweet"];
-                [newString setAttributes:existingAttributes range:NSMakeRange(postRange.location, [@"your Tweet" length])];
-                modified = YES;
-            }
-            
-            // Also check for capitalized "Post"
-            postRange = [currentText rangeOfString:@"your Post"];
-            if (postRange.location != NSNotFound) {
-                NSDictionary *existingAttributes = [newString attributesAtIndex:postRange.location effectiveRange:NULL];
-                [newString replaceCharactersInRange:postRange withString:@"your Tweet"];
-                [newString setAttributes:existingAttributes range:NSMakeRange(postRange.location, [@"your Tweet" length])];
-                modified = YES;
-            }
-            
-            // Replace "reposted" with "Retweeted"
-            NSRange repostRange = [currentText rangeOfString:@"reposted"];
-            if (repostRange.location != NSNotFound) {
-                NSDictionary *existingAttributes = [newString attributesAtIndex:repostRange.location effectiveRange:NULL];
-                [newString replaceCharactersInRange:repostRange withString:@"Retweeted"];
-                [newString setAttributes:existingAttributes range:NSMakeRange(repostRange.location, [@"Retweeted" length])];
-                modified = YES;
-            }
-            
-            // Also check for capitalized "Reposted"
-            repostRange = [currentText rangeOfString:@"Reposted"];
-            if (repostRange.location != NSNotFound) {
-                NSDictionary *existingAttributes = [newString attributesAtIndex:repostRange.location effectiveRange:NULL];
-                [newString replaceCharactersInRange:repostRange withString:@"Retweeted"];
-                [newString setAttributes:existingAttributes range:NSMakeRange(repostRange.location, [@"Retweeted" length])];
-                modified = YES;
+                
+                // Replace "your post" with "your Tweet"
+                NSRange postRange = [currentText rangeOfString:@"your post"];
+                if (postRange.location != NSNotFound) {
+                    NSDictionary *existingAttributes = [newString attributesAtIndex:postRange.location effectiveRange:NULL];
+                    [newString replaceCharactersInRange:postRange withString:@"your Tweet"];
+                    [newString setAttributes:existingAttributes range:NSMakeRange(postRange.location, [@"your Tweet" length])];
+                    modified = YES;
+                }
+                
+                // Also check for capitalized "Post"
+                postRange = [currentText rangeOfString:@"your Post"];
+                if (postRange.location != NSNotFound) {
+                    NSDictionary *existingAttributes = [newString attributesAtIndex:postRange.location effectiveRange:NULL];
+                    [newString replaceCharactersInRange:postRange withString:@"your Tweet"];
+                    [newString setAttributes:existingAttributes range:NSMakeRange(postRange.location, [@"your Tweet" length])];
+                    modified = YES;
+                }
+                
+                // Replace "reposted" with "Retweeted"
+                NSRange repostRange = [currentText rangeOfString:@"reposted"];
+                if (repostRange.location != NSNotFound) {
+                    NSDictionary *existingAttributes = [newString attributesAtIndex:repostRange.location effectiveRange:NULL];
+                    [newString replaceCharactersInRange:repostRange withString:@"Retweeted"];
+                    [newString setAttributes:existingAttributes range:NSMakeRange(repostRange.location, [@"Retweeted" length])];
+                    modified = YES;
+                }
+                
+                // Also check for capitalized "Reposted"
+                repostRange = [currentText rangeOfString:@"Reposted"];
+                if (repostRange.location != NSNotFound) {
+                    NSDictionary *existingAttributes = [newString attributesAtIndex:repostRange.location effectiveRange:NULL];
+                    [newString replaceCharactersInRange:repostRange withString:@"Retweeted"];
+                    [newString setAttributes:existingAttributes range:NSMakeRange(repostRange.location, [@"Retweeted" length])];
+                    modified = YES;
             }
         }
     }
     
     // Apply the modified text model if we made any changes
     if (modified && newString) {
-        TFNAttributedTextModel *newModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newString];
-        %orig(newModel);
+                    TFNAttributedTextModel *newModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newString];
+                    %orig(newModel);
         return;
     }
     
@@ -2747,19 +2748,32 @@ static NSTimer *cookieRetryTimer = nil;
 
 // Helper function to recursively find and hide a TFNButton by accessibilityIdentifier
 static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString *targetAccessibilityId) {
-    if ([viewToSearch isKindOfClass:NSClassFromString(@"TFNButton")]) {
-        TFNButton *button = (TFNButton *)viewToSearch;
-        if ([button.accessibilityIdentifier isEqualToString:targetAccessibilityId]) {
-            button.hidden = YES;
-            return YES;
+    @try {
+        // Safety check: Ensure view and target are valid
+        if (!viewToSearch || !targetAccessibilityId || !viewToSearch.superview) {
+            return NO;
         }
-    }
-    for (UIView *subview in viewToSearch.subviews) {
-        if (findAndHideButtonWithAccessibilityId(subview, targetAccessibilityId)) {
-            return YES;
+        
+        if ([viewToSearch isKindOfClass:NSClassFromString(@"TFNButton")]) {
+            TFNButton *button = (TFNButton *)viewToSearch;
+            if ([button.accessibilityIdentifier isEqualToString:targetAccessibilityId]) {
+                button.hidden = YES;
+                return YES;
+            }
         }
+        
+        // Create a copy of subviews to avoid mutation during iteration
+        NSArray *subviews = [viewToSearch.subviews copy];
+        for (UIView *subview in subviews) {
+            if (findAndHideButtonWithAccessibilityId(subview, targetAccessibilityId)) {
+                return YES;
+            }
+        }
+        return NO;
+    } @catch (NSException *exception) {
+        NSLog(@"[BHTwitter] Exception in findAndHideButtonWithAccessibilityId: %@", exception);
+        return NO;
     }
-    return NO;
 }
 
 %hook T1ConversationFocalStatusView
@@ -2783,15 +2797,23 @@ static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString 
 
 - (void)viewDidLoad {
     %orig;
-    if ([BHTManager hideFollowButton]) {
-        findAndHideButtonWithAccessibilityId(self.view, @"FollowButton");
+    @try {
+        if ([BHTManager hideFollowButton] && self.view) {
+            findAndHideButtonWithAccessibilityId(self.view, @"FollowButton");
+        }
+    } @catch (NSException *exception) {
+        NSLog(@"[BHTwitter] Exception in T1ImmersiveViewController viewDidLoad: %@", exception);
     }
 }
 
 - (void)viewWillAppear:(BOOL)animated {
     %orig;
-    if ([BHTManager hideFollowButton]) {
-        findAndHideButtonWithAccessibilityId(self.view, @"FollowButton");
+    @try {
+        if ([BHTManager hideFollowButton] && self.view) {
+            findAndHideButtonWithAccessibilityId(self.view, @"FollowButton");
+        }
+    } @catch (NSException *exception) {
+        NSLog(@"[BHTwitter] Exception in T1ImmersiveViewController viewWillAppear: %@", exception);
     }
 }
 
@@ -2805,6 +2827,21 @@ static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString 
 @end
 
 %hook TUIFollowControl
+
+- (void)didMoveToWindow {
+    %orig;
+    @try {
+        if ([BHTManager hideFollowButton] && self) {
+            UIViewController *vc = getViewControllerForView(self);
+            if (vc && [vc isKindOfClass:NSClassFromString(@"T1TimelinesItemsCarouselViewController")]) {
+                self.hidden = YES;
+                self.alpha = 0.0;
+            }
+        }
+    } @catch (NSException *exception) {
+        NSLog(@"[BHTwitter] Exception in TUIFollowControl didMoveToWindow: %@", exception);
+    }
+}
 
 - (void)setVariant:(NSUInteger)variant {
     if ([BHTManager restoreFollowButton]) {
@@ -2863,17 +2900,37 @@ static Class gExploreHeroCellClass = nil;
 
 // Helper function to find the UIViewController managing a UIView
 static UIViewController* getViewControllerForView(UIView *view) {
-    UIResponder *responder = view;
-    while ((responder = [responder nextResponder])) {
-        if ([responder isKindOfClass:[UIViewController class]]) {
-            return (UIViewController *)responder;
+    @try {
+        // Safety check: Ensure view is valid
+        if (!view) {
+            return nil;
         }
-        // Stop if we reach top-level objects like UIWindow or UIApplication without finding a VC
-        if ([responder isKindOfClass:[UIWindow class]] || [responder isKindOfClass:[UIApplication class]]) {
-            break;
+        
+        UIResponder *responder = view;
+        NSInteger maxIterations = 20; // Prevent infinite loops
+        NSInteger currentIteration = 0;
+        
+        while ((responder = [responder nextResponder]) && currentIteration < maxIterations) {
+            currentIteration++;
+            
+            // Safety check: Ensure responder is still valid
+            if (!responder) {
+                break;
+            }
+            
+            if ([responder isKindOfClass:[UIViewController class]]) {
+                return (UIViewController *)responder;
+            }
+            // Stop if we reach top-level objects like UIWindow or UIApplication without finding a VC
+            if ([responder isKindOfClass:[UIWindow class]] || [responder isKindOfClass:[UIApplication class]]) {
+                break;
+            }
         }
+        return nil;
+    } @catch (NSException *exception) {
+        NSLog(@"[BHTwitter] Exception in getViewControllerForView: %@", exception);
+        return nil;
     }
-    return nil;
 }
 
 // Helper function to check if a view is inside T1ProfileHeaderViewController
@@ -2953,6 +3010,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     }
     return NO;
 }
+
+
 
 // MARK: - Immersive Player Timestamp Visibility Control
 
