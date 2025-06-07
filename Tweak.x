@@ -5458,3 +5458,30 @@ static UIView* findPagingScrollViewInView(UIView* view) {
     }
 }
 %end
+
+@implementation GeminiTranslator
+
++ (instancetype)sharedInstance {
+    static GeminiTranslator *sharedInstance = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        sharedInstance = [[GeminiTranslator alloc] init];
+    });
+    return sharedInstance;
+}
+
+- (void)translateText:(NSString *)text fromLanguage:(NSString *)sourceLanguage toLanguage:(NSString *)targetLanguage completion:(void (^)(NSString *translatedText, NSError *error))completion {
+    // Simple implementation - just return the original text for now
+    if (completion) {
+        completion(text, nil);
+    }
+}
+
+- (void)simplifiedTranslateAndDisplay:(NSString *)text fromViewController:(UIViewController *)viewController {
+    // Simple implementation - just show an alert with the text
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Translation" message:text preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+    [viewController presentViewController:alert animated:YES completion:nil];
+}
+
+@end
