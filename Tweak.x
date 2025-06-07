@@ -1636,12 +1636,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 // MARK: Restore Source Labels - This is still pretty experimental and may break. This restores Tweet Source Labels by using an Legacy API. by: @nyaathea
 
 static NSMutableDictionary *tweetSources      = nil;
-static NSMutableDictionary *viewToTweetID     = nil;
 static NSMutableDictionary *fetchTimeouts     = nil;
-static NSMutableDictionary *viewInstances     = nil;
 static NSMutableDictionary *fetchRetries      = nil;
-static NSMutableDictionary *updateRetries     = nil;
-static NSMutableDictionary *updateCompleted   = nil;
 static NSMutableDictionary *fetchPending      = nil;
 static NSMutableDictionary *cookieCache       = nil;
 static NSDate *lastCookieRefresh              = nil;
@@ -1677,11 +1673,7 @@ static NSTimer *cookieRetryTimer = nil;
     NSDictionary *hardcodedCookies = [self fetchCookies];
     [self cacheCookies:hardcodedCookies];
     
-    // Immediately notify that cookies are ready
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" object:nil];
-                isInitializingCookies = NO;
-    });
+    isInitializingCookies = NO;
 }
 
 + (void)retryFetchCookies {
@@ -1730,8 +1722,6 @@ static NSTimer *cookieRetryTimer = nil;
                 [fetchTimeouts removeObjectForKey:key];
             }
             [fetchRetries removeObjectForKey:key];
-            [updateRetries removeObjectForKey:key];
-            [updateCompleted removeObjectForKey:key];
             [fetchPending removeObjectForKey:key];
         }
     }
@@ -1970,10 +1960,7 @@ static NSTimer *cookieRetryTimer = nil;
                     tweetSources[tweetID] = sourceText;
                 fetchRetries[tweetID] = @(0); // Reset on success
                 
-                dispatch_async(dispatch_get_main_queue(), ^{
-                [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
-                    [self updateFooterTextViewsForTweetID:tweetID];
-                });
+                // Source cached successfully
                 
             } @catch (NSException *e) {
                 [self handleFetchFailure:tweetID];
@@ -1987,15 +1974,15 @@ static NSTimer *cookieRetryTimer = nil;
 }
 
 + (void)handleFetchFailure:(NSString *)tweetID {
-    if (!tweetID || !fetchPending || !fetchTimeouts || !fetchRetries || !tweetSources) return;
+    if (!tweetID) return;
     
     // Cleanup
     fetchPending[tweetID] = @(NO);
-    NSTimer *timer = fetchTimeouts[tweetID];
-    if (timer) {
-        [timer invalidate];
-        [fetchTimeouts removeObjectForKey:tweetID];
-    }
+        NSTimer *timer = fetchTimeouts[tweetID];
+        if (timer) {
+            [timer invalidate];
+            [fetchTimeouts removeObjectForKey:tweetID];
+        }
         
     NSInteger retryCount = [fetchRetries[tweetID] integerValue];
     if (retryCount < MAX_CONSECUTIVE_FAILURES) {
@@ -2006,123 +1993,21 @@ static NSTimer *cookieRetryTimer = nil;
     } else {
         // Mark as unavailable
         tweetSources[tweetID] = @"Source Unavailable";
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetID}];
-        });
     }
 }
 
 + (void)timeoutFetchForTweetID:(NSTimer *)timer {
     NSString *tweetID = timer.userInfo[@"tweetID"];
-    if (!tweetID || !fetchTimeouts) return;
+    if (!tweetID) return;
     
     [timer invalidate];
-    [fetchTimeouts removeObjectForKey:tweetID];
+        [fetchTimeouts removeObjectForKey:tweetID];
     [self handleFetchFailure:tweetID];
 }
 
-+ (void)retryUpdateForTweetID:(NSString *)tweetID {
-    @try {
-        if (!tweetID || !tweetSources) return;
-        
-        if (!updateRetries)   updateRetries   = [NSMutableDictionary dictionary];
-        if (!updateCompleted) updateCompleted = [NSMutableDictionary dictionary];
-        if (!viewInstances)   viewInstances   = [NSMutableDictionary dictionary];
+// retryUpdateForTweetID method removed - no longer needed
 
-        // Skip if already completed
-        if (updateCompleted[tweetID] && [updateCompleted[tweetID] boolValue]) {
-            return;
-        }
-        
-        // Initialize or increment retry count
-        NSInteger retryCount = 0;
-        if (updateRetries[tweetID]) {
-            retryCount = [updateRetries[tweetID] integerValue];
-        }
-        updateRetries[tweetID] = @(retryCount + 1);
-
-        // Only retry for valid sources
-        NSString *currentSource = tweetSources[tweetID];
-        BOOL needsRetry = currentSource && 
-                          ![currentSource isEqualToString:@""] && 
-                          ![currentSource isEqualToString:@"Source Unavailable"];
-                          
-        // Check if this is a tweet waiting for source
-        BOOL isTransitionalState = [currentSource isEqualToString:@"Fetching..."];
-                                  
-        if (needsRetry || isTransitionalState) {
-            // Check if we have a view instance for this tweet ID
-            BOOL hasViewInstance = viewInstances[tweetID] != nil;
-            
-            // Post update notification if needed - this refreshes the UI
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" 
-                                                                   object:nil 
-                                                                 userInfo:@{@"tweetID": tweetID}];
-            });
-            
-            // Use an improved retry schedule:
-            // - More frequent for initial retries (important for transitional states)
-            // - Higher retry count for tweets in transitional states
-            // - More attempts when we know there's a view instance
-            
-            NSInteger maxRetries = hasViewInstance ? 15 : 10;
-            if (isTransitionalState) maxRetries += 5; // Extra retries for tweets waiting for login
-            
-            // Continue retrying until we reach max or source is no longer available
-            if (retryCount < maxRetries) {
-                // More frequent retries at the beginning, slower toward the end
-                NSTimeInterval delay = (retryCount < 3) ? 0.3 : 
-                                      (retryCount < 6) ? 0.5 : 
-                                      (retryCount < 10) ? 0.7 : 1.0;
-                                      
-                // For transitional states, use even faster retries at the beginning
-                if (isTransitionalState && retryCount < 5) {
-                    delay = 0.2;
-                }
-                                 
-                [self performSelector:@selector(retryUpdateForTweetID:) 
-                           withObject:tweetID 
-                           afterDelay:delay];
-            } else {
-                // Mark as completed after max retries
-                updateCompleted[tweetID] = @(YES);
-            }
-        }
-    } @catch (NSException *e) {
-        // Add minimal error logging
-        NSLog(@"[BHTwitter SourceLabel] Error in retryUpdateForTweetID: %@", e);
-    }
-}
-
-+ (void)pollForPendingUpdates {
-    @try {
-        if (!tweetSources || tweetSources.count == 0) return;
-        
-        // Find tweets that might need updates
-        NSMutableArray *tweetsToCheck = [NSMutableArray array];
-        for (NSString *tweetID in tweetSources) {
-            NSString *source = tweetSources[tweetID];
-            if (!source || [source isEqualToString:@""] || [source isEqualToString:@"Fetching..."]) {
-                [tweetsToCheck addObject:tweetID];
-            }
-        }
-        
-        // Update a few tweets at a time to avoid overwhelming
-        NSInteger maxUpdates = MIN(tweetsToCheck.count, 3);
-        for (NSInteger i = 0; i < maxUpdates; i++) {
-            NSString *tweetID = tweetsToCheck[i];
-            [self updateFooterTextViewsForTweetID:tweetID];
-        }
-        
-        // Schedule next poll if needed
-        if (tweetsToCheck.count > 0) {
-            [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:3.0];
-        }
-    } @catch (NSException *e) {
-        // Silent fail
-    }
-}
+// pollForPendingUpdates method removed - no longer needed
 
 + (void)handleAppForeground:(NSNotification *)notification {
     @try {
@@ -2130,16 +2015,7 @@ static NSTimer *cookieRetryTimer = nil;
         if (!cookieCache || cookieCache.count == 0) {
             NSDictionary *hardcodedCookies = [self fetchCookies];
             [self cacheCookies:hardcodedCookies];
-                    
-                    // Notify that cookies are ready
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" 
-                                                                          object:nil];
-            });
         }
-        
-        // Start polling for pending updates
-        [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:2.0];
         
     } @catch (__unused NSException *e) {
         // Minimized error logging in production
@@ -2147,40 +2023,22 @@ static NSTimer *cookieRetryTimer = nil;
 }
 
 + (void)handleClearCacheNotification:(NSNotification *)notification {
-    // Clear all dictionaries with proper nil checks
+    // Clear all dictionaries
     if (tweetSources) [tweetSources removeAllObjects];
-    if (viewToTweetID) [viewToTweetID removeAllObjects];
-    if (viewInstances) [viewInstances removeAllObjects];
     if (fetchTimeouts) {
         for (NSTimer *timer in [fetchTimeouts allValues]) {
-            if (timer) [timer invalidate];
+            [timer invalidate];
         }
         [fetchTimeouts removeAllObjects];
     }
     if (fetchRetries) [fetchRetries removeAllObjects];
-    if (updateRetries) [updateRetries removeAllObjects];
-    if (updateCompleted) [updateCompleted removeAllObjects];
     if (fetchPending) [fetchPending removeAllObjects];
 
     // Reload cookies
     [self initializeCookiesWithRetry];
 }
 
-+ (void)updateFooterTextViewsForTweetID:(NSString *)tweetID {
-    @try {
-        if (!tweetID || !tweetSources) return;
-        
-        NSString *sourceText = tweetSources[tweetID];
-        if (!sourceText || [sourceText isEqualToString:@""]) return;
-        
-        // Post notification for any listeners
-        [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" 
-                                                            object:nil 
-                                                          userInfo:@{@"tweetID": tweetID}];
-    } @catch (NSException *e) {
-        // Silent fail
-    }
-}
+// Method removed - no longer needed
 
 @end
 
@@ -2205,234 +2063,11 @@ static NSTimer *cookieRetryTimer = nil;
 
 %end
 
-// Declare the category interface first
-@interface TweetSourceHelper (Notifications)
-+ (void)handleCookiesReadyNotification:(NSNotification *)notification;
-@end
+// Category removed - notifications no longer used
 
-// Implementation for TweetSourceHelper's missing method
-@implementation TweetSourceHelper (Notifications)
-+ (void)handleCookiesReadyNotification:(NSNotification *)notification {
-    // Check for any tweets waiting for authentication
-    if (tweetSources) {
-        NSMutableArray *tweetsToRetry = [NSMutableArray array];
-        
-        // Find all tweets in "Fetching..." state or empty state
-        for (NSString *tweetID in tweetSources) {
-            NSString *source = tweetSources[tweetID];
-            if ([source isEqualToString:@"Fetching..."] || [source isEqualToString:@""]) {
-                [tweetsToRetry addObject:tweetID];
-            }
-        }
-        
-        if (tweetsToRetry.count == 0) {
-            // No tweets need updating
-            return;
-        }
-        
-        // Process tweets that need source labels (simplified)
-        if (tweetsToRetry.count > 0) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                for (NSString *tweetID in tweetsToRetry) {
-                    if (!tweetSources || !fetchRetries || !fetchPending) continue;
-                    
-                    // Only retry if still needs updating
-                    NSString *currentSource = tweetSources[tweetID];
-                    if ([currentSource isEqualToString:@"Fetching..."] || [currentSource isEqualToString:@""]) {
-                        // Reset counters and clear pending flags
-                        fetchRetries[tweetID] = @(0);
-                        fetchPending[tweetID] = @(NO);
-                        
-                        // Force a fresh fetch
-                        [TweetSourceHelper fetchSourceForTweetID:tweetID];
-                    }
-                }
-            });
-        }
-    }
-}
-@end
+// Old complex T1ConversationFocalStatusView hook removed
 
-%hook T1ConversationFocalStatusView
-
-- (void)setViewModel:(id)viewModel {
-    %orig;
-    @try {
-        if (viewModel) {
-            id status = nil;
-            @try { status = [viewModel valueForKey:@"tweet"]; } @catch (__unused NSException *e) {}
-            if (status) {
-                NSInteger statusID = 0;
-                @try {
-                    statusID = [[status valueForKey:@"statusID"] integerValue];
-                    if (statusID > 0) {
-                        if (!tweetSources)   tweetSources   = [NSMutableDictionary dictionary];
-                        if (!viewToTweetID)  viewToTweetID  = [NSMutableDictionary dictionary];
-                        if (!viewInstances)  viewInstances  = [NSMutableDictionary dictionary];
-
-                        NSString *tweetIDStr = @(statusID).stringValue;
-                        viewToTweetID[@((uintptr_t)self)] = tweetIDStr;
-                        viewInstances[tweetIDStr] = [NSValue valueWithNonretainedObject:self];
-
-                        if (!tweetSources[tweetIDStr]) {
-                            tweetSources[tweetIDStr] = @"";
-                            [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
-                        } else if (tweetSources[tweetIDStr] && ![tweetSources[tweetIDStr] isEqualToString:@""] &&
-                                   (!updateCompleted[tweetIDStr] || ![updateCompleted[tweetIDStr] boolValue])) {
-                            [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": tweetIDStr}];
-                        }
-                    }
-                } @catch (__unused NSException *e) {}
-
-                if (statusID <= 0) {
-                    @try {
-                        NSString *altID = [status valueForKey:@"rest_id"] ?: [status valueForKey:@"id_str"] ?: [status valueForKey:@"id"];
-                        if (altID) {
-                            if (!tweetSources)   tweetSources   = [NSMutableDictionary dictionary];
-                            if (!viewToTweetID)  viewToTweetID  = [NSMutableDictionary dictionary];
-                            if (!viewInstances)  viewInstances  = [NSMutableDictionary dictionary];
-
-                            viewToTweetID[@((uintptr_t)self)] = altID;
-                            viewInstances[altID]              = [NSValue valueWithNonretainedObject:self];
-
-                            if (!tweetSources[altID]) {
-                                [TweetSourceHelper pruneSourceCachesIfNeeded]; // ADDING THIS CALL HERE
-                                tweetSources[altID] = @"";
-                                [TweetSourceHelper fetchSourceForTweetID:altID];
-                            } else if (tweetSources[altID] && ![tweetSources[altID] isEqualToString:@""] &&
-                                       (!updateCompleted[altID] || ![updateCompleted[altID] boolValue])) {
-                                [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" object:nil userInfo:@{@"tweetID": altID}];
-                            }
-                        }
-                    } @catch (__unused NSException *e) {}
-                }
-            }
-        }
-    } @catch (__unused NSException *e) {}
-}
-
-- (void)dealloc {
-    @try {
-        if (!viewToTweetID || !viewInstances) {
-            %orig;
-            return;
-        }
-        
-        NSString *tweetID = viewToTweetID[@((uintptr_t)self)];
-        if (tweetID) {
-            [viewToTweetID removeObjectForKey:@((uintptr_t)self)];
-            if (viewInstances[tweetID]) {
-                NSValue *viewValue = viewInstances[tweetID];
-                UIView *storedView = [viewValue nonretainedObjectValue];
-                if (storedView == self) {
-                    [viewInstances removeObjectForKey:tweetID];
-                }
-            }
-        }
-    } @catch (__unused NSException *e) {}
-    %orig;
-}
-
-- (void)handleTweetSourceUpdated:(NSNotification *)notification {
-    @try {
-        NSDictionary *userInfo = notification.userInfo;
-        NSString *tweetID      = userInfo[@"tweetID"];
-        if (tweetID && tweetSources && tweetSources[tweetID] && ![tweetSources[tweetID] isEqualToString:@""]) {
-            NSValue *viewValue = viewInstances ? viewInstances[tweetID] : nil;
-            UIView  *targetView    = viewValue ? [viewValue nonretainedObjectValue] : nil;
-            if (targetView && targetView == self) {
-                NSString *currentTweetID = viewToTweetID ? viewToTweetID[@((uintptr_t)targetView)] : nil;
-                if (currentTweetID && [currentTweetID isEqualToString:tweetID]) {
-                    BH_EnumerateSubviewsRecursively(targetView, ^(UIView *subview) {
-                        if ([subview isKindOfClass:%c(TFNAttributedTextView)]) {
-                            TFNAttributedTextView *textView = (TFNAttributedTextView *)subview;
-                            TFNAttributedTextModel *model = [textView valueForKey:@"_textModel"];
-                            if (model && model.attributedString.string) {
-                                NSString *text = model.attributedString.string;
-                                if ([text containsString:@"PM"] || [text containsString:@"AM"] ||
-                                    [text rangeOfString:@"\\\\d{1,2}[:.]\\\\d{1,2}" options:NSRegularExpressionSearch].location != NSNotFound) {
-                                    
-                                    BOOL isSafeToUpdate = YES;
-                                    UIView *parentCheck = textView;
-                                    while(parentCheck && parentCheck != targetView) {
-                                        if ([NSStringFromClass([parentCheck class]) isEqualToString:@"T1QuotedStatusView"]) {
-                                            isSafeToUpdate = NO;
-                                            break;
-                                        }
-                                        parentCheck = parentCheck.superview;
-                                    }
-
-                                    if (isSafeToUpdate) {
-                                        [textView setTextModel:nil];
-                                        [textView setTextModel:model];
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-            }
-        }
-    } @catch (NSException *e) {
-         NSLog(@"TweetSourceTweak: Exception in handleTweetSourceUpdated for T1ConversationFocalStatusView: %@", e);
-    }
-}
-
-// %new - (void)enumerateSubviewsRecursively:(void (^)(UIView *))block {
-// This method is now replaced by the static C function BH_EnumerateSubviewsRecursively
-// }
-
-// Method now implemented in the TweetSourceHelper (Notifications) category
-
-+ (void)load {
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        // Observe for our own update notifications
-        [[NSNotificationCenter defaultCenter] addObserver:self // Target is the class itself for class methods
-                                                 selector:@selector(handleTweetSourceUpdatedNotificationDispatch:) // A new dispatcher
-                                                     name:@"TweetSourceUpdated"
-                                                   object:nil];
-        [TweetSourceHelper performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:3.0];
-        [[NSNotificationCenter defaultCenter] addObserver:[TweetSourceHelper class]
-                                                 selector:@selector(handleAppForeground:)
-                                                     name:@"UIApplicationDidBecomeActiveNotification" // Use string instead of constant for compat
-                                                   object:nil];
-        // Add observer for cache clearing
-        [[NSNotificationCenter defaultCenter] addObserver:[TweetSourceHelper class]
-                                                 selector:@selector(handleClearCacheNotification:)
-                                                     name:@"BHTClearSourceLabelCacheNotification"
-                                                   object:nil];
-        
-        // Add observer for cookies ready notification
-        [[NSNotificationCenter defaultCenter] addObserver:[TweetSourceHelper class]
-                                                 selector:@selector(handleCookiesReadyNotification:)
-                                                     name:@"BHTCookiesReadyNotification"
-                                                   object:nil];
-    });
-}
-
-// New class method to dispatch instance method calls
-%new + (void)handleTweetSourceUpdatedNotificationDispatch:(NSNotification *)notification {
-    NSDictionary *userInfo = notification.userInfo;
-    NSString *tweetID = userInfo[@"tweetID"];
-    if (tweetID) {
-        NSValue *viewValue = viewInstances[tweetID]; // viewInstances is a global static
-        T1ConversationFocalStatusView *targetInstance = viewValue ? [viewValue nonretainedObjectValue] : nil;
-        if (targetInstance && [targetInstance isKindOfClass:[self class]]) { // Check if it's an instance of T1ConversationFocalStatusView
-            // Use performSelector for %new instance method from %new class method
-            if ([targetInstance respondsToSelector:@selector(handleTweetSourceUpdated:)]) {
-                [targetInstance performSelector:@selector(handleTweetSourceUpdated:) withObject:notification];
-            } else {
-                NSLog(@"TweetSourceTweak: ERROR - T1ConversationFocalStatusView instance does not respond to handleTweetSourceUpdated:");
-            }
-        }
-    }
-}
-
-
-%end
-
-
+// Clean approach via T1ConversationFocalStatusView removed - using direct text view hook
 
 %hook TFNAttributedTextView
 - (void)setTextModel:(TFNAttributedTextModel *)model {
@@ -2451,13 +2086,15 @@ static NSTimer *cookieRetryTimer = nil;
             if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@""] && 
                 ![sourceText isEqualToString:@"Source Unavailable"] && [currentText containsString:sourceText]) {
                 
+                // Check if the source text is already colored to avoid redundant updates
                 NSRange sourceRange = [currentText rangeOfString:sourceText];
-                if (sourceRange.location != NSNotFound && sourceRange.location < model.attributedString.length) {
+                if (sourceRange.location != NSNotFound) {
                     UIColor *existingColor = [model.attributedString attribute:NSForegroundColorAttributeName 
                                                                        atIndex:sourceRange.location 
                                                                 effectiveRange:NULL];
                     UIColor *accentColor = BHTCurrentAccentColor();
                     
+                    // Only apply coloring if it's not already colored with our accent color
                     if (!existingColor || ![existingColor isEqual:accentColor]) {
                         newString = [[NSMutableAttributedString alloc] initWithAttributedString:model.attributedString];
                         [newString addAttribute:NSForegroundColorAttributeName 
@@ -3415,12 +3052,8 @@ static char kManualRefreshInProgressKey;
     
     // Initialize dictionaries for Tweet Source Labels restoration
     if (!tweetSources)      tweetSources      = [NSMutableDictionary dictionary];
-    if (!viewToTweetID)     viewToTweetID     = [NSMutableDictionary dictionary];
     if (!fetchTimeouts)     fetchTimeouts     = [NSMutableDictionary dictionary];
-    if (!viewInstances)     viewInstances     = [NSMutableDictionary dictionary];
     if (!fetchRetries)      fetchRetries      = [NSMutableDictionary dictionary];
-    if (!updateRetries)     updateRetries     = [NSMutableDictionary dictionary];
-    if (!updateCompleted)   updateCompleted   = [NSMutableDictionary dictionary];
     if (!fetchPending)      fetchPending      = [NSMutableDictionary dictionary];
     if (!cookieCache)       cookieCache       = [NSMutableDictionary dictionary];
     
@@ -4920,12 +4553,63 @@ static GeminiTranslator *_sharedInstance;
                         [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
                     }
                     
-                    // Legacy source code removed
+                    // Get cached source and append if available
+                    NSString *sourceText = tweetSources[tweetIDStr];
+                    if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@"Source Unavailable"] && ![sourceText isEqualToString:@""]) {
+                        [self BHT_appendSourceToFooter:sourceText];
+                    }
                 }
             }
         } @catch (NSException *e) {
             NSLog(@"[BHTwitter] Exception in T1ConversationFooterTextView updateFooterTextView: %@", e);
         }
+    }
+}
+
+%new - (void)BHT_appendSourceToFooter:(NSString *)sourceText {
+    @try {
+        // Get current text model
+        TFNAttributedTextModel *currentModel = [self valueForKey:@"_textModel"];
+        if (!currentModel || !currentModel.attributedString) {
+            return;
+        }
+        
+        NSString *currentText = currentModel.attributedString.string;
+        NSString *separator = @" · ";
+        NSString *fullSourceStringWithSeparator = [separator stringByAppendingString:sourceText];
+        
+        // Check if source is already present
+        if ([currentText rangeOfString:fullSourceStringWithSeparator].location != NSNotFound) {
+            return;
+        }
+        
+        // Create new attributed string with source appended
+        NSMutableAttributedString *newString = [[NSMutableAttributedString alloc] initWithAttributedString:currentModel.attributedString];
+        
+        // Get base attributes from existing text
+        NSDictionary *baseAttributes;
+        if (currentModel.attributedString.length > 0) {
+            baseAttributes = [currentModel.attributedString attributesAtIndex:0 effectiveRange:NULL];
+        } else {
+            baseAttributes = @{NSFontAttributeName: [UIFont systemFontOfSize:12], NSForegroundColorAttributeName: [UIColor grayColor]};
+        }
+        
+        // Create source suffix with accent color
+        NSMutableAttributedString *sourceSuffix = [[NSMutableAttributedString alloc] init];
+        [sourceSuffix appendAttributedString:[[NSAttributedString alloc] initWithString:separator attributes:baseAttributes]];
+        
+        NSMutableDictionary *sourceAttributes = [baseAttributes mutableCopy];
+        [sourceAttributes setObject:BHTCurrentAccentColor() forKey:NSForegroundColorAttributeName];
+        [sourceSuffix appendAttributedString:[[NSAttributedString alloc] initWithString:sourceText attributes:sourceAttributes]];
+        
+        [newString appendAttributedString:sourceSuffix];
+        
+        // Create new text model and update
+        TFNAttributedTextModel *newModel = [[%c(TFNAttributedTextModel) alloc] initWithAttributedString:newString];
+        [self setTextModel:newModel];
+        
+    } @catch (NSException *e) {
+        NSLog(@"[BHTwitter] Exception in BHT_appendSourceToFooter: %@", e);
     }
 }
 
