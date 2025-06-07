@@ -4701,58 +4701,6 @@ static void findTextView(UIView *view, UITextView **tweetTextView) {
 
 %end
 
-// Hook TTAStatusBodySelectableContentTextView to prevent text reversion
-%hook TTAStatusBodySelectableContentTextView
-
-static char kIsTranslatedKey;
-static char kOriginalTextKey;
-static char kTranslatedTextKey;
-
-- (void)setAttributedText:(NSAttributedString *)attributedText {
-    // Check if we're currently showing translated text
-    NSNumber *isTranslated = objc_getAssociatedObject(self, &kIsTranslatedKey);
-    
-    if (isTranslated && [isTranslated boolValue]) {
-        // If we're in translated mode, don't allow external updates to override our translation
-        NSAttributedString *currentTranslatedText = objc_getAssociatedObject(self, &kTranslatedTextKey);
-        if (currentTranslatedText && ![attributedText.string isEqualToString:currentTranslatedText.string]) {
-            // External code is trying to revert our translation, ignore it
-            return;
-        }
-    }
-    
-    // Store original text if this is the first time setting text (not translated)
-    if (!isTranslated || ![isTranslated boolValue]) {
-        objc_setAssociatedObject(self, &kOriginalTextKey, attributedText, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    }
-    
-    %orig(attributedText);
-}
-
-%new - (void)BHT_setTranslatedText:(NSAttributedString *)translatedText {
-    // Store the translated text and mark as translated
-    objc_setAssociatedObject(self, &kTranslatedTextKey, translatedText, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    objc_setAssociatedObject(self, &kIsTranslatedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    
-    // Set the text directly
-    [self setAttributedText:translatedText];
-}
-
-%new - (void)BHT_restoreOriginalText {
-    NSAttributedString *originalText = objc_getAssociatedObject(self, &kOriginalTextKey);
-    if (originalText) {
-        objc_setAssociatedObject(self, &kIsTranslatedKey, @NO, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        [self setAttributedText:originalText];
-    }
-}
-
-%new - (BOOL)BHT_isShowingTranslatedText {
-    NSNumber *isTranslated = objc_getAssociatedObject(self, &kIsTranslatedKey);
-    return isTranslated && [isTranslated boolValue];
-}
-
-%end
-
 // Hook TFNComposableViewAdapterSet to filter out translate adapters
 %hook TFNComposableViewAdapterSet
 
@@ -5552,16 +5500,25 @@ static BOOL isHomeTimelinePagingScrollView(UIView *instance) {
 }
 
 %new
-- (void)forceUpdateScrollViewToIndex:(NSInteger)index {
-    if (!isHomeTimelineSegmentedController(self)) return;
-    UIView *scrollViewToUpdate = nil;
-    for (UIView *subview in self.view.subviews) {
-        if ([subview isKindOfClass:NSClassFromString(@"TFNPagingScrollView")]) {
-            scrollViewToUpdate = subview; break;
-        } else if ([subview isKindOfClass:[UIScrollView class]]) {
-            if (!scrollViewToUpdate) scrollViewToUpdate = subview;
+// Helper to recursively find the paging scroll view
+static UIView* findPagingScrollViewInView(UIView* view) {
+    if ([view isKindOfClass:NSClassFromString(@"TFNPagingScrollView")]) {
+        return view;
+    }
+    for (UIView* subview in view.subviews) {
+        UIView* result = findPagingScrollViewInView(subview);
+        if (result) {
+            return result;
         }
     }
+    return nil;
+}
+
+- (void)forceUpdateScrollViewToIndex:(NSInteger)index {
+    if (!isHomeTimelineSegmentedController(self)) return;
+    
+    UIView *scrollViewToUpdate = findPagingScrollViewInView(self.view);
+
     if (scrollViewToUpdate && [scrollViewToUpdate isKindOfClass:[UIScrollView class]]) {
         UIScrollView *actualScrollView = (UIScrollView *)scrollViewToUpdate;
         if ([actualScrollView respondsToSelector:@selector(_setContentOffsetAnimationDuration:)]) {
@@ -5572,7 +5529,11 @@ static BOOL isHomeTimelinePagingScrollView(UIView *instance) {
             NSLog(@"[TwitTweak] HomeTimelineSegmentedVC: forceUpdateScrollViewToIndex calling setContentOffset on actualScrollView (animated:NO) for index %ld, offset %f", (long)index, offsetX);
             [actualScrollView setContentOffset:CGPointMake(offsetX, 0) animated:NO];
         } else {
-            NSLog(@"[TwitTweak] HomeTimelineSegmentedVC: forceUpdateScrollViewToIndex - Scroll view width 0 for index %ld.", (long)index);
+            NSLog(@"[TwitTweak] HomeTimelineSegmentedVC: forceUpdateScrollViewToIndex - Scroll view width 0 for index %ld. Will retry shortly.", (long)index);
+            // Retry after a short delay in case the layout wasn't ready
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                [self forceUpdateScrollViewToIndex:index];
+            });
         }
     } else {
          NSLog(@"[TwitTweak] HomeTimelineSegmentedVC: forceUpdateScrollViewToIndex - NO scroll view found.");
@@ -5633,28 +5594,30 @@ static BOOL isHomeTimelinePagingScrollView(UIView *instance) {
     %orig;
     AddToggleButtonToNavigationBar(self);
     
-    // Final check to ensure the scroll view is in the correct state after loading.
-    TFNScrollingSegmentedViewController *segmentedVC = nil;
-    for (UIViewController *childVC in [self childViewControllers]) {
-        if ([childVC isKindOfClass:NSClassFromString(@"TFNScrollingSegmentedViewController")]) {
-            segmentedVC = (TFNScrollingSegmentedViewController *)childVC;
-            break;
-        }
-    }
-    if (segmentedVC && isHomeTimelineSegmentedController(segmentedVC)) {
-        NSInteger savedIndex = GetSavedTimelineIndex();
-        if (segmentedVC.selectedIndex != savedIndex) {
-            NSLog(@"[TwitTweak] THFHomeTimelineVC viewDidAppear: Correcting index from %ld to saved %ld.", (long)segmentedVC.selectedIndex, (long)savedIndex);
-            segmentedVC.selectedIndex = savedIndex;
-        }
-        NSLog(@"[TwitTweak] THFHomeTimelineVC viewDidAppear: Forcing scroll view to index %ld.", (long)savedIndex);
-        [segmentedVC forceUpdateScrollViewToIndex:savedIndex];
-    }
-
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         if (gIsInitialLoadForAnimation) {
             NSLog(@"[TwitTweak] Initial load complete flag SET, tab switch animations now enabled.");
             gIsInitialLoadForAnimation = NO;
+        }
+
+        // Final check to ensure the scroll view is in the correct state after loading.
+        TFNScrollingSegmentedViewController *segmentedVC = nil;
+        for (UIViewController *childVC in [self childViewControllers]) {
+            if ([childVC isKindOfClass:NSClassFromString(@"TFNScrollingSegmentedViewController")]) {
+                segmentedVC = (TFNScrollingSegmentedViewController *)childVC;
+                break;
+            }
+        }
+        if (segmentedVC && isHomeTimelineSegmentedController(segmentedVC)) {
+            NSInteger savedIndex = GetSavedTimelineIndex();
+            if (segmentedVC.selectedIndex != savedIndex) {
+                NSLog(@"[TwitTweak] THFHomeTimelineVC viewDidAppear: Correcting index from %ld to saved %ld.", (long)segmentedVC.selectedIndex, (long)savedIndex);
+                segmentedVC.selectedIndex = savedIndex;
+            } else {
+                // Even if index is correct, the scroll view might be in the wrong place.
+                NSLog(@"[TwitTweak] THFHomeTimelineVC viewDidAppear: Forcing scroll view to index %ld.", (long)savedIndex);
+                [segmentedVC forceUpdateScrollViewToIndex:savedIndex];
+            }
         }
     });
 }
