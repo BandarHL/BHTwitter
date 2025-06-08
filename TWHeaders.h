@@ -133,6 +133,15 @@ static NSString *_lastCopiedURL;
 @interface TFNNavigationController : UINavigationController
 @end
 
+@interface T1TimelineNavigationController : TFNNavigationController
+- (void)BHT_addSearchButtonToNavigationContentView;
+- (void)BHT_searchButtonTapped:(UIButton *)sender;
+@end
+
+@interface T1TabNavigationController : TFNNavigationController
+- (void)_t1_action_didTapSearchButton:(id)arg1;
+@end
+
 @interface TTSSearchTypeaheadViewController : TFNItemsDataViewController
 - (void)clearActionControlWantsClear:(id)arg1;
 @end

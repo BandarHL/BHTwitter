@@ -5279,3 +5279,101 @@ static NSBundle *BHBundle() {
         }
     }
 %end
+
+// MARK: Add search button to T1TimelineNavigationController
+%hook T1TimelineNavigationController
+
+- (void)viewDidLoad {
+    %orig;
+    
+    // Find the _UINavigationContentView and add our search button
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self BHT_addSearchButtonToNavigationContentView];
+    });
+}
+
+- (void)viewDidAppear:(BOOL)animated {
+    %orig(animated);
+    
+    // Ensure the search button is added when view appears
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self BHT_addSearchButtonToNavigationContentView];
+    });
+}
+
+%new
+- (void)BHT_addSearchButtonToNavigationContentView {
+    @try {
+        // Find the _UINavigationContentView
+        UIView *navigationContentView = nil;
+        for (UIView *subview in self.navigationBar.subviews) {
+            if ([NSStringFromClass([subview class]) isEqualToString:@"_UINavigationContentView"]) {
+                navigationContentView = subview;
+                break;
+            }
+        }
+        
+        if (!navigationContentView) {
+            return;
+        }
+        
+        // Check if we already added the search button
+        UIButton *existingButton = [navigationContentView viewWithTag:9999];
+        if (existingButton) {
+            return; // Button already exists
+        }
+        
+        // Create the search button
+        UIButton *searchButton = [UIButton buttonWithType:UIButtonTypeSystem];
+        searchButton.tag = 9999; // Use a unique tag to identify our button
+        
+        // Set the search icon using tfn_vectorImageNamed
+        UIImage *searchIcon = [UIImage tfn_vectorImageNamed:@"search" fitsSize:CGSizeMake(24, 24) fillColor:[UIColor systemBlueColor]];
+        [searchButton setImage:searchIcon forState:UIControlStateNormal];
+        
+        // Configure button appearance
+        searchButton.tintColor = [UIColor systemBlueColor];
+        searchButton.backgroundColor = [UIColor clearColor];
+        
+        // Add target action
+        [searchButton addTarget:self action:@selector(BHT_searchButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
+        
+        // Set up constraints
+        searchButton.translatesAutoresizingMaskIntoConstraints = NO;
+        [navigationContentView addSubview:searchButton];
+        
+        // Position the button on the right side
+        [NSLayoutConstraint activateConstraints:@[
+            [searchButton.trailingAnchor constraintEqualToAnchor:navigationContentView.trailingAnchor constant:-16],
+            [searchButton.centerYAnchor constraintEqualToAnchor:navigationContentView.centerYAnchor],
+            [searchButton.widthAnchor constraintEqualToConstant:44],
+            [searchButton.heightAnchor constraintEqualToConstant:44]
+        ]];
+        
+    } @catch (NSException *exception) {
+        NSLog(@"[BHTwitter] Exception in BHT_addSearchButtonToNavigationContentView: %@", exception);
+    }
+}
+
+%new
+- (void)BHT_searchButtonTapped:(UIButton *)sender {
+    @try {
+        // Find the T1TabNavigationController in the hierarchy
+        UIViewController *current = self;
+        while (current) {
+            if ([current isKindOfClass:%c(T1TabNavigationController)]) {
+                // Cast to T1TabNavigationController and call the search action
+                T1TabNavigationController *tabNavController = (T1TabNavigationController *)current;
+                [tabNavController _t1_action_didTapSearchButton:sender];
+                return;
+            }
+            current = current.parentViewController;
+        }
+        
+        NSLog(@"[BHTwitter] Could not find T1TabNavigationController in hierarchy");
+    } @catch (NSException *exception) {
+        NSLog(@"[BHTwitter] Exception in BHT_searchButtonTapped: %@", exception);
+    }
+}
+
+%end
