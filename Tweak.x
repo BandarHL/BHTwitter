@@ -229,18 +229,13 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     %orig;
     
     // Signal UI to refresh after Twitter applies its palette
-    if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"] && !BHT_isInThemeChangeOperation) {
+    if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"] && 
+        !BHT_isInThemeChangeOperation && 
+        [BHTManager classicTabBarEnabled]) {
         // This call happens after Twitter has applied its color changes,
-        // so we need to force refresh our special UI elements
+        // so we need to refresh our tab bar theming
         dispatch_async(dispatch_get_main_queue(), ^{
             BHT_UpdateAllTabBarIcons();
-            
-            // Refresh our navigation bar bird logos
-            for (UIWindow *window in UIApplication.sharedApplication.windows) {
-                if (window.isHidden || !window.isOpaque) continue;
-                
-                // Navigation bar logo theme updates removed - no longer needed
-            }
         });
     }
 }
@@ -265,7 +260,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     %orig;
     
     // Ensure our theme isn't lost during dark/light mode changes
-    if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"]) {
+    if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"] && 
+        [BHTManager classicTabBarEnabled]) {
         dispatch_async(dispatch_get_main_queue(), ^{
             BHT_UpdateAllTabBarIcons();
         });
@@ -3651,27 +3647,26 @@ static char kManualRefreshInProgressKey;
 }
 %end
 
-// MARK: - Tab Bar Icon Theming
+// MARK: - Classic Tab Bar Icon Theming
+%hook T1TabView
 
-// Helper function to recursively check if a view contains DashAvatarImage
-static BOOL BHT_viewContainsDashAvatarImage(UIView *view) {
-    if (!view) return NO;
+%new
+- (void)bh_applyCurrentThemeToIcon {
+    UIImageView *imageView = [self valueForKey:@"imageView"];
+    if (!imageView) return;
     
-    for (UIView *subview in view.subviews) {
-        NSString *className = NSStringFromClass([subview class]);
-        if ([className isEqualToString:@"TwitterDash.DashAvatarImageView"] || 
-            [className isEqualToString:@"TwitterDash.DashAvatarImage"]) {
-            return YES;
-        }
-        // Recursively check subviews
-        if (BHT_viewContainsDashAvatarImage(subview)) {
-            return YES;
-        }
+    BOOL isSelected = [[self valueForKey:@"selected"] boolValue];
+    UIColor *targetColor = isSelected ? BHTCurrentAccentColor() : [UIColor secondaryLabelColor];
+    
+    // Ensure image is in template mode for proper tinting
+    if (imageView.image && imageView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
+        imageView.image = [imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
     }
-    return NO;
+    
+    // Apply tint color
+    imageView.tintColor = targetColor;
 }
 
-%hook T1TabView
 - (BOOL)_t1_showsTitle {
     return true;
 }
@@ -3679,175 +3674,81 @@ static BOOL BHT_viewContainsDashAvatarImage(UIView *view) {
 - (void)_t1_updateTitleLabel {
     %orig;
     
-    // Ensure titleLabel is not hidden
-    UILabel *titleLabel = [self valueForKey:@"titleLabel"];
-    if (titleLabel) {
-        titleLabel.hidden = NO;
+    // Ensure titleLabel is not hidden when classic tab bar is enabled
+    if ([BHTManager classicTabBarEnabled]) {
+        UILabel *titleLabel = [self valueForKey:@"titleLabel"];
+        if (titleLabel) {
+            titleLabel.hidden = NO;
+        }
     }
 }
 
-%new
-- (void)bh_applyCurrentThemeToIcon {
-    UIImageView *imgView = nil;
-    @try {
-        imgView = [self valueForKey:@"imageView"];
-    } @catch (NSException *exception) {
-        NSLog(@"[BHTwitter TabTheme] Exception getting imageView: %@", exception);
-        return;
-    }
-    if (!imgView) {
-        NSLog(@"[BHTwitter TabTheme] imageView is nil.");
-        return;
-    }
-
-    // Check if this tab contains a profile avatar that should not be themed
-    BOOL containsProfileAvatar = NO;
-    NSString *accessibilityLabel = self.accessibilityLabel;
+- (void)_t1_updateImageViewAnimated:(_Bool)animated {
+    %orig(animated);
     
-    // Check if this is a profile tab by looking for profile-related accessibility labels
-    if (accessibilityLabel && ([accessibilityLabel.lowercaseString containsString:@"profile"] || 
-                              [accessibilityLabel.lowercaseString containsString:@"account"])) {
-        containsProfileAvatar = YES;
-    }
-    
-    // Also check for DashAvatarImage in subviews if accessibility check didn't catch it
-    if (!containsProfileAvatar) {
-        containsProfileAvatar = BHT_viewContainsDashAvatarImage(self);
-    }
-    
-    // Additional check: see if the imageView itself is a DashAvatarImage
-    if (!containsProfileAvatar && imgView) {
-        NSString *imgViewClassName = NSStringFromClass([imgView class]);
-        if ([imgViewClassName isEqualToString:@"TwitterDash.DashAvatarImageView"] || 
-            [imgViewClassName isEqualToString:@"TwitterDash.DashAvatarImage"]) {
-            containsProfileAvatar = YES;
-        }
-    }
-
-    // MODIFIED: Logic for enabling/disabling theme
-    if (![BHTManager classicTabBarEnabled]) {
-        // Revert to default appearance
-        imgView.tintColor = nil; 
-        if (imgView.image) {
-            // Attempt to set to a mode that respects original colors, or automatic.
-            // UIImageRenderingModeAutomatic might be best if original isn't template.
-            // If Twitter's default icons are always template, this might not show them correctly
-            // without knowing their default non-themed tint color.
-            // For now, assume nil tintColor and automatic rendering mode is the goal.
-            imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAutomatic];
-        }
-    } else if (containsProfileAvatar) {
-        // Don't apply theming to profile avatar tabs - keep them at original appearance
-        imgView.tintColor = nil;
-        if (imgView.image) {
-            imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAutomatic];
-        }
-    } else {
-        // Apply custom theme (existing logic)
-        UIColor *targetColor;
-        if ([[self valueForKey:@"selected"] boolValue]) { 
-            targetColor = BHTCurrentAccentColor();
-        } else {
-            targetColor = [UIColor grayColor]; // Unselected but themed icon
-        }
-        
-    if (imgView.image && imgView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
-        imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-    }
-        
-    SEL applyTintColorSelector = @selector(applyTintColor:);
-    if ([self respondsToSelector:applyTintColorSelector]) {
-            ((void (*)(id, SEL, UIColor *))objc_msgSend)(self, applyTintColorSelector, targetColor);
-    } else {
-        imgView.tintColor = targetColor;
-    }
-    }
-
-    // Always call Twitter's internal update method to refresh the visual state
-    SEL updateImageViewSelector = NSSelectorFromString(@"_t1_updateImageViewAnimated:");
-    if ([self respondsToSelector:updateImageViewSelector]) {
-        IMP imp = [self methodForSelector:updateImageViewSelector];
-        void (*func)(id, SEL, _Bool) = (void *)imp;
-        func(self, updateImageViewSelector, NO); // Animate NO for immediate change
-    } else if (imgView) {
-        [imgView setNeedsDisplay]; // Fallback if the specific update method isn't found
+    // Apply our theming after Twitter updates the image view
+    if ([BHTManager classicTabBarEnabled]) {
+        [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
     }
 }
-
-
 
 - (void)setSelected:(_Bool)selected {
     %orig(selected);
-    [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
+    
+    // Apply theming when selection state changes
+    if ([BHTManager classicTabBarEnabled]) {
+        [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
+    }
 }
-
-// Optional: Hook _t1_updateImageViewAnimated if setSelected is not enough
-// or if other state changes (like theme color change) need to trigger this.
-/*
-- (void)_t1_updateImageViewAnimated:(_Bool)animated {
-    %orig(animated);
-    [self bh_applyCurrentThemeToIcon]; 
-}
-*/
 
 %end
 
+// MARK: - Tab Bar Controller Theme Integration
+%hook T1TabBarViewController
 
+- (void)_t1_updateTabBarAppearance {
+    %orig;
+    
+    // Apply our custom theming after Twitter updates the tab bar
+    if ([BHTManager classicTabBarEnabled]) {
+        NSArray *tabViews = [self valueForKey:@"tabViews"];
+        for (id tabView in tabViews) {
+            if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
+                [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
+            }
+        }
+    }
+}
 
-// Helper: Update all tab bar icons
+%end
+
+// Helper: Update all tab bar icons using Twitter's internal methods
 static void BHT_UpdateAllTabBarIcons(void) {
-    // Iterate all windows and view controllers to find T1TabBarViewController
+    // Use Twitter's notification system to refresh tab bars
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"T1TabBarAppearanceDidChangeNotification" object:nil];
+    
+    // Also trigger a direct refresh on visible tab bar controllers
     for (UIWindow *window in UIApplication.sharedApplication.windows) {
-        UIViewController *root = window.rootViewController;
-        if (!root) continue;
-        NSMutableArray *stack = [NSMutableArray arrayWithObject:root];
-        while (stack.count > 0) {
-            UIViewController *vc = [stack lastObject];
-            [stack removeLastObject];
-            if ([vc isKindOfClass:NSClassFromString(@"T1TabBarViewController")]) {
-                NSArray *tabViews = [vc valueForKey:@"tabViews"];
-                for (id tabView in tabViews) {
-                    if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
-                        [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
-                    }
+        if (window.isKeyWindow && window.rootViewController) {
+            UIViewController *rootVC = window.rootViewController;
+            
+            if ([rootVC isKindOfClass:NSClassFromString(@"T1TabBarViewController")]) {
+                // Use Twitter's internal tab bar refresh method if available
+                if ([rootVC respondsToSelector:@selector(_t1_updateTabBarAppearance)]) {
+                    [rootVC performSelector:@selector(_t1_updateTabBarAppearance)];
                 }
-            }
-            // Add children
-            for (UIViewController *child in vc.childViewControllers) {
-                [stack addObject:child];
-            }
-            if (vc.presentedViewController) {
-                [stack addObject:vc.presentedViewController];
             }
         }
     }
 }
 
 static void BHT_applyThemeToWindow(UIWindow *window) {
-    if (!window) return;
+    if (!window || !window.rootViewController) return;
 
+    // Simply trigger Twitter's internal appearance update
     if ([window.rootViewController isKindOfClass:NSClassFromString(@"T1TabBarViewController")]) {
-        BHT_UpdateAllTabBarIcons(); 
-    }
-
-    UIViewController *rootVC = window.rootViewController;
-    if (rootVC) {
-        UIViewController *currentContentVC = rootVC;
-        // Traverse to the most relevant visible content view controller
-        if ([rootVC isKindOfClass:NSClassFromString(@"T1TabBarViewController")]) {
-            if ([rootVC isKindOfClass:[UITabBarController class]]) {
-                currentContentVC = ((UITabBarController *)rootVC).selectedViewController;
-            }
-        }
-        
-        if ([currentContentVC isKindOfClass:[UINavigationController class]]) {
-            currentContentVC = [(UINavigationController *)currentContentVC visibleViewController];
-        }
-
-        // If we have a valid, loaded content view, tell it to redraw and re-layout.
-        if (currentContentVC && currentContentVC.isViewLoaded) {
-            [currentContentVC.view setNeedsDisplay];
-            [currentContentVC.view setNeedsLayout];
+        if ([window.rootViewController respondsToSelector:@selector(_t1_updateTabBarAppearance)]) {
+            [window.rootViewController performSelector:@selector(_t1_updateTabBarAppearance)];
         }
     }
 }
@@ -3881,15 +3782,9 @@ static void BHT_ensureThemingEngineSynchronized(BOOL forceSynchronize) {
             [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
         }
         
-        // Refresh UI to reflect these changes
-        BHT_UpdateAllTabBarIcons();
-        
-        // Apply to each window
-    for (UIWindow *window in [UIApplication sharedApplication].windows) {
-            if (!window.isOpaque || window.isHidden) continue;
-            
-            // Apply theme to the specific window
-        BHT_applyThemeToWindow(window);
+        // Refresh only tab bar icons when classic theming is enabled
+        if ([BHTManager classicTabBarEnabled]) {
+            BHT_UpdateAllTabBarIcons();
         }
         
         // Reset our operation flag
@@ -3904,34 +3799,15 @@ static void BHT_ensureTheming(void) {
 
 // Comprehensive UI refresh - used when we need to force a UI update
 static void BHT_forceRefreshAllWindowAppearances(void) {
-    // Update tab bar icons which are specifically customized by our tweak
-    BHT_UpdateAllTabBarIcons(); 
+    // Only update tab bar icons if classic theming is enabled
+    if ([BHTManager classicTabBarEnabled]) {
+        BHT_UpdateAllTabBarIcons();
+    }
     
+    // Trigger system-wide appearance updates
     for (UIWindow *window in [UIApplication sharedApplication].windows) {
-        if (!window.isOpaque || window.isHidden) continue;
-
-        // Update our custom nav bar bird icon for this window
-        if (window.rootViewController && window.rootViewController.isViewLoaded) {
-            // Navigation bar logo theme updates removed - no longer needed
-        }
-
-        // Trigger UI refresh hierarchy
-        UIViewController *rootVC = window.rootViewController;
-        if (rootVC && rootVC.isViewLoaded) {
-            // Trigger tintColorDidChange on relevant views
-            BH_EnumerateSubviewsRecursively(rootVC.view, ^(UIView *subview) {
-                if ([subview respondsToSelector:@selector(tintColorDidChange)]) {
-                    [subview tintColorDidChange];
-                }
-                if ([subview respondsToSelector:@selector(setNeedsDisplay)]) {
-                    [subview setNeedsDisplay];
-                }
-            });
-            
-            // Force layout update
-            [rootVC.view setNeedsLayout];
-            [rootVC.view layoutIfNeeded];
-            [rootVC.view setNeedsDisplay];
+        if (window.isKeyWindow && window.rootViewController) {
+            [window.rootViewController.view setNeedsLayout];
         }
     }
 }
