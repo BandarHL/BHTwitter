@@ -3734,14 +3734,17 @@ static char kManualRefreshInProgressKey;
         parentView = parentView.superview;
     }
     
-    if (isTabViewLabel && [BHTManager classicTabBarEnabled]) {
-        // Only interfere when theming is enabled
+    // Only interfere with tab view labels when theming is enabled AND 
+    // the color being set isn't already the default label color (to avoid fighting manual resets)
+    if (isTabViewLabel && [BHTManager classicTabBarEnabled] && 
+        color != [UIColor labelColor] && ![color isEqual:[UIColor labelColor]]) {
+        // Apply our custom theming
         T1TabView *tabView = (T1TabView *)parentView;
         BOOL isSelected = [[tabView valueForKey:@"selected"] boolValue];
         UIColor *targetColor = isSelected ? BHTCurrentAccentColor() : [UIColor secondaryLabelColor];
         %orig(targetColor);
     } else {
-        // Let Twitter handle colors normally (either not a tab view or theming disabled)
+        // Let Twitter handle colors normally 
         %orig(color);
     }
 }
