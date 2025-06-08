@@ -108,6 +108,7 @@ static NSString *_lastCopiedURL;
 @end
 
 @interface TFNSettingsDescriptionItem : NSObject
+@property (nonatomic, readonly, copy) NSString *text;
 - (instancetype)initWithText:(NSString *)text callsToAction:(NSArray *)callsToAction;
 @end
 
