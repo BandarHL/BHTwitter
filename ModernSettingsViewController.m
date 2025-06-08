@@ -3,6 +3,7 @@
 #import "TWHeaders.h"
 
 @interface ModernSettingsViewController ()
+@property (nonatomic, strong) TFNTwitterAccount *account;
 @end
 
 @implementation ModernSettingsViewController
@@ -10,7 +11,7 @@
 - (instancetype)initWithAccount:(TFNTwitterAccount *)account {
     self = [super init];
     if (self) {
-        [self setAccount:account];
+        self.account = account;
     }
     return self;
 }
