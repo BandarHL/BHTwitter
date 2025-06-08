@@ -1118,33 +1118,19 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 - (void)refreshTabViewsWithThemingInView:(UIView *)view {
     // Check if this view is a T1TabView
     if ([view isKindOfClass:NSClassFromString(@"T1TabView")]) {
-        // Use Twitter's specific internal methods to refresh the tab view icons
+        // Use Twitter's specific internal methods to refresh the tab view
         if ([view respondsToSelector:@selector(_t1_updateImageViewAnimated:)]) {
             [view performSelector:@selector(_t1_updateImageViewAnimated:) withObject:@(NO)];
         }
-        
-        // Special handling for tab labels - directly update their colors
-        UILabel *titleLabel = [view valueForKey:@"titleLabel"];
-        if (titleLabel) {
-            BOOL isSelected = [[view valueForKey:@"selected"] boolValue];
-            BOOL themingEnabled = [[NSUserDefaults standardUserDefaults] boolForKey:@"tab_bar_theming"];
-            
-            if (themingEnabled) {
-                // Apply theme colors
-                extern UIColor *BHTCurrentAccentColor(void);
-                UIColor *targetColor = isSelected ? BHTCurrentAccentColor() : [UIColor secondaryLabelColor];
-                titleLabel.textColor = targetColor;
-            } else {
-                // Reset to default system color
-                titleLabel.textColor = [UIColor labelColor];
-            }
-        }
-        
         if ([view respondsToSelector:@selector(_t1_updateTitleLabel)]) {
             [view performSelector:@selector(_t1_updateTitleLabel)];
         }
         if ([view respondsToSelector:@selector(_t1_layoutForTabBar)]) {
             [view performSelector:@selector(_t1_layoutForTabBar)];
+        }
+        // Fix badge positioning when theming changes
+        if ([view respondsToSelector:@selector(_t1_layoutBadgeViewMaximized)]) {
+            [view performSelector:@selector(_t1_layoutBadgeViewMaximized)];
         }
     }
     
@@ -1240,6 +1226,10 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         // Use Twitter's specific layout methods instead of layoutSubviews
         if ([view respondsToSelector:@selector(_t1_layoutForTabBar)]) {
             [view performSelector:@selector(_t1_layoutForTabBar)];
+        }
+        // Fix badge positioning when labels change
+        if ([view respondsToSelector:@selector(_t1_layoutBadgeViewMaximized)]) {
+            [view performSelector:@selector(_t1_layoutBadgeViewMaximized)];
         }
     }
     

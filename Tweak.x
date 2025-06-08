@@ -3669,11 +3669,6 @@ static char kManualRefreshInProgressKey;
         
         // Apply tint color to icon
         imageView.tintColor = targetColor;
-        
-        // Apply tint color to label if it exists
-        if (titleLabel) {
-            titleLabel.textColor = targetColor;
-        }
     } else {
         // Revert to default Twitter appearance
         imageView.tintColor = nil;
@@ -3682,11 +3677,11 @@ static char kManualRefreshInProgressKey;
         if (imageView.image) {
             imageView.image = [imageView.image imageWithRenderingMode:UIImageRenderingModeAutomatic];
         }
-        
-        // Reset label color to default
-        if (titleLabel) {
-            titleLabel.textColor = [UIColor labelColor];
-        }
+    }
+    
+    // Trigger label color update through Twitter's dynamic color system
+    if (titleLabel && [titleLabel respondsToSelector:@selector(_tfn_dynamicColor_UILabel_setTextColor:)]) {
+        [titleLabel performSelector:@selector(_tfn_dynamicColor_UILabel_setTextColor:) withObject:nil];
     }
 }
 
@@ -3721,6 +3716,41 @@ static char kManualRefreshInProgressKey;
     
     // Always apply theming logic (it handles both enabled and disabled cases)
     [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
+}
+
+%end
+
+// MARK: - Tab Label Color Management
+%hook UILabel
+
+- (void)_tfn_dynamicColor_UILabel_setTextColor:(id)color {
+    // Check if this label is inside a T1TabView
+    UIView *parentView = self.superview;
+    BOOL isTabViewLabel = NO;
+    
+    while (parentView) {
+        if ([parentView isKindOfClass:NSClassFromString(@"T1TabView")]) {
+            isTabViewLabel = YES;
+            break;
+        }
+        parentView = parentView.superview;
+    }
+    
+    if (isTabViewLabel) {
+        if ([BHTManager classicTabBarEnabled]) {
+            // Apply our custom theming if enabled
+            T1TabView *tabView = (T1TabView *)parentView;
+            BOOL isSelected = [[tabView valueForKey:@"selected"] boolValue];
+            UIColor *targetColor = isSelected ? BHTCurrentAccentColor() : [UIColor secondaryLabelColor];
+            %orig(targetColor);
+        } else {
+            // Let Twitter handle the default color by passing nil/nothing
+            %orig(nil);
+        }
+    } else {
+        // Not a tab view label, proceed normally
+        %orig(color);
+    }
 }
 
 %end
