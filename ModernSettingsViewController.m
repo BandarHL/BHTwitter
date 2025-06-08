@@ -2,9 +2,8 @@
 #import "BHTBundle/BHTBundle.h"
 #import "TWHeaders.h"
 
-@interface ModernSettingsViewController () <UITableViewDelegate, UITableViewDataSource>
+@interface ModernSettingsViewController ()
 @property (nonatomic, strong) TFNTwitterAccount *account;
-@property (nonatomic, strong) UITableView *tableView;
 @property (nonatomic, strong) NSArray *sections;
 @property (nonatomic, strong) id descriptionAdapter;
 @end
@@ -12,7 +11,7 @@
 @implementation ModernSettingsViewController
 
 - (instancetype)initWithAccount:(TFNTwitterAccount *)account {
-    self = [super init];
+    self = [super initWithStyle:UITableViewStyleGrouped];
     if (self) {
         self.account = account;
         self.descriptionAdapter = [[objc_getClass("TFNSettingsDescriptionItemTableRowAdapter") alloc] init];
@@ -23,15 +22,9 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.title = @"Modern BHTwitter";
-    self.view.backgroundColor = [UIColor systemBackgroundColor];
-
-    self.tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleGrouped];
-    self.tableView.delegate = self;
-    self.tableView.dataSource = self;
-    [self.view addSubview:self.tableView];
 
     id descriptionItem = [[objc_getClass("TFNSettingsDescriptionItem") alloc] initWithText:@"Welcome to the new BHTwitter settings! This is a work in progress." callsToAction:nil];
-    id section = @[descriptionItem]; // For now, a section is just an array of items
+    id section = @[descriptionItem];
     self.sections = @[section];
 }
 

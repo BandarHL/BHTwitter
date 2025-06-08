@@ -3,7 +3,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface ModernSettingsViewController : UIViewController
+@interface ModernSettingsViewController : UITableViewController
 
 - (instancetype)initWithAccount:(TFNTwitterAccount *)account;
 
