@@ -3652,6 +3652,25 @@ static char kManualRefreshInProgressKey;
 %end
 
 // MARK: - Tab Bar Icon Theming
+
+// Helper function to recursively check if a view contains DashAvatarImage
+static BOOL BHT_viewContainsDashAvatarImage(UIView *view) {
+    if (!view) return NO;
+    
+    for (UIView *subview in view.subviews) {
+        NSString *className = NSStringFromClass([subview class]);
+        if ([className isEqualToString:@"TwitterDash.DashAvatarImageView"] || 
+            [className isEqualToString:@"TwitterDash.DashAvatarImage"]) {
+            return YES;
+        }
+        // Recursively check subviews
+        if (BHT_viewContainsDashAvatarImage(subview)) {
+            return YES;
+        }
+    }
+    return NO;
+}
+
 %hook T1TabView
 - (BOOL)_t1_showsTitle {
     return true;
@@ -3681,6 +3700,30 @@ static char kManualRefreshInProgressKey;
         return;
     }
 
+    // Check if this tab contains a profile avatar that should not be themed
+    BOOL containsProfileAvatar = NO;
+    NSString *accessibilityLabel = self.accessibilityLabel;
+    
+    // Check if this is a profile tab by looking for profile-related accessibility labels
+    if (accessibilityLabel && ([accessibilityLabel.lowercaseString containsString:@"profile"] || 
+                              [accessibilityLabel.lowercaseString containsString:@"account"])) {
+        containsProfileAvatar = YES;
+    }
+    
+    // Also check for DashAvatarImage in subviews if accessibility check didn't catch it
+    if (!containsProfileAvatar) {
+        containsProfileAvatar = BHT_viewContainsDashAvatarImage(self);
+    }
+    
+    // Additional check: see if the imageView itself is a DashAvatarImage
+    if (!containsProfileAvatar && imgView) {
+        NSString *imgViewClassName = NSStringFromClass([imgView class]);
+        if ([imgViewClassName isEqualToString:@"TwitterDash.DashAvatarImageView"] || 
+            [imgViewClassName isEqualToString:@"TwitterDash.DashAvatarImage"]) {
+            containsProfileAvatar = YES;
+        }
+    }
+
     // MODIFIED: Logic for enabling/disabling theme
     if (![BHTManager classicTabBarEnabled]) {
         // Revert to default appearance
@@ -3691,6 +3734,12 @@ static char kManualRefreshInProgressKey;
             // If Twitter's default icons are always template, this might not show them correctly
             // without knowing their default non-themed tint color.
             // For now, assume nil tintColor and automatic rendering mode is the goal.
+            imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAutomatic];
+        }
+    } else if (containsProfileAvatar) {
+        // Don't apply theming to profile avatar tabs - keep them at original appearance
+        imgView.tintColor = nil;
+        if (imgView.image) {
             imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAutomatic];
         }
     } else {
@@ -3724,6 +3773,8 @@ static char kManualRefreshInProgressKey;
         [imgView setNeedsDisplay]; // Fallback if the specific update method isn't found
     }
 }
+
+
 
 - (void)setSelected:(_Bool)selected {
     %orig(selected);
