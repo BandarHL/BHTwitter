@@ -317,6 +317,10 @@
 "RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_OFF" = "To disable and restore default icons, please restart Twitter.";
 "CLASSIC_TAB_BAR_DISABLED_NOTIFICATION_NAME" = "BHTClassicTabBarSettingChangedNotification";
 
+/* Restore tab labels */
+"RESTORE_TAB_LABELS_TITLE" = "Classic tab labels";
+"RESTORE_TAB_LABELS_DETAIL" = "Show labels under tab bar icons like legacy Twitter versions.";
+
 /*Message customization*/
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_1" = "Use an image";
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_2" = "Use a color";

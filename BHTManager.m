@@ -308,6 +308,10 @@
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"tab_bar_theming"];
 }
 
++ (BOOL)restoreTabLabels {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"restore_tab_labels"];
+}
+
 + (void)clearSourceLabelCache {
     // Post notification to trigger cache clearing in Tweak.x
     [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTClearSourceLabelCacheNotification" object:nil];

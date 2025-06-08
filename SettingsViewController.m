@@ -492,6 +492,12 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
                                                        defaultValue:false 
                                                        changeAction:@selector(tabBarThemingAction:)];
         
+        PSSpecifier *restoreTabLabels = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTORE_TAB_LABELS_TITLE"]
+                                                         detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTORE_TAB_LABELS_DETAIL"]
+                                                                 key:@"restore_tab_labels" 
+                                                        defaultValue:false 
+                                                        changeAction:nil];
+        
         PSSpecifier *hideViewCount = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE"] key:@"hide_view_count" defaultValue:false changeAction:nil];
 
         PSSpecifier *hideBookmarkButton = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_MARKBOOK_BUTTON_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_MARKBOOK_BUTTON_OPTION_DETAIL_TITLE"] key:@"hide_bookmark_button" defaultValue:false changeAction:nil];
@@ -634,6 +640,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             hideSpace,
             stopHidingTabBar,
             tabBarTheming,
+            restoreTabLabels,
             disableRTL,
             showScrollIndicator,
             font,

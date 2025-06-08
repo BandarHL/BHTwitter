@@ -3668,14 +3668,17 @@ static char kManualRefreshInProgressKey;
 }
 
 - (BOOL)_t1_showsTitle {
-    return true;
+    if ([BHTManager restoreTabLabels]) {
+        return true;
+    }
+    return %orig;
 }
 
 - (void)_t1_updateTitleLabel {
     %orig;
     
-    // Ensure titleLabel is not hidden when classic tab bar is enabled
-    if ([BHTManager classicTabBarEnabled]) {
+    // Ensure titleLabel is not hidden when restore tab labels is enabled
+    if ([BHTManager restoreTabLabels]) {
         UILabel *titleLabel = [self valueForKey:@"titleLabel"];
         if (titleLabel) {
             titleLabel.hidden = NO;
