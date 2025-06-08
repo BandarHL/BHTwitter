@@ -1138,6 +1138,10 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         return ![BHTManager disableArticles];
     }
 
+    if ([key isEqualToString:@"ios_dm_dash_enabled"]) {
+        return ![BHTManager disableXChat];
+    }
+
     if ([key isEqualToString:@"highlights_tweets_tab_ui_enabled"]) {
         return ![BHTManager disableHighlights];
     }
