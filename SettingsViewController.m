@@ -1137,7 +1137,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         if (![[[NSUserDefaults standardUserDefaults] objectForKey:@"tab_bar_theming"] boolValue]) {
             UILabel *titleLabel = [view valueForKey:@"titleLabel"];
             if (titleLabel) {
-                titleLabel.textColor = [UIColor labelColor];
+                titleLabel.textColor = nil;
             }
         }
     }
@@ -1244,7 +1244,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         if (![[[NSUserDefaults standardUserDefaults] objectForKey:@"tab_bar_theming"] boolValue]) {
             UILabel *titleLabel = [view valueForKey:@"titleLabel"];
             if (titleLabel) {
-                titleLabel.textColor = [UIColor labelColor];
+                titleLabel.textColor = nil;
             }
         }
     }

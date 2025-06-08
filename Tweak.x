@@ -3734,11 +3734,8 @@ static char kManualRefreshInProgressKey;
         parentView = parentView.superview;
     }
     
-    // Only interfere with tab view labels when theming is enabled AND 
-    // the color being set isn't already the default label color (to avoid fighting manual resets)
-    if (isTabViewLabel && [BHTManager classicTabBarEnabled] && 
-        color != [UIColor labelColor] && ![color isEqual:[UIColor labelColor]]) {
-        // Apply our custom theming
+    if (isTabViewLabel && [BHTManager classicTabBarEnabled]) {
+        // Apply our custom theming when enabled
         T1TabView *tabView = (T1TabView *)parentView;
         BOOL isSelected = [[tabView valueForKey:@"selected"] boolValue];
         UIColor *targetColor = isSelected ? BHTCurrentAccentColor() : [UIColor secondaryLabelColor];
