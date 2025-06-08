@@ -1650,6 +1650,9 @@ static NSMutableDictionary *fetchPending      = nil;
 static NSMutableDictionary *cookieCache       = nil;
 static NSDate *lastCookieRefresh              = nil;
 
+// Add a dispatch queue for thread-safe access to shared data
+static dispatch_queue_t sourceLabelDataQueue = nil;
+
 // Constants for cookie refresh interval (reduced to 1 day in seconds for more frequent refresh)
 #define COOKIE_REFRESH_INTERVAL (24 * 60 * 60)
 #define COOKIE_FORCE_REFRESH_RETRY_COUNT 1 // Force cookie refresh after this many consecutive failures
@@ -1812,29 +1815,21 @@ static NSTimer *cookieRetryTimer = nil;
 
 + (void)fetchSourceForTweetID:(NSString *)tweetID {
     if (!tweetID) return;
-    @try {
-        // Initialize dictionaries if needed
-        if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
-        if (!fetchTimeouts) fetchTimeouts = [NSMutableDictionary dictionary];
-        if (!fetchRetries) fetchRetries = [NSMutableDictionary dictionary];
-        if (!fetchPending) fetchPending = [NSMutableDictionary dictionary];
+    
+    // Defer the entire operation to our concurrent queue to handle state checks and request creation safely
+    dispatch_async(sourceLabelDataQueue, ^{
+        @try {
+            // Initialize dictionaries if needed
+            if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
+            if (!fetchTimeouts) fetchTimeouts = [NSMutableDictionary dictionary];
+            if (!fetchRetries) fetchRetries = [NSMutableDictionary dictionary];
+            if (!fetchPending) fetchPending = [NSMutableDictionary dictionary];
 
-        // Simple cache size management
-        if (tweetSources.count > MAX_SOURCE_CACHE_SIZE) {
-            // Remove 25% of entries to free up space
-            NSArray *keysToRemove = [[tweetSources allKeys] subarrayWithRange:NSMakeRange(0, tweetSources.count / 4)];
-            for (NSString *key in keysToRemove) {
-                [tweetSources removeObjectForKey:key];
-                [fetchRetries removeObjectForKey:key];
-                [fetchPending removeObjectForKey:key];
-                
-                NSTimer *timer = fetchTimeouts[key];
-                if (timer) {
-                    [timer invalidate];
-                    [fetchTimeouts removeObjectForKey:key];
-                }
+            // Simple cache size management
+            if (tweetSources.count > MAX_SOURCE_CACHE_SIZE) {
+                // Pruning is now async, so we just call it
+                [self pruneSourceCachesIfNeeded];
             }
-        }
 
         // Skip if already pending or has valid result
         if ([fetchPending[tweetID] boolValue] || 
@@ -1852,13 +1847,17 @@ static NSTimer *cookieRetryTimer = nil;
         fetchPending[tweetID] = @(YES);
         fetchRetries[tweetID] = @(retryCount + 1);
 
-        // Set simple timeout
-        NSTimer *timeoutTimer = [NSTimer scheduledTimerWithTimeInterval:8.0
-                                                                 target:self
-                                                               selector:@selector(timeoutFetchForTweetID:)
-                                                               userInfo:@{@"tweetID": tweetID}
-                                                                repeats:NO];
-        fetchTimeouts[tweetID] = timeoutTimer;
+                // Set simple timeout on main thread
+        dispatch_async(dispatch_get_main_queue(), ^{
+            NSTimer *timeoutTimer = [NSTimer scheduledTimerWithTimeInterval:8.0
+                                                                    target:self
+                                                                  selector:@selector(timeoutFetchForTweetID:)
+                                                                  userInfo:@{@"tweetID": tweetID}
+                                                                   repeats:NO];
+            dispatch_barrier_async(sourceLabelDataQueue, ^{
+                fetchTimeouts[tweetID] = timeoutTimer;
+            });
+        });
 
         // Build request
         NSString *urlString = [NSString stringWithFormat:@"https://api.twitter.com/2/timeline/conversation/%@.json?include_ext_alt_text=true&include_reply_count=true&tweet_mode=extended", tweetID];
@@ -1899,14 +1898,19 @@ static NSTimer *cookieRetryTimer = nil;
         NSURLSession *session = [NSURLSession sharedSession];
         NSURLSessionDataTask *task = [session dataTaskWithRequest:request
                                                 completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
-            @try {
-                // Cleanup timeout
-                NSTimer *timer = fetchTimeouts[tweetID];
-                if (timer) {
-                    [timer invalidate];
-                    [fetchTimeouts removeObjectForKey:tweetID];
-                }
-                fetchPending[tweetID] = @(NO);
+            // The completion handler runs on a background thread
+            // We must use our queue to modify shared state
+            dispatch_barrier_async(sourceLabelDataQueue, ^{
+                @try {
+                    // Cleanup timeout
+                    NSTimer *timer = fetchTimeouts[tweetID];
+                    if (timer) {
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            [timer invalidate];
+                        });
+                        [fetchTimeouts removeObjectForKey:tweetID];
+                    }
+                    fetchPending[tweetID] = @(NO);
 
                 // Handle errors
                 if (error || !data) {
@@ -1924,11 +1928,9 @@ static NSTimer *cookieRetryTimer = nil;
                         @"auth_token": @"71fc90d6010d76ec4473b3e42c6802a8f1185316",
                         @"twid": @"u%3D1930115366878871552"
                     };
-                    [self cacheCookies:hardcodedCookies];
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        [self fetchSourceForTweetID:tweetID];
-                    });
-                    return;
+                                            [self cacheCookies:hardcodedCookies];
+                        [self fetchSourceForTweetID:tweetID]; // Re-call, which will be queued
+                        return;
                 }
 
                 if (httpResponse.statusCode != 200) {
@@ -1979,32 +1981,37 @@ static NSTimer *cookieRetryTimer = nil;
                     [self updateFooterTextViewsForTweetID:tweetID];
                 });
                 
-            } @catch (NSException *e) {
-                [self handleFetchFailure:tweetID];
-            }
+                            } @catch (NSException *e) {
+                    [self handleFetchFailure:tweetID];
+                }
+            });
         }];
         [task resume];
         
-    } @catch (NSException *e) {
-        [self handleFetchFailure:tweetID];
-    }
+        } @catch (NSException *e) {
+            [self handleFetchFailure:tweetID];
+        }
+    });
 }
 
 + (void)handleFetchFailure:(NSString *)tweetID {
     if (!tweetID) return;
     
-    // Cleanup
+    // This is a write operation, but it's called from other synchronized blocks
+    // So we don't need to wrap it again, but the caller must be synchronized
     fetchPending[tweetID] = @(NO);
-        NSTimer *timer = fetchTimeouts[tweetID];
-        if (timer) {
+    NSTimer *timer = fetchTimeouts[tweetID];
+    if (timer) {
+        dispatch_async(dispatch_get_main_queue(), ^{
             [timer invalidate];
-            [fetchTimeouts removeObjectForKey:tweetID];
-        }
+        });
+        [fetchTimeouts removeObjectForKey:tweetID];
+    }
         
     NSInteger retryCount = [fetchRetries[tweetID] integerValue];
     if (retryCount < MAX_CONSECUTIVE_FAILURES) {
         // Simple retry after delay
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), sourceLabelDataQueue, ^{
             [self fetchSourceForTweetID:tweetID];
         });
     } else {
@@ -2020,9 +2027,11 @@ static NSTimer *cookieRetryTimer = nil;
     NSString *tweetID = timer.userInfo[@"tweetID"];
     if (!tweetID) return;
     
-    [timer invalidate];
+    dispatch_barrier_async(sourceLabelDataQueue, ^{
+        [timer invalidate];
         [fetchTimeouts removeObjectForKey:tweetID];
-    [self handleFetchFailure:tweetID];
+        [self handleFetchFailure:tweetID];
+    });
 }
 
 + (void)retryUpdateForTweetID:(NSString *)tweetID {
@@ -3577,6 +3586,9 @@ static char kManualRefreshInProgressKey;
         
         // The full name for the hosting controller is very long and specific.
         gDashHostingControllerClass = NSClassFromString(@"_TtGC7SwiftUI19UIHostingControllerGV10TFNUISwift22HostingEnvironmentViewV11TwitterDash18DashNavigationView__");
+        
+        // Initialize the concurrent queue for source label data access
+        sourceLabelDataQueue = dispatch_queue_create("com.bandarhelal.bhtwitter.sourceLabelQueue", DISPATCH_QUEUE_CONCURRENT);
     });
     
     // Initialize dictionaries for Tweet Source Labels restoration
