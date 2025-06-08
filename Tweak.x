@@ -1500,7 +1500,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         [DataViewControllerBackingStore insertSection:0 atIndex:1];
         [DataViewControllerBackingStore insertItem:@"Row 0 " atIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
         [DataViewControllerBackingStore insertItem:@"Row1" atIndexPath:[NSIndexPath indexPathForRow:1 inSection:0]];
-        [DataViewControllerBackingStore insertItem:@"Row2" atIndexPath:[NSIndexPath indexPathForRow:2 inSection:0]];
     }
 }
 
@@ -1518,11 +1517,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         Settingscell.textLabel.textColor = [UIColor colorWithRed:0.40 green:0.47 blue:0.53 alpha:1.0];
         [Settingscell.textLabel setText:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"]];
         return Settingscell;
-    } else if (indexPath.section == 0 && indexPath.row == 2) {
-        TFNTextCell *modernTweakCell = [[%c(TFNTextCell) alloc] init];
-        [modernTweakCell setAccessoryType:UITableViewCellAccessoryDisclosureIndicator];
-        [modernTweakCell.textLabel setText:@"Modern BHTwitter Settings"];
-        return modernTweakCell;
     }
     
     
@@ -1532,9 +1526,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     if ([indexPath section]== 0 && [indexPath row]== 1) {
         [self.navigationController pushViewController:[BHTManager BHTSettingsWithAccount:self.account] animated:true];
-    } else if ([indexPath section] == 0 && [indexPath row] == 2) {
-        ModernSettingsViewController *modernSettings = [[ModernSettingsViewController alloc] initWithAccount:self.account];
-        [self.navigationController pushViewController:modernSettings animated:YES];
     } else {
         return %orig;
     }
