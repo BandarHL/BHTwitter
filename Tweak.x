@@ -5280,45 +5280,30 @@ static NSBundle *BHBundle() {
     }
 %end
 
-// MARK: Add search button to T1TimelineNavigationController
-%hook T1TimelineNavigationController
+// MARK: Add search button to TFNNavigationBar when used in T1TimelineNavigationController
+%hook TFNNavigationBar
 
-- (void)viewDidLoad {
+- (void)didMoveToSuperview {
     %orig;
     
-    // Find the _UINavigationContentView and add our search button
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [self BHT_addSearchButtonToNavigationContentView];
-    });
-}
-
-- (void)viewDidAppear:(BOOL)animated {
-    %orig(animated);
-    
-    // Ensure the search button is added when view appears
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [self BHT_addSearchButtonToNavigationContentView];
-    });
+    // Check if this navigation bar belongs to a T1TimelineNavigationController
+    UIResponder *responder = self.nextResponder;
+    while (responder) {
+        if ([responder isKindOfClass:%c(T1TimelineNavigationController)]) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self BHT_addSearchButtonToNavigationBar];
+            });
+            break;
+        }
+        responder = responder.nextResponder;
+    }
 }
 
 %new
-- (void)BHT_addSearchButtonToNavigationContentView {
+- (void)BHT_addSearchButtonToNavigationBar {
     @try {
-        // Find the _UINavigationContentView
-        UIView *navigationContentView = nil;
-        for (UIView *subview in self.navigationBar.subviews) {
-            if ([NSStringFromClass([subview class]) isEqualToString:@"_UINavigationContentView"]) {
-                navigationContentView = subview;
-                break;
-            }
-        }
-        
-        if (!navigationContentView) {
-            return;
-        }
-        
         // Check if we already added the search button
-        UIButton *existingButton = [navigationContentView viewWithTag:9999];
+        UIButton *existingButton = [self viewWithTag:9999];
         if (existingButton) {
             return; // Button already exists
         }
@@ -5340,34 +5325,43 @@ static NSBundle *BHBundle() {
         
         // Set up constraints
         searchButton.translatesAutoresizingMaskIntoConstraints = NO;
-        [navigationContentView addSubview:searchButton];
+        [self addSubview:searchButton];
         
         // Position the button on the right side
         [NSLayoutConstraint activateConstraints:@[
-            [searchButton.trailingAnchor constraintEqualToAnchor:navigationContentView.trailingAnchor constant:-16],
-            [searchButton.centerYAnchor constraintEqualToAnchor:navigationContentView.centerYAnchor],
+            [searchButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16],
+            [searchButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
             [searchButton.widthAnchor constraintEqualToConstant:44],
             [searchButton.heightAnchor constraintEqualToConstant:44]
         ]];
         
     } @catch (NSException *exception) {
-        NSLog(@"[BHTwitter] Exception in BHT_addSearchButtonToNavigationContentView: %@", exception);
+        NSLog(@"[BHTwitter] Exception in BHT_addSearchButtonToNavigationBar: %@", exception);
     }
 }
 
 %new
 - (void)BHT_searchButtonTapped:(UIButton *)sender {
     @try {
-        // Find the T1TabNavigationController in the hierarchy
-        UIViewController *current = self;
-        while (current) {
-            if ([current isKindOfClass:%c(T1TabNavigationController)]) {
-                // Cast to T1TabNavigationController and call the search action
-                T1TabNavigationController *tabNavController = (T1TabNavigationController *)current;
-                [tabNavController _t1_action_didTapSearchButton:sender];
-                return;
+        // Find the T1TimelineNavigationController that owns this navigation bar
+        UIResponder *responder = self.nextResponder;
+        while (responder) {
+            if ([responder isKindOfClass:%c(T1TimelineNavigationController)]) {
+                T1TimelineNavigationController *timelineNavController = (T1TimelineNavigationController *)responder;
+                
+                // Now find the T1TabNavigationController in the hierarchy
+                UIViewController *current = timelineNavController;
+                while (current) {
+                    if ([current isKindOfClass:%c(T1TabNavigationController)]) {
+                        T1TabNavigationController *tabNavController = (T1TabNavigationController *)current;
+                        [tabNavController _t1_action_didTapSearchButton:sender];
+                        return;
+                    }
+                    current = current.parentViewController;
+                }
+                break;
             }
-            current = current.parentViewController;
+            responder = responder.nextResponder;
         }
         
         NSLog(@"[BHTwitter] Could not find T1TabNavigationController in hierarchy");
