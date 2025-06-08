@@ -206,8 +206,8 @@
 "STOP_HIDING_TAB_BAR_TITLE" = "Keep the navigation bar visible";
 "STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "Don't fade the navigation bar when you scroll.";
 
-"CLASSIC_TAB_BAR_SETTINGS_TITLE" = "Classic Tab Icons";
-"CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "Applies accent color to the current selected tab. Restart required.";
+"CLASSIC_TAB_BAR_SETTINGS_TITLE" = "Classic Tab Bar";
+"CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "Applies your accent color to the currently selected tab.";
 
 "DISABLE_RTL_OPTION_TITLE" = "Use left-to-right layout";
 "DISABLE_RTL_OPTION_DETAIL_TITLE" = "Force a a left-to-right layout, even for languages that are read from right-to-left.";
@@ -318,7 +318,7 @@
 "CLASSIC_TAB_BAR_DISABLED_NOTIFICATION_NAME" = "BHTClassicTabBarSettingChangedNotification";
 
 /* Restore tab labels */
-"RESTORE_TAB_LABELS_TITLE" = "Classic tab labels";
+"RESTORE_TAB_LABELS_TITLE" = "Restore Tab labels";
 "RESTORE_TAB_LABELS_DETAIL" = "Show labels under tab bar icons like legacy Twitter versions.";
 
 /*Message customization*/

@@ -3653,18 +3653,41 @@ static char kManualRefreshInProgressKey;
 %new
 - (void)bh_applyCurrentThemeToIcon {
     UIImageView *imageView = [self valueForKey:@"imageView"];
+    UILabel *titleLabel = [self valueForKey:@"titleLabel"];
     if (!imageView) return;
     
     BOOL isSelected = [[self valueForKey:@"selected"] boolValue];
-    UIColor *targetColor = isSelected ? BHTCurrentAccentColor() : [UIColor secondaryLabelColor];
     
-    // Ensure image is in template mode for proper tinting
-    if (imageView.image && imageView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
-        imageView.image = [imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+    if ([BHTManager classicTabBarEnabled]) {
+        // Apply custom theming
+        UIColor *targetColor = isSelected ? BHTCurrentAccentColor() : [UIColor secondaryLabelColor];
+        
+        // Ensure image is in template mode for proper tinting
+        if (imageView.image && imageView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
+            imageView.image = [imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+        }
+        
+        // Apply tint color to icon
+        imageView.tintColor = targetColor;
+        
+        // Apply tint color to label if it exists
+        if (titleLabel) {
+            titleLabel.textColor = targetColor;
+        }
+    } else {
+        // Revert to default Twitter appearance
+        imageView.tintColor = nil;
+        
+        // Reset image rendering mode to automatic
+        if (imageView.image) {
+            imageView.image = [imageView.image imageWithRenderingMode:UIImageRenderingModeAutomatic];
+        }
+        
+        // Reset label color to default
+        if (titleLabel) {
+            titleLabel.textColor = [UIColor labelColor];
+        }
     }
-    
-    // Apply tint color
-    imageView.tintColor = targetColor;
 }
 
 - (BOOL)_t1_showsTitle {
@@ -3689,19 +3712,15 @@ static char kManualRefreshInProgressKey;
 - (void)_t1_updateImageViewAnimated:(_Bool)animated {
     %orig(animated);
     
-    // Apply our theming after Twitter updates the image view
-    if ([BHTManager classicTabBarEnabled]) {
-        [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
-    }
+    // Always apply theming logic (it handles both enabled and disabled cases)
+    [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
 }
 
 - (void)setSelected:(_Bool)selected {
     %orig(selected);
     
-    // Apply theming when selection state changes
-    if ([BHTManager classicTabBarEnabled]) {
-        [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
-    }
+    // Always apply theming logic (it handles both enabled and disabled cases)
+    [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
 }
 
 %end
