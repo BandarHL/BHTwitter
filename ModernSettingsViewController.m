@@ -13,6 +13,7 @@
 - (instancetype)initWithAccount:(TFNTwitterAccount *)account {
     self = [super initWithStyle:UITableViewStyleGrouped];
     if (self) {
+        NSLog(@"[BHTwitter] Initializing ModernSettingsViewController as a UITableViewController subclass.");
         self.account = account;
         self.descriptionAdapter = [[objc_getClass("TFNSettingsDescriptionItemTableRowAdapter") alloc] init];
     }
