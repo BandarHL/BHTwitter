@@ -107,6 +107,14 @@ static NSString *_lastCopiedURL;
 - (id)itemAtIndexPath:(id)arg1;
 @end
 
+@interface TFNSettingsDescriptionItem : NSObject
+- (instancetype)initWithText:(NSString *)text callsToAction:(NSArray *)callsToAction;
+@end
+
+@interface TFNItemsDataViewSection : NSObject
++ (instancetype)sectionWithItem:(id)item;
+@end
+
 @interface TFNItemsDataViewControllerBackingStore: NSObject
 - (void)insertSection:(id)section atIndex:(NSUInteger)index;
 - (void)insertItem:(id)item atIndexPath:(NSIndexPath *)indexPath;
