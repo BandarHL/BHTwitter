@@ -1132,6 +1132,12 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         if ([view respondsToSelector:@selector(_t1_layoutBadgeViewMaximized)]) {
             [view performSelector:@selector(_t1_layoutBadgeViewMaximized)];
         }
+        
+        // Manually trigger label color update
+        UILabel *titleLabel = [view valueForKey:@"titleLabel"];
+        if (titleLabel && [titleLabel respondsToSelector:@selector(_tfn_dynamicColor_UILabel_setTextColor:)]) {
+            [titleLabel performSelector:@selector(_tfn_dynamicColor_UILabel_setTextColor:) withObject:nil];
+        }
     }
     
     // Recursively search subviews
@@ -1230,6 +1236,12 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         // Fix badge positioning when labels change
         if ([view respondsToSelector:@selector(_t1_layoutBadgeViewMaximized)]) {
             [view performSelector:@selector(_t1_layoutBadgeViewMaximized)];
+        }
+        
+        // Manually trigger label color update
+        UILabel *titleLabel = [view valueForKey:@"titleLabel"];
+        if (titleLabel && [titleLabel respondsToSelector:@selector(_tfn_dynamicColor_UILabel_setTextColor:)]) {
+            [titleLabel performSelector:@selector(_tfn_dynamicColor_UILabel_setTextColor:) withObject:nil];
         }
     }
     
