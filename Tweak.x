@@ -229,18 +229,13 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     %orig;
     
     // Signal UI to refresh after Twitter applies its palette
-    if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"] && !BHT_isInThemeChangeOperation) {
+    if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"] && 
+        !BHT_isInThemeChangeOperation && 
+        [BHTManager classicTabBarEnabled]) {
         // This call happens after Twitter has applied its color changes,
-        // so we need to force refresh our special UI elements
+        // so we need to refresh our tab bar theming
         dispatch_async(dispatch_get_main_queue(), ^{
             BHT_UpdateAllTabBarIcons();
-            
-            // Refresh our navigation bar bird logos
-            for (UIWindow *window in UIApplication.sharedApplication.windows) {
-                if (window.isHidden || !window.isOpaque) continue;
-                
-                // Navigation bar logo theme updates removed - no longer needed
-            }
         });
     }
 }
@@ -265,7 +260,8 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     %orig;
     
     // Ensure our theme isn't lost during dark/light mode changes
-    if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"]) {
+    if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"] && 
+        [BHTManager classicTabBarEnabled]) {
         dispatch_async(dispatch_get_main_queue(), ^{
             BHT_UpdateAllTabBarIcons();
         });
@@ -1178,6 +1174,10 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         return false;
     }
 
+    if ([key isEqualToString:@"ios_subscription_journey_enabled"]) {
+        return false;
+    }
+
     if ([key isEqualToString:@"ios_tweet_detail_conversation_context_removal_enabled"]) {
         return ![BHTManager restoreReplyContext];
     }
@@ -1646,6 +1646,9 @@ static NSMutableDictionary *fetchPending      = nil;
 static NSMutableDictionary *cookieCache       = nil;
 static NSDate *lastCookieRefresh              = nil;
 
+// Add a dispatch queue for thread-safe access to shared data
+static dispatch_queue_t sourceLabelDataQueue = nil;
+
 // Constants for cookie refresh interval (reduced to 1 day in seconds for more frequent refresh)
 #define COOKIE_REFRESH_INTERVAL (24 * 60 * 60)
 #define COOKIE_FORCE_REFRESH_RETRY_COUNT 1 // Force cookie refresh after this many consecutive failures
@@ -1690,51 +1693,54 @@ static NSTimer *cookieRetryTimer = nil;
 }
 
 + (void)pruneSourceCachesIfNeeded {
-    if (!tweetSources) return;
-    
-    if (tweetSources.count > MAX_SOURCE_CACHE_SIZE) {
-        [self logDebugInfo:[NSString stringWithFormat:@"Pruning cache with %ld entries", (long)tweetSources.count]];
+    // This is a write operation, use a barrier
+    dispatch_barrier_async(sourceLabelDataQueue, ^{
+        if (!tweetSources) return;
         
-        // Find oldest entries to remove (those with null values or "Source Unavailable")
-        NSMutableArray *keysToRemove = [NSMutableArray array];
-        
-        for (NSString *key in tweetSources) {
-            NSString *source = tweetSources[key];
-            if (!source || [source isEqualToString:@""] || [source isEqualToString:@"Source Unavailable"]) {
-                [keysToRemove addObject:key];
-                if (keysToRemove.count >= tweetSources.count / 4) break; // Remove up to 25% at once
-            }
-        }
-        
-        // If we didn't find enough "empty" entries, remove some random ones
-        if (keysToRemove.count < tweetSources.count / 5) {
-            NSArray *allKeys = [tweetSources allKeys];
-            for (int i = 0; i < 20 && keysToRemove.count < tweetSources.count / 4; i++) {
-                NSString *randomKey = allKeys[arc4random_uniform((uint32_t)allKeys.count)];
-                if (![keysToRemove containsObject:randomKey]) {
-                    [keysToRemove addObject:randomKey];
+        __block NSUInteger count = 0;
+        count = tweetSources.count;
+
+        if (count > MAX_SOURCE_CACHE_SIZE) {
+            [self logDebugInfo:[NSString stringWithFormat:@"Pruning cache with %ld entries", (long)count]];
+            
+            NSMutableArray *keysToRemove = [NSMutableArray array];
+            
+            [tweetSources enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
+                if (!obj || [obj isEqualToString:@""] || [obj isEqualToString:@"Source Unavailable"]) {
+                    [keysToRemove addObject:key];
+                    if (keysToRemove.count >= count / 4) *stop = YES;
+                }
+            }];
+            
+            if (keysToRemove.count < count / 5) {
+                NSArray *allKeys = [tweetSources allKeys];
+                for (int i = 0; i < 20 && keysToRemove.count < count / 4; i++) {
+                    NSString *randomKey = allKeys[arc4random_uniform((uint32_t)allKeys.count)];
+                    if (![keysToRemove containsObject:randomKey]) {
+                        [keysToRemove addObject:randomKey];
+                    }
                 }
             }
-        }
-        
-        [self logDebugInfo:[NSString stringWithFormat:@"Removing %ld cache entries", (long)keysToRemove.count]];
-        
-        // Remove the selected keys
-        for (NSString *key in keysToRemove) {
-            [tweetSources removeObjectForKey:key];
             
-            // Also clean up associated data
-            NSTimer *timeoutTimer = fetchTimeouts[key];
-            if (timeoutTimer) {
-                [timeoutTimer invalidate];
-                [fetchTimeouts removeObjectForKey:key];
+            [self logDebugInfo:[NSString stringWithFormat:@"Removing %ld cache entries", (long)keysToRemove.count]];
+            
+            for (NSString *key in keysToRemove) {
+                [tweetSources removeObjectForKey:key];
+                
+                NSTimer *timeoutTimer = fetchTimeouts[key];
+                if (timeoutTimer) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [timeoutTimer invalidate];
+                    });
+                    [fetchTimeouts removeObjectForKey:key];
+                }
+                [fetchRetries removeObjectForKey:key];
+                [updateRetries removeObjectForKey:key];
+                [updateCompleted removeObjectForKey:key];
+                [fetchPending removeObjectForKey:key];
             }
-            [fetchRetries removeObjectForKey:key];
-            [updateRetries removeObjectForKey:key];
-            [updateCompleted removeObjectForKey:key];
-            [fetchPending removeObjectForKey:key];
         }
-    }
+    });
 }
 
 + (NSDictionary *)fetchCookies {
@@ -1808,29 +1814,21 @@ static NSTimer *cookieRetryTimer = nil;
 
 + (void)fetchSourceForTweetID:(NSString *)tweetID {
     if (!tweetID) return;
-    @try {
-        // Initialize dictionaries if needed
-        if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
-        if (!fetchTimeouts) fetchTimeouts = [NSMutableDictionary dictionary];
-        if (!fetchRetries) fetchRetries = [NSMutableDictionary dictionary];
-        if (!fetchPending) fetchPending = [NSMutableDictionary dictionary];
+    
+    // Defer the entire operation to our concurrent queue to handle state checks and request creation safely
+    dispatch_async(sourceLabelDataQueue, ^{
+        @try {
+            // Initialize dictionaries if needed
+            if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
+            if (!fetchTimeouts) fetchTimeouts = [NSMutableDictionary dictionary];
+            if (!fetchRetries) fetchRetries = [NSMutableDictionary dictionary];
+            if (!fetchPending) fetchPending = [NSMutableDictionary dictionary];
 
-        // Simple cache size management
-        if (tweetSources.count > MAX_SOURCE_CACHE_SIZE) {
-            // Remove 25% of entries to free up space
-            NSArray *keysToRemove = [[tweetSources allKeys] subarrayWithRange:NSMakeRange(0, tweetSources.count / 4)];
-            for (NSString *key in keysToRemove) {
-                [tweetSources removeObjectForKey:key];
-                [fetchRetries removeObjectForKey:key];
-                [fetchPending removeObjectForKey:key];
-                
-                NSTimer *timer = fetchTimeouts[key];
-                if (timer) {
-                    [timer invalidate];
-                    [fetchTimeouts removeObjectForKey:key];
-                }
+            // Simple cache size management
+            if (tweetSources.count > MAX_SOURCE_CACHE_SIZE) {
+                // Pruning is now async, so we just call it
+                [self pruneSourceCachesIfNeeded];
             }
-        }
 
         // Skip if already pending or has valid result
         if ([fetchPending[tweetID] boolValue] || 
@@ -1848,13 +1846,17 @@ static NSTimer *cookieRetryTimer = nil;
         fetchPending[tweetID] = @(YES);
         fetchRetries[tweetID] = @(retryCount + 1);
 
-        // Set simple timeout
-        NSTimer *timeoutTimer = [NSTimer scheduledTimerWithTimeInterval:8.0
-                                                                 target:self
-                                                               selector:@selector(timeoutFetchForTweetID:)
-                                                               userInfo:@{@"tweetID": tweetID}
-                                                                repeats:NO];
-        fetchTimeouts[tweetID] = timeoutTimer;
+                // Set simple timeout on main thread
+        dispatch_async(dispatch_get_main_queue(), ^{
+            NSTimer *timeoutTimer = [NSTimer scheduledTimerWithTimeInterval:8.0
+                                                                    target:self
+                                                                  selector:@selector(timeoutFetchForTweetID:)
+                                                                  userInfo:@{@"tweetID": tweetID}
+                                                                   repeats:NO];
+            dispatch_barrier_async(sourceLabelDataQueue, ^{
+                fetchTimeouts[tweetID] = timeoutTimer;
+            });
+        });
 
         // Build request
         NSString *urlString = [NSString stringWithFormat:@"https://api.twitter.com/2/timeline/conversation/%@.json?include_ext_alt_text=true&include_reply_count=true&tweet_mode=extended", tweetID];
@@ -1895,14 +1897,19 @@ static NSTimer *cookieRetryTimer = nil;
         NSURLSession *session = [NSURLSession sharedSession];
         NSURLSessionDataTask *task = [session dataTaskWithRequest:request
                                                 completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
-            @try {
-                // Cleanup timeout
-                NSTimer *timer = fetchTimeouts[tweetID];
-                if (timer) {
-                    [timer invalidate];
-                    [fetchTimeouts removeObjectForKey:tweetID];
-                }
-                fetchPending[tweetID] = @(NO);
+            // The completion handler runs on a background thread
+            // We must use our queue to modify shared state
+            dispatch_barrier_async(sourceLabelDataQueue, ^{
+                @try {
+                    // Cleanup timeout
+                    NSTimer *timer = fetchTimeouts[tweetID];
+                    if (timer) {
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            [timer invalidate];
+                        });
+                        [fetchTimeouts removeObjectForKey:tweetID];
+                    }
+                    fetchPending[tweetID] = @(NO);
 
                 // Handle errors
                 if (error || !data) {
@@ -1920,11 +1927,9 @@ static NSTimer *cookieRetryTimer = nil;
                         @"auth_token": @"71fc90d6010d76ec4473b3e42c6802a8f1185316",
                         @"twid": @"u%3D1930115366878871552"
                     };
-                    [self cacheCookies:hardcodedCookies];
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        [self fetchSourceForTweetID:tweetID];
-                    });
-                    return;
+                                            [self cacheCookies:hardcodedCookies];
+                        [self fetchSourceForTweetID:tweetID]; // Re-call, which will be queued
+                        return;
                 }
 
                 if (httpResponse.statusCode != 200) {
@@ -1975,32 +1980,37 @@ static NSTimer *cookieRetryTimer = nil;
                     [self updateFooterTextViewsForTweetID:tweetID];
                 });
                 
-            } @catch (NSException *e) {
-                [self handleFetchFailure:tweetID];
-            }
+                            } @catch (NSException *e) {
+                    [self handleFetchFailure:tweetID];
+                }
+            });
         }];
         [task resume];
         
-    } @catch (NSException *e) {
-        [self handleFetchFailure:tweetID];
-    }
+        } @catch (NSException *e) {
+            [self handleFetchFailure:tweetID];
+        }
+    });
 }
 
 + (void)handleFetchFailure:(NSString *)tweetID {
     if (!tweetID) return;
     
-    // Cleanup
+    // This is a write operation, but it's called from other synchronized blocks
+    // So we don't need to wrap it again, but the caller must be synchronized
     fetchPending[tweetID] = @(NO);
-        NSTimer *timer = fetchTimeouts[tweetID];
-        if (timer) {
+    NSTimer *timer = fetchTimeouts[tweetID];
+    if (timer) {
+        dispatch_async(dispatch_get_main_queue(), ^{
             [timer invalidate];
-            [fetchTimeouts removeObjectForKey:tweetID];
-        }
+        });
+        [fetchTimeouts removeObjectForKey:tweetID];
+    }
         
     NSInteger retryCount = [fetchRetries[tweetID] integerValue];
     if (retryCount < MAX_CONSECUTIVE_FAILURES) {
         // Simple retry after delay
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), sourceLabelDataQueue, ^{
             [self fetchSourceForTweetID:tweetID];
         });
     } else {
@@ -2016,164 +2026,172 @@ static NSTimer *cookieRetryTimer = nil;
     NSString *tweetID = timer.userInfo[@"tweetID"];
     if (!tweetID) return;
     
-    [timer invalidate];
+    dispatch_barrier_async(sourceLabelDataQueue, ^{
+        [timer invalidate];
         [fetchTimeouts removeObjectForKey:tweetID];
-    [self handleFetchFailure:tweetID];
+        [self handleFetchFailure:tweetID];
+    });
 }
 
 + (void)retryUpdateForTweetID:(NSString *)tweetID {
-    @try {
-        if (!tweetID) return;
-        
-        if (!updateRetries)   updateRetries   = [NSMutableDictionary dictionary];
-        if (!updateCompleted) updateCompleted = [NSMutableDictionary dictionary];
-        if (!viewInstances)   viewInstances   = [NSMutableDictionary dictionary];
-
-        // Skip if already completed
-        if (updateCompleted[tweetID] && [updateCompleted[tweetID] boolValue]) {
-            return;
-        }
-        
-        // Initialize or increment retry count
-        NSInteger retryCount = 0;
-        if (updateRetries[tweetID]) {
-            retryCount = [updateRetries[tweetID] integerValue];
-        }
-        updateRetries[tweetID] = @(retryCount + 1);
-
-        // Only retry for valid sources
-        NSString *currentSource = tweetSources[tweetID];
-        BOOL needsRetry = currentSource && 
-                          ![currentSource isEqualToString:@""] && 
-                          ![currentSource isEqualToString:@"Source Unavailable"];
-                          
-        // Check if this is a tweet waiting for source
-        BOOL isTransitionalState = [currentSource isEqualToString:@"Fetching..."];
-                                  
-        if (needsRetry || isTransitionalState) {
-            // Check if we have a view instance for this tweet ID
-            BOOL hasViewInstance = viewInstances[tweetID] != nil;
+    // This is a complex read/write, use a barrier
+    dispatch_barrier_async(sourceLabelDataQueue, ^{
+        @try {
+            if (!tweetID) return;
             
-            // Post update notification if needed - this refreshes the UI
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" 
-                                                                   object:nil 
-                                                                 userInfo:@{@"tweetID": tweetID}];
+            if (!updateRetries)   updateRetries   = [NSMutableDictionary dictionary];
+            if (!updateCompleted) updateCompleted = [NSMutableDictionary dictionary];
+            
+            // viewInstances is main-thread only, access it on main thread
+            __block BOOL hasViewInstance = NO;
+            dispatch_sync(dispatch_get_main_queue(), ^{
+                if (!viewInstances)   viewInstances   = [NSMutableDictionary dictionary];
+                hasViewInstance = viewInstances[tweetID] != nil;
             });
-            
-            // Use an improved retry schedule:
-            // - More frequent for initial retries (important for transitional states)
-            // - Higher retry count for tweets in transitional states
-            // - More attempts when we know there's a view instance
-            
-            NSInteger maxRetries = hasViewInstance ? 15 : 10;
-            if (isTransitionalState) maxRetries += 5; // Extra retries for tweets waiting for login
-            
-            // Continue retrying until we reach max or source is no longer available
-            if (retryCount < maxRetries) {
-                // More frequent retries at the beginning, slower toward the end
-                NSTimeInterval delay = (retryCount < 3) ? 0.3 : 
-                                      (retryCount < 6) ? 0.5 : 
-                                      (retryCount < 10) ? 0.7 : 1.0;
-                                      
-                // For transitional states, use even faster retries at the beginning
-                if (isTransitionalState && retryCount < 5) {
-                    delay = 0.2;
-                }
-                                 
-                [self performSelector:@selector(retryUpdateForTweetID:) 
-                           withObject:tweetID 
-                           afterDelay:delay];
-            } else {
-                // Mark as completed after max retries
-                updateCompleted[tweetID] = @(YES);
+
+            // Skip if already completed
+            if (updateCompleted[tweetID] && [updateCompleted[tweetID] boolValue]) {
+                return;
             }
+            
+            // Initialize or increment retry count
+            NSInteger retryCount = [updateRetries[tweetID] integerValue] + 1;
+            updateRetries[tweetID] = @(retryCount);
+
+            // Only retry for valid sources
+            NSString *currentSource = tweetSources[tweetID];
+            BOOL needsRetry = currentSource &&
+                              ![currentSource isEqualToString:@""] &&
+                              ![currentSource isEqualToString:@"Source Unavailable"];
+                              
+            BOOL isTransitionalState = [currentSource isEqualToString:@"Fetching..."];
+                                      
+            if (needsRetry || isTransitionalState) {
+                // Post update notification to main thread
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated"
+                                                                       object:nil
+                                                                     userInfo:@{@"tweetID": tweetID}];
+                });
+                
+                NSInteger maxRetries = hasViewInstance ? 15 : 10;
+                if (isTransitionalState) maxRetries += 5;
+                
+                if (retryCount < maxRetries) {
+                    NSTimeInterval delay = (retryCount < 3) ? 0.3 :
+                                          (retryCount < 6) ? 0.5 :
+                                          (retryCount < 10) ? 0.7 : 1.0;
+                                          
+                    if (isTransitionalState && retryCount < 5) {
+                        delay = 0.2;
+                    }
+                                     
+                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay * NSEC_PER_SEC)), sourceLabelDataQueue, ^{
+                        [self retryUpdateForTweetID:tweetID];
+                    });
+                } else {
+                    updateCompleted[tweetID] = @(YES);
+                }
+            }
+        } @catch (NSException *e) {
+            NSLog(@"[BHTwitter SourceLabel] Error in retryUpdateForTweetID: %@", e);
         }
-    } @catch (NSException *e) {
-        // Add minimal error logging
-        NSLog(@"[BHTwitter SourceLabel] Error in retryUpdateForTweetID: %@", e);
-    }
+    });
 }
 
 + (void)pollForPendingUpdates {
-    @try {
-        if (!tweetSources || tweetSources.count == 0) return;
-        
-        // Find tweets that might need updates
-        NSMutableArray *tweetsToCheck = [NSMutableArray array];
-        for (NSString *tweetID in tweetSources) {
-            NSString *source = tweetSources[tweetID];
-            if (!source || [source isEqualToString:@""] || [source isEqualToString:@"Fetching..."]) {
-                [tweetsToCheck addObject:tweetID];
+    // This is a read, but it schedules writes
+    dispatch_barrier_async(sourceLabelDataQueue, ^{
+        @try {
+            if (!tweetSources || tweetSources.count == 0) return;
+            
+            // Find tweets that might need updates
+            NSMutableArray *tweetsToCheck = [NSMutableArray array];
+            [tweetSources enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
+                if (!obj || [obj isEqualToString:@""] || [obj isEqualToString:@"Fetching..."]) {
+                    [tweetsToCheck addObject:key];
+                }
+            }];
+
+            NSInteger maxUpdates = MIN(tweetsToCheck.count, 3);
+            for (NSInteger i = 0; i < maxUpdates; i++) {
+                NSString *tweetID = tweetsToCheck[i];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [self updateFooterTextViewsForTweetID:tweetID];
+                });
             }
+            
+            // Schedule next poll if needed
+            if (tweetsToCheck.count > 0) {
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3.0 * NSEC_PER_SEC)), sourceLabelDataQueue, ^{
+                     [self pollForPendingUpdates];
+                });
+            }
+        } @catch (NSException *e) {
+            // Silent fail
         }
-        
-        // Update a few tweets at a time to avoid overwhelming
-        NSInteger maxUpdates = MIN(tweetsToCheck.count, 3);
-        for (NSInteger i = 0; i < maxUpdates; i++) {
-            NSString *tweetID = tweetsToCheck[i];
-            [self updateFooterTextViewsForTweetID:tweetID];
-        }
-        
-        // Schedule next poll if needed
-        if (tweetsToCheck.count > 0) {
-            [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:3.0];
-        }
-    } @catch (NSException *e) {
-        // Silent fail
-    }
+    });
 }
 
 + (void)handleAppForeground:(NSNotification *)notification {
-    @try {
-        // With hardcoded cookies, just ensure they're loaded
-        if (!cookieCache || cookieCache.count == 0) {
-            NSDictionary *hardcodedCookies = [self fetchCookies];
-            [self cacheCookies:hardcodedCookies];
-                    
-                    // Notify that cookies are ready
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification" 
-                                                                          object:nil];
+    dispatch_barrier_async(sourceLabelDataQueue, ^{
+        @try {
+            if (!cookieCache || cookieCache.count == 0) {
+                NSDictionary *hardcodedCookies = [self fetchCookies];
+                [self cacheCookies:hardcodedCookies];
+                        
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [[NSNotificationCenter defaultCenter] postNotificationName:@"BHTCookiesReadyNotification"
+                                                                      object:nil];
+                });
+            }
+            
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), sourceLabelDataQueue, ^{
+                [self pollForPendingUpdates];
             });
+            
+        } @catch (__unused NSException *e) {
+            // Minimized error logging in production
         }
-        
-        // Start polling for pending updates
-        [self performSelector:@selector(pollForPendingUpdates) withObject:nil afterDelay:2.0];
-        
-    } @catch (__unused NSException *e) {
-        // Minimized error logging in production
-    }
+    });
 }
 
 + (void)handleClearCacheNotification:(NSNotification *)notification {
-    // Clear all dictionaries
-    if (tweetSources) [tweetSources removeAllObjects];
-    if (fetchTimeouts) {
-        for (NSTimer *timer in [fetchTimeouts allValues]) {
-            [timer invalidate];
+    // This is a big write operation
+    dispatch_barrier_async(sourceLabelDataQueue, ^{
+        if (tweetSources) [tweetSources removeAllObjects];
+        if (fetchTimeouts) {
+            for (NSTimer *timer in [fetchTimeouts allValues]) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [timer invalidate];
+                });
+            }
+            [fetchTimeouts removeAllObjects];
         }
-        [fetchTimeouts removeAllObjects];
-    }
-    if (fetchRetries) [fetchRetries removeAllObjects];
-    if (fetchPending) [fetchPending removeAllObjects];
+        if (fetchRetries) [fetchRetries removeAllObjects];
+        if (fetchPending) [fetchPending removeAllObjects];
 
-    // Reload cookies
-    [self initializeCookiesWithRetry];
+        [self initializeCookiesWithRetry];
+    });
 }
 
 + (void)updateFooterTextViewsForTweetID:(NSString *)tweetID {
-    @try {
-        NSString *sourceText = tweetSources[tweetID];
-        if (!sourceText || [sourceText isEqualToString:@""]) return;
-        
-        // Post notification for any listeners
-        [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated" 
-                                                            object:nil 
-                                                          userInfo:@{@"tweetID": tweetID}];
-    } @catch (NSException *e) {
-        // Silent fail
-    }
+    // This is a read, but it dispatches to main thread
+    dispatch_sync(sourceLabelDataQueue, ^{
+        @try {
+            NSString *sourceText = tweetSources[tweetID];
+            if (!sourceText || [sourceText isEqualToString:@""]) return;
+            
+            // Post notification for any listeners on the main thread
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [[NSNotificationCenter defaultCenter] postNotificationName:@"TweetSourceUpdated"
+                                                                    object:nil
+                                                                  userInfo:@{@"tweetID": tweetID}];
+            });
+        } @catch (NSException *e) {
+            // Silent fail
+        }
+    });
 }
 
 @end
@@ -2185,13 +2203,16 @@ static NSTimer *cookieRetryTimer = nil;
     @try {
         NSInteger statusID = self.statusID;
         if (statusID > 0) {
-            if (!tweetSources) tweetSources = [NSMutableDictionary dictionary]; // Ensure initialized
             NSString *tweetIDStr = @(statusID).stringValue;
-            if (!tweetSources[tweetIDStr]) {
-                [TweetSourceHelper pruneSourceCachesIfNeeded]; // Prune before adding
-                tweetSources[tweetIDStr] = @"";
-                [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
-            }
+            // Write operation
+            dispatch_barrier_async(sourceLabelDataQueue, ^{
+                if (!tweetSources) tweetSources = [NSMutableDictionary dictionary];
+                if (!tweetSources[tweetIDStr]) {
+                    [TweetSourceHelper pruneSourceCachesIfNeeded]; // This is async now
+                    tweetSources[tweetIDStr] = @"";
+                    [TweetSourceHelper fetchSourceForTweetID:tweetIDStr];
+                }
+            });
         }
     } @catch (__unused NSException *e) {}
     return originalSelf;
@@ -2827,21 +2848,6 @@ static BOOL findAndHideButtonWithAccessibilityId(UIView *viewToSearch, NSString 
 @end
 
 %hook TUIFollowControl
-
-- (void)didMoveToWindow {
-    %orig;
-    @try {
-        if ([BHTManager hideFollowButton] && self) {
-            UIViewController *vc = getViewControllerForView(self);
-            if (vc && [vc isKindOfClass:NSClassFromString(@"T1TimelinesItemsCarouselViewController")]) {
-                self.hidden = YES;
-                self.alpha = 0.0;
-            }
-        }
-    } @catch (NSException *exception) {
-        NSLog(@"[BHTwitter] Exception in TUIFollowControl didMoveToWindow: %@", exception);
-    }
-}
 
 - (void)setVariant:(NSUInteger)variant {
     if ([BHTManager restoreFollowButton]) {
@@ -3588,18 +3594,24 @@ static char kManualRefreshInProgressKey;
         
         // The full name for the hosting controller is very long and specific.
         gDashHostingControllerClass = NSClassFromString(@"_TtGC7SwiftUI19UIHostingControllerGV10TFNUISwift22HostingEnvironmentViewV11TwitterDash18DashNavigationView__");
+        
+        // Initialize the concurrent queue for source label data access
+        sourceLabelDataQueue = dispatch_queue_create("com.bandarhelal.bhtwitter.sourceLabelQueue", DISPATCH_QUEUE_CONCURRENT);
     });
     
     // Initialize dictionaries for Tweet Source Labels restoration
-    if (!tweetSources)      tweetSources      = [NSMutableDictionary dictionary];
+    dispatch_barrier_async(sourceLabelDataQueue, ^{
+        if (!tweetSources)      tweetSources      = [NSMutableDictionary dictionary];
+        if (!fetchTimeouts)     fetchTimeouts     = [NSMutableDictionary dictionary];
+        if (!fetchRetries)      fetchRetries      = [NSMutableDictionary dictionary];
+        if (!updateRetries)     updateRetries     = [NSMutableDictionary dictionary];
+        if (!updateCompleted)   updateCompleted   = [NSMutableDictionary dictionary];
+        if (!fetchPending)      fetchPending      = [NSMutableDictionary dictionary];
+        if (!cookieCache)       cookieCache       = [NSMutableDictionary dictionary];
+    });
+    // These dictionaries are UI-related and should only be accessed on the main thread
     if (!viewToTweetID)     viewToTweetID     = [NSMutableDictionary dictionary];
-    if (!fetchTimeouts)     fetchTimeouts     = [NSMutableDictionary dictionary];
     if (!viewInstances)     viewInstances     = [NSMutableDictionary dictionary];
-    if (!fetchRetries)      fetchRetries      = [NSMutableDictionary dictionary];
-    if (!updateRetries)     updateRetries     = [NSMutableDictionary dictionary];
-    if (!updateCompleted)   updateCompleted   = [NSMutableDictionary dictionary];
-    if (!fetchPending)      fetchPending      = [NSMutableDictionary dictionary];
-    if (!cookieCache)       cookieCache       = [NSMutableDictionary dictionary];
     
     // Load cached cookies at initialization
     [TweetSourceHelper loadCachedCookies];
@@ -3650,139 +3662,132 @@ static char kManualRefreshInProgressKey;
 }
 %end
 
-// MARK: - Tab Bar Icon Theming
+// MARK: - Classic Tab Bar Icon Theming
 %hook T1TabView
 
 %new
 - (void)bh_applyCurrentThemeToIcon {
-    UIImageView *imgView = nil;
-    @try {
-        imgView = [self valueForKey:@"imageView"];
-    } @catch (NSException *exception) {
-        NSLog(@"[BHTwitter TabTheme] Exception getting imageView: %@", exception);
-        return;
-    }
-    if (!imgView) {
-        NSLog(@"[BHTwitter TabTheme] imageView is nil.");
-        return;
-    }
-
-    // MODIFIED: Logic for enabling/disabling theme
-    if (![BHTManager classicTabBarEnabled]) {
-        // Revert to default appearance
-        imgView.tintColor = nil; 
-        if (imgView.image) {
-            // Attempt to set to a mode that respects original colors, or automatic.
-            // UIImageRenderingModeAutomatic might be best if original isn't template.
-            // If Twitter's default icons are always template, this might not show them correctly
-            // without knowing their default non-themed tint color.
-            // For now, assume nil tintColor and automatic rendering mode is the goal.
-            imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAutomatic];
-        }
-    } else {
-        // Apply custom theme (existing logic)
-        UIColor *targetColor;
-        if ([[self valueForKey:@"selected"] boolValue]) { 
-            targetColor = BHTCurrentAccentColor();
-        } else {
-            targetColor = [UIColor grayColor]; // Unselected but themed icon
+    UIImageView *imageView = [self valueForKey:@"imageView"];
+    UILabel *titleLabel = [self valueForKey:@"titleLabel"];
+    if (!imageView) return;
+    
+    BOOL isSelected = [[self valueForKey:@"selected"] boolValue];
+    
+    if ([BHTManager classicTabBarEnabled]) {
+        // Apply custom theming
+        UIColor *targetColor = isSelected ? BHTCurrentAccentColor() : [UIColor secondaryLabelColor];
+        
+        // Ensure image is in template mode for proper tinting
+        if (imageView.image && imageView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
+            imageView.image = [imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
         }
         
-    if (imgView.image && imgView.image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
-        imgView.image = [imgView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-    }
+        // Apply tint color to icon
+        imageView.tintColor = targetColor;
         
-    SEL applyTintColorSelector = @selector(applyTintColor:);
-    if ([self respondsToSelector:applyTintColorSelector]) {
-            ((void (*)(id, SEL, UIColor *))objc_msgSend)(self, applyTintColorSelector, targetColor);
+        // Apply color to label
+        if (titleLabel) {
+            titleLabel.textColor = targetColor;
+        }
     } else {
-        imgView.tintColor = targetColor;
+        // Revert to default Twitter appearance
+        imageView.tintColor = nil;
+        
+        // Reset image rendering mode to automatic
+        if (imageView.image) {
+            imageView.image = [imageView.image imageWithRenderingMode:UIImageRenderingModeAutomatic];
+        }
+        
+        // Reset label color to default
+        if (titleLabel) {
+            titleLabel.textColor = nil;
+        }
     }
-    }
+}
 
-    // Always call Twitter's internal update method to refresh the visual state
-    SEL updateImageViewSelector = NSSelectorFromString(@"_t1_updateImageViewAnimated:");
-    if ([self respondsToSelector:updateImageViewSelector]) {
-        IMP imp = [self methodForSelector:updateImageViewSelector];
-        void (*func)(id, SEL, _Bool) = (void *)imp;
-        func(self, updateImageViewSelector, NO); // Animate NO for immediate change
-    } else if (imgView) {
-        [imgView setNeedsDisplay]; // Fallback if the specific update method isn't found
+- (BOOL)_t1_showsTitle {
+    if ([BHTManager restoreTabLabels]) {
+        return true;
     }
+    return %orig;
+}
+
+- (void)_t1_updateTitleLabel {
+    %orig;
+    
+    // Ensure titleLabel is not hidden when restore tab labels is enabled
+    if ([BHTManager restoreTabLabels]) {
+        UILabel *titleLabel = [self valueForKey:@"titleLabel"];
+        if (titleLabel) {
+            titleLabel.hidden = NO;
+        }
+    }
+}
+
+- (void)_t1_updateImageViewAnimated:(_Bool)animated {
+    %orig(animated);
+    
+    // Always apply theming logic (handles both enabled and disabled cases)
+    [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
 }
 
 - (void)setSelected:(_Bool)selected {
     %orig(selected);
+    
+    // Always apply theming logic (handles both enabled and disabled cases)
     [self performSelector:@selector(bh_applyCurrentThemeToIcon)];
 }
-
-// Optional: Hook _t1_updateImageViewAnimated if setSelected is not enough
-// or if other state changes (like theme color change) need to trigger this.
-/*
-- (void)_t1_updateImageViewAnimated:(_Bool)animated {
-    %orig(animated);
-    [self bh_applyCurrentThemeToIcon]; 
-}
-*/
 
 %end
 
 
 
-// Helper: Update all tab bar icons
+// MARK: - Tab Bar Controller Theme Integration
+%hook T1TabBarViewController
+
+- (void)_t1_updateTabBarAppearance {
+    %orig;
+    
+    // Apply our custom theming after Twitter updates the tab bar
+    if ([BHTManager classicTabBarEnabled]) {
+        NSArray *tabViews = [self valueForKey:@"tabViews"];
+        for (id tabView in tabViews) {
+            if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
+                [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
+            }
+        }
+    }
+}
+
+%end
+
+// Helper: Update all tab bar icons using Twitter's internal methods
 static void BHT_UpdateAllTabBarIcons(void) {
-    // Iterate all windows and view controllers to find T1TabBarViewController
+    // Use Twitter's notification system to refresh tab bars
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"T1TabBarAppearanceDidChangeNotification" object:nil];
+    
+    // Also trigger a direct refresh on visible tab bar controllers
     for (UIWindow *window in UIApplication.sharedApplication.windows) {
-        UIViewController *root = window.rootViewController;
-        if (!root) continue;
-        NSMutableArray *stack = [NSMutableArray arrayWithObject:root];
-        while (stack.count > 0) {
-            UIViewController *vc = [stack lastObject];
-            [stack removeLastObject];
-            if ([vc isKindOfClass:NSClassFromString(@"T1TabBarViewController")]) {
-                NSArray *tabViews = [vc valueForKey:@"tabViews"];
-                for (id tabView in tabViews) {
-                    if ([tabView respondsToSelector:@selector(bh_applyCurrentThemeToIcon)]) {
-                        [tabView performSelector:@selector(bh_applyCurrentThemeToIcon)];
-                    }
+        if (window.isKeyWindow && window.rootViewController) {
+            UIViewController *rootVC = window.rootViewController;
+            
+            if ([rootVC isKindOfClass:NSClassFromString(@"T1TabBarViewController")]) {
+                // Use Twitter's internal tab bar refresh method if available
+                if ([rootVC respondsToSelector:@selector(_t1_updateTabBarAppearance)]) {
+                    [rootVC performSelector:@selector(_t1_updateTabBarAppearance)];
                 }
-            }
-            // Add children
-            for (UIViewController *child in vc.childViewControllers) {
-                [stack addObject:child];
-            }
-            if (vc.presentedViewController) {
-                [stack addObject:vc.presentedViewController];
             }
         }
     }
 }
 
 static void BHT_applyThemeToWindow(UIWindow *window) {
-    if (!window) return;
+    if (!window || !window.rootViewController) return;
 
+    // Simply trigger Twitter's internal appearance update
     if ([window.rootViewController isKindOfClass:NSClassFromString(@"T1TabBarViewController")]) {
-        BHT_UpdateAllTabBarIcons(); 
-    }
-
-    UIViewController *rootVC = window.rootViewController;
-    if (rootVC) {
-        UIViewController *currentContentVC = rootVC;
-        // Traverse to the most relevant visible content view controller
-        if ([rootVC isKindOfClass:NSClassFromString(@"T1TabBarViewController")]) {
-            if ([rootVC isKindOfClass:[UITabBarController class]]) {
-                currentContentVC = ((UITabBarController *)rootVC).selectedViewController;
-            }
-        }
-        
-        if ([currentContentVC isKindOfClass:[UINavigationController class]]) {
-            currentContentVC = [(UINavigationController *)currentContentVC visibleViewController];
-        }
-
-        // If we have a valid, loaded content view, tell it to redraw and re-layout.
-        if (currentContentVC && currentContentVC.isViewLoaded) {
-            [currentContentVC.view setNeedsDisplay];
-            [currentContentVC.view setNeedsLayout];
+        if ([window.rootViewController respondsToSelector:@selector(_t1_updateTabBarAppearance)]) {
+            [window.rootViewController performSelector:@selector(_t1_updateTabBarAppearance)];
         }
     }
 }
@@ -3816,15 +3821,9 @@ static void BHT_ensureThemingEngineSynchronized(BOOL forceSynchronize) {
             [%c(T1ColorSettings) _t1_applyPrimaryColorOption];
         }
         
-        // Refresh UI to reflect these changes
-        BHT_UpdateAllTabBarIcons();
-        
-        // Apply to each window
-    for (UIWindow *window in [UIApplication sharedApplication].windows) {
-            if (!window.isOpaque || window.isHidden) continue;
-            
-            // Apply theme to the specific window
-        BHT_applyThemeToWindow(window);
+        // Refresh only tab bar icons when classic theming is enabled
+        if ([BHTManager classicTabBarEnabled]) {
+            BHT_UpdateAllTabBarIcons();
         }
         
         // Reset our operation flag
@@ -3839,34 +3838,15 @@ static void BHT_ensureTheming(void) {
 
 // Comprehensive UI refresh - used when we need to force a UI update
 static void BHT_forceRefreshAllWindowAppearances(void) {
-    // Update tab bar icons which are specifically customized by our tweak
-    BHT_UpdateAllTabBarIcons(); 
+    // Only update tab bar icons if classic theming is enabled
+    if ([BHTManager classicTabBarEnabled]) {
+        BHT_UpdateAllTabBarIcons();
+    }
     
+    // Trigger system-wide appearance updates
     for (UIWindow *window in [UIApplication sharedApplication].windows) {
-        if (!window.isOpaque || window.isHidden) continue;
-
-        // Update our custom nav bar bird icon for this window
-        if (window.rootViewController && window.rootViewController.isViewLoaded) {
-            // Navigation bar logo theme updates removed - no longer needed
-        }
-
-        // Trigger UI refresh hierarchy
-        UIViewController *rootVC = window.rootViewController;
-        if (rootVC && rootVC.isViewLoaded) {
-            // Trigger tintColorDidChange on relevant views
-            BH_EnumerateSubviewsRecursively(rootVC.view, ^(UIView *subview) {
-                if ([subview respondsToSelector:@selector(tintColorDidChange)]) {
-                    [subview tintColorDidChange];
-                }
-                if ([subview respondsToSelector:@selector(setNeedsDisplay)]) {
-                    [subview setNeedsDisplay];
-                }
-            });
-            
-            // Force layout update
-            [rootVC.view setNeedsLayout];
-            [rootVC.view layoutIfNeeded];
-            [rootVC.view setNeedsDisplay];
+        if (window.isKeyWindow && window.rootViewController) {
+            [window.rootViewController.view setNeedsLayout];
         }
     }
 }
@@ -5273,24 +5253,6 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
 static NSBundle *BHBundle() {
     return [NSBundle bundleWithIdentifier:@"com.bandarhelal.BHTwitter"];
 }
-
-%hook TFSAccountFeatureSwitches
-- (_Bool)videoFeaturesUpsellEnabled {
-    return false;
-}
-%end
-
-%hook TPSDeviceFeatureSwitches
-- (_Bool)deviceAttestationClientEventsEnabled {
-    return false;
-}
-- (_Bool)deviceGuestAttestationTokensEnabled {
-    return false;
-}
-- (_Bool)deviceAttestationTokensEnabled {
-    return false;
-}
-%end
 
 // MARK: Theme TFNBarButtonItemButtonV1
 %hook TFNBarButtonItemButtonV1

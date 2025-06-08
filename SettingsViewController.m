@@ -492,6 +492,12 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
                                                        defaultValue:false 
                                                        changeAction:@selector(tabBarThemingAction:)];
         
+        PSSpecifier *restoreTabLabels = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTORE_TAB_LABELS_TITLE"]
+                                                         detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTORE_TAB_LABELS_DETAIL"]
+                                                                 key:@"restore_tab_labels" 
+                                                        defaultValue:false 
+                                                        changeAction:@selector(restoreTabLabelsAction:)];
+        
         PSSpecifier *hideViewCount = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE"] key:@"hide_view_count" defaultValue:false changeAction:nil];
 
         PSSpecifier *hideBookmarkButton = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_MARKBOOK_BUTTON_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_MARKBOOK_BUTTON_OPTION_DETAIL_TITLE"] key:@"hide_bookmark_button" defaultValue:false changeAction:nil];
@@ -634,6 +640,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             hideSpace,
             stopHidingTabBar,
             tabBarTheming,
+            restoreTabLabels,
             disableRTL,
             showScrollIndicator,
             font,
@@ -1089,32 +1096,56 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 }
 
 - (void)tabBarThemingAction:(UISwitch *)sender {
-    BOOL newState = sender.isOn;
-    NSString *key = @"tab_bar_theming"; // The UserDefaults key
-    BOOL previousState = !newState;    // The state before the user toggled the switch
+    // Save the setting immediately
+    [[NSUserDefaults standardUserDefaults] setBool:sender.isOn forKey:@"tab_bar_theming"];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+    
+    // Trigger immediate refresh of all tab views with theming
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self refreshAllTabViewsWithTheming];
+    });
+}
 
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_TITLE"]
-                                                                   message:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC"]
-                                                                preferredStyle:UIAlertControllerStyleAlert];
+- (void)refreshAllTabViewsWithTheming {
+    // Find all T1TabView instances and refresh them with theming
+    for (UIWindow *window in [UIApplication sharedApplication].windows) {
+        if (window.isKeyWindow && window.rootViewController) {
+            [self refreshTabViewsWithThemingInView:window.rootViewController.view];
+        }
+    }
+}
 
-    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_NOW_BUTTON_TITLE"]
-                                              style:UIAlertActionStyleDestructive
-                                            handler:^(UIAlertAction * _Nonnull action) {
-        [[NSUserDefaults standardUserDefaults] setBool:newState forKey:key];
-            [[NSUserDefaults standardUserDefaults] synchronize];
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                exit(0);
-            });
-        }]];
-
-    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"]
-                                              style:UIAlertActionStyleCancel
-                                            handler:^(UIAlertAction * _Nonnull action) {
-        // Revert the switch to its previous state if canceled
-        [sender setOn:previousState animated:YES];
-        }]];
-
-        [self presentViewController:alert animated:YES completion:nil];
+- (void)refreshTabViewsWithThemingInView:(UIView *)view {
+    // Check if this view is a T1TabView
+    if ([view isKindOfClass:NSClassFromString(@"T1TabView")]) {
+        // Use Twitter's specific internal methods to refresh the tab view
+        if ([view respondsToSelector:@selector(_t1_updateImageViewAnimated:)]) {
+            [view performSelector:@selector(_t1_updateImageViewAnimated:) withObject:@(NO)];
+        }
+        if ([view respondsToSelector:@selector(_t1_updateTitleLabel)]) {
+            [view performSelector:@selector(_t1_updateTitleLabel)];
+        }
+        if ([view respondsToSelector:@selector(_t1_layoutForTabBar)]) {
+            [view performSelector:@selector(_t1_layoutForTabBar)];
+        }
+        // Fix badge positioning when theming changes
+        if ([view respondsToSelector:@selector(_t1_layoutBadgeViewMaximized)]) {
+            [view performSelector:@selector(_t1_layoutBadgeViewMaximized)];
+        }
+        
+        // Force label color reset when theming is OFF
+        if (![[[NSUserDefaults standardUserDefaults] objectForKey:@"tab_bar_theming"] boolValue]) {
+            UILabel *titleLabel = [view valueForKey:@"titleLabel"];
+            if (titleLabel) {
+                titleLabel.textColor = nil;
+            }
+        }
+    }
+    
+    // Recursively search subviews
+    for (UIView *subview in view.subviews) {
+        [self refreshTabViewsWithThemingInView:subview];
+    }
 }
 
 - (void)squareAvatarsAction:(UISwitch *)sender {
@@ -1171,6 +1202,57 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 
 - (void)openNeoFreeBirdTwitter:(PSSpecifier *)specifier {
     [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"twitter://user?id=1878595268255297537"] options:@{} completionHandler:nil];
+}
+
+- (void)restoreTabLabelsAction:(UISwitch *)sender {
+    // Save the setting immediately
+    [[NSUserDefaults standardUserDefaults] setBool:sender.isOn forKey:@"restore_tab_labels"];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+    
+    // Trigger immediate refresh of all tab views
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self refreshAllTabViews];
+    });
+}
+
+- (void)refreshAllTabViews {
+    // Find all T1TabView instances and refresh them using Twitter's internal methods
+    for (UIWindow *window in [UIApplication sharedApplication].windows) {
+        if (window.isKeyWindow && window.rootViewController) {
+            [self refreshTabViewsInView:window.rootViewController.view];
+        }
+    }
+}
+
+- (void)refreshTabViewsInView:(UIView *)view {
+    // Check if this view is a T1TabView
+    if ([view isKindOfClass:NSClassFromString(@"T1TabView")]) {
+        // Use Twitter's specific internal methods to refresh the tab view
+        if ([view respondsToSelector:@selector(_t1_updateTitleLabel)]) {
+            [view performSelector:@selector(_t1_updateTitleLabel)];
+        }
+        // Use Twitter's specific layout methods instead of layoutSubviews
+        if ([view respondsToSelector:@selector(_t1_layoutForTabBar)]) {
+            [view performSelector:@selector(_t1_layoutForTabBar)];
+        }
+        // Fix badge positioning when labels change
+        if ([view respondsToSelector:@selector(_t1_layoutBadgeViewMaximized)]) {
+            [view performSelector:@selector(_t1_layoutBadgeViewMaximized)];
+        }
+        
+        // Force label color reset when theming is OFF
+        if (![[[NSUserDefaults standardUserDefaults] objectForKey:@"tab_bar_theming"] boolValue]) {
+            UILabel *titleLabel = [view valueForKey:@"titleLabel"];
+            if (titleLabel) {
+                titleLabel.textColor = nil;
+            }
+        }
+    }
+    
+    // Recursively search subviews
+    for (UIView *subview in view.subviews) {
+        [self refreshTabViewsInView:subview];
+    }
 }
 
 @end
