@@ -1268,6 +1268,9 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 %end
 
 %hook TFNTwitterAccount
+- (_Bool)isXChatEnabled {
+    return [BHTManager disableXChat] ? false : %orig;
+}
 - (_Bool)isEditProfileUsernameEnabled {
     return true;
 }

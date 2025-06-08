@@ -346,3 +346,6 @@
 
 "VOICE_OPTION_TITLE" = "Voice mode";
 "VOICE_OPTION_DETAIL_TITLE" = "Reply to Tweets and replies using your voice.";
+
+"DISABLE_XCHAT_OPTION_TITLE" = "Disable XChat";
+"DISABLE_XCHAT_OPTION_DETAIL_TITLE" = "Disable XChat on the sidebar.";

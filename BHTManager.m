@@ -376,5 +376,9 @@
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"restore_reply_context"];
 }
 
++ (BOOL)disableXChat {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"disable_xchat"];
+}
+
 @end
 
