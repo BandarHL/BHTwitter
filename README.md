@@ -1,34 +1,11 @@
 # NeoFreeBird-BHTwitter
 the ultimate way to tweak your Twitter/X experience.
 
+## Warning: 
+these builds are considered beta. even though they should work fine. you may run into some issues.
+currently we're building it against Twitter/X v10.94. recent versions may have issues that havent been fixed yet.
+
 > Forked from [BHTwitter](https://github.com/BandarHL/BHTwitter).
-
-# Features
-
-- **Download media**: Save videos and GIFs directly from Tweets.
-- **Custom tab bar**: Personalize your navigation.
-- **No search history**: Keep your searches private.
-- **No topic Tweets**: Remove irrelevant topics from your feed.
-- **No video captions**: Clean up your video player.
-- **Lock Twitter**: Secure the app with Face ID, Touch ID, or a passcode.
-- **Custom fonts**: Change the font to match your style.
-- **Better DM search**: Unlock advanced Direct Message filters.
-- **High-quality media**: Always upload and view in the best quality available.
-- **Undo Tweet**: Add a delay to fix mistakes before posting.
-- **Change theme**: Choose colors to match your mood.
-- **Change app icon**: Fresh icons to suit your theme.
-- **Twitter Circles**: Full support included.
-- **Copy profile details**: Easily copy bios, usernames, and more.
-- **Save Tweets as images**: Long-press to export Tweets cleanly.
-- **Hide Spaces bar**: Make your timeline cleaner.
-- **Left-to-right layout**: Force LTR layout even for RTL languages.
-- **Open links externally**: Use Safari or your default browser.
-- **Translate bios**: View bios in your preferred language.
-- **Original Tweet layout**: Revert to the classic Tweet style.
-- **Voice Tweets & DMs**: Enable hidden voice features.
-- **Block promoted Tweets**: Remove ads from your feed.
-- **Confirm likes, Tweets, and follows**: Add confirmation prompts to avoid mistakes.
-- **FLEX debug tool**: Tools for developers to debug easily.
 
 | | | |
 |:-------------------------:|:-------------------------:|:-------------------------:|
