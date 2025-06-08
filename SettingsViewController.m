@@ -496,7 +496,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
                                                          detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTORE_TAB_LABELS_DETAIL"]
                                                                  key:@"restore_tab_labels" 
                                                         defaultValue:false 
-                                                        changeAction:nil];
+                                                        changeAction:@selector(restoreTabLabelsAction:)];
         
         PSSpecifier *hideViewCount = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE"] key:@"hide_view_count" defaultValue:false changeAction:nil];
 
@@ -1178,6 +1178,44 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 
 - (void)openNeoFreeBirdTwitter:(PSSpecifier *)specifier {
     [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"twitter://user?id=1878595268255297537"] options:@{} completionHandler:nil];
+}
+
+- (void)restoreTabLabelsAction:(UISwitch *)sender {
+    // Save the setting immediately
+    [[NSUserDefaults standardUserDefaults] setBool:sender.isOn forKey:@"restore_tab_labels"];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+    
+    // Trigger immediate refresh of all tab views
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self refreshAllTabViews];
+    });
+}
+
+- (void)refreshAllTabViews {
+    // Find all T1TabView instances and refresh them using Twitter's internal methods
+    for (UIWindow *window in [UIApplication sharedApplication].windows) {
+        if (window.isKeyWindow && window.rootViewController) {
+            [self refreshTabViewsInView:window.rootViewController.view];
+        }
+    }
+}
+
+- (void)refreshTabViewsInView:(UIView *)view {
+    // Check if this view is a T1TabView
+    if ([view isKindOfClass:NSClassFromString(@"T1TabView")]) {
+        // Use Twitter's internal methods to refresh the tab view
+        if ([view respondsToSelector:@selector(_t1_updateTitleLabel)]) {
+            [view performSelector:@selector(_t1_updateTitleLabel)];
+        }
+        if ([view respondsToSelector:@selector(layoutSubviews)]) {
+            [view performSelector:@selector(layoutSubviews)];
+        }
+    }
+    
+    // Recursively search subviews
+    for (UIView *subview in view.subviews) {
+        [self refreshTabViewsInView:subview];
+    }
 }
 
 @end
