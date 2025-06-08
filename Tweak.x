@@ -3718,6 +3718,36 @@ static char kManualRefreshInProgressKey;
 
 %end
 
+// MARK: - Tab Label Color Management
+%hook UILabel
+
+- (void)_tfn_dynamicColor_UILabel_setTextColor:(id)color {
+    // Check if this label is inside a T1TabView
+    UIView *parentView = self.superview;
+    BOOL isTabViewLabel = NO;
+    
+    while (parentView) {
+        if ([parentView isKindOfClass:NSClassFromString(@"T1TabView")]) {
+            isTabViewLabel = YES;
+            break;
+        }
+        parentView = parentView.superview;
+    }
+    
+    if (isTabViewLabel && [BHTManager classicTabBarEnabled]) {
+        // Only interfere when theming is enabled
+        T1TabView *tabView = (T1TabView *)parentView;
+        BOOL isSelected = [[tabView valueForKey:@"selected"] boolValue];
+        UIColor *targetColor = isSelected ? BHTCurrentAccentColor() : [UIColor secondaryLabelColor];
+        %orig(targetColor);
+    } else {
+        // Let Twitter handle colors normally (either not a tab view or theming disabled)
+        %orig(color);
+    }
+}
+
+%end
+
 // MARK: - Tab Bar Controller Theme Integration
 %hook T1TabBarViewController
 
