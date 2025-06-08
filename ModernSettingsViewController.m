@@ -6,6 +6,7 @@
 @property (nonatomic, strong) TFNTwitterAccount *account;
 @property (nonatomic, strong) UITableView *tableView;
 @property (nonatomic, strong) NSArray *sections;
+@property (nonatomic, strong) id descriptionAdapter;
 @end
 
 @implementation ModernSettingsViewController
@@ -14,6 +15,7 @@
     self = [super init];
     if (self) {
         self.account = account;
+        self.descriptionAdapter = [[objc_getClass("TFNSettingsDescriptionItemTableRowAdapter") alloc] init];
     }
     return self;
 }
@@ -48,10 +50,7 @@
     
     // For now, we only have one type of item. We will expand this.
     if ([item isKindOfClass:objc_getClass("TFNSettingsDescriptionItem")]) {
-        UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"DescriptionCell"];
-        cell.textLabel.text = [item text];
-        cell.textLabel.numberOfLines = 0;
-        return cell;
+        return [self.descriptionAdapter dataViewController:self tableViewCellForItem:item withOptions:nil atIndexPath:indexPath];
     }
     
     return [[UITableViewCell alloc] init];

@@ -112,6 +112,10 @@ static NSString *_lastCopiedURL;
 - (instancetype)initWithText:(NSString *)text callsToAction:(NSArray *)callsToAction;
 @end
 
+@interface TFNSettingsDescriptionItemTableRowAdapter : NSObject
+- (id)dataViewController:(id)arg1 tableViewCellForItem:(id)arg2 withOptions:(id)arg3 atIndexPath:(id)arg4;
+@end
+
 @interface TFNItemsDataViewSection : NSObject
 + (instancetype)sectionWithItem:(id)item;
 @end
