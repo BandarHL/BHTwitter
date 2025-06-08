@@ -1203,12 +1203,13 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 - (void)refreshTabViewsInView:(UIView *)view {
     // Check if this view is a T1TabView
     if ([view isKindOfClass:NSClassFromString(@"T1TabView")]) {
-        // Use Twitter's internal methods to refresh the tab view
+        // Use Twitter's specific internal methods to refresh the tab view
         if ([view respondsToSelector:@selector(_t1_updateTitleLabel)]) {
             [view performSelector:@selector(_t1_updateTitleLabel)];
         }
-        if ([view respondsToSelector:@selector(layoutSubviews)]) {
-            [view performSelector:@selector(layoutSubviews)];
+        // Use Twitter's specific layout methods instead of layoutSubviews
+        if ([view respondsToSelector:@selector(_t1_layoutForTabBar)]) {
+            [view performSelector:@selector(_t1_layoutForTabBar)];
         }
     }
     
