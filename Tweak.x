@@ -3653,7 +3653,6 @@ static char kManualRefreshInProgressKey;
 %new
 - (void)bh_applyCurrentThemeToIcon {
     UIImageView *imageView = [self valueForKey:@"imageView"];
-    UILabel *titleLabel = [self valueForKey:@"titleLabel"];
     if (!imageView) return;
     
     BOOL isSelected = [[self valueForKey:@"selected"] boolValue];
@@ -3669,11 +3668,6 @@ static char kManualRefreshInProgressKey;
         
         // Apply tint color to icon
         imageView.tintColor = targetColor;
-        
-        // Apply tint color to label if it exists
-        if (titleLabel) {
-            titleLabel.textColor = targetColor;
-        }
     } else {
         // Revert to default Twitter appearance
         imageView.tintColor = nil;
@@ -3681,11 +3675,6 @@ static char kManualRefreshInProgressKey;
         // Reset image rendering mode to automatic
         if (imageView.image) {
             imageView.image = [imageView.image imageWithRenderingMode:UIImageRenderingModeAutomatic];
-        }
-        
-        // Reset label color to default
-        if (titleLabel) {
-            titleLabel.textColor = [UIColor labelColor];
         }
     }
 }

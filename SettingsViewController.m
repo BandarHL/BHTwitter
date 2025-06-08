@@ -1133,10 +1133,12 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             [view performSelector:@selector(_t1_layoutBadgeViewMaximized)];
         }
         
-        // Manually trigger label color update
-        UILabel *titleLabel = [view valueForKey:@"titleLabel"];
-        if (titleLabel && [titleLabel respondsToSelector:@selector(_tfn_dynamicColor_UILabel_setTextColor:)]) {
-            [titleLabel performSelector:@selector(_tfn_dynamicColor_UILabel_setTextColor:) withObject:nil];
+        // Only trigger label color reset when theming is OFF
+        if (![[[NSUserDefaults standardUserDefaults] objectForKey:@"tab_bar_theming"] boolValue]) {
+            UILabel *titleLabel = [view valueForKey:@"titleLabel"];
+            if (titleLabel && [titleLabel respondsToSelector:@selector(_tfn_dynamicColor_UILabel_setTextColor:)]) {
+                [titleLabel performSelector:@selector(_tfn_dynamicColor_UILabel_setTextColor:) withObject:nil];
+            }
         }
     }
     
@@ -1238,10 +1240,12 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             [view performSelector:@selector(_t1_layoutBadgeViewMaximized)];
         }
         
-        // Manually trigger label color update
-        UILabel *titleLabel = [view valueForKey:@"titleLabel"];
-        if (titleLabel && [titleLabel respondsToSelector:@selector(_tfn_dynamicColor_UILabel_setTextColor:)]) {
-            [titleLabel performSelector:@selector(_tfn_dynamicColor_UILabel_setTextColor:) withObject:nil];
+        // Only trigger label color reset when theming is OFF
+        if (![[[NSUserDefaults standardUserDefaults] objectForKey:@"tab_bar_theming"] boolValue]) {
+            UILabel *titleLabel = [view valueForKey:@"titleLabel"];
+            if (titleLabel && [titleLabel respondsToSelector:@selector(_tfn_dynamicColor_UILabel_setTextColor:)]) {
+                [titleLabel performSelector:@selector(_tfn_dynamicColor_UILabel_setTextColor:) withObject:nil];
+            }
         }
     }
     
