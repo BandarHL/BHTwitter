@@ -1096,32 +1096,44 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
 }
 
 - (void)tabBarThemingAction:(UISwitch *)sender {
-    BOOL newState = sender.isOn;
-    NSString *key = @"tab_bar_theming"; // The UserDefaults key
-    BOOL previousState = !newState;    // The state before the user toggled the switch
+    // Save the setting immediately
+    [[NSUserDefaults standardUserDefaults] setBool:sender.isOn forKey:@"tab_bar_theming"];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+    
+    // Trigger immediate refresh of all tab views with theming
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self refreshAllTabViewsWithTheming];
+    });
+}
 
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_TITLE"]
-                                                                   message:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC"]
-                                                                preferredStyle:UIAlertControllerStyleAlert];
+- (void)refreshAllTabViewsWithTheming {
+    // Find all T1TabView instances and refresh them with theming
+    for (UIWindow *window in [UIApplication sharedApplication].windows) {
+        if (window.isKeyWindow && window.rootViewController) {
+            [self refreshTabViewsWithThemingInView:window.rootViewController.view];
+        }
+    }
+}
 
-    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_NOW_BUTTON_TITLE"]
-                                              style:UIAlertActionStyleDestructive
-                                            handler:^(UIAlertAction * _Nonnull action) {
-        [[NSUserDefaults standardUserDefaults] setBool:newState forKey:key];
-            [[NSUserDefaults standardUserDefaults] synchronize];
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                exit(0);
-            });
-        }]];
-
-    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"]
-                                              style:UIAlertActionStyleCancel
-                                            handler:^(UIAlertAction * _Nonnull action) {
-        // Revert the switch to its previous state if canceled
-        [sender setOn:previousState animated:YES];
-        }]];
-
-        [self presentViewController:alert animated:YES completion:nil];
+- (void)refreshTabViewsWithThemingInView:(UIView *)view {
+    // Check if this view is a T1TabView
+    if ([view isKindOfClass:NSClassFromString(@"T1TabView")]) {
+        // Use Twitter's specific internal methods to refresh the tab view
+        if ([view respondsToSelector:@selector(_t1_updateImageViewAnimated:)]) {
+            [view performSelector:@selector(_t1_updateImageViewAnimated:) withObject:@(NO)];
+        }
+        if ([view respondsToSelector:@selector(_t1_updateTitleLabel)]) {
+            [view performSelector:@selector(_t1_updateTitleLabel)];
+        }
+        if ([view respondsToSelector:@selector(_t1_layoutForTabBar)]) {
+            [view performSelector:@selector(_t1_layoutForTabBar)];
+        }
+    }
+    
+    // Recursively search subviews
+    for (UIView *subview in view.subviews) {
+        [self refreshTabViewsWithThemingInView:subview];
+    }
 }
 
 - (void)squareAvatarsAction:(UISwitch *)sender {
