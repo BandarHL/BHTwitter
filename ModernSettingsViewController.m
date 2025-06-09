@@ -8,8 +8,8 @@ extern UIColor *BHTCurrentAccentColor(void);
 
 @interface ModernSettingsTableViewCell : UITableViewCell
 @property (nonatomic, strong) UIImageView *iconImageView;
-@property (nonatomic, strong) UILabel *titleLabel;
-@property (nonatomic, strong) UILabel *subtitleLabel;
+@property (nonatomic, strong) TFNAttributedTextView *titleTextView;
+@property (nonatomic, strong) TFNAttributedTextView *subtitleTextView;
 @property (nonatomic, strong) UIImageView *chevronImageView;
 @end
 
@@ -32,20 +32,15 @@ extern UIColor *BHTCurrentAccentColor(void);
     self.iconImageView.tintColor = [UIColor secondaryLabelColor];
     [self.contentView addSubview:self.iconImageView];
     
-    // Title
-    self.titleLabel = [[UILabel alloc] init];
-    self.titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    self.titleLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold];
-    self.titleLabel.textColor = [UIColor labelColor];
-    [self.contentView addSubview:self.titleLabel];
+    // Title using Twitter's text view
+    self.titleTextView = [[objc_getClass("TFNAttributedTextView") alloc] init];
+    self.titleTextView.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.contentView addSubview:self.titleTextView];
     
-    // Subtitle
-    self.subtitleLabel = [[UILabel alloc] init];
-    self.subtitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    self.subtitleLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightRegular];
-    self.subtitleLabel.textColor = [UIColor secondaryLabelColor];
-    self.subtitleLabel.numberOfLines = 0;
-    [self.contentView addSubview:self.subtitleLabel];
+    // Subtitle using Twitter's text view
+    self.subtitleTextView = [[objc_getClass("TFNAttributedTextView") alloc] init];
+    self.subtitleTextView.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.contentView addSubview:self.subtitleTextView];
     
     // Chevron
     self.chevronImageView = [[UIImageView alloc] init];
@@ -69,15 +64,15 @@ extern UIColor *BHTCurrentAccentColor(void);
         [self.iconImageView.heightAnchor constraintEqualToConstant:24],
         
         // Title constraints
-        [self.titleLabel.leadingAnchor constraintEqualToAnchor:self.iconImageView.trailingAnchor constant:16],
-        [self.titleLabel.topAnchor constraintEqualToAnchor:self.contentView.topAnchor constant:16],
-        [self.titleLabel.trailingAnchor constraintEqualToAnchor:self.chevronImageView.leadingAnchor constant:-16],
+        [self.titleTextView.leadingAnchor constraintEqualToAnchor:self.iconImageView.trailingAnchor constant:16],
+        [self.titleTextView.topAnchor constraintEqualToAnchor:self.contentView.topAnchor constant:16],
+        [self.titleTextView.trailingAnchor constraintEqualToAnchor:self.chevronImageView.leadingAnchor constant:-16],
         
         // Subtitle constraints
-        [self.subtitleLabel.leadingAnchor constraintEqualToAnchor:self.titleLabel.leadingAnchor],
-        [self.subtitleLabel.topAnchor constraintEqualToAnchor:self.titleLabel.bottomAnchor constant:4],
-        [self.subtitleLabel.trailingAnchor constraintEqualToAnchor:self.titleLabel.trailingAnchor],
-        [self.subtitleLabel.bottomAnchor constraintEqualToAnchor:self.contentView.bottomAnchor constant:-16],
+        [self.subtitleTextView.leadingAnchor constraintEqualToAnchor:self.titleTextView.leadingAnchor],
+        [self.subtitleTextView.topAnchor constraintEqualToAnchor:self.titleTextView.bottomAnchor constant:4],
+        [self.subtitleTextView.trailingAnchor constraintEqualToAnchor:self.titleTextView.trailingAnchor],
+        [self.subtitleTextView.bottomAnchor constraintEqualToAnchor:self.contentView.bottomAnchor constant:-16],
         
         // Chevron constraints
         [self.chevronImageView.trailingAnchor constraintEqualToAnchor:self.contentView.trailingAnchor constant:-20],
@@ -85,6 +80,31 @@ extern UIColor *BHTCurrentAccentColor(void);
         [self.chevronImageView.widthAnchor constraintEqualToConstant:12],
         [self.chevronImageView.heightAnchor constraintEqualToConstant:12]
     ]];
+}
+
+- (void)configureWithTitle:(NSString *)title subtitle:(NSString *)subtitle iconName:(NSString *)iconName {
+    // Configure title with Twitter's font system - using the same fonts as SettingsViewController
+    UIFont *titleFont = [[objc_getClass("TAEStandardFontGroup") sharedFontGroup] headline2BoldFont];
+    UIFont *subtitleFont = [titleFont fontWithSize:14.0]; // Smaller version of the same font
+    
+    // Create attributed text for title
+    NSAttributedString *titleAttributedString = [[NSAttributedString alloc] initWithString:title attributes:@{
+        NSFontAttributeName: titleFont,
+        NSForegroundColorAttributeName: [UIColor labelColor]
+    }];
+    TFNAttributedTextModel *titleTextModel = [[objc_getClass("TFNAttributedTextModel") alloc] initWithAttributedString:titleAttributedString];
+    self.titleTextView.textModel = titleTextModel;
+    
+    // Create attributed text for subtitle
+    NSAttributedString *subtitleAttributedString = [[NSAttributedString alloc] initWithString:subtitle attributes:@{
+        NSFontAttributeName: subtitleFont,
+        NSForegroundColorAttributeName: [UIColor secondaryLabelColor]
+    }];
+    TFNAttributedTextModel *subtitleTextModel = [[objc_getClass("TFNAttributedTextModel") alloc] initWithAttributedString:subtitleAttributedString];
+    self.subtitleTextView.textModel = subtitleTextModel;
+    
+    // Set icon
+    self.iconImageView.image = [UIImage systemImageNamed:iconName];
 }
 
 - (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
@@ -206,9 +226,9 @@ extern UIColor *BHTCurrentAccentColor(void);
     
     NSDictionary *sectionData = self.sections[indexPath.row];
     
-    cell.titleLabel.text = sectionData[@"title"];
-    cell.subtitleLabel.text = sectionData[@"subtitle"];
-    cell.iconImageView.image = [UIImage systemImageNamed:sectionData[@"icon"]];
+    [cell configureWithTitle:sectionData[@"title"] 
+                    subtitle:sectionData[@"subtitle"] 
+                    iconName:sectionData[@"icon"]];
     
     return cell;
 }
