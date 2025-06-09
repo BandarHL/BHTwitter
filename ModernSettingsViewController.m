@@ -154,33 +154,39 @@ extern UIColor *BHTCurrentAccentColor(void);
 - (void)setupSections {
     self.sections = @[
         @{
-            @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_DOWNLOADS_MEDIA_TITLE"],
-            @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_DOWNLOADS_MEDIA_SUBTITLE"],
-            @"icon": @"arrow.down.circle",
+            @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_MEDIA_TITLE"],
+            @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_MEDIA_SUBTITLE"],
+            @"icon": @"photo.on.rectangle",
             @"action": @"showDownloadsSettings"
         },
         @{
-            @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_PRIVACY_SAFETY_TITLE"], 
-            @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_PRIVACY_SAFETY_SUBTITLE"],
-            @"icon": @"shield",
+            @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_TWITTER_BLUE_TITLE"], 
+            @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_TWITTER_BLUE_SUBTITLE"],
+            @"icon": @"checkmark.seal",
             @"action": @"showPrivacySettings"
         },
         @{
-            @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_INTERFACE_LAYOUT_TITLE"],
-            @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_INTERFACE_LAYOUT_SUBTITLE"],
+            @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_LAYOUT_TITLE"],
+            @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_LAYOUT_SUBTITLE"],
             @"icon": @"paintbrush",
             @"action": @"showInterfaceSettings"
         },
         @{
-            @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_ADVANCED_FEATURES_TITLE"],
-            @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_ADVANCED_FEATURES_SUBTITLE"],
-            @"icon": @"gearshape.2",
+            @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_PROFILES_TITLE"],
+            @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_PROFILES_SUBTITLE"],
+            @"icon": @"person.circle",
             @"action": @"showAdvancedSettings"
         },
         @{
-            @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_ABOUT_SUPPORT_TITLE"],
-            @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_ABOUT_SUPPORT_SUBTITLE"],
-            @"icon": @"info.circle",
+            @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_TWEETS_TITLE"],
+            @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_TWEETS_SUBTITLE"],
+            @"icon": @"bubble.left.and.bubble.right",
+            @"action": @"showTweetsSettings"
+        },
+        @{
+            @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_MESSAGES_TITLE"],
+            @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_MESSAGES_SUBTITLE"],
+            @"icon": @"message",
             @"action": @"showAboutSettings"
         }
     ];
