@@ -1,6 +1,7 @@
 #import "ModernSettingsViewController.h"
 #import "BHTBundle/BHTBundle.h"
 #import "BHDimPalette.h"
+#import "SettingsViewController.h"
 
 // Import external function to get theme color
 extern UIColor *BHTCurrentAccentColor(void);
@@ -34,18 +35,16 @@ extern UIColor *BHTCurrentAccentColor(void);
     // Title
     self.titleLabel = [[UILabel alloc] init];
     self.titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    self.titleLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleHeadline];
+    self.titleLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold];
     self.titleLabel.textColor = [UIColor labelColor];
-    self.titleLabel.adjustsFontForContentSizeCategory = YES;
     [self.contentView addSubview:self.titleLabel];
     
     // Subtitle
     self.subtitleLabel = [[UILabel alloc] init];
     self.subtitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    self.subtitleLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleSubheadline];
+    self.subtitleLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightRegular];
     self.subtitleLabel.textColor = [UIColor secondaryLabelColor];
     self.subtitleLabel.numberOfLines = 0;
-    self.subtitleLabel.adjustsFontForContentSizeCategory = YES;
     [self.contentView addSubview:self.subtitleLabel];
     
     // Chevron
@@ -95,10 +94,9 @@ extern UIColor *BHTCurrentAccentColor(void);
 
 @end
 
-@interface ModernSettingsViewController () <UITableViewDataSource, UITableViewDelegate, UISearchBarDelegate>
+@interface ModernSettingsViewController () <UITableViewDataSource, UITableViewDelegate>
 @property (nonatomic, strong) TFNTwitterAccount *account;
 @property (nonatomic, strong) UITableView *tableView;
-@property (nonatomic, strong) UISearchBar *searchBar;
 @property (nonatomic, strong) NSArray *sections;
 @end
 
@@ -116,46 +114,34 @@ extern UIColor *BHTCurrentAccentColor(void);
 - (void)setupSections {
     self.sections = @[
         @{
-            @"title": @"Your account",
-            @"subtitle": @"See information about your account, download an archive of your data, or learn about your account deactivation options.",
-            @"icon": @"person.circle",
-            @"action": @"showAccountSettings"
+            @"title": @"Downloads & Media",
+            @"subtitle": @"Video downloads, media settings, and content handling options.",
+            @"icon": @"arrow.down.circle",
+            @"action": @"showDownloadsSettings"
         },
         @{
-            @"title": @"Security and account access", 
-            @"subtitle": @"Manage your account's security and keep track of your account's usage including apps that you have connected to your account.",
-            @"icon": @"lock.shield",
-            @"action": @"showSecuritySettings"
-        },
-        @{
-            @"title": @"Monetization",
-            @"subtitle": @"See how you can make money on Twitter and manage your monetization options.",
-            @"icon": @"dollarsign.circle",
-            @"action": @"showMonetizationSettings"
-        },
-        @{
-            @"title": @"Twitter Blue",
-            @"subtitle": @"Manage your subscription features including Undo Tweet timing.",
-            @"icon": @"checkmark.seal",
-            @"action": @"showTwitterBlueSettings"
-        },
-        @{
-            @"title": @"Privacy and safety",
-            @"subtitle": @"Manage what information you see and share on Twitter.",
+            @"title": @"Privacy & Safety", 
+            @"subtitle": @"Ad blocking, sensitive content, tracking protection, and security features.",
             @"icon": @"shield",
             @"action": @"showPrivacySettings"
         },
         @{
-            @"title": @"Notifications",
-            @"subtitle": @"Select the kinds of notifications you get about your activities, interests, and recommendations.",
-            @"icon": @"bell",
-            @"action": @"showNotificationSettings"
+            @"title": @"Interface & Layout",
+            @"subtitle": @"Themes, fonts, tab customization, and visual appearance options.",
+            @"icon": @"paintbrush",
+            @"action": @"showInterfaceSettings"
         },
         @{
-            @"title": @"Accessibility, display, and languages",
-            @"subtitle": @"Manage how Twitter content is displayed to you.",
-            @"icon": @"accessibility",
-            @"action": @"showDisplaySettings"
+            @"title": @"Advanced Features",
+            @"subtitle": @"Translation, confirmations, profile tools, and experimental options.",
+            @"icon": @"gearshape.2",
+            @"action": @"showAdvancedSettings"
+        },
+        @{
+            @"title": @"About & Support",
+            @"subtitle": @"Developers, acknowledgments, version info, and debug options.",
+            @"icon": @"info.circle",
+            @"action": @"showAboutSettings"
         }
     ];
 }
@@ -164,28 +150,18 @@ extern UIColor *BHTCurrentAccentColor(void);
     [super viewDidLoad];
     [self setupNavigationBar];
     [self setupTableView];
-    [self setupSearchBar];
     [self setupLayout];
 }
 
 - (void)setupNavigationBar {
-    self.title = @"Settings";
     self.view.backgroundColor = [BHDimPalette currentBackgroundColor];
     
     // Use Twitter's title view if account is available
     if (self.account) {
-        self.navigationItem.titleView = [objc_getClass("TFNTitleView") titleViewWithTitle:@"Settings" subtitle:self.account.displayUsername];
+        self.navigationItem.titleView = [objc_getClass("TFNTitleView") titleViewWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"] subtitle:self.account.displayUsername];
+    } else {
+        self.title = [[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_TITLE"];
     }
-}
-
-- (void)setupSearchBar {
-    self.searchBar = [[UISearchBar alloc] init];
-    self.searchBar.translatesAutoresizingMaskIntoConstraints = NO;
-    self.searchBar.delegate = self;
-    self.searchBar.placeholder = @"Search settings";
-    self.searchBar.searchBarStyle = UISearchBarStyleMinimal;
-    self.searchBar.backgroundColor = [BHDimPalette currentBackgroundColor];
-    [self.view addSubview:self.searchBar];
 }
 
 - (void)setupTableView {
@@ -204,13 +180,8 @@ extern UIColor *BHTCurrentAccentColor(void);
 
 - (void)setupLayout {
     [NSLayoutConstraint activateConstraints:@[
-        // Search bar
-        [self.searchBar.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor],
-        [self.searchBar.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
-        [self.searchBar.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
-        
         // Table view
-        [self.tableView.topAnchor constraintEqualToAnchor:self.searchBar.bottomAnchor],
+        [self.tableView.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor],
         [self.tableView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
         [self.tableView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
         [self.tableView.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor]
@@ -221,7 +192,6 @@ extern UIColor *BHTCurrentAccentColor(void);
     [super traitCollectionDidChange:previousTraitCollection];
     self.view.backgroundColor = [BHDimPalette currentBackgroundColor];
     self.tableView.backgroundColor = [BHDimPalette currentBackgroundColor];
-    self.searchBar.backgroundColor = [BHDimPalette currentBackgroundColor];
     [self.tableView reloadData];
 }
 
@@ -251,64 +221,54 @@ extern UIColor *BHTCurrentAccentColor(void);
     NSDictionary *sectionData = self.sections[indexPath.row];
     NSString *action = sectionData[@"action"];
     
-    if ([action isEqualToString:@"showAccountSettings"]) {
-        [self showAccountSettings];
-    } else if ([action isEqualToString:@"showSecuritySettings"]) {
-        [self showSecuritySettings];
-    } else if ([action isEqualToString:@"showMonetizationSettings"]) {
-        [self showMonetizationSettings];
-    } else if ([action isEqualToString:@"showTwitterBlueSettings"]) {
-        [self showTwitterBlueSettings];
+    if ([action isEqualToString:@"showDownloadsSettings"]) {
+        [self showDownloadsSettings];
     } else if ([action isEqualToString:@"showPrivacySettings"]) {
         [self showPrivacySettings];
-    } else if ([action isEqualToString:@"showNotificationSettings"]) {
-        [self showNotificationSettings];
-    } else if ([action isEqualToString:@"showDisplaySettings"]) {
-        [self showDisplaySettings];
+    } else if ([action isEqualToString:@"showInterfaceSettings"]) {
+        [self showInterfaceSettings];
+    } else if ([action isEqualToString:@"showAdvancedSettings"]) {
+        [self showAdvancedSettings];
+    } else if ([action isEqualToString:@"showAboutSettings"]) {
+        [self showAboutSettings];
     }
 }
 
-#pragma mark - Navigation Methods (Placeholder implementations)
+#pragma mark - Navigation Methods
 
-- (void)showAccountSettings {
-    // TODO: Implement account settings
-    NSLog(@"Show Account Settings");
-}
-
-- (void)showSecuritySettings {
-    // TODO: Implement security settings  
-    NSLog(@"Show Security Settings");
-}
-
-- (void)showMonetizationSettings {
-    // TODO: Implement monetization settings
-    NSLog(@"Show Monetization Settings");
-}
-
-- (void)showTwitterBlueSettings {
-    // TODO: Implement Twitter Blue settings
-    NSLog(@"Show Twitter Blue Settings");
+- (void)showDownloadsSettings {
+    // Create a filtered settings view with download-related options
+    SettingsViewController *settingsVC = [[SettingsViewController alloc] initWithTwitterAccount:self.account];
+    // TODO: Filter to show only download/media related settings
+    [self.navigationController pushViewController:settingsVC animated:YES];
 }
 
 - (void)showPrivacySettings {
-    // TODO: Implement privacy settings
-    NSLog(@"Show Privacy Settings");
+    // Create a filtered settings view with privacy-related options
+    SettingsViewController *settingsVC = [[SettingsViewController alloc] initWithTwitterAccount:self.account];
+    // TODO: Filter to show only privacy/safety related settings
+    [self.navigationController pushViewController:settingsVC animated:YES];
 }
 
-- (void)showNotificationSettings {
-    // TODO: Implement notification settings
-    NSLog(@"Show Notification Settings");
+- (void)showInterfaceSettings {
+    // Create a filtered settings view with interface-related options
+    SettingsViewController *settingsVC = [[SettingsViewController alloc] initWithTwitterAccount:self.account];
+    // TODO: Filter to show only interface/theme related settings
+    [self.navigationController pushViewController:settingsVC animated:YES];
 }
 
-- (void)showDisplaySettings {
-    // TODO: Implement display settings
-    NSLog(@"Show Display Settings");
+- (void)showAdvancedSettings {
+    // Create a filtered settings view with advanced options
+    SettingsViewController *settingsVC = [[SettingsViewController alloc] initWithTwitterAccount:self.account];
+    // TODO: Filter to show only advanced/experimental settings
+    [self.navigationController pushViewController:settingsVC animated:YES];
 }
 
-#pragma mark - UISearchBarDelegate
-
-- (void)searchBar:(UISearchBar *)searchBar textDidChange:(NSString *)searchText {
-    // TODO: Implement search functionality
+- (void)showAboutSettings {
+    // Create a filtered settings view with about/developer info
+    SettingsViewController *settingsVC = [[SettingsViewController alloc] initWithTwitterAccount:self.account];
+    // TODO: Filter to show only about/developer/debug settings
+    [self.navigationController pushViewController:settingsVC animated:YES];
 }
 
 @end
