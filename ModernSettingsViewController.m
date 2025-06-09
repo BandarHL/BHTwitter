@@ -152,8 +152,8 @@ extern UIColor *BHTCurrentAccentColor(void);
     id currentPalette = [settings currentColorPalette];
     id colorPalette = [currentPalette colorPalette];
     
-    // Use Twitter's text details dark background color for subtitles
-    UIColor *subtitleColor = [colorPalette performSelector:@selector(textDetailsDarkBackgroundColor)];
+    // Use Twitter's tab bar item color for subtitles (same as icons)
+    UIColor *subtitleColor = [colorPalette performSelector:@selector(tabBarItemColor)];
     self.subtitleLabel.textColor = subtitleColor;
 }
 
@@ -181,6 +181,7 @@ extern UIColor *BHTCurrentAccentColor(void);
 @property (nonatomic, strong) TFNTwitterAccount *account;
 @property (nonatomic, strong) UITableView *tableView;
 @property (nonatomic, strong) NSArray *sections;
+@property (nonatomic, strong) NSArray *developerCells;
 @end
 
 @implementation ModernSettingsViewController
@@ -190,6 +191,7 @@ extern UIColor *BHTCurrentAccentColor(void);
     if (self) {
         _account = account;
         [self setupSections];
+        [self setupDeveloperCells];
     }
     return self;
 }
@@ -235,6 +237,41 @@ extern UIColor *BHTCurrentAccentColor(void);
     ];
 }
 
+- (void)setupDeveloperCells {
+    self.developerCells = @[
+        @{
+            @"title": @"aridan",
+            @"username": @"actuallyaridan",
+            @"avatarURL": @"https://unavatar.io/x/actuallyaridan",
+            @"userID": @"1351218086649720837"
+        },
+        @{
+            @"title": @"timi2506",
+            @"username": @"timi2506", 
+            @"avatarURL": @"https://unavatar.io/x/timi2506",
+            @"userID": @"1671731225424195584"
+        },
+        @{
+            @"title": @"nyathea",
+            @"username": @"nyaathea",
+            @"avatarURL": @"https://unavatar.io/x/nyaathea", 
+            @"userID": @"1541742676009226241"
+        },
+        @{
+            @"title": @"BandarHelal",
+            @"username": @"BandarHL",
+            @"avatarURL": @"https://unavatar.io/x/BandarHL",
+            @"userID": @"827842200708853762"
+        },
+        @{
+            @"title": @"NeoFreeBird",
+            @"username": @"NeoFreeBird", 
+            @"avatarURL": @"https://unavatar.io/x/NeoFreeBird",
+            @"userID": @"1878595268255297537"
+        }
+    ];
+}
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     [self setupNavigationBar];
@@ -268,7 +305,7 @@ extern UIColor *BHTCurrentAccentColor(void);
 }
 
 - (void)setupTableView {
-    self.tableView = [[UITableView alloc] initWithFrame:CGRectZero style:UITableViewStylePlain];
+    self.tableView = [[UITableView alloc] initWithFrame:CGRectZero style:UITableViewStyleGrouped];
     self.tableView.translatesAutoresizingMaskIntoConstraints = NO;
     self.tableView.dataSource = self;
     self.tableView.delegate = self;
@@ -276,6 +313,8 @@ extern UIColor *BHTCurrentAccentColor(void);
     self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
     self.tableView.estimatedRowHeight = 80;
     self.tableView.rowHeight = UITableViewAutomaticDimension;
+    self.tableView.estimatedSectionHeaderHeight = 50;
+    self.tableView.sectionHeaderHeight = UITableViewAutomaticDimension;
     
     [self.tableView registerClass:[ModernSettingsTableViewCell class] forCellReuseIdentifier:@"SettingsCell"];
     [self.view addSubview:self.tableView];
@@ -300,20 +339,145 @@ extern UIColor *BHTCurrentAccentColor(void);
 
 #pragma mark - UITableViewDataSource
 
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+    return 2; // Main sections + Developer section
+}
+
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    return self.sections.count;
+    if (section == 0) {
+        return self.sections.count;
+    } else {
+        return self.developerCells.count;
+    }
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    ModernSettingsTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"SettingsCell" forIndexPath:indexPath];
+    if (indexPath.section == 0) {
+        ModernSettingsTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"SettingsCell" forIndexPath:indexPath];
+        
+        NSDictionary *sectionData = self.sections[indexPath.row];
+        
+        [cell configureWithTitle:sectionData[@"title"] 
+                        subtitle:sectionData[@"subtitle"] 
+                        iconName:sectionData[@"icon"]];
+        
+        return cell;
+    } else {
+        // Developer cell
+        UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"DeveloperCell"];
+        if (!cell) {
+            cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:@"DeveloperCell"];
+        }
+        
+        NSDictionary *developer = self.developerCells[indexPath.row];
+        
+        // Configure cell appearance
+        cell.backgroundColor = [BHDimPalette currentBackgroundColor];
+        cell.selectionStyle = UITableViewCellSelectionStyleDefault;
+        
+        // Set title and subtitle with Twitter fonts
+        id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
+        cell.textLabel.text = developer[@"title"];
+        cell.textLabel.font = [fontGroup performSelector:@selector(bodyBoldFont)];
+        
+        // Get Twitter's color palette for text and subtitle colors
+        Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
+        id settings = [TAEColorSettingsCls sharedSettings];
+        id currentPalette = [settings currentColorPalette];
+        id colorPalette = [currentPalette colorPalette];
+        UIColor *textColor = [colorPalette performSelector:@selector(primaryTextColor)];
+        UIColor *subtitleColor = [colorPalette performSelector:@selector(tabBarItemColor)];
+        
+        cell.textLabel.textColor = textColor;
+        cell.detailTextLabel.text = [NSString stringWithFormat:@"@%@", developer[@"username"]];
+        cell.detailTextLabel.font = [fontGroup performSelector:@selector(subtext2Font)];
+        cell.detailTextLabel.textColor = subtitleColor;
+        
+        // Load avatar image (simplified for now)
+        cell.imageView.image = [UIImage systemImageNamed:@"person.circle.fill"];
+        cell.imageView.tintColor = subtitleColor;
+        
+        return cell;
+    }
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
+    if (section == 0) {
+        // Top subtitle header
+        UIView *headerView = [[UIView alloc] init];
+        headerView.backgroundColor = [BHDimPalette currentBackgroundColor];
+        
+        UILabel *subtitleLabel = [[UILabel alloc] init];
+        subtitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
+        subtitleLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_DETAIL"];
+        subtitleLabel.numberOfLines = 0;
+        subtitleLabel.textAlignment = NSTextAlignmentLeft;
+        
+        // Use Twitter fonts and colors
+        id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
+        subtitleLabel.font = [fontGroup performSelector:@selector(subtext2Font)];
+        
+        // Get Twitter's color palette for subtitle color
+        Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
+        id settings = [TAEColorSettingsCls sharedSettings];
+        id currentPalette = [settings currentColorPalette];
+        id colorPalette = [currentPalette colorPalette];
+        UIColor *subtitleColor = [colorPalette performSelector:@selector(tabBarItemColor)];
+        subtitleLabel.textColor = subtitleColor;
+        
+        [headerView addSubview:subtitleLabel];
+        
+        [NSLayoutConstraint activateConstraints:@[
+            [subtitleLabel.leadingAnchor constraintEqualToAnchor:headerView.leadingAnchor constant:20],
+            [subtitleLabel.trailingAnchor constraintEqualToAnchor:headerView.trailingAnchor constant:-20],
+            [subtitleLabel.topAnchor constraintEqualToAnchor:headerView.topAnchor constant:16],
+            [subtitleLabel.bottomAnchor constraintEqualToAnchor:headerView.bottomAnchor constant:-16]
+        ]];
+        
+        return headerView;
+    } else if (section == 1) {
+        // Developer section header
+        UIView *headerView = [[UIView alloc] init];
+        headerView.backgroundColor = [BHDimPalette currentBackgroundColor];
+        
+        UILabel *titleLabel = [[UILabel alloc] init];
+        titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
+        titleLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"DEVELOPER_SECTION_HEADER_TITLE"];
+        
+        // Use Twitter fonts and colors
+        id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
+        titleLabel.font = [fontGroup performSelector:@selector(headline2BoldFont)];
+        
+        // Get Twitter's color palette for text color
+        Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
+        id settings = [TAEColorSettingsCls sharedSettings];
+        id currentPalette = [settings currentColorPalette];
+        id colorPalette = [currentPalette colorPalette];
+        UIColor *titleColor = [colorPalette performSelector:@selector(primaryTextColor)];
+        titleLabel.textColor = titleColor;
+        
+        [headerView addSubview:titleLabel];
+        
+        [NSLayoutConstraint activateConstraints:@[
+            [titleLabel.leadingAnchor constraintEqualToAnchor:headerView.leadingAnchor constant:20],
+            [titleLabel.trailingAnchor constraintEqualToAnchor:headerView.trailingAnchor constant:-20],
+            [titleLabel.topAnchor constraintEqualToAnchor:headerView.topAnchor constant:32],
+            [titleLabel.bottomAnchor constraintEqualToAnchor:headerView.bottomAnchor constant:-16]
+        ]];
+        
+        return headerView;
+    }
     
-    NSDictionary *sectionData = self.sections[indexPath.row];
-    
-    [cell configureWithTitle:sectionData[@"title"] 
-                    subtitle:sectionData[@"subtitle"] 
-                    iconName:sectionData[@"icon"]];
-    
-    return cell;
+    return nil;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
+    if (section == 0) {
+        return UITableViewAutomaticDimension;
+    } else if (section == 1) {
+        return UITableViewAutomaticDimension;
+    }
+    return 0;
 }
 
 #pragma mark - UITableViewDelegate
@@ -321,19 +485,27 @@ extern UIColor *BHTCurrentAccentColor(void);
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
     
-    NSDictionary *sectionData = self.sections[indexPath.row];
-    NSString *action = sectionData[@"action"];
-    
-    if ([action isEqualToString:@"showDownloadsSettings"]) {
-        [self showDownloadsSettings];
-    } else if ([action isEqualToString:@"showPrivacySettings"]) {
-        [self showPrivacySettings];
-    } else if ([action isEqualToString:@"showInterfaceSettings"]) {
-        [self showInterfaceSettings];
-    } else if ([action isEqualToString:@"showAdvancedSettings"]) {
-        [self showAdvancedSettings];
-    } else if ([action isEqualToString:@"showAboutSettings"]) {
-        [self showAboutSettings];
+    if (indexPath.section == 0) {
+        NSDictionary *sectionData = self.sections[indexPath.row];
+        NSString *action = sectionData[@"action"];
+        
+        if ([action isEqualToString:@"showDownloadsSettings"]) {
+            [self showDownloadsSettings];
+        } else if ([action isEqualToString:@"showPrivacySettings"]) {
+            [self showPrivacySettings];
+        } else if ([action isEqualToString:@"showInterfaceSettings"]) {
+            [self showInterfaceSettings];
+        } else if ([action isEqualToString:@"showAdvancedSettings"]) {
+            [self showAdvancedSettings];
+        } else if ([action isEqualToString:@"showAboutSettings"]) {
+            [self showAboutSettings];
+        }
+    } else if (indexPath.section == 1) {
+        // Developer cell selected
+        NSDictionary *developer = self.developerCells[indexPath.row];
+        NSString *userID = developer[@"userID"];
+        NSString *twitterURL = [NSString stringWithFormat:@"twitter://user?id=%@", userID];
+        [[UIApplication sharedApplication] openURL:[NSURL URLWithString:twitterURL] options:@{} completionHandler:nil];
     }
 }
 
