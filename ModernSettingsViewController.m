@@ -28,10 +28,19 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.title = @"Modern BHTwitter";
+}
 
-    id descriptionItem = [[objc_getClass("TFNSettingsDescriptionItem") alloc] initWithText:@"Welcome to the new BHTwitter settings! This is a work in progress." callsToAction:@[]];
-    id section = [[objc_getClass("TFNItemsSection") alloc] initWithItems:@[descriptionItem]];
-    [self setValue:@[section] forKey:@"sections"];
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    
+    // Only configure sections the first time the view appears
+    if (self.isMovingToParentViewController) {
+        self.title = @"Modern BHTwitter";
+
+        id descriptionItem = [[objc_getClass("TFNSettingsDescriptionItem") alloc] initWithText:@"Welcome to the new BHTwitter settings! This is a work in progress." callsToAction:@[]];
+        id section = [[objc_getClass("TFNItemsSection") alloc] initWithItems:@[descriptionItem]];
+        [self setValue:@[section] forKey:@"sections"];
+    }
 }
 
 @end 
