@@ -4,8 +4,8 @@
 
 @interface ModernSettingsViewController ()
 @property (nonatomic, strong) TFNTwitterAccount *account;
-// @property (nonatomic, strong) NSArray *sections;
-// @property (nonatomic, strong) id descriptionAdapter;
+@property (nonatomic, strong) NSArray *sections;
+@property (nonatomic, strong) id descriptionAdapter;
 @end
 
 @implementation ModernSettingsViewController
@@ -15,7 +15,7 @@
     if (self) {
         NSLog(@"[BHTwitter] Initializing ModernSettingsViewController as a UITableViewController subclass.");
         self.account = account;
-        // self.descriptionAdapter = [[objc_getClass("TFNSettingsDescriptionItemTableRowAdapter") alloc] init];
+        self.descriptionAdapter = [[objc_getClass("TFNSettingsDescriptionItemTableRowAdapter") alloc] init];
     }
     return self;
 }
