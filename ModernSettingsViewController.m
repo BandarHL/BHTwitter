@@ -363,39 +363,15 @@ extern UIColor *BHTCurrentAccentColor(void);
         
         return cell;
     } else {
-        // Developer cell
+        // Developer cell - create custom HBTwitterCell-style layout
         UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"DeveloperCell"];
         if (!cell) {
-            cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:@"DeveloperCell"];
+            cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"DeveloperCell"];
+            [self setupDeveloperCell:cell];
         }
         
         NSDictionary *developer = self.developerCells[indexPath.row];
-        
-        // Configure cell appearance
-        cell.backgroundColor = [BHDimPalette currentBackgroundColor];
-        cell.selectionStyle = UITableViewCellSelectionStyleDefault;
-        
-        // Set title and subtitle with Twitter fonts
-        id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
-        cell.textLabel.text = developer[@"title"];
-        cell.textLabel.font = [fontGroup performSelector:@selector(bodyBoldFont)];
-        
-        // Get Twitter's color palette for text and subtitle colors
-        Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
-        id settings = [TAEColorSettingsCls sharedSettings];
-        id currentPalette = [settings currentColorPalette];
-        id colorPalette = [currentPalette colorPalette];
-        UIColor *textColor = [colorPalette performSelector:@selector(textColor)];
-        UIColor *subtitleColor = [colorPalette performSelector:@selector(tabBarItemColor)];
-        
-        cell.textLabel.textColor = textColor;
-        cell.detailTextLabel.text = [NSString stringWithFormat:@"@%@", developer[@"username"]];
-        cell.detailTextLabel.font = [fontGroup performSelector:@selector(subtext2Font)];
-        cell.detailTextLabel.textColor = subtitleColor;
-        
-        // Load avatar image (simplified for now)
-        cell.imageView.image = [UIImage systemImageNamed:@"person.circle.fill"];
-        cell.imageView.tintColor = subtitleColor;
+        [self configureDeveloperCell:cell withDeveloper:developer];
         
         return cell;
     }
@@ -506,6 +482,106 @@ extern UIColor *BHTCurrentAccentColor(void);
         NSString *userID = developer[@"userID"];
         NSString *twitterURL = [NSString stringWithFormat:@"twitter://user?id=%@", userID];
         [[UIApplication sharedApplication] openURL:[NSURL URLWithString:twitterURL] options:@{} completionHandler:nil];
+    }
+}
+
+#pragma mark - Developer Cell Setup
+
+- (void)setupDeveloperCell:(UITableViewCell *)cell {
+    // Remove default subviews
+    cell.textLabel.text = nil;
+    cell.detailTextLabel.text = nil;
+    cell.imageView.image = nil;
+    
+    // Create custom layout matching HBTwitterCell
+    UIImageView *avatarImageView = [[UIImageView alloc] init];
+    avatarImageView.translatesAutoresizingMaskIntoConstraints = NO;
+    avatarImageView.layer.cornerRadius = 28; // 56x56 image, so radius = 28
+    avatarImageView.clipsToBounds = YES;
+    avatarImageView.contentMode = UIViewContentModeScaleAspectFill;
+    avatarImageView.tag = 100; // Tag to find it later
+    [cell.contentView addSubview:avatarImageView];
+    
+    UILabel *nameLabel = [[UILabel alloc] init];
+    nameLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    nameLabel.tag = 101;
+    [cell.contentView addSubview:nameLabel];
+    
+    UILabel *usernameLabel = [[UILabel alloc] init];
+    usernameLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    usernameLabel.tag = 102;
+    [cell.contentView addSubview:usernameLabel];
+    
+    // Setup constraints to match HBTwitterCell layout
+    [NSLayoutConstraint activateConstraints:@[
+        // Avatar constraints
+        [avatarImageView.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:20],
+        [avatarImageView.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
+        [avatarImageView.widthAnchor constraintEqualToConstant:56],
+        [avatarImageView.heightAnchor constraintEqualToConstant:56],
+        
+        // Name label constraints
+        [nameLabel.leadingAnchor constraintEqualToAnchor:avatarImageView.trailingAnchor constant:12],
+        [nameLabel.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-20],
+        [nameLabel.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:16],
+        
+        // Username label constraints
+        [usernameLabel.leadingAnchor constraintEqualToAnchor:nameLabel.leadingAnchor],
+        [usernameLabel.trailingAnchor constraintEqualToAnchor:nameLabel.trailingAnchor],
+        [usernameLabel.topAnchor constraintEqualToAnchor:nameLabel.bottomAnchor constant:2],
+        [usernameLabel.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-16]
+    ]];
+    
+    // Set cell properties
+    cell.backgroundColor = [BHDimPalette currentBackgroundColor];
+    cell.selectionStyle = UITableViewCellSelectionStyleDefault;
+}
+
+- (void)configureDeveloperCell:(UITableViewCell *)cell withDeveloper:(NSDictionary *)developer {
+    // Get subviews by tag
+    UIImageView *avatarImageView = [cell.contentView viewWithTag:100];
+    UILabel *nameLabel = [cell.contentView viewWithTag:101];
+    UILabel *usernameLabel = [cell.contentView viewWithTag:102];
+    
+    // Configure fonts and colors
+    id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
+    Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
+    id settings = [TAEColorSettingsCls sharedSettings];
+    id currentPalette = [settings currentColorPalette];
+    id colorPalette = [currentPalette colorPalette];
+    UIColor *textColor = [colorPalette performSelector:@selector(textColor)];
+    UIColor *subtitleColor = [colorPalette performSelector:@selector(tabBarItemColor)];
+    
+    // Set text content and styling
+    nameLabel.text = developer[@"title"];
+    nameLabel.font = [fontGroup performSelector:@selector(bodyBoldFont)];
+    nameLabel.textColor = textColor;
+    
+    usernameLabel.text = [NSString stringWithFormat:@"@%@", developer[@"username"]];
+    usernameLabel.font = [fontGroup performSelector:@selector(subtext2Font)];
+    usernameLabel.textColor = subtitleColor;
+    
+    // Load profile image asynchronously
+    NSString *avatarURL = developer[@"avatarURL"];
+    if (avatarURL) {
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            NSData *imageData = [NSData dataWithContentsOfURL:[NSURL URLWithString:avatarURL]];
+            UIImage *image = [UIImage imageWithData:imageData];
+            
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (image) {
+                    avatarImageView.image = image;
+                } else {
+                    // Fallback to person icon if image fails to load
+                    avatarImageView.image = [UIImage systemImageNamed:@"person.circle.fill"];
+                    avatarImageView.tintColor = subtitleColor;
+                }
+            });
+        });
+    } else {
+        // Fallback icon
+        avatarImageView.image = [UIImage systemImageNamed:@"person.circle.fill"];
+        avatarImageView.tintColor = subtitleColor;
     }
 }
 
