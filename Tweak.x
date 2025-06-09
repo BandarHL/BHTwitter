@@ -40,6 +40,11 @@ static UIViewController* getViewControllerForView(UIView *view);
 static BOOL BHT_themeManagerInitialized = NO;
 static BOOL BHT_isInThemeChangeOperation = NO;
 
+// Notification observer storage to prevent retain cycles
+static id<NSObject> BHT_traitCollectionObserver = nil;
+static id<NSObject> BHT_foregroundObserver = nil;
+static id<NSObject> BHT_windowVisibilityObserver = nil;
+
 // Map to store timestamp labels for each player instance
 static NSMapTable<T1ImmersiveFullScreenViewController *, UILabel *> *playerToTimestampMap = nil;
 
@@ -176,12 +181,27 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (instancetype)init {
     id instance = %orig;
     if (instance && !BHT_themeManagerInitialized) {
+        // Store observers to prevent retain cycles and memory leaks
+        NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+        NSOperationQueue *mainQueue = [NSOperationQueue mainQueue];
+        
+        // Remove any existing observers first
+        if (BHT_traitCollectionObserver) {
+            [center removeObserver:BHT_traitCollectionObserver];
+            BHT_traitCollectionObserver = nil;
+        }
+        if (BHT_foregroundObserver) {
+            [center removeObserver:BHT_foregroundObserver];
+            BHT_foregroundObserver = nil;
+        }
+        
         // Register for system theme and appearance related notifications
-        [[NSNotificationCenter defaultCenter] addObserverForName:@"UITraitCollectionDidChangeNotification"
+        BHT_traitCollectionObserver = [center addObserverForName:@"UITraitCollectionDidChangeNotification"
                                                          object:nil
-                                                          queue:[NSOperationQueue mainQueue]
+                                                          queue:mainQueue
                                                      usingBlock:^(NSNotification * _Nonnull note) {
-            if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"]) {
+            NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+            if ([defaults objectForKey:@"bh_color_theme_selectedColor"]) {
                 dispatch_async(dispatch_get_main_queue(), ^{
                     BHT_ensureThemingEngineSynchronized(NO);
                 });
@@ -189,11 +209,12 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         }];
         
         // Also listen for app entering foreground
-        [[NSNotificationCenter defaultCenter] addObserverForName:@"UIApplicationWillEnterForegroundNotification"
+        BHT_foregroundObserver = [center addObserverForName:@"UIApplicationWillEnterForegroundNotification"
                                                          object:nil
-                                                          queue:[NSOperationQueue mainQueue]
+                                                          queue:mainQueue
                                                      usingBlock:^(NSNotification * _Nonnull note) {
-            if ([NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"]) {
+            NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+            if ([defaults objectForKey:@"bh_color_theme_selectedColor"]) {
                 dispatch_async(dispatch_get_main_queue(), ^{
                     BHT_ensureThemingEngineSynchronized(YES);
                 });
@@ -203,6 +224,21 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         BHT_themeManagerInitialized = YES;
     }
     return instance;
+}
+
+- (void)dealloc {
+    // Clean up observers to prevent crashes
+    NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+    if (BHT_traitCollectionObserver) {
+        [center removeObserver:BHT_traitCollectionObserver];
+        BHT_traitCollectionObserver = nil;
+    }
+    if (BHT_foregroundObserver) {
+        [center removeObserver:BHT_foregroundObserver];
+        BHT_foregroundObserver = nil;
+    }
+    
+    %orig;
 }
 
 - (void)setPrimaryColorOption:(NSInteger)colorOption {
@@ -342,6 +378,38 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (void)applicationDidBecomeActive:(id)arg1 {
     %orig;
     
+    // Re-establish observers if they were cleaned up (safety measure against crashes)
+    if (BHT_themeManagerInitialized && !BHT_traitCollectionObserver) {
+        NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+        NSOperationQueue *mainQueue = [NSOperationQueue mainQueue];
+        
+        // Re-register trait collection observer
+        BHT_traitCollectionObserver = [center addObserverForName:@"UITraitCollectionDidChangeNotification"
+                                                         object:nil
+                                                          queue:mainQueue
+                                                     usingBlock:^(NSNotification * _Nonnull note) {
+            NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+            if ([defaults objectForKey:@"bh_color_theme_selectedColor"]) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    BHT_ensureThemingEngineSynchronized(NO);
+                });
+            }
+        }];
+        
+        // Re-register foreground observer
+        BHT_foregroundObserver = [center addObserverForName:@"UIApplicationWillEnterForegroundNotification"
+                                                         object:nil
+                                                          queue:mainQueue
+                                                     usingBlock:^(NSNotification * _Nonnull note) {
+            NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+            if ([defaults objectForKey:@"bh_color_theme_selectedColor"]) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    BHT_ensureThemingEngineSynchronized(YES);
+                });
+            }
+        }];
+    }
+    
     // Re-apply theme on becoming active - simpler with our new management system
     if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
         BHT_ensureThemingEngineSynchronized(YES);
@@ -371,6 +439,26 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 - (void)applicationWillTerminate:(id)arg1 {
     %orig;
+    
+    // Clean up notification observers to prevent crashes
+    NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+    if (BHT_traitCollectionObserver) {
+        [center removeObserver:BHT_traitCollectionObserver];
+        BHT_traitCollectionObserver = nil;
+    }
+    if (BHT_foregroundObserver) {
+        [center removeObserver:BHT_foregroundObserver];
+        BHT_foregroundObserver = nil;
+    }
+    if (BHT_windowVisibilityObserver) {
+        [center removeObserver:BHT_windowVisibilityObserver];
+        BHT_windowVisibilityObserver = nil;
+    }
+    if (_PasteboardChangeObserver) {
+        [center removeObserver:_PasteboardChangeObserver];
+        _PasteboardChangeObserver = nil;
+    }
+    
     if ([BHTManager Padlock]) {
         [[keychain shared] saveDictionary:@{@"isAuthenticated": @NO}];
     }
@@ -378,6 +466,19 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 
 - (void)applicationWillResignActive:(id)arg1 {
     %orig;
+    
+    // Additional safety: Clean up observers when app goes to background
+    // This helps prevent exec_bad_access crashes on resume
+    NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+    if (BHT_traitCollectionObserver) {
+        [center removeObserver:BHT_traitCollectionObserver];
+        BHT_traitCollectionObserver = nil;
+    }
+    if (BHT_foregroundObserver) {
+        [center removeObserver:BHT_foregroundObserver];
+        BHT_foregroundObserver = nil;
+    }
+    
     if ([BHTManager Padlock]) {
         UIImageView *image = [[UIImageView alloc] initWithFrame:self.window.bounds];
         [image setTag:909];
@@ -3631,12 +3732,13 @@ static char kManualRefreshInProgressKey;
     // The logic for handling classic tab bar changes is now fully managed by restart.
     
     // Add observers for both window and theme changes
-    [[NSNotificationCenter defaultCenter] addObserverForName:UIWindowDidBecomeVisibleNotification 
+    BHT_windowVisibilityObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIWindowDidBecomeVisibleNotification 
                                                     object:nil 
                                                      queue:[NSOperationQueue mainQueue] 
                                                 usingBlock:^(NSNotification * _Nonnull note) {
         UIWindow *window = note.object;
-        if (window && [[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+        if (window && [defaults objectForKey:@"bh_color_theme_selectedColor"]) {
             BHT_applyThemeToWindow(window);
         }
     }];

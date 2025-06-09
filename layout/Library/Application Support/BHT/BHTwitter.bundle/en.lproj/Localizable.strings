@@ -350,3 +350,23 @@
 
 "DISABLE_XCHAT_OPTION_TITLE" = "Disable XChat";
 "DISABLE_XCHAT_OPTION_DETAIL_TITLE" = "Disable XChat on the sidebar.";
+
+/*Modern Settings Layout*/
+
+"MODERN_SETTINGS_LAYOUT_TITLE" = "General and Layout";
+"MODERN_SETTINGS_LAYOUT_SUBTITLE" = "Customize the layout of your Twitter app.";
+
+"MODERN_SETTINGS_MEDIA_TITLE" = "Photos and Videos";
+"MODERN_SETTINGS_MEDIA_SUBTITLE" = "Make your media viewing experience more pleasent. Download videos, enable timestamps, and more.";
+
+"MODERN_SETTINGS_TWITTER_BLUE_TITLE" = "Twitter Blue";
+"MODERN_SETTINGS_TWITTER_BLUE_SUBTITLE" = "Enable Blue features. Remove ads, Undo Tweet, Change your theme, and more.";
+
+"MODERN_SETTINGS_PROFILES_TITLE" = "Profiles";
+"MODERN_SETTINGS_PROFILES_SUBTITLE" = "Tweak your profile layout.";
+
+"MODERN_SETTINGS_TWEETS_TITLE" = "Tweets;
+"MODERN_SETTINGS_TWEETS_SUBTITLE" = "Modify how tweets are displayed and more";
+
+"MODERN_SETTINGS_MESSAGES_TITLE" = "Direct messages";
+"MODERN_SETTINGS_MESSAGES_SUBTITLE" = ".";
