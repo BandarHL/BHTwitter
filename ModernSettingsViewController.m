@@ -55,18 +55,18 @@ extern UIColor *BHTCurrentAccentColor(void);
     self.iconImageView.tintColor = [UIColor secondaryLabelColor];
     [self.contentView addSubview:self.iconImageView];
     
-    // Title using Twitter's internal font methods
+    // Title using Twitter's internal font methods (smaller size)
     self.titleLabel = [[UILabel alloc] init];
     self.titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
     id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
-    self.titleLabel.font = [fontGroup performSelector:@selector(bodyBoldFont)];
+    self.titleLabel.font = [fontGroup performSelector:@selector(subtext1BoldFont)];
     self.titleLabel.textColor = [UIColor labelColor];
     [self.contentView addSubview:self.titleLabel];
     
-    // Subtitle using Twitter's internal font methods
+    // Subtitle using Twitter's internal font methods (smaller size)
     self.subtitleLabel = [[UILabel alloc] init];
     self.subtitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    self.subtitleLabel.font = [fontGroup performSelector:@selector(subtext1Font)];
+    self.subtitleLabel.font = [fontGroup performSelector:@selector(subtext2Font)];
     self.subtitleLabel.textColor = [UIColor secondaryLabelColor];
     self.subtitleLabel.numberOfLines = 0;
     [self.contentView addSubview:self.subtitleLabel];
@@ -127,8 +127,8 @@ extern UIColor *BHTCurrentAccentColor(void);
     // Update fonts when text size changes using Twitter's internal methods
     if (previousTraitCollection.preferredContentSizeCategory != self.traitCollection.preferredContentSizeCategory) {
         id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
-        self.titleLabel.font = [fontGroup performSelector:@selector(bodyBoldFont)];
-        self.subtitleLabel.font = [fontGroup performSelector:@selector(subtext1Font)];
+        self.titleLabel.font = [fontGroup performSelector:@selector(subtext1BoldFont)];
+        self.subtitleLabel.font = [fontGroup performSelector:@selector(subtext2Font)];
     }
 }
 
