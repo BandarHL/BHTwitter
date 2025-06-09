@@ -21,6 +21,10 @@
     if (self) {
         NSLog(@"[BHTwitter] Initializing ModernSettingsViewController as a TFNItemsDataViewController subclass.");
         // The account will be set after initialization
+
+        // Create and assign the backing store, which is the real data source for the view controller.
+        id backingStore = [[objc_getClass("TFNItemsDataViewControllerBackingStore") alloc] init];
+        [self setValue:backingStore forKey:@"backingStore"];
     }
     return self;
 }
@@ -39,7 +43,10 @@
 
         id descriptionItem = [[objc_getClass("TFNSettingsDescriptionItem") alloc] initWithText:@"Welcome to the new BHTwitter settings! This is a work in progress." callsToAction:@[]];
         id section = [[objc_getClass("TFNItemsSection") alloc] initWithItems:@[descriptionItem]];
-        [self setValue:@[section] forKey:@"sections"];
+        
+        // Set the sections on the backing store, not the view controller itself.
+        id backingStore = [self valueForKey:@"backingStore"];
+        [backingStore setValue:@[section] forKey:@"sections"];
     }
 }
 
