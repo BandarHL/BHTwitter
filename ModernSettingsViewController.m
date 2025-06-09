@@ -152,8 +152,8 @@ extern UIColor *BHTCurrentAccentColor(void);
     id currentPalette = [settings currentColorPalette];
     id colorPalette = [currentPalette colorPalette];
     
-    // Use Twitter's module footer color for subtitles  
-    UIColor *subtitleColor = [colorPalette performSelector:@selector(moduleFooterColor)];
+    // Use Twitter's text details dark background color for subtitles
+    UIColor *subtitleColor = [colorPalette performSelector:@selector(textDetailsDarkBackgroundColor)];
     self.subtitleLabel.textColor = subtitleColor;
 }
 
