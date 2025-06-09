@@ -385,7 +385,7 @@ extern UIColor *BHTCurrentAccentColor(void);
         id settings = [TAEColorSettingsCls sharedSettings];
         id currentPalette = [settings currentColorPalette];
         id colorPalette = [currentPalette colorPalette];
-        UIColor *textColor = [colorPalette performSelector:@selector(primaryTextColor)];
+        UIColor *textColor = [colorPalette performSelector:@selector(textColor)];
         UIColor *subtitleColor = [colorPalette performSelector:@selector(tabBarItemColor)];
         
         cell.textLabel.textColor = textColor;
@@ -453,7 +453,7 @@ extern UIColor *BHTCurrentAccentColor(void);
         id settings = [TAEColorSettingsCls sharedSettings];
         id currentPalette = [settings currentColorPalette];
         id colorPalette = [currentPalette colorPalette];
-        UIColor *titleColor = [colorPalette performSelector:@selector(primaryTextColor)];
+        UIColor *titleColor = [colorPalette performSelector:@selector(textColor)];
         titleLabel.textColor = titleColor;
         
         [headerView addSubview:titleLabel];
