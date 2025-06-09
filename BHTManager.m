@@ -340,8 +340,7 @@
 
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount {
     if ([[[NSUserDefaults standardUserDefaults] objectForKey:@"enable_modern_layout"] boolValue]) {
-        ModernSettingsViewController *modernSettings = [[ModernSettingsViewController alloc] init];
-        [modernSettings setValue:twAccount forKey:@"account"];
+        ModernSettingsViewController *modernSettings = [[ModernSettingsViewController alloc] initWithAccount:twAccount];
         return modernSettings;
     } else {
         SettingsViewController *pref = [[SettingsViewController alloc] initWithTwitterAccount:twAccount];
