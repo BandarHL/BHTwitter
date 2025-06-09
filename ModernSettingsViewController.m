@@ -75,7 +75,7 @@ extern UIColor *BHTCurrentAccentColor(void);
     self.chevronImageView = [[UIImageView alloc] init];
     self.chevronImageView.translatesAutoresizingMaskIntoConstraints = NO;
     self.chevronImageView.contentMode = UIViewContentModeScaleAspectFit;
-    self.chevronImageView.image = [UIImage systemImageNamed:@"chevron.right"];
+    self.chevronImageView.image = [UIImage tfn_vectorImageNamed:@"chevron_right" fitsSize:CGSizeMake(18, 18) fillColor:[UIColor tertiaryLabelColor]];
     self.chevronImageView.tintColor = [UIColor tertiaryLabelColor];
     [self.contentView addSubview:self.chevronImageView];
     
@@ -89,8 +89,8 @@ extern UIColor *BHTCurrentAccentColor(void);
         // Icon constraints
         [self.iconImageView.leadingAnchor constraintEqualToAnchor:self.contentView.leadingAnchor constant:20],
         [self.iconImageView.centerYAnchor constraintEqualToAnchor:self.contentView.centerYAnchor],
-        [self.iconImageView.widthAnchor constraintEqualToConstant:24],
-        [self.iconImageView.heightAnchor constraintEqualToConstant:24],
+        [self.iconImageView.widthAnchor constraintEqualToConstant:20],
+        [self.iconImageView.heightAnchor constraintEqualToConstant:20],
         
         // Title constraints
         [self.titleLabel.leadingAnchor constraintEqualToAnchor:self.iconImageView.trailingAnchor constant:16],
@@ -106,8 +106,8 @@ extern UIColor *BHTCurrentAccentColor(void);
         // Chevron constraints
         [self.chevronImageView.trailingAnchor constraintEqualToAnchor:self.contentView.trailingAnchor constant:-20],
         [self.chevronImageView.centerYAnchor constraintEqualToAnchor:self.contentView.centerYAnchor],
-        [self.chevronImageView.widthAnchor constraintEqualToConstant:12],
-        [self.chevronImageView.heightAnchor constraintEqualToConstant:12]
+        [self.chevronImageView.widthAnchor constraintEqualToConstant:18],
+        [self.chevronImageView.heightAnchor constraintEqualToConstant:18]
     ]];
 }
 
@@ -116,8 +116,8 @@ extern UIColor *BHTCurrentAccentColor(void);
     self.titleLabel.text = title;
     self.subtitleLabel.text = subtitle;
     
-    // Set icon
-    self.iconImageView.image = [UIImage systemImageNamed:iconName];
+    // Set icon using Twitter's internal vector system
+    self.iconImageView.image = [UIImage tfn_vectorImageNamed:iconName fitsSize:CGSizeMake(20, 20) fillColor:[UIColor labelColor]];
 }
 
 - (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
@@ -156,37 +156,37 @@ extern UIColor *BHTCurrentAccentColor(void);
         @{
             @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_MEDIA_TITLE"],
             @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_MEDIA_SUBTITLE"],
-            @"icon": @"photo.on.rectangle",
+            @"icon": @"media_tab_v2_stroke",
             @"action": @"showDownloadsSettings"
         },
         @{
             @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_TWITTER_BLUE_TITLE"], 
             @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_TWITTER_BLUE_SUBTITLE"],
-            @"icon": @"checkmark.seal",
+            @"icon": @"twitter_blue_stroke",
             @"action": @"showPrivacySettings"
         },
         @{
             @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_LAYOUT_TITLE"],
             @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_LAYOUT_SUBTITLE"],
-            @"icon": @"paintbrush",
+            @"icon": @"cards",
             @"action": @"showInterfaceSettings"
         },
         @{
             @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_PROFILES_TITLE"],
             @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_PROFILES_SUBTITLE"],
-            @"icon": @"person.circle",
+            @"icon": @"person_stroke",
             @"action": @"showAdvancedSettings"
         },
         @{
             @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_TWEETS_TITLE"],
             @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_TWEETS_SUBTITLE"],
-            @"icon": @"bubble.left.and.bubble.right",
+            @"icon": @"quill",
             @"action": @"showTweetsSettings"
         },
         @{
             @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_MESSAGES_TITLE"],
             @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_MESSAGES_SUBTITLE"],
-            @"icon": @"message",
+            @"icon": @"messages_stroke",
             @"action": @"showAboutSettings"
         }
     ];
