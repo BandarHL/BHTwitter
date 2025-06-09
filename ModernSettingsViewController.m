@@ -23,30 +23,28 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.title = @"Modern BHTwitter";
-    self.view.backgroundColor = [UIColor blueColor]; 
-    self.tableView.backgroundColor = [UIColor greenColor];
-    // id descriptionItem = [[objc_getClass("TFNSettingsDescriptionItem") alloc] initWithText:@"Welcome to the new BHTwitter settings! This is a work in progress." callsToAction:nil];
-    // id section = @[descriptionItem];
-    // self.sections = @[section];
+    id descriptionItem = [[objc_getClass("TFNSettingsDescriptionItem") alloc] initWithText:@"Welcome to the new BHTwitter settings! This is a work in progress." callsToAction:nil];
+    id section = @[descriptionItem];
+    self.sections = @[section];
 }
 
 #pragma mark - UITableViewDataSource
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
-    return 0;
+    return self.sections.count;
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    return 0;
+    return [self.sections[section] count];
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    // id item = self.sections[indexPath.section][indexPath.row];
+    id item = self.sections[indexPath.section][indexPath.row];
     
     // For now, we only have one type of item. We will expand this.
-    // if ([item isKindOfClass:objc_getClass("TFNSettingsDescriptionItem")]) {
-    //     return [self.descriptionAdapter dataViewController:self tableViewCellForItem:item withOptions:nil atIndexPath:indexPath];
-    // }
+    if ([item isKindOfClass:objc_getClass("TFNSettingsDescriptionItem")]) {
+        return [self.descriptionAdapter dataViewController:self tableViewCellForItem:item withOptions:nil atIndexPath:indexPath];
+    }
     
     return [[UITableViewCell alloc] init];
 }
