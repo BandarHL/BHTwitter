@@ -55,17 +55,19 @@ extern UIColor *BHTCurrentAccentColor(void);
     self.iconImageView.tintColor = [UIColor secondaryLabelColor];
     [self.contentView addSubview:self.iconImageView];
     
-    // Title using UILabel with proven Twitter fonts (same as SettingsViewController)
+    // Title using proper iOS Dynamic Type scaling
     self.titleLabel = [[UILabel alloc] init];
     self.titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    self.titleLabel.font = TwitterChirpFont(TwitterFontStyleSemibold);
+    self.titleLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleBody];
+    self.titleLabel.adjustsFontForContentSizeCategory = YES;
     self.titleLabel.textColor = [UIColor labelColor];
     [self.contentView addSubview:self.titleLabel];
     
-    // Subtitle using UILabel with proven Twitter fonts (same as SettingsViewController)
+    // Subtitle using proper iOS Dynamic Type scaling
     self.subtitleLabel = [[UILabel alloc] init];
     self.subtitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    self.subtitleLabel.font = TwitterChirpFont(TwitterFontStyleRegular);
+    self.subtitleLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleFootnote];
+    self.subtitleLabel.adjustsFontForContentSizeCategory = YES;
     self.subtitleLabel.textColor = [UIColor secondaryLabelColor];
     self.subtitleLabel.numberOfLines = 0;
     [self.contentView addSubview:self.subtitleLabel];
@@ -122,6 +124,12 @@ extern UIColor *BHTCurrentAccentColor(void);
 - (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
     [super traitCollectionDidChange:previousTraitCollection];
     self.backgroundColor = [BHDimPalette currentBackgroundColor];
+    
+    // Update fonts when text size changes
+    if (previousTraitCollection.preferredContentSizeCategory != self.traitCollection.preferredContentSizeCategory) {
+        self.titleLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleBody];
+        self.subtitleLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleFootnote];
+    }
 }
 
 @end
@@ -183,6 +191,20 @@ extern UIColor *BHTCurrentAccentColor(void);
     [self setupNavigationBar];
     [self setupTableView];
     [self setupLayout];
+    
+    // Listen for Dynamic Type changes
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(contentSizeCategoryDidChange:)
+                                                 name:UIContentSizeCategoryDidChangeNotification
+                                               object:nil];
+}
+
+- (void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+- (void)contentSizeCategoryDidChange:(NSNotification *)notification {
+    [self.tableView reloadData];
 }
 
 - (void)setupNavigationBar {
