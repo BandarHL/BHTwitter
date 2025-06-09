@@ -55,19 +55,19 @@ extern UIColor *BHTCurrentAccentColor(void);
     self.iconImageView.tintColor = [UIColor secondaryLabelColor];
     [self.contentView addSubview:self.iconImageView];
     
-    // Title using Twitter's internal font methods (smaller size)
+    // Title using Twitter's internal font methods (larger size)
     self.titleLabel = [[UILabel alloc] init];
     self.titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
     id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
-    self.titleLabel.font = [fontGroup performSelector:@selector(subtext1BoldFont)];
+    self.titleLabel.font = [fontGroup performSelector:@selector(bodyBoldFont)];
     self.titleLabel.textColor = [UIColor labelColor];
     [self.contentView addSubview:self.titleLabel];
     
-    // Subtitle using Twitter's internal font methods (smaller size)
+    // Subtitle using Twitter's internal font methods (larger size)
     self.subtitleLabel = [[UILabel alloc] init];
     self.subtitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    self.subtitleLabel.font = [fontGroup performSelector:@selector(subtext2Font)];
-    self.subtitleLabel.textColor = [UIColor secondaryLabelColor];
+    self.subtitleLabel.font = [fontGroup performSelector:@selector(subtext1Font)];
+    [self updateSubtitleColor];
     self.subtitleLabel.numberOfLines = 0;
     [self.contentView addSubview:self.subtitleLabel];
     
@@ -145,6 +145,18 @@ extern UIColor *BHTCurrentAccentColor(void);
     self.chevronImageView.image = [UIImage tfn_vectorImageNamed:@"chevron_right" fitsSize:CGSizeMake(18, 18) fillColor:chevronColor];
 }
 
+- (void)updateSubtitleColor {
+    // Get Twitter's color palette properly
+    Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
+    id settings = [TAEColorSettingsCls sharedSettings];
+    id currentPalette = [settings currentColorPalette];
+    id colorPalette = [currentPalette colorPalette];
+    
+    // Use Twitter's text details color for subtitles
+    UIColor *subtitleColor = [colorPalette performSelector:@selector(textDetailsLightDarkBackgroundColor)];
+    self.subtitleLabel.textColor = subtitleColor;
+}
+
 - (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
     [super traitCollectionDidChange:previousTraitCollection];
     self.backgroundColor = [BHDimPalette currentBackgroundColor];
@@ -152,11 +164,14 @@ extern UIColor *BHTCurrentAccentColor(void);
     // Update icon colors when appearance changes
     [self updateIconColors];
     
+    // Update subtitle color when appearance changes
+    [self updateSubtitleColor];
+    
     // Update fonts when text size changes using Twitter's internal methods
     if (previousTraitCollection.preferredContentSizeCategory != self.traitCollection.preferredContentSizeCategory) {
         id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
-        self.titleLabel.font = [fontGroup performSelector:@selector(subtext1BoldFont)];
-        self.subtitleLabel.font = [fontGroup performSelector:@selector(subtext2Font)];
+        self.titleLabel.font = [fontGroup performSelector:@selector(bodyBoldFont)];
+        self.subtitleLabel.font = [fontGroup performSelector:@selector(subtext1Font)];
     }
 }
 
