@@ -63,10 +63,10 @@ extern UIColor *BHTCurrentAccentColor(void);
     self.titleLabel.textColor = [UIColor labelColor];
     [self.contentView addSubview:self.titleLabel];
     
-    // Subtitle using Twitter's internal font methods (larger size)
+    // Subtitle using Twitter's internal font methods (original size)
     self.subtitleLabel = [[UILabel alloc] init];
     self.subtitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    self.subtitleLabel.font = [fontGroup performSelector:@selector(subtext1Font)];
+    self.subtitleLabel.font = [fontGroup performSelector:@selector(subtext2Font)];
     [self updateSubtitleColor];
     self.subtitleLabel.numberOfLines = 0;
     [self.contentView addSubview:self.subtitleLabel];
@@ -152,8 +152,8 @@ extern UIColor *BHTCurrentAccentColor(void);
     id currentPalette = [settings currentColorPalette];
     id colorPalette = [currentPalette colorPalette];
     
-    // Use Twitter's text details color for subtitles
-    UIColor *subtitleColor = [colorPalette performSelector:@selector(textDetailsLightDarkBackgroundColor)];
+    // Use Twitter's module footer color for subtitles  
+    UIColor *subtitleColor = [colorPalette performSelector:@selector(moduleFooterColor)];
     self.subtitleLabel.textColor = subtitleColor;
 }
 
@@ -171,7 +171,7 @@ extern UIColor *BHTCurrentAccentColor(void);
     if (previousTraitCollection.preferredContentSizeCategory != self.traitCollection.preferredContentSizeCategory) {
         id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
         self.titleLabel.font = [fontGroup performSelector:@selector(bodyBoldFont)];
-        self.subtitleLabel.font = [fontGroup performSelector:@selector(subtext1Font)];
+        self.subtitleLabel.font = [fontGroup performSelector:@selector(subtext2Font)];
     }
 }
 
@@ -197,10 +197,10 @@ extern UIColor *BHTCurrentAccentColor(void);
 - (void)setupSections {
     self.sections = @[
         @{
-            @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_MEDIA_TITLE"],
-            @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_MEDIA_SUBTITLE"],
-            @"icon": @"media_tab_v2_stroke",
-            @"action": @"showDownloadsSettings"
+            @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_LAYOUT_TITLE"],
+            @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_LAYOUT_SUBTITLE"],
+            @"icon": @"cards",
+            @"action": @"showInterfaceSettings"
         },
         @{
             @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_TWITTER_BLUE_TITLE"], 
@@ -209,10 +209,10 @@ extern UIColor *BHTCurrentAccentColor(void);
             @"action": @"showPrivacySettings"
         },
         @{
-            @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_LAYOUT_TITLE"],
-            @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_LAYOUT_SUBTITLE"],
-            @"icon": @"cards",
-            @"action": @"showInterfaceSettings"
+            @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_MEDIA_TITLE"],
+            @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_MEDIA_SUBTITLE"],
+            @"icon": @"media_tab_v2_stroke",
+            @"action": @"showDownloadsSettings"
         },
         @{
             @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_PROFILES_TITLE"],
