@@ -75,8 +75,6 @@ extern UIColor *BHTCurrentAccentColor(void);
     self.chevronImageView = [[UIImageView alloc] init];
     self.chevronImageView.translatesAutoresizingMaskIntoConstraints = NO;
     self.chevronImageView.contentMode = UIViewContentModeScaleAspectFit;
-    self.chevronImageView.image = [UIImage tfn_vectorImageNamed:@"chevron_right" fitsSize:CGSizeMake(18, 18) fillColor:[UIColor tertiaryLabelColor]];
-    self.chevronImageView.tintColor = [UIColor tertiaryLabelColor];
     [self.contentView addSubview:self.chevronImageView];
     
     // Cell appearance
@@ -99,7 +97,7 @@ extern UIColor *BHTCurrentAccentColor(void);
         
         // Subtitle constraints
         [self.subtitleLabel.leadingAnchor constraintEqualToAnchor:self.titleLabel.leadingAnchor],
-        [self.subtitleLabel.topAnchor constraintEqualToAnchor:self.titleLabel.bottomAnchor constant:4],
+        [self.subtitleLabel.topAnchor constraintEqualToAnchor:self.titleLabel.bottomAnchor constant:2],
         [self.subtitleLabel.trailingAnchor constraintEqualToAnchor:self.titleLabel.trailingAnchor],
         [self.subtitleLabel.bottomAnchor constraintEqualToAnchor:self.contentView.bottomAnchor constant:-16],
         
@@ -116,13 +114,43 @@ extern UIColor *BHTCurrentAccentColor(void);
     self.titleLabel.text = title;
     self.subtitleLabel.text = subtitle;
     
-    // Set icon using Twitter's internal vector system
-    self.iconImageView.image = [UIImage tfn_vectorImageNamed:iconName fitsSize:CGSizeMake(20, 20) fillColor:[UIColor labelColor]];
+    // Store icon name for theme updates
+    objc_setAssociatedObject(self, @selector(iconName), iconName, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    
+    // Set icon using Twitter's internal vector system with proper dynamic color
+    [self updateIconColors];
+}
+
+- (void)updateIconColors {
+    NSString *iconName = objc_getAssociatedObject(self, @selector(iconName));
+    if (iconName) {
+        // Get Twitter's color palette properly
+        Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
+        id settings = [TAEColorSettingsCls sharedSettings];
+        id currentPalette = [settings currentColorPalette];
+        id colorPalette = [currentPalette colorPalette];
+        
+        // Use Twitter's tab bar item color for icons
+        UIColor *iconColor = [colorPalette performSelector:@selector(tabBarItemColor)];
+        self.iconImageView.image = [UIImage tfn_vectorImageNamed:iconName fitsSize:CGSizeMake(20, 20) fillColor:iconColor];
+    }
+    
+    // Update chevron color using Twitter's tab bar item color  
+    Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
+    id settings = [TAEColorSettingsCls sharedSettings];
+    id currentPalette = [settings currentColorPalette];
+    id colorPalette = [currentPalette colorPalette];
+    
+    UIColor *chevronColor = [colorPalette performSelector:@selector(tabBarItemColor)];
+    self.chevronImageView.image = [UIImage tfn_vectorImageNamed:@"chevron_right" fitsSize:CGSizeMake(18, 18) fillColor:chevronColor];
 }
 
 - (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
     [super traitCollectionDidChange:previousTraitCollection];
     self.backgroundColor = [BHDimPalette currentBackgroundColor];
+    
+    // Update icon colors when appearance changes
+    [self updateIconColors];
     
     // Update fonts when text size changes using Twitter's internal methods
     if (previousTraitCollection.preferredContentSizeCategory != self.traitCollection.preferredContentSizeCategory) {
