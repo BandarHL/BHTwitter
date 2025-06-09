@@ -55,19 +55,18 @@ extern UIColor *BHTCurrentAccentColor(void);
     self.iconImageView.tintColor = [UIColor secondaryLabelColor];
     [self.contentView addSubview:self.iconImageView];
     
-    // Title using proper iOS Dynamic Type scaling
+    // Title using Twitter's internal font methods
     self.titleLabel = [[UILabel alloc] init];
     self.titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    self.titleLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleBody];
-    self.titleLabel.adjustsFontForContentSizeCategory = YES;
+    id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
+    self.titleLabel.font = [fontGroup performSelector:@selector(bodyBoldFont)];
     self.titleLabel.textColor = [UIColor labelColor];
     [self.contentView addSubview:self.titleLabel];
     
-    // Subtitle using proper iOS Dynamic Type scaling
+    // Subtitle using Twitter's internal font methods
     self.subtitleLabel = [[UILabel alloc] init];
     self.subtitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    self.subtitleLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleFootnote];
-    self.subtitleLabel.adjustsFontForContentSizeCategory = YES;
+    self.subtitleLabel.font = [fontGroup performSelector:@selector(subtext1Font)];
     self.subtitleLabel.textColor = [UIColor secondaryLabelColor];
     self.subtitleLabel.numberOfLines = 0;
     [self.contentView addSubview:self.subtitleLabel];
@@ -125,10 +124,11 @@ extern UIColor *BHTCurrentAccentColor(void);
     [super traitCollectionDidChange:previousTraitCollection];
     self.backgroundColor = [BHDimPalette currentBackgroundColor];
     
-    // Update fonts when text size changes
+    // Update fonts when text size changes using Twitter's internal methods
     if (previousTraitCollection.preferredContentSizeCategory != self.traitCollection.preferredContentSizeCategory) {
-        self.titleLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleBody];
-        self.subtitleLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleFootnote];
+        id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
+        self.titleLabel.font = [fontGroup performSelector:@selector(bodyBoldFont)];
+        self.subtitleLabel.font = [fontGroup performSelector:@selector(subtext1Font)];
     }
 }
 
