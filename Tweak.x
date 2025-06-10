@@ -3231,6 +3231,13 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     return originalView;
 }
 
+- (void)setBlurBackgroundView:(UIView *)blurBackgroundView {
+    %orig;
+    if (blurBackgroundView) {
+        blurBackgroundView.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.2];
+    }
+}
+
 %end
 
 // MARK: - Restore Pull-To-Refresh Sounds
