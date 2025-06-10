@@ -215,7 +215,7 @@ jobs:
       - name: Create Draft Release
         if: ${{ inputs.create_release }}
         id: create_release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -223,4 +223,3 @@ jobs:
           name: v${{ env.BHTWITTER_VERSION }} - BHTwitter
           files: main/packages/${{ steps.package_name.outputs.package }}
           draft: true
-          overwrite: true
