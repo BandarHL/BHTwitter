@@ -3223,22 +3223,37 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 %hook TFNBlurHandler
 
-- (id)blurBackgroundView {
-    id originalView = %orig;
+- (UIView *)blurBackgroundView {
+    UIView *originalView = %orig;
     if (originalView) {
-        [originalView setBackgroundColor:[UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.2]];
+        originalView.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.2];
+        
+        // Also set the layer backgroundColor to ensure it persists
+        originalView.layer.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.2].CGColor;
+        
+        // Mark the view with a tag so we can identify it in UIView hook
+        originalView.tag = 999999;
     }
     return originalView;
 }
 
 - (void)setBlurBackgroundView:(UIView *)blurBackgroundView {
+    %orig;
     if (blurBackgroundView) {
-        // Create our own view to replace the one being set
-        UIView *customView = [[UIView alloc] initWithFrame:blurBackgroundView.frame];
-        customView.bounds = blurBackgroundView.bounds;
-        customView.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.2];
-        customView.autoresizingMask = blurBackgroundView.autoresizingMask;
-        %orig(customView);
+        blurBackgroundView.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.2];
+        blurBackgroundView.layer.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.2].CGColor;
+        blurBackgroundView.tag = 999999;
+    }
+}
+
+%end
+
+%hook UIView
+
+- (void)setBackgroundColor:(UIColor *)backgroundColor {
+    if (self.tag == 999999) {
+        // This is our blur background view, force our color
+        %orig([UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.2]);
     } else {
         %orig;
     }
