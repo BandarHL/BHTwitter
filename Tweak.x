@@ -3226,10 +3226,10 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 - (UIView *)blurBackgroundView {
     UIView *originalView = %orig;
     if (originalView) {
-        originalView.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.2];
+        originalView.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.3];
         
         // Also set the layer backgroundColor to ensure it persists
-        originalView.layer.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.2].CGColor;
+        originalView.layer.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.3].CGColor;
         
         // Mark the view with a tag so we can identify it in UIView hook
         originalView.tag = 999999;
@@ -3240,8 +3240,8 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 - (void)setBlurBackgroundView:(UIView *)blurBackgroundView {
     %orig;
     if (blurBackgroundView) {
-        blurBackgroundView.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.2];
-        blurBackgroundView.layer.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.2].CGColor;
+        blurBackgroundView.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.3];
+        blurBackgroundView.layer.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.3].CGColor;
         blurBackgroundView.tag = 999999;
     }
 }
@@ -3253,7 +3253,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 - (void)setBackgroundColor:(UIColor *)backgroundColor {
     if (self.tag == 999999) {
         // This is our blur background view, force our color
-        %orig([UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.2]);
+        %orig([UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.3]);
     } else {
         %orig;
     }
