@@ -340,19 +340,25 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 
 - (void)applicationDidBecomeActive:(id)arg1 {
+    NSLog(@"[BHTwitter] applicationDidBecomeActive - START");
     %orig;
+    NSLog(@"[BHTwitter] applicationDidBecomeActive - orig called");
     
     // Re-apply theme on becoming active - simpler with our new management system
     if ([[NSUserDefaults standardUserDefaults] objectForKey:@"bh_color_theme_selectedColor"]) {
+        NSLog(@"[BHTwitter] applicationDidBecomeActive - applying theme");
         BHT_ensureThemingEngineSynchronized(YES);
     }
 
     // Initialize cookies if tweet labels are enabled
     if ([BHTManager RestoreTweetLabels]) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [TweetSourceHelper initializeCookiesWithRetry];
-            });
+        NSLog(@"[BHTwitter] applicationDidBecomeActive - initializing cookies");
+        dispatch_async(dispatch_get_main_queue(), ^{
+            NSLog(@"[BHTwitter] applicationDidBecomeActive - calling initializeCookiesWithRetry");
+            [TweetSourceHelper initializeCookiesWithRetry];
+        });
     }
+    NSLog(@"[BHTwitter] applicationDidBecomeActive - END");
 
     if ([BHTManager Padlock]) {
         NSDictionary *keychainData = [[keychain shared] getData];
