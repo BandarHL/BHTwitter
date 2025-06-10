@@ -3233,8 +3233,9 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 - (void)setBlurBackgroundView:(UIView *)blurBackgroundView {
     if (blurBackgroundView) {
-        // Create our own view of the same class as the original
-        UIView *customView = [[[blurBackgroundView class] alloc] initWithFrame:blurBackgroundView.frame];
+        // Create our own view to replace the one being set
+        UIView *customView = [[UIView alloc] initWithFrame:blurBackgroundView.frame];
+        customView.bounds = blurBackgroundView.bounds;
         customView.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.2];
         customView.autoresizingMask = blurBackgroundView.autoresizingMask;
         %orig(customView);
