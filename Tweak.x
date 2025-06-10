@@ -2326,9 +2326,13 @@ static NSTimer *cookieRetryTimer = nil;
     // Update footer text immediately if we have the source
     NSString *sourceText = tweetSources[tweetIDStr];
     if (sourceText && sourceText.length > 0 && ![sourceText isEqualToString:@"Source Unavailable"] && ![sourceText isEqualToString:@""]) {
-        // Delay the update to ensure the view is fully configured
+        // Delay the update to ensure the view is fully configured, using a weak reference to self to prevent retain cycles
+        __weak __typeof(self) weakSelf = self;
         dispatch_async(dispatch_get_main_queue(), ^{
-            [self BHT_updateFooterTextWithSource:sourceText tweetID:tweetIDStr];
+            __strong __typeof(weakSelf) strongSelf = weakSelf;
+            if (strongSelf) {
+                [strongSelf BHT_updateFooterTextWithSource:sourceText tweetID:tweetIDStr];
+            }
         });
     }
 }
