@@ -3237,7 +3237,7 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
         
         // Create our own view with the desired background
         UIView *customView = [[UIView alloc] initWithFrame:frame];
-        customView.bounds = CGRectMake(0, 0, frame.size.width, frame.size.height);
+        customView.bounds = [originalView bounds];
         customView.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.2];
         customView.autoresizingMask = [originalView autoresizingMask];
         return customView;
