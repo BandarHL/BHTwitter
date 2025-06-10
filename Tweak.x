@@ -3223,18 +3223,27 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 %hook TFNBlurHandler
 
-- (UIView *)blurBackgroundView {
-    UIView *originalView = %orig;
+- (id)blurBackgroundView {
+    id originalView = %orig;
     if (originalView) {
-        originalView.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.2];
+        // Create our own view with the desired background
+        UIView *customView = [[UIView alloc] initWithFrame:[originalView frame]];
+        customView.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.2];
+        customView.autoresizingMask = [originalView autoresizingMask];
+        return customView;
     }
     return originalView;
 }
 
 - (void)setBlurBackgroundView:(UIView *)blurBackgroundView {
-    %orig;
     if (blurBackgroundView) {
-        blurBackgroundView.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.2];
+        // Create our own view to replace the one being set
+        UIView *customView = [[UIView alloc] initWithFrame:blurBackgroundView.frame];
+        customView.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.2];
+        customView.autoresizingMask = blurBackgroundView.autoresizingMask;
+        %orig(customView);
+    } else {
+        %orig;
     }
 }
 
