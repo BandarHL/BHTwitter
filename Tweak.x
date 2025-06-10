@@ -3089,6 +3089,12 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 - (NSInteger)style;
 @end
 
+// MARK: - Blur Handler
+
+@interface TFNBlurHandler : NSObject
+@property(retain, nonatomic) UIView *blurBackgroundView;
+@end
+
 %hook TFNAvatarImageView
 
 - (void)setStyle:(NSInteger)style {
@@ -3211,6 +3217,18 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
     } else {
         %orig;
     }
+}
+
+%end
+
+%hook TFNBlurHandler
+
+- (UIView *)blurBackgroundView {
+    UIView *originalView = %orig;
+    if (originalView) {
+        originalView.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.5];
+    }
+    return originalView;
 }
 
 %end
