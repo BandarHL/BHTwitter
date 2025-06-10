@@ -3226,8 +3226,18 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 - (id)blurBackgroundView {
     id originalView = %orig;
     if (originalView) {
+        CGRect frame = [originalView frame];
+        // If frame is empty, use bounds or a default frame
+        if (CGRectIsEmpty(frame)) {
+            frame = [originalView bounds];
+            if (CGRectIsEmpty(frame)) {
+                frame = CGRectMake(0, 0, 100, 100); // Default fallback
+            }
+        }
+        
         // Create our own view with the desired background
-        UIView *customView = [[UIView alloc] initWithFrame:[originalView frame]];
+        UIView *customView = [[UIView alloc] initWithFrame:frame];
+        customView.bounds = CGRectMake(0, 0, frame.size.width, frame.size.height);
         customView.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.2];
         customView.autoresizingMask = [originalView autoresizingMask];
         return customView;
