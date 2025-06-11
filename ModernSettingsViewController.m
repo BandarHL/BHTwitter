@@ -7,7 +7,6 @@
 @class TFNTwitterAccount;
 @interface GeneralSettingsViewController : UIViewController
 - (instancetype)initWithAccount:(TFNTwitterAccount *)account;
-@property (nonatomic, strong) TFNTwitterAccount *account;
 @end
 
 // Forward declaration for the view-controller implemented later in this file
@@ -706,96 +705,214 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
 @end
 
-// Primary interface for the custom toggle cell so the compiler is aware before use
-@interface GeneralToggleCell : UITableViewCell
+#pragma mark - General Settings Page
+
+@interface ModernSettingsToggleCell : UITableViewCell
 @property (nonatomic, strong) UILabel *titleLabel;
 @property (nonatomic, strong) UILabel *subtitleLabel;
-@property (nonatomic, strong) UISwitch *toggle;
+@property (nonatomic, strong) UISwitch *toggleSwitch;
+
+- (void)configureWithTitle:(NSString *)title subtitle:(NSString *)subtitle learnMore:(BOOL)learnMore;
+- (void)addTarget:(id)target action:(SEL)action forControlEvents:(UIControlEvents)events;
 @end
 
-@implementation GeneralToggleCell
+@implementation ModernSettingsToggleCell
 
 - (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier {
-    if ((self = [super initWithStyle:UITableViewCellStyleDefault reuseIdentifier:reuseIdentifier])) {
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
         self.selectionStyle = UITableViewCellSelectionStyleNone;
         self.backgroundColor = [BHDimPalette currentBackgroundColor];
-
-        // Title label
-        _titleLabel = [[UILabel alloc] init];
-        _titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-        _titleLabel.textColor = [UIColor labelColor];
-        id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
-        _titleLabel.font = [fontGroup performSelector:@selector(bodyBoldFont)];
-        [self.contentView addSubview:_titleLabel];
-
-        // Subtitle label
-        _subtitleLabel = [[UILabel alloc] init];
-        _subtitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-        _subtitleLabel.numberOfLines = 0;
-        _subtitleLabel.textColor = [UIColor secondaryLabelColor];
-        _subtitleLabel.font = [fontGroup performSelector:@selector(subtext2Font)];
-        [self.contentView addSubview:_subtitleLabel];
-
-        // Toggle switch
-        _toggle = [[UISwitch alloc] init];
-        _toggle.translatesAutoresizingMaskIntoConstraints = NO;
-        _toggle.onTintColor = BHTCurrentAccentColor();
-        [self.contentView addSubview:_toggle];
-
-        // Constraints
+        
+        UIStackView *textStack = [[UIStackView alloc] init];
+        textStack.translatesAutoresizingMaskIntoConstraints = NO;
+        textStack.axis = UILayoutConstraintAxisVertical;
+        textStack.spacing = 4;
+        textStack.alignment = UIStackViewAlignmentLeading;
+        [self.contentView addSubview:textStack];
+        
+        self.titleLabel = [UILabel new];
+        self.subtitleLabel = [UILabel new];
+        self.subtitleLabel.numberOfLines = 0;
+        
+        [textStack addArrangedSubview:self.titleLabel];
+        [textStack addArrangedSubview:self.subtitleLabel];
+        
+        self.toggleSwitch = [UISwitch new];
+        self.toggleSwitch.translatesAutoresizingMaskIntoConstraints = NO;
+        [self.contentView addSubview:self.toggleSwitch];
+        
+        [self applyTheme];
+        
         [NSLayoutConstraint activateConstraints:@[
-            [_titleLabel.topAnchor constraintEqualToAnchor:self.contentView.topAnchor constant:16],
-            [_titleLabel.leadingAnchor constraintEqualToAnchor:self.contentView.leadingAnchor constant:20],
+            [textStack.leadingAnchor constraintEqualToAnchor:self.contentView.leadingAnchor constant:20],
+            [textStack.topAnchor constraintEqualToAnchor:self.contentView.topAnchor constant:14],
+            [textStack.bottomAnchor constraintEqualToAnchor:self.contentView.bottomAnchor constant:-14],
+            [textStack.trailingAnchor constraintEqualToAnchor:self.toggleSwitch.leadingAnchor constant:-16],
 
-            [_toggle.centerYAnchor constraintEqualToAnchor:_titleLabel.centerYAnchor],
-            [_toggle.trailingAnchor constraintEqualToAnchor:self.contentView.trailingAnchor constant:-20],
-
-            [_subtitleLabel.leadingAnchor constraintEqualToAnchor:_titleLabel.leadingAnchor],
-            [_subtitleLabel.trailingAnchor constraintEqualToAnchor:self.contentView.trailingAnchor constant:-20],
-            [_subtitleLabel.topAnchor constraintEqualToAnchor:_titleLabel.bottomAnchor constant:4],
-            [_subtitleLabel.bottomAnchor constraintEqualToAnchor:self.contentView.bottomAnchor constant:-16]
+            [self.toggleSwitch.trailingAnchor constraintEqualToAnchor:self.contentView.trailingAnchor constant:-20],
+            [self.toggleSwitch.centerYAnchor constraintEqualToAnchor:self.contentView.centerYAnchor]
         ]];
     }
     return self;
 }
 
+- (void)configureWithTitle:(NSString *)title subtitle:(NSString *)subtitle learnMore:(BOOL)learnMore {
+    self.titleLabel.text = title;
+    
+    if (learnMore) {
+        NSString *learnMoreString = @" Learn more";
+        NSString *fullSubtitle = [subtitle stringByAppendingString:learnMoreString];
+        NSMutableAttributedString *attributedString = [[NSMutableAttributedString alloc] initWithString:fullSubtitle];
+        [attributedString addAttribute:NSForegroundColorAttributeName value:BHTCurrentAccentColor() range:[fullSubtitle rangeOfString:learnMoreString]];
+        self.subtitleLabel.attributedText = attributedString;
+    } else {
+        self.subtitleLabel.text = subtitle;
+    }
+}
+
+- (void)addTarget:(id)target action:(SEL)action forControlEvents:(UIControlEvents)events {
+    [self.toggleSwitch addTarget:target action:action forControlEvents:events];
+}
+
+- (void)applyTheme {
+    id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
+    self.titleLabel.font = [fontGroup performSelector:@selector(bodyBoldFont)];
+    self.subtitleLabel.font = [fontGroup performSelector:@selector(subtext2Font)];
+
+    Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
+    id settings = [TAEColorSettingsCls sharedSettings];
+    id colorPalette = [[settings currentColorPalette] colorPalette];
+    self.titleLabel.textColor = [colorPalette performSelector:@selector(textColor)];
+    self.subtitleLabel.textColor = [colorPalette performSelector:@selector(secondaryTextColor)];
+    self.toggleSwitch.onTintColor = BHTCurrentAccentColor();
+}
+
+- (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
+    [super traitCollectionDidChange:previousTraitCollection];
+    [self applyTheme];
+}
+
 @end
 
-// -------------------------------
-// Minimal implementation for GeneralSettingsViewController (placeholder) to restore missing symbol
+@interface GeneralSettingsViewController () <UITableViewDataSource, UITableViewDelegate>
+@property (nonatomic, strong) TFNTwitterAccount *account;
+@property (nonatomic, strong) UITableView *tableView;
+@property (nonatomic, strong) NSArray<NSDictionary *> *toggles;
+@end
+
 @implementation GeneralSettingsViewController
 
 - (instancetype)initWithAccount:(TFNTwitterAccount *)account {
     if ((self = [super init])) {
-        _account = account;
+        self.account = account;
+        [self buildToggleList];
     }
     return self;
 }
 
 - (void)viewDidLoad {
     [super viewDidLoad];
+    [self setupNav];
+    [self setupTable];
+}
+
+- (void)setupNav {
+    self.title = [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_LAYOUT_TITLE"];
+}
+
+- (void)setupTable {
     self.view.backgroundColor = [BHDimPalette currentBackgroundColor];
-    NSString *title = [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_LAYOUT_TITLE"] ?: @"General";
-    if (self.account) {
-        self.navigationItem.titleView = [objc_getClass("TFNTitleView") titleViewWithTitle:title subtitle:self.account.displayUsername];
-    } else {
-        self.title = title;
-    }
+    self.tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleGrouped];
+    self.tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    self.tableView.dataSource = self;
+    self.tableView.delegate = self;
+    self.tableView.backgroundColor = [BHDimPalette currentBackgroundColor];
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    self.tableView.rowHeight = UITableViewAutomaticDimension;
+    self.tableView.estimatedRowHeight = 80;
+    [self.tableView registerClass:[ModernSettingsToggleCell class] forCellReuseIdentifier:@"ToggleCell"];
+    [self.view addSubview:self.tableView];
+}
+
+- (void)buildToggleList {
+    self.toggles = @[
+        @{ @"key": @"padlock", @"titleKey": @"PADLOCK_OPTION_TITLE", @"subtitleKey": @"PADLOCK_OPTION_DETAIL_TITLE", @"default": @NO, @"learnMore": @YES },
+        @{ @"key": @"custom_voice_upload", @"titleKey": @"UPLOAD_CUSTOM_VOICE_OPTION_TITLE", @"subtitleKey": @"UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE", @"default": @YES },
+        @{ @"key": @"hide_topics", @"titleKey": @"HIDE_TOPICS_OPTION_TITLE", @"subtitleKey": @"HIDE_TOPICS_OPTION_DETAIL_TITLE", @"default": @NO },
+        @{ @"key": @"hide_topics_to_follow", @"titleKey": @"HIDE_TOPICS_TO_FOLLOW_OPTION", @"subtitleKey": @"HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE", @"default": @NO },
+        @{ @"key": @"hide_who_to_follow", @"titleKey": @"HIDE_WHO_FOLLOW_OPTION", @"subtitleKey": @"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE", @"default": @NO },
+        @{ @"key": @"openInBrowser", @"titleKey": @"ALWAYS_OPEN_SAFARI_OPTION_TITLE", @"subtitleKey": @"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE", @"default": @NO },
+        @{ @"key": @"strip_tracking_params", @"titleKey": @"STRIP_URL_TRACKING_PARAMETERS_TITLE", @"subtitleKey": @"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE", @"default": @NO },
+        @{ @"key": @"enable_translate", @"titleKey": @"ENABLE_TRANSLATE_OPTION_TITLE", @"subtitleKey": @"ENABLE_TRANSLATE_OPTION_DETAIL_TITLE", @"default": @NO },
+        @{ @"key": @"hide_spaces", @"titleKey": @"HIDE_SPACE_OPTION_TITLE", @"subtitleKey": @"", @"default": @NO },
+        @{ @"key": @"no_tab_bar_hiding", @"titleKey": @"STOP_HIDING_TAB_BAR_TITLE", @"subtitleKey": @"STOP_HIDING_TAB_BAR_TITLE", @"default": @NO },
+        @{ @"key": @"tab_bar_theming", @"titleKey": @"CLASSIC_TAB_BAR_SETTINGS_TITLE", @"subtitleKey": @"CLASSIC_TAB_BAR_SETTINGS_DETAIL", @"default": @NO },
+        @{ @"key": @"restore_tab_labels", @"titleKey": @"RESTORE_TAB_LABELS_TITLE", @"subtitleKey": @"RESTORE_TAB_LABELS_DETAIL", @"default": @NO },
+        @{ @"key": @"dis_rtl", @"titleKey": @"DISABLE_RTL_OPTION_TITLE", @"subtitleKey": @"DISABLE_RTL_OPTION_DETAIL_TITLE", @"default": @NO },
+        @{ @"key": @"showScollIndicator", @"titleKey": @"SHOW_SCOLL_INDICATOR_OPTION_TITLE", @"subtitleKey": @"", @"default": @NO }
+    ];
+}
+
+#pragma mark - UITableViewDataSource
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { return self.toggles.count; }
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    ModernSettingsToggleCell *cell = [tableView dequeueReusableCellWithIdentifier:@"ToggleCell" forIndexPath:indexPath];
+    
+    NSDictionary *toggleData = self.toggles[indexPath.row];
+    NSString *title = [[BHTBundle sharedBundle] localizedStringForKey:toggleData[@"titleKey"]];
+    NSString *subtitleKey = toggleData[@"subtitleKey"];
+    NSString *subtitle = (subtitleKey.length > 0) ? [[BHTBundle sharedBundle] localizedStringForKey:subtitleKey] : @"";
+    BOOL learnMore = [toggleData[@"learnMore"] boolValue];
+    
+    [cell configureWithTitle:title subtitle:subtitle learnMore:learnMore];
+    
+    NSString *key = toggleData[@"key"];
+    BOOL isEnabled = [[[NSUserDefaults standardUserDefaults] objectForKey:key] ?: toggleData[@"default"] boolValue];
+    cell.toggleSwitch.on = isEnabled;
+    
+    objc_setAssociatedObject(cell.toggleSwitch, @"prefKey", key, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    [cell addTarget:self action:@selector(switchChanged:) forControlEvents:UIControlEventValueChanged];
+    
+    return cell;
+}
+
+#pragma mark - UITableViewDelegate
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
+    UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 0)];
     UILabel *label = [[UILabel alloc] init];
     label.translatesAutoresizingMaskIntoConstraints = NO;
-    id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
-    label.font = [fontGroup performSelector:@selector(bodyBoldFont)];
-    label.text = [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_PLACEHOLDER_TEXT"] ?: @"Nothing to see here.. yet";
-    label.textColor = [UIColor secondaryLabelColor];
-    label.textAlignment = NSTextAlignmentCenter;
+    label.text = [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_LAYOUT_SUBTITLE"];
     label.numberOfLines = 0;
-    [self.view addSubview:label];
+    
+    id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
+    label.font = [fontGroup performSelector:@selector(subtext2Font)];
+    label.textColor = [UIColor secondaryLabelColor];
+    
+    [header addSubview:label];
     [NSLayoutConstraint activateConstraints:@[
-        [label.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
-        [label.centerYAnchor constraintEqualToAnchor:self.view.centerYAnchor],
-        [label.leadingAnchor constraintGreaterThanOrEqualToAnchor:self.view.leadingAnchor constant:20],
-        [label.trailingAnchor constraintLessThanOrEqualToAnchor:self.view.trailingAnchor constant:-20]
+        [label.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:20],
+        [label.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-20],
+        [label.topAnchor constraintEqualToAnchor:header.topAnchor constant:8],
+        [label.bottomAnchor constraintEqualToAnchor:header.bottomAnchor constant:-8]
     ]];
+    return header;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
+    return UITableViewAutomaticDimension;
+}
+
+#pragma mark - Actions
+
+- (void)switchChanged:(UISwitch *)sender {
+    NSString *key = objc_getAssociatedObject(sender, @"prefKey");
+    if (key) {
+        [[NSUserDefaults standardUserDefaults] setBool:sender.isOn forKey:key];
+    }
 }
 
 @end
