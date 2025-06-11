@@ -422,7 +422,7 @@ extern UIColor *BHTCurrentAccentColor(void);
         
         // Use Twitter fonts and colors
         id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
-        titleLabel.font = [fontGroup performSelector:@selector(headline2BoldFont)];
+        titleLabel.font = [fontGroup performSelector:@selector(headline1BoldFont)];
         
         // Get Twitter's color palette for text color
         Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
@@ -514,7 +514,7 @@ extern UIColor *BHTCurrentAccentColor(void);
     // Create custom layout matching HBTwitterCell
     UIImageView *avatarImageView = [[UIImageView alloc] init];
     avatarImageView.translatesAutoresizingMaskIntoConstraints = NO;
-    avatarImageView.layer.cornerRadius = 28; // 56x56 image, so radius = 28
+    avatarImageView.layer.cornerRadius = 22; // 44x44 image, radius = 22
     avatarImageView.clipsToBounds = YES;
     avatarImageView.contentMode = UIViewContentModeScaleAspectFill;
     avatarImageView.tag = 100; // Tag to find it later
@@ -535,8 +535,8 @@ extern UIColor *BHTCurrentAccentColor(void);
         // Avatar constraints
         [avatarImageView.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:20],
         [avatarImageView.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
-        [avatarImageView.widthAnchor constraintEqualToConstant:56],
-        [avatarImageView.heightAnchor constraintEqualToConstant:56],
+        [avatarImageView.widthAnchor constraintEqualToConstant:44],
+        [avatarImageView.heightAnchor constraintEqualToConstant:44],
         
         // Name label constraints
         [nameLabel.leadingAnchor constraintEqualToAnchor:avatarImageView.trailingAnchor constant:12],
