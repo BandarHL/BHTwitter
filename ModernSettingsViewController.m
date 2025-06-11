@@ -784,7 +784,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     id settings = [TAEColorSettingsCls sharedSettings];
     id colorPalette = [[settings currentColorPalette] colorPalette];
     self.titleLabel.textColor = [colorPalette performSelector:@selector(textColor)];
-    self.subtitleLabel.textColor = [colorPalette performSelector:@selector(secondaryTextColor)];
+    self.subtitleLabel.textColor = [colorPalette performSelector:@selector(tabBarItemColor)];
     self.toggleSwitch.onTintColor = BHTCurrentAccentColor();
 }
 
