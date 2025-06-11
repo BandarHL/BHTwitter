@@ -201,25 +201,25 @@ extern UIColor *BHTCurrentAccentColor(void);
         @{
             @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_LAYOUT_TITLE"],
             @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_LAYOUT_SUBTITLE"],
-            @"icon": @"cards",
+            @"icon": @"settings_stroke",
             @"action": @"showInterfaceSettings"
         },
         @{
             @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_TWITTER_BLUE_TITLE"], 
             @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_TWITTER_BLUE_SUBTITLE"],
-            @"icon": @"twitter_blue_stroke",
+            @"icon": @"twitter_blue",
             @"action": @"showPrivacySettings"
         },
         @{
             @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_MEDIA_TITLE"],
             @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_MEDIA_SUBTITLE"],
-            @"icon": @"media_tab_v2_stroke",
+            @"icon": @"media_tab_stroke",
             @"action": @"showDownloadsSettings"
         },
         @{
             @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_PROFILES_TITLE"],
             @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_PROFILES_SUBTITLE"],
-            @"icon": @"person_stroke",
+            @"icon": @"account",
             @"action": @"showAdvancedSettings"
         },
         @{
