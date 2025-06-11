@@ -1,6 +1,19 @@
 #import "ModernSettingsViewController.h"
 #import "BHTBundle/BHTBundle.h"
 #import "BHDimPalette.h"
+#import "SettingsViewController.h"
+
+// Forward declare full interface so compiler knows the class and its init method
+@class TFNTwitterAccount;
+@interface GeneralSettingsViewController : UIViewController
+- (instancetype)initWithAccount:(TFNTwitterAccount *)account;
+@end
+
+// Forward declaration for the view-controller implemented later in this file
+@class GeneralSettingsViewController;
+
+// Import external function to get theme color
+extern UIColor *BHTCurrentAccentColor(void);
 
 typedef NS_ENUM(NSInteger, TwitterFontStyle) {
     TwitterFontStyleRegular,
@@ -24,10 +37,6 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
                    [UIFont systemFontOfSize:12 weight:UIFontWeightRegular];
     }
 }
-#import "SettingsViewController.h"
-
-// Import external function to get theme color
-extern UIColor *BHTCurrentAccentColor(void);
 
 @interface ModernSettingsTableViewCell : UITableViewCell
 @property (nonatomic, strong) UIImageView *iconImageView;
@@ -660,7 +669,7 @@ extern UIColor *BHTCurrentAccentColor(void);
 #pragma mark - Sub-pages (placeholder)
 
 - (void)showLayoutSettings {
-    UIViewController *vc = [self placeholderViewControllerWithTitle:@"MODERN_SETTINGS_LAYOUT_TITLE"];
+    GeneralSettingsViewController *vc = [[GeneralSettingsViewController alloc] initWithAccount:self.account];
     [self.navigationController pushViewController:vc animated:YES];
 }
 
@@ -692,6 +701,153 @@ extern UIColor *BHTCurrentAccentColor(void);
 - (void)showExperimentalSettings {
     UIViewController *vc = [self placeholderViewControllerWithTitle:@"MODERN_SETTINGS_EXPERIMENTAL_TITLE"];
     [self.navigationController pushViewController:vc animated:YES];
+}
+
+@end
+
+#pragma mark - General Settings Page
+
+@interface GeneralSettingsViewController () <UITableViewDataSource, UITableViewDelegate>
+@property (nonatomic, strong) TFNTwitterAccount *account;
+@property (nonatomic, strong) UITableView *tableView;
+@property (nonatomic, strong) NSArray<NSDictionary *> *toggles;
+@end
+
+@implementation GeneralSettingsViewController
+
+- (instancetype)initWithAccount:(TFNTwitterAccount *)account {
+    if ((self = [super init])) {
+        _account = account;
+        [self buildToggleList];
+    }
+    return self;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.view.backgroundColor = [BHDimPalette currentBackgroundColor];
+    [self setupNav];
+    [self setupTable];
+}
+
+- (void)setupNav {
+    NSString *title = [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_LAYOUT_TITLE"];
+    if (self.account) {
+        self.navigationItem.titleView = [objc_getClass("TFNTitleView") titleViewWithTitle:title subtitle:self.account.displayUsername];
+    } else {
+        self.title = title;
+    }
+}
+
+- (void)setupTable {
+    self.tableView = [[UITableView alloc] initWithFrame:CGRectZero style:UITableViewStyleGrouped];
+    self.tableView.translatesAutoresizingMaskIntoConstraints = NO;
+    self.tableView.dataSource = self;
+    self.tableView.delegate = self;
+    self.tableView.backgroundColor = [BHDimPalette currentBackgroundColor];
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    [self.view addSubview:self.tableView];
+    [NSLayoutConstraint activateConstraints:@[
+        [self.tableView.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor],
+        [self.tableView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
+        [self.tableView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
+        [self.tableView.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor]
+    ]];
+}
+
+- (void)buildToggleList {
+    // Combine switches from Main and Layout sections of classic controller
+    _toggles = @[ 
+        // Main
+        @{ @"key": @"custom_voice_upload", @"titleKey": @"UPLOAD_CUSTOM_VOICE_OPTION_TITLE", @"subtitleKey": @"UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE", @"default": @YES },
+        @{ @"key": @"hide_topics", @"titleKey": @"HIDE_TOPICS_OPTION_TITLE", @"subtitleKey": @"HIDE_TOPICS_OPTION_DETAIL_TITLE", @"default": @NO },
+        @{ @"key": @"hide_topics_to_follow", @"titleKey": @"HIDE_TOPICS_TO_FOLLOW_OPTION", @"subtitleKey": @"HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE", @"default": @NO },
+        @{ @"key": @"hide_who_to_follow", @"titleKey": @"HIDE_WHO_FOLLOW_OPTION", @"subtitleKey": @"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE", @"default": @NO },
+        @{ @"key": @"padlock", @"titleKey": @"PADLOCK_OPTION_TITLE", @"subtitleKey": @"PADLOCK_OPTION_DETAIL_TITLE", @"default": @NO },
+        @{ @"key": @"openInBrowser", @"titleKey": @"ALWAYS_OPEN_SAFARI_OPTION_TITLE", @"subtitleKey": @"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE", @"default": @NO },
+        @{ @"key": @"strip_tracking_params", @"titleKey": @"STRIP_URL_TRACKING_PARAMETERS_TITLE", @"subtitleKey": @"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE", @"default": @NO },
+        @{ @"key": @"enable_translate", @"titleKey": @"ENABLE_TRANSLATE_OPTION_TITLE", @"subtitleKey": @"ENABLE_TRANSLATE_OPTION_DETAIL_TITLE", @"default": @NO },
+        // Layout
+        @{ @"key": @"hide_spaces", @"titleKey": @"HIDE_SPACE_OPTION_TITLE", @"subtitleKey": @"", @"default": @NO },
+        @{ @"key": @"no_tab_bar_hiding", @"titleKey": @"STOP_HIDING_TAB_BAR_TITLE", @"subtitleKey": @"STOP_HIDING_TAB_BAR_TITLE", @"default": @NO },
+        @{ @"key": @"tab_bar_theming", @"titleKey": @"CLASSIC_TAB_BAR_SETTINGS_TITLE", @"subtitleKey": @"CLASSIC_TAB_BAR_SETTINGS_DETAIL", @"default": @NO },
+        @{ @"key": @"restore_tab_labels", @"titleKey": @"RESTORE_TAB_LABELS_TITLE", @"subtitleKey": @"RESTORE_TAB_LABELS_DETAIL", @"default": @NO },
+        @{ @"key": @"dis_rtl", @"titleKey": @"DISABLE_RTL_OPTION_TITLE", @"subtitleKey": @"DISABLE_RTL_OPTION_DETAIL_TITLE", @"default": @NO },
+        @{ @"key": @"showScollIndicator", @"titleKey": @"SHOW_SCOLL_INDICATOR_OPTION_TITLE", @"subtitleKey": @"", @"default": @NO }
+    ];
+}
+
+#pragma mark UITableViewDataSource
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView { return 1; }
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { return self.toggles.count; }
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    NSString *identifier = @"GeneralSwitchCell";
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:identifier];
+    if (!cell) {
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:identifier];
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+        // switch control
+        UISwitch *sw = [[UISwitch alloc] init];
+        sw.tag = 500;
+        [sw addTarget:self action:@selector(switchChanged:) forControlEvents:UIControlEventValueChanged];
+        cell.accessoryView = sw;
+    }
+    NSDictionary *toggle = self.toggles[indexPath.row];
+    NSString *title = [[BHTBundle sharedBundle] localizedStringForKey:toggle[@"titleKey"]];
+    NSString *subtitleKey = toggle[@"subtitleKey"];
+    NSString *subtitle = subtitleKey.length ? [[BHTBundle sharedBundle] localizedStringForKey:subtitleKey] : @"";
+    cell.textLabel.text = title;
+    cell.detailTextLabel.text = subtitle;
+    id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
+    cell.textLabel.font = [fontGroup performSelector:@selector(bodyBoldFont)];
+    cell.detailTextLabel.font = [fontGroup performSelector:@selector(subtext2Font)];
+    cell.detailTextLabel.numberOfLines = 0;
+    UISwitch *sw = (UISwitch *)cell.accessoryView;
+    sw.onTintColor = BHTCurrentAccentColor();
+    NSString *key = toggle[@"key"];
+    BOOL enabled = [[[NSUserDefaults standardUserDefaults] objectForKey:key] ?: toggle[@"default"] boolValue];
+    sw.on = enabled;
+    // store key inside switch for callback
+    objc_setAssociatedObject(sw, @"prefKey", key, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    return cell;
+}
+
+#pragma mark UITableViewDelegate
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
+    UILabel *label = [[UILabel alloc] init];
+    label.numberOfLines = 0;
+    label.text = [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_LAYOUT_SUBTITLE"];
+    id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
+    label.font = [fontGroup performSelector:@selector(subtext2Font)];
+    Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
+    id settings = [TAEColorSettingsCls sharedSettings];
+    id colorPalette = [[settings currentColorPalette] colorPalette];
+    label.textColor = [colorPalette performSelector:@selector(tabBarItemColor)];
+    label.textAlignment = NSTextAlignmentLeft;
+    UIView *container = [[UIView alloc] init];
+    container.backgroundColor = [BHDimPalette currentBackgroundColor];
+    label.translatesAutoresizingMaskIntoConstraints = NO;
+    [container addSubview:label];
+    [NSLayoutConstraint activateConstraints:@[
+        [label.leadingAnchor constraintEqualToAnchor:container.leadingAnchor constant:20],
+        [label.trailingAnchor constraintEqualToAnchor:container.trailingAnchor constant:-20],
+        [label.topAnchor constraintEqualToAnchor:container.topAnchor constant:16],
+        [label.bottomAnchor constraintEqualToAnchor:container.bottomAnchor constant:-16]
+    ]];
+    return container;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section { return UITableViewAutomaticDimension; }
+
+#pragma mark Switch action
+- (void)switchChanged:(UISwitch *)sender {
+    NSString *key = objc_getAssociatedObject(sender, @"prefKey");
+    if (key) {
+        [[NSUserDefaults standardUserDefaults] setBool:sender.isOn forKey:key];
+        [[NSUserDefaults standardUserDefaults] synchronize];
+    }
 }
 
 @end
