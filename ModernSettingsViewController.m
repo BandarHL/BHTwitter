@@ -712,7 +712,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 @property (nonatomic, strong) UILabel *subtitleLabel;
 @property (nonatomic, strong) UISwitch *toggleSwitch;
 
-- (void)configureWithTitle:(NSString *)title subtitle:(NSString *)subtitle learnMore:(BOOL)learnMore;
+- (void)configureWithTitle:(NSString *)title subtitle:(NSString *)subtitle;
 - (void)addTarget:(id)target action:(SEL)action forControlEvents:(UIControlEvents)events;
 @end
 
@@ -761,18 +761,9 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     return self;
 }
 
-- (void)configureWithTitle:(NSString *)title subtitle:(NSString *)subtitle learnMore:(BOOL)learnMore {
+- (void)configureWithTitle:(NSString *)title subtitle:(NSString *)subtitle {
     self.titleLabel.text = title;
-    
-    if (learnMore) {
-        NSString *learnMoreString = @" Learn more";
-        NSString *fullSubtitle = [subtitle stringByAppendingString:learnMoreString];
-        NSMutableAttributedString *attributedString = [[NSMutableAttributedString alloc] initWithString:fullSubtitle];
-        [attributedString addAttribute:NSForegroundColorAttributeName value:BHTCurrentAccentColor() range:[fullSubtitle rangeOfString:learnMoreString]];
-        self.subtitleLabel.attributedText = attributedString;
-    } else {
-        self.subtitleLabel.text = subtitle;
-    }
+    self.subtitleLabel.text = subtitle;
 }
 
 - (void)addTarget:(id)target action:(SEL)action forControlEvents:(UIControlEvents)events {
@@ -822,7 +813,12 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 }
 
 - (void)setupNav {
-    self.title = [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_LAYOUT_TITLE"];
+    NSString *title = [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_LAYOUT_TITLE"];
+    if (self.account) {
+        self.navigationItem.titleView = [objc_getClass("TFNTitleView") titleViewWithTitle:title subtitle:self.account.displayUsername];
+    } else {
+        self.title = title;
+    }
 }
 
 - (void)setupTable {
@@ -841,7 +837,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
 - (void)buildToggleList {
     self.toggles = @[
-        @{ @"key": @"padlock", @"titleKey": @"PADLOCK_OPTION_TITLE", @"subtitleKey": @"PADLOCK_OPTION_DETAIL_TITLE", @"default": @NO, @"learnMore": @YES },
+        @{ @"key": @"padlock", @"titleKey": @"PADLOCK_OPTION_TITLE", @"subtitleKey": @"PADLOCK_OPTION_DETAIL_TITLE", @"default": @NO },
         @{ @"key": @"custom_voice_upload", @"titleKey": @"UPLOAD_CUSTOM_VOICE_OPTION_TITLE", @"subtitleKey": @"UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE", @"default": @YES },
         @{ @"key": @"hide_topics", @"titleKey": @"HIDE_TOPICS_OPTION_TITLE", @"subtitleKey": @"HIDE_TOPICS_OPTION_DETAIL_TITLE", @"default": @NO },
         @{ @"key": @"hide_topics_to_follow", @"titleKey": @"HIDE_TOPICS_TO_FOLLOW_OPTION", @"subtitleKey": @"HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE", @"default": @NO },
@@ -869,9 +865,8 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     NSString *title = [[BHTBundle sharedBundle] localizedStringForKey:toggleData[@"titleKey"]];
     NSString *subtitleKey = toggleData[@"subtitleKey"];
     NSString *subtitle = (subtitleKey.length > 0) ? [[BHTBundle sharedBundle] localizedStringForKey:subtitleKey] : @"";
-    BOOL learnMore = [toggleData[@"learnMore"] boolValue];
     
-    [cell configureWithTitle:title subtitle:subtitle learnMore:learnMore];
+    [cell configureWithTitle:title subtitle:subtitle];
     
     NSString *key = toggleData[@"key"];
     BOOL isEnabled = [[[NSUserDefaults standardUserDefaults] objectForKey:key] ?: toggleData[@"default"] boolValue];
@@ -916,6 +911,85 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     NSString *key = objc_getAssociatedObject(sender, @"prefKey");
     if (key) {
         [[NSUserDefaults standardUserDefaults] setBool:sender.isOn forKey:key];
+
+        if ([key isEqualToString:@"tab_bar_theming"]) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self refreshAllTabViewsWithTheming];
+            });
+        } else if ([key isEqualToString:@"restore_tab_labels"]) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self refreshAllTabViews];
+            });
+        }
+    }
+}
+
+- (void)refreshAllTabViewsWithTheming {
+    for (UIWindow *window in [UIApplication sharedApplication].windows) {
+        if (window.isKeyWindow && window.rootViewController) {
+            [self refreshTabViewsWithThemingInView:window.rootViewController.view];
+        }
+    }
+}
+
+- (void)refreshTabViewsWithThemingInView:(UIView *)view {
+    if ([view isKindOfClass:NSClassFromString(@"T1TabView")]) {
+        if ([view respondsToSelector:@selector(_t1_updateImageViewAnimated:)]) {
+            [view performSelector:@selector(_t1_updateImageViewAnimated:) withObject:@(NO)];
+        }
+        if ([view respondsToSelector:@selector(_t1_updateTitleLabel)]) {
+            [view performSelector:@selector(_t1_updateTitleLabel)];
+        }
+        if ([view respondsToSelector:@selector(_t1_layoutForTabBar)]) {
+            [view performSelector:@selector(_t1_layoutForTabBar)];
+        }
+        if ([view respondsToSelector:@selector(_t1_layoutBadgeViewMaximized)]) {
+            [view performSelector:@selector(_t1_layoutBadgeViewMaximized)];
+        }
+        
+        if (![[[NSUserDefaults standardUserDefaults] objectForKey:@"tab_bar_theming"] boolValue]) {
+            UILabel *titleLabel = [view valueForKey:@"titleLabel"];
+            if (titleLabel) {
+                titleLabel.textColor = nil;
+            }
+        }
+    }
+    
+    for (UIView *subview in view.subviews) {
+        [self refreshTabViewsWithThemingInView:subview];
+    }
+}
+
+- (void)refreshAllTabViews {
+    for (UIWindow *window in [UIApplication sharedApplication].windows) {
+        if (window.isKeyWindow && window.rootViewController) {
+            [self refreshTabViewsInView:window.rootViewController.view];
+        }
+    }
+}
+
+- (void)refreshTabViewsInView:(UIView *)view {
+    if ([view isKindOfClass:NSClassFromString(@"T1TabView")]) {
+        if ([view respondsToSelector:@selector(_t1_updateTitleLabel)]) {
+            [view performSelector:@selector(_t1_updateTitleLabel)];
+        }
+        if ([view respondsToSelector:@selector(_t1_layoutForTabBar)]) {
+            [view performSelector:@selector(_t1_layoutForTabBar)];
+        }
+        if ([view respondsToSelector:@selector(_t1_layoutBadgeViewMaximized)]) {
+            [view performSelector:@selector(_t1_layoutBadgeViewMaximized)];
+        }
+        
+        if (![[[NSUserDefaults standardUserDefaults] objectForKey:@"tab_bar_theming"] boolValue]) {
+            UILabel *titleLabel = [view valueForKey:@"titleLabel"];
+            if (titleLabel) {
+                titleLabel.textColor = nil;
+            }
+        }
+    }
+    
+    for (UIView *subview in view.subviews) {
+        [self refreshTabViewsInView:subview];
     }
 }
 
