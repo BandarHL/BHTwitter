@@ -456,6 +456,24 @@ extern UIColor *BHTCurrentAccentColor(void);
     return 0;
 }
 
+- (UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section {
+    // Add a thin separator under the main settings section to visually divide it from the developer list
+    if (section == 0) {
+        UIView *separator = [[UIView alloc] initWithFrame:CGRectZero];
+        separator.backgroundColor = [UIColor separatorColor];
+        return separator;
+    }
+    return nil;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section {
+    if (section == 0) {
+        // 1-pixel line regardless of screen scale
+        return 1.0 / UIScreen.mainScreen.scale;
+    }
+    return CGFLOAT_MIN;
+}
+
 #pragma mark - UITableViewDelegate
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -560,6 +578,10 @@ extern UIColor *BHTCurrentAccentColor(void);
     usernameLabel.text = [NSString stringWithFormat:@"@%@", developer[@"username"]];
     usernameLabel.font = [fontGroup performSelector:@selector(subtext2Font)];
     usernameLabel.textColor = subtitleColor;
+    
+    // Add chevron accessory similar to original HBTwitterCell
+    cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+    cell.tintColor = subtitleColor;
     
     // Load profile image asynchronously
     NSString *avatarURL = developer[@"avatarURL"];
