@@ -7,6 +7,7 @@
 @class TFNTwitterAccount;
 @interface GeneralSettingsViewController : UIViewController
 - (instancetype)initWithAccount:(TFNTwitterAccount *)account;
+@property (nonatomic, strong) TFNTwitterAccount *account;
 @end
 
 // Forward declaration for the view-controller implemented later in this file
@@ -756,6 +757,45 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         ]];
     }
     return self;
+}
+
+@end
+
+// -------------------------------
+// Minimal implementation for GeneralSettingsViewController (placeholder) to restore missing symbol
+@implementation GeneralSettingsViewController
+
+- (instancetype)initWithAccount:(TFNTwitterAccount *)account {
+    if ((self = [super init])) {
+        _account = account;
+    }
+    return self;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.view.backgroundColor = [BHDimPalette currentBackgroundColor];
+    NSString *title = [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_LAYOUT_TITLE"] ?: @"General";
+    if (self.account) {
+        self.navigationItem.titleView = [objc_getClass("TFNTitleView") titleViewWithTitle:title subtitle:self.account.displayUsername];
+    } else {
+        self.title = title;
+    }
+    UILabel *label = [[UILabel alloc] init];
+    label.translatesAutoresizingMaskIntoConstraints = NO;
+    id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
+    label.font = [fontGroup performSelector:@selector(bodyBoldFont)];
+    label.text = [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_PLACEHOLDER_TEXT"] ?: @"Nothing to see here.. yet";
+    label.textColor = [UIColor secondaryLabelColor];
+    label.textAlignment = NSTextAlignmentCenter;
+    label.numberOfLines = 0;
+    [self.view addSubview:label];
+    [NSLayoutConstraint activateConstraints:@[
+        [label.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
+        [label.centerYAnchor constraintEqualToAnchor:self.view.centerYAnchor],
+        [label.leadingAnchor constraintGreaterThanOrEqualToAnchor:self.view.leadingAnchor constant:20],
+        [label.trailingAnchor constraintLessThanOrEqualToAnchor:self.view.trailingAnchor constant:-20]
+    ]];
 }
 
 @end
