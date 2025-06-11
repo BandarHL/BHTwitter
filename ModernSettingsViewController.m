@@ -202,13 +202,13 @@ extern UIColor *BHTCurrentAccentColor(void);
             @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_LAYOUT_TITLE"],
             @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_LAYOUT_SUBTITLE"],
             @"icon": @"settings_stroke",
-            @"action": @"showInterfaceSettings"
+            @"action": @"showLayoutSettings"
         },
         @{
             @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_TWITTER_BLUE_TITLE"], 
             @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_TWITTER_BLUE_SUBTITLE"],
             @"icon": @"twitter_blue",
-            @"action": @"showPrivacySettings"
+            @"action": @"showTwitterBlueSettings"
         },
         @{
             @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_MEDIA_TITLE"],
@@ -220,7 +220,7 @@ extern UIColor *BHTCurrentAccentColor(void);
             @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_PROFILES_TITLE"],
             @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_PROFILES_SUBTITLE"],
             @"icon": @"account",
-            @"action": @"showAdvancedSettings"
+            @"action": @"showProfilesSettings"
         },
         @{
             @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_TWEETS_TITLE"],
@@ -232,7 +232,7 @@ extern UIColor *BHTCurrentAccentColor(void);
             @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_MESSAGES_TITLE"],
             @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_MESSAGES_SUBTITLE"],
             @"icon": @"messages_stroke",
-            @"action": @"showAboutSettings"
+            @"action": @"showMessagesSettings"
         },
         @{
             @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_EXPERIMENTAL_TITLE"],
@@ -491,14 +491,16 @@ extern UIColor *BHTCurrentAccentColor(void);
         
         if ([action isEqualToString:@"showDownloadsSettings"]) {
             [self showDownloadsSettings];
-        } else if ([action isEqualToString:@"showPrivacySettings"]) {
-            [self showPrivacySettings];
-        } else if ([action isEqualToString:@"showInterfaceSettings"]) {
-            [self showInterfaceSettings];
-        } else if ([action isEqualToString:@"showAdvancedSettings"]) {
-            [self showAdvancedSettings];
-        } else if ([action isEqualToString:@"showAboutSettings"]) {
-            [self showAboutSettings];
+        } else if ([action isEqualToString:@"showTwitterBlueSettings"]) {
+            [self showTwitterBlueSettings];
+        } else if ([action isEqualToString:@"showLayoutSettings"]) {
+            [self showLayoutSettings];
+        } else if ([action isEqualToString:@"showProfilesSettings"]) {
+            [self showProfilesSettings];
+        } else if ([action isEqualToString:@"showTweetsSettings"]) {
+            [self showTweetsSettings];
+        } else if ([action isEqualToString:@"showMessagesSettings"]) {
+            [self showMessagesSettings];
         } else if ([action isEqualToString:@"showExperimentalSettings"]) {
             [self showExperimentalSettings];
         }
@@ -620,47 +622,76 @@ extern UIColor *BHTCurrentAccentColor(void);
     }
 }
 
-#pragma mark - Navigation Methods
+#pragma mark - Placeholder helper
+
+- (UIViewController *)placeholderViewControllerWithTitle:(NSString *)titleKey {
+    UIViewController *vc = [[UIViewController alloc] init];
+    vc.view.backgroundColor = [BHDimPalette currentBackgroundColor];
+    NSString *resolvedTitle = titleKey;
+    // If we passed a localization key, resolve via bundle; fall back to the raw string.
+    NSString *localized = [[BHTBundle sharedBundle] localizedStringForKey:titleKey];
+    if (localized && ![localized isEqualToString:titleKey]) {
+        resolvedTitle = localized;
+    }
+    if (self.account) {
+        vc.navigationItem.titleView = [objc_getClass("TFNTitleView") titleViewWithTitle:resolvedTitle subtitle:self.account.displayUsername];
+    } else {
+        vc.title = resolvedTitle;
+    }
+    // Show centered placeholder label
+    UILabel *label = [[UILabel alloc] init];
+    label.translatesAutoresizingMaskIntoConstraints = NO;
+    id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
+    label.font = [fontGroup performSelector:@selector(bodyBoldFont)];
+    label.text = [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_PLACEHOLDER_TEXT"] ?: @"Nothing to see here.. yet";
+    label.textColor = [UIColor secondaryLabelColor];
+    label.textAlignment = NSTextAlignmentCenter;
+    label.numberOfLines = 0;
+    [vc.view addSubview:label];
+    [NSLayoutConstraint activateConstraints:@[
+        [label.centerXAnchor constraintEqualToAnchor:vc.view.centerXAnchor],
+        [label.centerYAnchor constraintEqualToAnchor:vc.view.centerYAnchor],
+        [label.leadingAnchor constraintGreaterThanOrEqualToAnchor:vc.view.leadingAnchor constant:20],
+        [label.trailingAnchor constraintLessThanOrEqualToAnchor:vc.view.trailingAnchor constant:-20]
+    ]];
+    return vc;
+}
+
+#pragma mark - Sub-pages (placeholder)
+
+- (void)showLayoutSettings {
+    UIViewController *vc = [self placeholderViewControllerWithTitle:@"MODERN_SETTINGS_LAYOUT_TITLE"];
+    [self.navigationController pushViewController:vc animated:YES];
+}
+
+- (void)showTwitterBlueSettings {
+    UIViewController *vc = [self placeholderViewControllerWithTitle:@"MODERN_SETTINGS_TWITTER_BLUE_TITLE"];
+    [self.navigationController pushViewController:vc animated:YES];
+}
 
 - (void)showDownloadsSettings {
-    // Create a filtered settings view with download-related options
-    SettingsViewController *settingsVC = [[SettingsViewController alloc] initWithTwitterAccount:self.account];
-    // TODO: Filter to show only download/media related settings
-    [self.navigationController pushViewController:settingsVC animated:YES];
+    UIViewController *vc = [self placeholderViewControllerWithTitle:@"MODERN_SETTINGS_MEDIA_TITLE"];
+    [self.navigationController pushViewController:vc animated:YES];
 }
 
-- (void)showPrivacySettings {
-    // Create a filtered settings view with privacy-related options
-    SettingsViewController *settingsVC = [[SettingsViewController alloc] initWithTwitterAccount:self.account];
-    // TODO: Filter to show only privacy/safety related settings
-    [self.navigationController pushViewController:settingsVC animated:YES];
+- (void)showProfilesSettings {
+    UIViewController *vc = [self placeholderViewControllerWithTitle:@"MODERN_SETTINGS_PROFILES_TITLE"];
+    [self.navigationController pushViewController:vc animated:YES];
 }
 
-- (void)showInterfaceSettings {
-    // Create a filtered settings view with interface-related options
-    SettingsViewController *settingsVC = [[SettingsViewController alloc] initWithTwitterAccount:self.account];
-    // TODO: Filter to show only interface/theme related settings
-    [self.navigationController pushViewController:settingsVC animated:YES];
+- (void)showTweetsSettings {
+    UIViewController *vc = [self placeholderViewControllerWithTitle:@"MODERN_SETTINGS_TWEETS_TITLE"];
+    [self.navigationController pushViewController:vc animated:YES];
 }
 
-- (void)showAdvancedSettings {
-    // Create a filtered settings view with advanced options
-    SettingsViewController *settingsVC = [[SettingsViewController alloc] initWithTwitterAccount:self.account];
-    // TODO: Filter to show only advanced/experimental settings
-    [self.navigationController pushViewController:settingsVC animated:YES];
-}
-
-- (void)showAboutSettings {
-    // Create a filtered settings view with about/developer info
-    SettingsViewController *settingsVC = [[SettingsViewController alloc] initWithTwitterAccount:self.account];
-    // TODO: Filter to show only about/developer/debug settings
-    [self.navigationController pushViewController:settingsVC animated:YES];
+- (void)showMessagesSettings {
+    UIViewController *vc = [self placeholderViewControllerWithTitle:@"MODERN_SETTINGS_MESSAGES_TITLE"];
+    [self.navigationController pushViewController:vc animated:YES];
 }
 
 - (void)showExperimentalSettings {
-    SettingsViewController *settingsVC = [[SettingsViewController alloc] initWithTwitterAccount:self.account];
-    // TODO: Filter to show only experimental settings
-    [self.navigationController pushViewController:settingsVC animated:YES];
+    UIViewController *vc = [self placeholderViewControllerWithTitle:@"MODERN_SETTINGS_EXPERIMENTAL_TITLE"];
+    [self.navigationController pushViewController:vc animated:YES];
 }
 
 @end
