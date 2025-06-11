@@ -723,35 +723,39 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     if (self) {
         self.selectionStyle = UITableViewCellSelectionStyleNone;
         self.backgroundColor = [BHDimPalette currentBackgroundColor];
-        
-        UIStackView *textStack = [[UIStackView alloc] init];
-        textStack.translatesAutoresizingMaskIntoConstraints = NO;
-        textStack.axis = UILayoutConstraintAxisVertical;
-        textStack.spacing = 4;
-        textStack.alignment = UIStackViewAlignmentLeading;
-        [self.contentView addSubview:textStack];
-        
+
         self.titleLabel = [UILabel new];
+        self.titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
+        [self.contentView addSubview:self.titleLabel];
+        
         self.subtitleLabel = [UILabel new];
         self.subtitleLabel.numberOfLines = 0;
-        
-        [textStack addArrangedSubview:self.titleLabel];
-        [textStack addArrangedSubview:self.subtitleLabel];
+        self.subtitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
+        [self.contentView addSubview:self.subtitleLabel];
         
         self.toggleSwitch = [UISwitch new];
         self.toggleSwitch.translatesAutoresizingMaskIntoConstraints = NO;
         [self.contentView addSubview:self.toggleSwitch];
-        
+
         [self applyTheme];
         
         [NSLayoutConstraint activateConstraints:@[
-            [textStack.leadingAnchor constraintEqualToAnchor:self.contentView.leadingAnchor constant:20],
-            [textStack.topAnchor constraintEqualToAnchor:self.contentView.topAnchor constant:14],
-            [textStack.bottomAnchor constraintEqualToAnchor:self.contentView.bottomAnchor constant:-14],
-            [textStack.trailingAnchor constraintEqualToAnchor:self.toggleSwitch.leadingAnchor constant:-16],
-
+            // Align switch to the right
             [self.toggleSwitch.trailingAnchor constraintEqualToAnchor:self.contentView.trailingAnchor constant:-20],
-            [self.toggleSwitch.centerYAnchor constraintEqualToAnchor:self.contentView.centerYAnchor]
+
+            // Align title label
+            [self.titleLabel.leadingAnchor constraintEqualToAnchor:self.contentView.leadingAnchor constant:20],
+            [self.titleLabel.topAnchor constraintEqualToAnchor:self.contentView.topAnchor constant:14],
+            [self.titleLabel.trailingAnchor constraintEqualToAnchor:self.toggleSwitch.leadingAnchor constant:-16],
+            
+            // Center switch vertically with the title
+            [self.toggleSwitch.centerYAnchor constraintEqualToAnchor:self.titleLabel.centerYAnchor],
+
+            // Align subtitle label below the title
+            [self.subtitleLabel.leadingAnchor constraintEqualToAnchor:self.titleLabel.leadingAnchor],
+            [self.subtitleLabel.trailingAnchor constraintEqualToAnchor:self.titleLabel.trailingAnchor],
+            [self.subtitleLabel.topAnchor constraintEqualToAnchor:self.titleLabel.bottomAnchor constant:4],
+            [self.subtitleLabel.bottomAnchor constraintEqualToAnchor:self.contentView.bottomAnchor constant:-14]
         ]];
     }
     return self;
