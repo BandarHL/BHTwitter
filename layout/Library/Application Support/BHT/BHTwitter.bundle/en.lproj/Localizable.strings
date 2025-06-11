@@ -370,3 +370,6 @@
 
 "MODERN_SETTINGS_MESSAGES_TITLE" = "Direct Messages";
 "MODERN_SETTINGS_MESSAGES_SUBTITLE" = "Customize your Twitter messaging experience.";
+
+"MODERN_SETTINGS_EXPERIMENTAL_TITLE" = "Experimental";
+"MODERN_SETTINGS_EXPERIMENTAL_SUBTITLE" = "Try features that may be unstable. like using the new Solarium UI for iOS 26.";

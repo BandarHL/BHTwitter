@@ -233,6 +233,12 @@ extern UIColor *BHTCurrentAccentColor(void);
             @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_MESSAGES_SUBTITLE"],
             @"icon": @"messages_stroke",
             @"action": @"showAboutSettings"
+        },
+        @{
+            @"title": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_EXPERIMENTAL_TITLE"],
+            @"subtitle": [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_EXPERIMENTAL_SUBTITLE"],
+            @"icon": @"flask",
+            @"action": @"showExperimentalSettings"
         }
     ];
 }
@@ -493,6 +499,8 @@ extern UIColor *BHTCurrentAccentColor(void);
             [self showAdvancedSettings];
         } else if ([action isEqualToString:@"showAboutSettings"]) {
             [self showAboutSettings];
+        } else if ([action isEqualToString:@"showExperimentalSettings"]) {
+            [self showExperimentalSettings];
         }
     } else if (indexPath.section == 1) {
         // Developer cell selected
@@ -646,6 +654,12 @@ extern UIColor *BHTCurrentAccentColor(void);
     // Create a filtered settings view with about/developer info
     SettingsViewController *settingsVC = [[SettingsViewController alloc] initWithTwitterAccount:self.account];
     // TODO: Filter to show only about/developer/debug settings
+    [self.navigationController pushViewController:settingsVC animated:YES];
+}
+
+- (void)showExperimentalSettings {
+    SettingsViewController *settingsVC = [[SettingsViewController alloc] initWithTwitterAccount:self.account];
+    // TODO: Filter to show only experimental settings
     [self.navigationController pushViewController:settingsVC animated:YES];
 }
 
