@@ -514,7 +514,7 @@ extern UIColor *BHTCurrentAccentColor(void);
     // Create custom layout matching HBTwitterCell
     UIImageView *avatarImageView = [[UIImageView alloc] init];
     avatarImageView.translatesAutoresizingMaskIntoConstraints = NO;
-    avatarImageView.layer.cornerRadius = 22; // 44x44 image, radius = 22
+    avatarImageView.layer.cornerRadius = 26; // 52x52 image, radius = 26
     avatarImageView.clipsToBounds = YES;
     avatarImageView.contentMode = UIViewContentModeScaleAspectFill;
     avatarImageView.tag = 100; // Tag to find it later
@@ -523,31 +523,46 @@ extern UIColor *BHTCurrentAccentColor(void);
     UILabel *nameLabel = [[UILabel alloc] init];
     nameLabel.translatesAutoresizingMaskIntoConstraints = NO;
     nameLabel.tag = 101;
+    nameLabel.adjustsFontForContentSizeCategory = YES;
     [cell.contentView addSubview:nameLabel];
     
     UILabel *usernameLabel = [[UILabel alloc] init];
     usernameLabel.translatesAutoresizingMaskIntoConstraints = NO;
     usernameLabel.tag = 102;
+    usernameLabel.adjustsFontForContentSizeCategory = YES;
     [cell.contentView addSubview:usernameLabel];
+    
+    // Custom chevron image (matches main cells)
+    UIImageView *devChevron = [[UIImageView alloc] init];
+    devChevron.translatesAutoresizingMaskIntoConstraints = NO;
+    devChevron.tag = 103;
+    devChevron.contentMode = UIViewContentModeScaleAspectFit;
+    [cell.contentView addSubview:devChevron];
     
     // Setup constraints to match HBTwitterCell layout
     [NSLayoutConstraint activateConstraints:@[
         // Avatar constraints
         [avatarImageView.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:20],
         [avatarImageView.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
-        [avatarImageView.widthAnchor constraintEqualToConstant:44],
-        [avatarImageView.heightAnchor constraintEqualToConstant:44],
+        [avatarImageView.widthAnchor constraintEqualToConstant:52],
+        [avatarImageView.heightAnchor constraintEqualToConstant:52],
         
         // Name label constraints
         [nameLabel.leadingAnchor constraintEqualToAnchor:avatarImageView.trailingAnchor constant:12],
-        [nameLabel.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-20],
+        [nameLabel.trailingAnchor constraintEqualToAnchor:devChevron.leadingAnchor constant:-12],
         [nameLabel.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:16],
         
         // Username label constraints
         [usernameLabel.leadingAnchor constraintEqualToAnchor:nameLabel.leadingAnchor],
-        [usernameLabel.trailingAnchor constraintEqualToAnchor:nameLabel.trailingAnchor],
+        [usernameLabel.trailingAnchor constraintEqualToAnchor:devChevron.leadingAnchor constant:-12],
         [usernameLabel.topAnchor constraintEqualToAnchor:nameLabel.bottomAnchor constant:2],
-        [usernameLabel.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-16]
+        [usernameLabel.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-16],
+        
+        // Chevron constraints
+        [devChevron.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-20],
+        [devChevron.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
+        [devChevron.widthAnchor constraintEqualToConstant:18],
+        [devChevron.heightAnchor constraintEqualToConstant:18]
     ]];
     
     // Set cell properties
@@ -579,31 +594,21 @@ extern UIColor *BHTCurrentAccentColor(void);
     usernameLabel.font = [fontGroup performSelector:@selector(subtext2Font)];
     usernameLabel.textColor = subtitleColor;
     
-    // Add chevron accessory similar to original HBTwitterCell
-    cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
-    cell.tintColor = subtitleColor;
+    UIImageView *devChevron = [cell.contentView viewWithTag:103];
+    devChevron.image = [UIImage tfn_vectorImageNamed:@"chevron_right" fitsSize:CGSizeMake(18, 18) fillColor:subtitleColor];
     
-    // Load profile image asynchronously
+    // Load avatar image asynchronously
     NSString *avatarURL = developer[@"avatarURL"];
-    if (avatarURL) {
+    if (avatarURL.length > 0) {
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-            NSData *imageData = [NSData dataWithContentsOfURL:[NSURL URLWithString:avatarURL]];
-            UIImage *image = [UIImage imageWithData:imageData];
-            
+            NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:avatarURL]];
+            UIImage *img = [UIImage imageWithData:data];
             dispatch_async(dispatch_get_main_queue(), ^{
-                if (image) {
-                    avatarImageView.image = image;
-                } else {
-                    // Fallback to person icon if image fails to load
-                    avatarImageView.image = [UIImage systemImageNamed:@"person.circle.fill"];
-                    avatarImageView.tintColor = subtitleColor;
-                }
+                avatarImageView.image = img ?: [UIImage systemImageNamed:@"person.circle.fill"];
             });
         });
     } else {
-        // Fallback icon
         avatarImageView.image = [UIImage systemImageNamed:@"person.circle.fill"];
-        avatarImageView.tintColor = subtitleColor;
     }
 }
 
