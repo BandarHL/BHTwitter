@@ -393,73 +393,34 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 }
 
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
-    if (section == 0) {
-        // Top subtitle header
-        UIView *headerView = [[UIView alloc] init];
-        headerView.backgroundColor = [BHDimPalette currentBackgroundColor];
-        
-        UILabel *subtitleLabel = [[UILabel alloc] init];
-        subtitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-        subtitleLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"BHTWITTER_SETTINGS_DETAIL"];
-        subtitleLabel.numberOfLines = 0;
-        subtitleLabel.textAlignment = NSTextAlignmentLeft;
-        
-        // Use Twitter fonts and colors
-        id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
-        subtitleLabel.font = [fontGroup performSelector:@selector(subtext2Font)];
-        
-        // Get Twitter's color palette for subtitle color
-        Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
-        id settings = [TAEColorSettingsCls sharedSettings];
-        id currentPalette = [settings currentColorPalette];
-        id colorPalette = [currentPalette colorPalette];
-        UIColor *subtitleColor = [colorPalette performSelector:@selector(tabBarItemColor)];
-        subtitleLabel.textColor = subtitleColor;
-        
-        [headerView addSubview:subtitleLabel];
-        
-        [NSLayoutConstraint activateConstraints:@[
-            [subtitleLabel.leadingAnchor constraintEqualToAnchor:headerView.leadingAnchor constant:20],
-            [subtitleLabel.trailingAnchor constraintEqualToAnchor:headerView.trailingAnchor constant:-20],
-            [subtitleLabel.topAnchor constraintEqualToAnchor:headerView.topAnchor constant:16],
-            [subtitleLabel.bottomAnchor constraintEqualToAnchor:headerView.bottomAnchor constant:-16]
-        ]];
-        
-        return headerView;
-    } else if (section == 1) {
-        // Developer section header
-        UIView *headerView = [[UIView alloc] init];
-        headerView.backgroundColor = [BHDimPalette currentBackgroundColor];
-        
-        UILabel *titleLabel = [[UILabel alloc] init];
-        titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-        titleLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"DEVELOPER_SECTION_HEADER_TITLE"];
-        
-        // Use Twitter fonts and colors
-        id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
-        titleLabel.font = [fontGroup performSelector:@selector(headline1BoldFont)];
-        
-        // Get Twitter's color palette for text color
-        Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
-        id settings = [TAEColorSettingsCls sharedSettings];
-        id currentPalette = [settings currentColorPalette];
-        id colorPalette = [currentPalette colorPalette];
-        UIColor *titleColor = [colorPalette performSelector:@selector(textColor)];
-        titleLabel.textColor = titleColor;
-        
-        [headerView addSubview:titleLabel];
-        
-        [NSLayoutConstraint activateConstraints:@[
-            [titleLabel.leadingAnchor constraintEqualToAnchor:headerView.leadingAnchor constant:20],
-            [titleLabel.trailingAnchor constraintEqualToAnchor:headerView.trailingAnchor constant:-20],
-            [titleLabel.topAnchor constraintEqualToAnchor:headerView.topAnchor constant:32],
-            [titleLabel.bottomAnchor constraintEqualToAnchor:headerView.bottomAnchor constant:-16]
-        ]];
-        
-        return headerView;
-    }
+    UIView *header = [[UIView alloc] init];
+    header.backgroundColor = [BHDimPalette currentBackgroundColor];
     
-    return nil;
+    UILabel *label = [[UILabel alloc] init];
+    label.translatesAutoresizingMaskIntoConstraints = NO;
+    label.text = [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_LAYOUT_SUBTITLE"];
+    label.numberOfLines = 0;
+    label.textAlignment = NSTextAlignmentLeft;
+
+    id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
+    label.font = [fontGroup performSelector:@selector(subtext2Font)];
+
+    Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
+    id settings = [TAEColorSettingsCls sharedSettings];
+    id currentPalette = [settings currentColorPalette];
+    id colorPalette = [currentPalette colorPalette];
+    label.textColor = [colorPalette performSelector:@selector(tabBarItemColor)];
+    
+    [header addSubview:label];
+    
+    [NSLayoutConstraint activateConstraints:@[
+        [label.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:20],
+        [label.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-20],
+        [label.topAnchor constraintEqualToAnchor:header.topAnchor constant:16],
+        [label.bottomAnchor constraintEqualToAnchor:header.bottomAnchor constant:-16]
+    ]];
+    
+    return header;
 }
 
 - (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
@@ -946,6 +907,9 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         if ([view respondsToSelector:@selector(_t1_layoutBadgeViewMaximized)]) {
             [view performSelector:@selector(_t1_layoutBadgeViewMaximized)];
         }
+        if ([view respondsToSelector:@selector(_t1_layoutBadgeViewMinimized)]) {
+            [view performSelector:@selector(_t1_layoutBadgeViewMinimized)];
+        }
         
         if (![[[NSUserDefaults standardUserDefaults] objectForKey:@"tab_bar_theming"] boolValue]) {
             UILabel *titleLabel = [view valueForKey:@"titleLabel"];
@@ -978,6 +942,9 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         }
         if ([view respondsToSelector:@selector(_t1_layoutBadgeViewMaximized)]) {
             [view performSelector:@selector(_t1_layoutBadgeViewMaximized)];
+        }
+        if ([view respondsToSelector:@selector(_t1_layoutBadgeViewMinimized)]) {
+            [view performSelector:@selector(_t1_layoutBadgeViewMinimized)];
         }
         
         if (![[[NSUserDefaults standardUserDefaults] objectForKey:@"tab_bar_theming"] boolValue]) {
