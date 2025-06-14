@@ -206,8 +206,8 @@
 "STOP_HIDING_TAB_BAR_TITLE" = "ナビゲーションバーを常に表示";
 "STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "スクロールしてもナビゲーションバーが消えないようにします。";
 
-"CLASSIC_TAB_BAR_SETTINGS_TITLE" = "タブアイコンを置換";
-"CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "現在選択されているタブにアクセントカラーを適用します。アプリの再起動が必要です。";
+"CLASSIC_TAB_BAR_SETTINGS_TITLE" = "クラシックタブバー";
+"CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "現在選択されているタブにアクセントカラーを適用します。";
 
 "DISABLE_RTL_OPTION_TITLE" = "左から右へのレイアウトを使用";
 "DISABLE_RTL_OPTION_DETAIL_TITLE" = "右から左に読む言語の場合でも、左から右へのレイアウトを強制します。";
@@ -316,6 +316,10 @@
 "RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_ON" = "この変更を反映するには、Twitterを再起動する必要があります。";
 "RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_OFF" = "デフォルトアイコンを無効にして元に戻すには、Twitterを再起動してください。";
 "CLASSIC_TAB_BAR_DISABLED_NOTIFICATION_NAME" = "BHTClassicTabBarSettingChangedNotification";
+
+/* Restore tab labels */
+"RESTORE_TAB_LABELS_TITLE" = "タブラベルを復元";
+"RESTORE_TAB_LABELS_DETAIL" = "以前のTwitterのように、タブバーアイコンの下にラベルを表示します。";
 
 /*Message customization*/
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_1" = "画像を使用";
