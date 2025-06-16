@@ -847,11 +847,11 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         @{ @"key": @"hide_who_to_follow", @"titleKey": @"HIDE_WHO_FOLLOW_OPTION", @"subtitleKey": @"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE", @"default": @NO },
         @{ @"key": @"openInBrowser", @"titleKey": @"ALWAYS_OPEN_SAFARI_OPTION_TITLE", @"subtitleKey": @"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE", @"default": @NO },
         @{ @"key": @"strip_tracking_params", @"titleKey": @"STRIP_URL_TRACKING_PARAMETERS_TITLE", @"subtitleKey": @"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE", @"default": @NO },
-        @{ @"type": @"button", @"parentKey": @"strip_tracking_params", @"key": @"url_host_button", @"titleKey": @"SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE", @"action": @"showURLHostSelectionViewController:", @"prefKeyForSubtitle": @"tweet_url_host", @"subtitleDefault": @"x.com" },
+        @{ @"type": @"button", @"parentKey": @"strip_tracking_params", @"key": @"url_host_button", @"titleKey": @"SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE", @"action": @"showURLHostSelectionViewController:", @"prefKeyForSubtitle": @"tweet_url_host", @"subtitleDefault": @"x.com", @"icon": @"link" },
         @{ @"key": @"enable_translate", @"titleKey": @"ENABLE_TRANSLATE_OPTION_TITLE", @"subtitleKey": @"ENABLE_TRANSLATE_OPTION_DETAIL_TITLE", @"default": @NO },
-        @{ @"type": @"button", @"parentKey": @"enable_translate", @"key": @"translate_endpoint_button", @"titleKey": @"TRANSLATE_ENDPOINT_OPTION_TITLE", @"action": @"showTranslateEndpointInput:", @"prefKeyForSubtitle": @"translate_endpoint", @"subtitleDefault": @"Default Gemini API" },
-        @{ @"type": @"button", @"parentKey": @"enable_translate", @"key": @"translate_api_key_button", @"titleKey": @"TRANSLATE_API_KEY_OPTION_TITLE", @"action": @"showTranslateAPIKeyInput:", @"prefKeyForSubtitle": @"translate_api_key", @"subtitleDefault": @"Not Set", @"isSecure": @YES },
-        @{ @"type": @"button", @"parentKey": @"enable_translate", @"key": @"translate_model_button", @"titleKey": @"TRANSLATE_MODEL_OPTION_TITLE", @"action": @"showTranslateModelInput:", @"prefKeyForSubtitle": @"translate_model", @"subtitleDefault": @"gemini-1.5-flash" },
+        @{ @"type": @"button", @"parentKey": @"enable_translate", @"key": @"translate_endpoint_button", @"titleKey": @"TRANSLATE_ENDPOINT_OPTION_TITLE", @"action": @"showTranslateEndpointInput:", @"prefKeyForSubtitle": @"translate_endpoint", @"subtitleDefault": @"Default Gemini API", @"icon": @"sparkle_stroke" },
+        @{ @"type": @"button", @"parentKey": @"enable_translate", @"key": @"translate_api_key_button", @"titleKey": @"TRANSLATE_API_KEY_OPTION_TITLE", @"action": @"showTranslateAPIKeyInput:", @"prefKeyForSubtitle": @"translate_api_key", @"subtitleDefault": @"Not Set", @"isSecure": @YES, @"icon": @"sparkle_stroke" },
+        @{ @"type": @"button", @"parentKey": @"enable_translate", @"key": @"translate_model_button", @"titleKey": @"TRANSLATE_MODEL_OPTION_TITLE", @"action": @"showTranslateModelInput:", @"prefKeyForSubtitle": @"translate_model", @"subtitleDefault": @"gemini-1.5-flash", @"icon": @"sparkle_stroke" },
         @{ @"key": @"hide_spaces", @"titleKey": @"HIDE_SPACE_OPTION_TITLE", @"subtitleKey": @"", @"default": @NO },
         @{ @"key": @"no_tab_bar_hiding", @"titleKey": @"STOP_HIDING_TAB_BAR_TITLE", @"subtitleKey": @"STOP_HIDING_TAB_BAR_TITLE", @"default": @NO },
         @{ @"key": @"tab_bar_theming", @"titleKey": @"CLASSIC_TAB_BAR_SETTINGS_TITLE", @"subtitleKey": @"CLASSIC_TAB_BAR_SETTINGS_DETAIL", @"default": @NO },
@@ -900,7 +900,8 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
             }
         }
         
-        [cell configureWithTitle:title subtitle:subtitle iconName:nil];
+        NSString *iconName = toggleData[@"icon"];
+        [cell configureWithTitle:title subtitle:subtitle iconName:iconName];
         
         return cell;
 
