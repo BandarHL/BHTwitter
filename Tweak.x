@@ -3225,46 +3225,6 @@ static BOOL isViewInsideDashHostingController(UIView *view) {
 
 %end
 
-%hook TFNBlurHandler
-
-- (UIView *)blurBackgroundView {
-    UIView *originalView = %orig;
-    if (originalView) {
-        originalView.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.3];
-        
-        // Also set the layer backgroundColor to ensure it persists
-        originalView.layer.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.3].CGColor;
-        
-        // Mark the view with a tag so we can identify it in UIView hook
-        originalView.tag = 999999;
-    }
-    return originalView;
-}
-
-- (void)setBlurBackgroundView:(UIView *)blurBackgroundView {
-    %orig;
-    if (blurBackgroundView) {
-        blurBackgroundView.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.3];
-        blurBackgroundView.layer.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.3].CGColor;
-        blurBackgroundView.tag = 999999;
-    }
-}
-
-%end
-
-%hook UIView
-
-- (void)setBackgroundColor:(UIColor *)backgroundColor {
-    if (self.tag == 999999) {
-        // This is our blur background view, force our color
-        %orig([UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.3]);
-    } else {
-        %orig;
-    }
-}
-
-%end
-
 // MARK: - Restore Pull-To-Refresh Sounds
 
 // Helper function to play sounds since we can't directly call methods on TFNPullToRefreshControl

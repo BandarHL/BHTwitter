@@ -794,6 +794,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 @property (nonatomic, strong) TFNTwitterAccount *account;
 @property (nonatomic, strong) UITableView *tableView;
 @property (nonatomic, strong) NSArray<NSDictionary *> *toggles;
+@property (nonatomic, strong) NSArray<NSDictionary *> *visibleToggles;
 @end
 
 @implementation GeneralSettingsViewController
@@ -802,6 +803,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     if ((self = [super init])) {
         self.account = account;
         [self buildToggleList];
+        [self updateVisibleToggles];
     }
     return self;
 }
@@ -832,6 +834,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     self.tableView.rowHeight = UITableViewAutomaticDimension;
     self.tableView.estimatedRowHeight = 80;
     [self.tableView registerClass:[ModernSettingsToggleCell class] forCellReuseIdentifier:@"ToggleCell"];
+    [self.tableView registerClass:[ModernSettingsTableViewCell class] forCellReuseIdentifier:@"ButtonCell"];
     [self.view addSubview:self.tableView];
 }
 
@@ -844,7 +847,11 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         @{ @"key": @"hide_who_to_follow", @"titleKey": @"HIDE_WHO_FOLLOW_OPTION", @"subtitleKey": @"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE", @"default": @NO },
         @{ @"key": @"openInBrowser", @"titleKey": @"ALWAYS_OPEN_SAFARI_OPTION_TITLE", @"subtitleKey": @"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE", @"default": @NO },
         @{ @"key": @"strip_tracking_params", @"titleKey": @"STRIP_URL_TRACKING_PARAMETERS_TITLE", @"subtitleKey": @"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE", @"default": @NO },
+        @{ @"type": @"button", @"parentKey": @"strip_tracking_params", @"key": @"url_host_button", @"titleKey": @"SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE", @"action": @"showURLHostSelectionViewController:", @"prefKeyForSubtitle": @"tweet_url_host", @"subtitleDefault": @"x.com" },
         @{ @"key": @"enable_translate", @"titleKey": @"ENABLE_TRANSLATE_OPTION_TITLE", @"subtitleKey": @"ENABLE_TRANSLATE_OPTION_DETAIL_TITLE", @"default": @NO },
+        @{ @"type": @"button", @"parentKey": @"enable_translate", @"key": @"translate_endpoint_button", @"titleKey": @"TRANSLATE_ENDPOINT_OPTION_TITLE", @"action": @"showTranslateEndpointInput:", @"prefKeyForSubtitle": @"translate_endpoint", @"subtitleDefault": @"Default Gemini API" },
+        @{ @"type": @"button", @"parentKey": @"enable_translate", @"key": @"translate_api_key_button", @"titleKey": @"TRANSLATE_API_KEY_OPTION_TITLE", @"action": @"showTranslateAPIKeyInput:", @"prefKeyForSubtitle": @"translate_api_key", @"subtitleDefault": @"Not Set", @"isSecure": @YES },
+        @{ @"type": @"button", @"parentKey": @"enable_translate", @"key": @"translate_model_button", @"titleKey": @"TRANSLATE_MODEL_OPTION_TITLE", @"action": @"showTranslateModelInput:", @"prefKeyForSubtitle": @"translate_model", @"subtitleDefault": @"gemini-1.5-flash" },
         @{ @"key": @"hide_spaces", @"titleKey": @"HIDE_SPACE_OPTION_TITLE", @"subtitleKey": @"", @"default": @NO },
         @{ @"key": @"no_tab_bar_hiding", @"titleKey": @"STOP_HIDING_TAB_BAR_TITLE", @"subtitleKey": @"STOP_HIDING_TAB_BAR_TITLE", @"default": @NO },
         @{ @"key": @"tab_bar_theming", @"titleKey": @"CLASSIC_TAB_BAR_SETTINGS_TITLE", @"subtitleKey": @"CLASSIC_TAB_BAR_SETTINGS_DETAIL", @"default": @NO },
@@ -854,31 +861,89 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     ];
 }
 
+- (void)updateVisibleToggles {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSMutableArray *visible = [NSMutableArray array];
+    for (NSDictionary *toggleData in self.toggles) {
+        NSString *parentKey = toggleData[@"parentKey"];
+        if (parentKey) {
+            BOOL parentEnabled = [[defaults objectForKey:parentKey] ?: toggleData[@"default"] boolValue];
+            if (parentEnabled) {
+                [visible addObject:toggleData];
+            }
+        } else {
+            [visible addObject:toggleData];
+        }
+    }
+    self.visibleToggles = [visible copy];
+}
+
 #pragma mark - UITableViewDataSource
 
-- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { return self.toggles.count; }
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { return self.visibleToggles.count; }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    ModernSettingsToggleCell *cell = [tableView dequeueReusableCellWithIdentifier:@"ToggleCell" forIndexPath:indexPath];
+    NSDictionary *toggleData = self.visibleToggles[indexPath.row];
+    NSString *type = toggleData[@"type"];
     
-    NSDictionary *toggleData = self.toggles[indexPath.row];
-    NSString *title = [[BHTBundle sharedBundle] localizedStringForKey:toggleData[@"titleKey"]];
-    NSString *subtitleKey = toggleData[@"subtitleKey"];
-    NSString *subtitle = (subtitleKey.length > 0) ? [[BHTBundle sharedBundle] localizedStringForKey:subtitleKey] : @"";
-    
-    [cell configureWithTitle:title subtitle:subtitle];
-    
-    NSString *key = toggleData[@"key"];
-    BOOL isEnabled = [[[NSUserDefaults standardUserDefaults] objectForKey:key] ?: toggleData[@"default"] boolValue];
-    cell.toggleSwitch.on = isEnabled;
-    
-    objc_setAssociatedObject(cell.toggleSwitch, @"prefKey", key, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    [cell addTarget:self action:@selector(switchChanged:) forControlEvents:UIControlEventValueChanged];
-    
-    return cell;
+    if ([type isEqualToString:@"button"]) {
+        ModernSettingsTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"ButtonCell" forIndexPath:indexPath];
+        
+        NSString *title = [[BHTBundle sharedBundle] localizedStringForKey:toggleData[@"titleKey"]];
+        
+        NSString *subtitle = @"";
+        NSString *prefKey = toggleData[@"prefKeyForSubtitle"];
+        if (prefKey) {
+            subtitle = [[NSUserDefaults standardUserDefaults] objectForKey:prefKey] ?: toggleData[@"subtitleDefault"];
+            if ([toggleData[@"isSecure"] boolValue] && subtitle.length > 0 && ![subtitle isEqualToString:toggleData[@"subtitleDefault"]]) {
+                subtitle = @"••••••••••••••••";
+            }
+        }
+        
+        [cell configureWithTitle:title subtitle:subtitle iconName:nil];
+        
+        return cell;
+
+    } else { // Default to toggle cell
+        ModernSettingsToggleCell *cell = [tableView dequeueReusableCellWithIdentifier:@"ToggleCell" forIndexPath:indexPath];
+        
+        NSString *title = [[BHTBundle sharedBundle] localizedStringForKey:toggleData[@"titleKey"]];
+        NSString *subtitleKey = toggleData[@"subtitleKey"];
+        NSString *subtitle = (subtitleKey.length > 0) ? [[BHTBundle sharedBundle] localizedStringForKey:subtitleKey] : @"";
+        
+        [cell configureWithTitle:title subtitle:subtitle];
+        
+        NSString *key = toggleData[@"key"];
+        BOOL isEnabled = [[[NSUserDefaults standardUserDefaults] objectForKey:key] ?: toggleData[@"default"] boolValue];
+        cell.toggleSwitch.on = isEnabled;
+        
+        objc_setAssociatedObject(cell.toggleSwitch, @"prefKey", key, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        [cell addTarget:self action:@selector(switchChanged:) forControlEvents:UIControlEventValueChanged];
+        
+        return cell;
+    }
 }
 
 #pragma mark - UITableViewDelegate
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    
+    NSDictionary *data = self.visibleToggles[indexPath.row];
+    if ([data[@"type"] isEqualToString:@"button"]) {
+        NSString *actionName = data[@"action"];
+        if (actionName) {
+            SEL action = NSSelectorFromString(actionName);
+            if ([self respondsToSelector:action]) {
+                // Pass the data dictionary as the sender
+                #pragma clang diagnostic push
+                #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                [self performSelector:action withObject:data];
+                #pragma clang diagnostic pop
+            }
+        }
+    }
+}
 
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
     UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 0)];
@@ -911,10 +976,60 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
 #pragma mark - Actions
 
+- (void)updateAndAnimateChangesForKey:(NSString *)key {
+    NSArray *oldVisibleToggles = self.visibleToggles;
+    [self updateVisibleToggles];
+    NSArray *newVisibleToggles = self.visibleToggles;
+
+    [self.tableView beginUpdates];
+
+    __block NSInteger toggleIndex = -1;
+    [oldVisibleToggles enumerateObjectsUsingBlock:^(NSDictionary * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        if ([obj[@"key"] isEqualToString:key]) {
+            toggleIndex = idx;
+            *stop = YES;
+        }
+    }];
+
+    if (toggleIndex == -1) {
+        [self.tableView endUpdates];
+        [self.tableView reloadData];
+        return;
+    }
+
+    NSMutableArray *children = [NSMutableArray array];
+    for (NSDictionary *toggleData in self.toggles) {
+        if ([toggleData[@"parentKey"] isEqualToString:key]) {
+            [children addObject:toggleData];
+        }
+    }
+
+    if (children.count == 0) {
+        [self.tableView endUpdates];
+        return;
+    }
+
+    BOOL isAdding = newVisibleToggles.count > oldVisibleToggles.count;
+    
+    NSMutableArray *indexPaths = [NSMutableArray array];
+    for (int i = 0; i < children.count; i++) {
+        [indexPaths addObject:[NSIndexPath indexPathForRow:toggleIndex + 1 + i inSection:0]];
+    }
+
+    if (isAdding) {
+        [self.tableView insertRowsAtIndexPaths:indexPaths withRowAnimation:UITableViewRowAnimationAutomatic];
+    } else {
+        [self.tableView deleteRowsAtIndexPaths:indexPaths withRowAnimation:UITableViewRowAnimationAutomatic];
+    }
+
+    [self.tableView endUpdates];
+}
+
 - (void)switchChanged:(UISwitch *)sender {
     NSString *key = objc_getAssociatedObject(sender, @"prefKey");
     if (key) {
         [[NSUserDefaults standardUserDefaults] setBool:sender.isOn forKey:key];
+        [self updateAndAnimateChangesForKey:key];
 
         if ([key isEqualToString:@"tab_bar_theming"]) {
             dispatch_async(dispatch_get_main_queue(), ^{
@@ -998,6 +1113,126 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     for (UIView *subview in view.subviews) {
         [self refreshTabViewsInView:subview];
     }
+}
+
+// Translate configuration input methods
+- (void)showURLHostSelectionViewController:(NSDictionary *)sender {
+    NSIndexPath *indexPath = [self.tableView indexPathForSelectedRow];
+    UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:indexPath];
+
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"NeoFreeBird" message:@"URL" preferredStyle:UIAlertControllerStyleActionSheet];
+
+    if (alert.popoverPresentationController != nil) {
+        alert.popoverPresentationController.sourceView = cell;
+        alert.popoverPresentationController.sourceRect = cell.bounds;
+    }
+
+    UIAlertAction *xHostAction = [UIAlertAction actionWithTitle:@"x.com" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [[NSUserDefaults standardUserDefaults] setObject:@"x.com" forKey:@"tweet_url_host"];
+        [self.tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
+    }];
+    UIAlertAction *twitterHostAction = [UIAlertAction actionWithTitle:@"twitter.com" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [[NSUserDefaults standardUserDefaults] setObject:@"twitter.com" forKey:@"tweet_url_host"];
+        [self.tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
+    }];
+    UIAlertAction *fxHostAction = [UIAlertAction actionWithTitle:@"fxtwitter.com" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [[NSUserDefaults standardUserDefaults] setObject:@"fxtwitter.com" forKey:@"tweet_url_host"];
+        [self.tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
+    }];
+    UIAlertAction *vxHostAction = [UIAlertAction actionWithTitle:@"vxtwitter.com" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [[NSUserDefaults standardUserDefaults] setObject:@"vxtwitter.com" forKey:@"tweet_url_host"];
+        [self.tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
+    }];
+
+    UIAlertAction *cancel = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"] style:UIAlertActionStyleCancel handler:nil];
+    
+    [alert addAction:xHostAction];
+    [alert addAction:twitterHostAction];
+    [alert addAction:fxHostAction];
+    [alert addAction:vxHostAction];
+    [alert addAction:cancel];
+    
+    [self presentViewController:alert animated:true completion:nil];
+}
+
+- (void)showTranslateEndpointInput:(NSDictionary *)sender {
+    NSIndexPath *indexPath = [self.tableView indexPathForSelectedRow];
+    NSString *currentValue = [[NSUserDefaults standardUserDefaults] stringForKey:@"translate_endpoint"];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TRANSLATE_ENDPOINT_OPTION_TITLE"]
+                                                                   message:@"Enter the API endpoint URL for translation"
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    
+    [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
+        textField.placeholder = @"https://generativelanguage.googleapis.com/v1beta/models";
+        textField.text = currentValue;
+        textField.keyboardType = UIKeyboardTypeURL;
+    }];
+    
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"OK_BUTTON_TITLE"] style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        NSString *inputText = alert.textFields.firstObject.text;
+        if (inputText.length > 0) {
+            [[NSUserDefaults standardUserDefaults] setObject:inputText forKey:@"translate_endpoint"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"translate_endpoint"];
+        }
+        if (indexPath) [self.tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
+    }]];
+    
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"] style:UIAlertActionStyleCancel handler:nil]];
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)showTranslateAPIKeyInput:(NSDictionary *)sender {
+    NSIndexPath *indexPath = [self.tableView indexPathForSelectedRow];
+    NSString *currentValue = [[NSUserDefaults standardUserDefaults] stringForKey:@"translate_api_key"];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TRANSLATE_API_KEY_OPTION_TITLE"]
+                                                                   message:@"Enter your API key for the translation service"
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    
+    [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
+        textField.placeholder = @"API Key";
+        textField.text = currentValue;
+        textField.secureTextEntry = YES;
+    }];
+    
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"OK_BUTTON_TITLE"] style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        NSString *inputText = alert.textFields.firstObject.text;
+        if (inputText.length > 0) {
+            [[NSUserDefaults standardUserDefaults] setObject:inputText forKey:@"translate_api_key"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"translate_api_key"];
+        }
+        if (indexPath) [self.tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
+    }]];
+    
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"] style:UIAlertActionStyleCancel handler:nil]];
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)showTranslateModelInput:(NSDictionary *)sender {
+    NSIndexPath *indexPath = [self.tableView indexPathForSelectedRow];
+    NSString *currentValue = [[NSUserDefaults standardUserDefaults] stringForKey:@"translate_model"];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TRANSLATE_MODEL_OPTION_TITLE"]
+                                                                   message:@"Enter the model name to use for translation"
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    
+    [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
+        textField.placeholder = @"gemini-1.5-flash";
+        textField.text = currentValue;
+    }];
+    
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"OK_BUTTON_TITLE"] style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        NSString *inputText = alert.textFields.firstObject.text;
+        if (inputText.length > 0) {
+            [[NSUserDefaults standardUserDefaults] setObject:inputText forKey:@"translate_model"];
+        } else {
+            [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"translate_model"];
+        }
+        if (indexPath) [self.tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
+    }]];
+    
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"] style:UIAlertActionStyleCancel handler:nil]];
+    [self presentViewController:alert animated:YES completion:nil];
 }
 
 @end
