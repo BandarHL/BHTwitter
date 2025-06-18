@@ -401,6 +401,50 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         [[%c(FLEXManager) sharedManager] showExplorer];
     }
 }
+
+- (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey, id> *)options {
+    if ([url.scheme isEqualToString:@"twitter"] && [url.host isEqualToString:@"neofreebird"]) {
+        
+        TFNTwitterAccount *account = nil;
+        UIViewController *presentingVC = topMostController();
+
+        // Try to get account from the top view controller.
+        if ([presentingVC respondsToSelector:@selector(account)]) {
+            account = [presentingVC performSelector:@selector(account)];
+        }
+
+        // If that fails, try to get it from the root view controller's hierarchy.
+        if (!account) {
+            id rootVC = self.window.rootViewController;
+            if ([rootVC isKindOfClass:objc_getClass("T1TabBarViewController")]) {
+                id tabBarVC = rootVC;
+                id selectedVC = [tabBarVC selectedViewController];
+            
+                if ([selectedVC isKindOfClass:[UINavigationController class]]) {
+                    selectedVC = [selectedVC topViewController];
+                }
+            
+                if ([selectedVC respondsToSelector:@selector(account)]) {
+                    account = [selectedVC performSelector:@selector(account)];
+                }
+            }
+        }
+
+        if (account) {
+            ModernSettingsViewController *settingsVC = [[%c(ModernSettingsViewController) alloc] initWithAccount:account];
+            UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:settingsVC];
+            [navController setModalPresentationStyle:UIModalPresentationFullScreen];
+
+            [presentingVC presentViewController:navController animated:YES completion:nil];
+            return YES; // We handled the URL.
+        } else {
+            // Can't get account, can't open settings.
+            NSLog(@"[BHTwitter] Could not open Modern Settings via URL scheme, no account found.");
+        }
+    }
+    
+    return %orig(app, url, options);
+}
 %end
 
 // MARK: prevent tab bar fade 
