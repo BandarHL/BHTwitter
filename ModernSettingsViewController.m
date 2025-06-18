@@ -70,6 +70,12 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 @property (nonatomic, strong) UIImageView *chevronImageView;
 @end
 
+@interface ModernSettingsCompactButtonCell : UITableViewCell
+@property (nonatomic, strong) UILabel *titleLabel;
+@property (nonatomic, strong) UILabel *subtitleLabel;
+@property (nonatomic, strong) UIImageView *chevronImageView;
+@end
+
 @interface ModernSettingsToggleCell : UITableViewCell
 @property (nonatomic, strong) UILabel *titleLabel;
 @property (nonatomic, strong) UILabel *subtitleLabel;
@@ -297,6 +303,120 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     if (previousTraitCollection.preferredContentSizeCategory != self.traitCollection.preferredContentSizeCategory) {
         id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
         self.titleLabel.font = [fontGroup performSelector:@selector(bodyBoldFont)];
+    }
+}
+
+@end
+
+@implementation ModernSettingsCompactButtonCell
+
+- (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier {
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        [self setupViews];
+        [self setupConstraints];
+    }
+    return self;
+}
+
+- (void)setupViews {
+    // Title using Twitter's internal font methods
+    self.titleLabel = [[UILabel alloc] init];
+    self.titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
+    self.titleLabel.font = [fontGroup performSelector:@selector(bodyBoldFont)];
+    self.titleLabel.textColor = [UIColor labelColor];
+    [self.contentView addSubview:self.titleLabel];
+    
+    // Subtitle for the right side value
+    self.subtitleLabel = [[UILabel alloc] init];
+    self.subtitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    self.subtitleLabel.font = [fontGroup performSelector:@selector(subtext2Font)];
+    self.subtitleLabel.textAlignment = NSTextAlignmentRight;
+    [self updateSubtitleColor];
+    [self.contentView addSubview:self.subtitleLabel];
+    
+    // Chevron
+    self.chevronImageView = [[UIImageView alloc] init];
+    self.chevronImageView.translatesAutoresizingMaskIntoConstraints = NO;
+    self.chevronImageView.contentMode = UIViewContentModeScaleAspectFit;
+    [self.contentView addSubview:self.chevronImageView];
+    
+    // Cell appearance
+    self.backgroundColor = [BHDimPalette currentBackgroundColor];
+    self.selectionStyle = UITableViewCellSelectionStyleDefault;
+    
+    // Update chevron color
+    [self updateChevronColor];
+}
+
+- (void)setupConstraints {
+    [NSLayoutConstraint activateConstraints:@[
+        // Title constraints
+        [self.titleLabel.leadingAnchor constraintEqualToAnchor:self.contentView.leadingAnchor constant:20],
+        [self.titleLabel.centerYAnchor constraintEqualToAnchor:self.contentView.centerYAnchor],
+        [self.titleLabel.topAnchor constraintEqualToAnchor:self.contentView.topAnchor constant:16],
+        [self.titleLabel.bottomAnchor constraintEqualToAnchor:self.contentView.bottomAnchor constant:-16],
+        
+        // Subtitle constraints (between title and chevron)
+        [self.subtitleLabel.leadingAnchor constraintGreaterThanOrEqualToAnchor:self.titleLabel.trailingAnchor constant:16],
+        [self.subtitleLabel.trailingAnchor constraintEqualToAnchor:self.chevronImageView.leadingAnchor constant:-8],
+        [self.subtitleLabel.centerYAnchor constraintEqualToAnchor:self.contentView.centerYAnchor],
+        
+        // Chevron constraints
+        [self.chevronImageView.trailingAnchor constraintEqualToAnchor:self.contentView.trailingAnchor constant:-20],
+        [self.chevronImageView.centerYAnchor constraintEqualToAnchor:self.contentView.centerYAnchor],
+        [self.chevronImageView.widthAnchor constraintEqualToConstant:18],
+        [self.chevronImageView.heightAnchor constraintEqualToConstant:18]
+    ]];
+    
+    // Priority adjustments to handle text overflow gracefully
+    [self.titleLabel setContentHuggingPriority:UILayoutPriorityDefaultHigh forAxis:UILayoutConstraintAxisHorizontal];
+    [self.subtitleLabel setContentHuggingPriority:UILayoutPriorityDefaultLow forAxis:UILayoutConstraintAxisHorizontal];
+    [self.subtitleLabel setContentCompressionResistancePriority:UILayoutPriorityDefaultLow forAxis:UILayoutConstraintAxisHorizontal];
+}
+
+- (void)configureWithTitle:(NSString *)title subtitle:(NSString *)subtitle {
+    self.titleLabel.text = title;
+    self.subtitleLabel.text = subtitle;
+}
+
+- (void)updateChevronColor {
+    // Get Twitter's color palette properly
+    Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
+    id settings = [TAEColorSettingsCls sharedSettings];
+    id currentPalette = [settings currentColorPalette];
+    id colorPalette = [currentPalette colorPalette];
+    
+    UIColor *chevronColor = [colorPalette performSelector:@selector(tabBarItemColor)];
+    self.chevronImageView.image = [UIImage tfn_vectorImageNamed:@"chevron_right" fitsSize:CGSizeMake(18, 18) fillColor:chevronColor];
+}
+
+- (void)updateSubtitleColor {
+    // Get Twitter's color palette properly
+    Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
+    id settings = [TAEColorSettingsCls sharedSettings];
+    id currentPalette = [settings currentColorPalette];
+    id colorPalette = [currentPalette colorPalette];
+    
+    // Use Twitter's tab bar item color for subtitles (same as icons)
+    UIColor *subtitleColor = [colorPalette performSelector:@selector(tabBarItemColor)];
+    self.subtitleLabel.textColor = subtitleColor;
+}
+
+- (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
+    [super traitCollectionDidChange:previousTraitCollection];
+    self.backgroundColor = [BHDimPalette currentBackgroundColor];
+    
+    // Update colors when appearance changes
+    [self updateChevronColor];
+    [self updateSubtitleColor];
+    
+    // Update fonts when text size changes using Twitter's internal methods
+    if (previousTraitCollection.preferredContentSizeCategory != self.traitCollection.preferredContentSizeCategory) {
+        id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
+        self.titleLabel.font = [fontGroup performSelector:@selector(bodyBoldFont)];
+        self.subtitleLabel.font = [fontGroup performSelector:@selector(subtext2Font)];
     }
 }
 
@@ -1787,6 +1907,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     self.tableView.estimatedRowHeight = 80;
     [self.tableView registerClass:[ModernSettingsToggleCell class] forCellReuseIdentifier:@"ToggleCell"];
     [self.tableView registerClass:[ModernSettingsTableViewCell class] forCellReuseIdentifier:@"ButtonCell"];
+    [self.tableView registerClass:[ModernSettingsCompactButtonCell class] forCellReuseIdentifier:@"CompactButtonCell"];
     [self.view addSubview:self.tableView];
 }
 
@@ -1799,11 +1920,11 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         @{ @"key": @"hide_who_to_follow", @"titleKey": @"HIDE_WHO_FOLLOW_OPTION", @"subtitleKey": @"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE", @"default": @NO },
         @{ @"key": @"openInBrowser", @"titleKey": @"ALWAYS_OPEN_SAFARI_OPTION_TITLE", @"subtitleKey": @"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE", @"default": @NO },
         @{ @"key": @"strip_tracking_params", @"titleKey": @"STRIP_URL_TRACKING_PARAMETERS_TITLE", @"subtitleKey": @"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE", @"default": @NO },
-        @{ @"type": @"button", @"parentKey": @"strip_tracking_params", @"key": @"url_host_button", @"titleKey": @"SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE", @"action": @"showURLHostSelectionViewController:", @"prefKeyForSubtitle": @"tweet_url_host", @"subtitleDefault": @"x.com", @"icon": @"link" },
+        @{ @"type": @"compactButton", @"parentKey": @"strip_tracking_params", @"key": @"url_host_button", @"titleKey": @"SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE", @"action": @"showURLHostSelectionViewController:", @"prefKeyForSubtitle": @"tweet_url_host", @"subtitleDefault": @"x.com" },
         @{ @"key": @"enable_translate", @"titleKey": @"ENABLE_TRANSLATE_OPTION_TITLE", @"subtitleKey": @"ENABLE_TRANSLATE_OPTION_DETAIL_TITLE", @"default": @NO },
-        @{ @"type": @"button", @"parentKey": @"enable_translate", @"key": @"translate_endpoint_button", @"titleKey": @"TRANSLATE_ENDPOINT_OPTION_TITLE", @"action": @"showTranslateEndpointInput:", @"prefKeyForSubtitle": @"translate_endpoint", @"subtitleDefault": @"Default Gemini API", @"icon": @"sparkle_stroke" },
-        @{ @"type": @"button", @"parentKey": @"enable_translate", @"key": @"translate_api_key_button", @"titleKey": @"TRANSLATE_API_KEY_OPTION_TITLE", @"action": @"showTranslateAPIKeyInput:", @"prefKeyForSubtitle": @"translate_api_key", @"subtitleDefault": @"Not Set", @"isSecure": @YES, @"icon": @"sparkle_stroke" },
-        @{ @"type": @"button", @"parentKey": @"enable_translate", @"key": @"translate_model_button", @"titleKey": @"TRANSLATE_MODEL_OPTION_TITLE", @"action": @"showTranslateModelInput:", @"prefKeyForSubtitle": @"translate_model", @"subtitleDefault": @"gemini-1.5-flash", @"icon": @"sparkle_stroke" },
+        @{ @"type": @"compactButton", @"parentKey": @"enable_translate", @"key": @"translate_endpoint_button", @"titleKey": @"TRANSLATE_ENDPOINT_OPTION_TITLE", @"action": @"showTranslateEndpointInput:", @"prefKeyForSubtitle": @"translate_endpoint", @"subtitleDefault": @"Default Gemini API" },
+        @{ @"type": @"compactButton", @"parentKey": @"enable_translate", @"key": @"translate_api_key_button", @"titleKey": @"TRANSLATE_API_KEY_OPTION_TITLE", @"action": @"showTranslateAPIKeyInput:", @"prefKeyForSubtitle": @"translate_api_key", @"subtitleDefault": @"Not Set", @"isSecure": @YES },
+        @{ @"type": @"compactButton", @"parentKey": @"enable_translate", @"key": @"translate_model_button", @"titleKey": @"TRANSLATE_MODEL_OPTION_TITLE", @"action": @"showTranslateModelInput:", @"prefKeyForSubtitle": @"translate_model", @"subtitleDefault": @"gemini-1.5-flash" },
         
         // Search section toggles
         @{ @"key": @"no_his", @"titleKey": @"NO_HISTORY_OPTION_TITLE", @"subtitleKey": @"NO_HISTORY_OPTION_DETAIL_TITLE", @"default": @NO },
@@ -1819,8 +1940,8 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         
         // Font settings
         @{ @"key": @"en_font", @"titleKey": @"FONT_OPTION_TITLE", @"subtitleKey": @"FONT_OPTION_DETAIL_TITLE", @"default": @NO },
-        @{ @"type": @"button", @"parentKey": @"en_font", @"key": @"regular_font_button", @"titleKey": @"REQULAR_FONTS_PICKER_OPTION_TITLE", @"action": @"showRegularFontPicker:", @"prefKeyForSubtitle": @"bhtwitter_font_1", @"subtitleDefault": @"System Default", @"icon": @"text_formatting" },
-        @{ @"type": @"button", @"parentKey": @"en_font", @"key": @"bold_font_button", @"titleKey": @"BOLD_FONTS_PICKER_OPTION_TITLE", @"action": @"showBoldFontPicker:", @"prefKeyForSubtitle": @"bhtwitter_font_2", @"subtitleDefault": @"System Default", @"icon": @"text_formatting" }
+        @{ @"type": @"compactButton", @"parentKey": @"en_font", @"key": @"regular_font_button", @"titleKey": @"REQULAR_FONTS_PICKER_OPTION_TITLE", @"action": @"showRegularFontPicker:", @"prefKeyForSubtitle": @"bhtwitter_font_1", @"subtitleDefault": @"System Default" },
+        @{ @"type": @"compactButton", @"parentKey": @"en_font", @"key": @"bold_font_button", @"titleKey": @"BOLD_FONTS_PICKER_OPTION_TITLE", @"action": @"showBoldFontPicker:", @"prefKeyForSubtitle": @"bhtwitter_font_2", @"subtitleDefault": @"System Default" }
     ];
 }
 
@@ -1849,7 +1970,25 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     NSDictionary *toggleData = self.visibleToggles[indexPath.row];
     NSString *type = toggleData[@"type"];
     
-    if ([type isEqualToString:@"button"]) {
+    if ([type isEqualToString:@"compactButton"]) {
+        ModernSettingsCompactButtonCell *cell = [tableView dequeueReusableCellWithIdentifier:@"CompactButtonCell" forIndexPath:indexPath];
+        
+        NSString *title = [[BHTBundle sharedBundle] localizedStringForKey:toggleData[@"titleKey"]];
+        
+        NSString *subtitle = @"";
+        NSString *prefKey = toggleData[@"prefKeyForSubtitle"];
+        if (prefKey) {
+            subtitle = [[NSUserDefaults standardUserDefaults] objectForKey:prefKey] ?: toggleData[@"subtitleDefault"];
+            if ([toggleData[@"isSecure"] boolValue] && subtitle.length > 0 && ![subtitle isEqualToString:toggleData[@"subtitleDefault"]]) {
+                subtitle = @"••••••••••••••••";
+            }
+        }
+        
+        [cell configureWithTitle:title subtitle:subtitle];
+        
+        return cell;
+        
+    } else if ([type isEqualToString:@"button"]) {
         ModernSettingsTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"ButtonCell" forIndexPath:indexPath];
         
         NSString *title = [[BHTBundle sharedBundle] localizedStringForKey:toggleData[@"titleKey"]];
@@ -1894,7 +2033,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
     
     NSDictionary *data = self.visibleToggles[indexPath.row];
-    if ([data[@"type"] isEqualToString:@"button"]) {
+    if ([data[@"type"] isEqualToString:@"button"] || [data[@"type"] isEqualToString:@"compactButton"]) {
         NSString *actionName = data[@"action"];
         if (actionName) {
             SEL action = NSSelectorFromString(actionName);
