@@ -25,6 +25,10 @@
 - (instancetype)initWithAccount:(TFNTwitterAccount *)account;
 @end
 
+@interface MessagesSettingsViewController : UIViewController
+- (instancetype)initWithAccount:(TFNTwitterAccount *)account;
+@end
+
 // Forward declaration for the view-controller implemented later in this file
 @class GeneralSettingsViewController;
 
@@ -880,7 +884,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 }
 
 - (void)showMessagesSettings {
-    UIViewController *vc = [self placeholderViewControllerWithTitle:@"MODERN_SETTINGS_MESSAGES_TITLE"];
+    MessagesSettingsViewController *vc = [[MessagesSettingsViewController alloc] initWithAccount:self.account];
     [self.navigationController pushViewController:vc animated:YES];
 }
 
@@ -1509,6 +1513,228 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
     [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"OK_BUTTON_TITLE"] style:UIAlertActionStyleDefault handler:nil]];
 
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+@end
+
+#pragma mark - Messages Settings Page
+
+@interface MessagesSettingsViewController () <UITableViewDataSource, UITableViewDelegate>
+@property (nonatomic, strong) TFNTwitterAccount *account;
+@property (nonatomic, strong) UITableView *tableView;
+@property (nonatomic, strong) NSArray<NSDictionary *> *settings;
+@end
+
+@implementation MessagesSettingsViewController
+
+- (instancetype)initWithAccount:(TFNTwitterAccount *)account {
+    if ((self = [super init])) {
+        self.account = account;
+        [self buildSettingsList];
+    }
+    return self;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    [self setupNav];
+    [self setupTable];
+}
+
+- (void)setupNav {
+    NSString *title = [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_MESSAGES_TITLE"];
+    if (self.account) {
+        self.navigationItem.titleView = [objc_getClass("TFNTitleView") titleViewWithTitle:title subtitle:self.account.displayUsername];
+    } else {
+        self.title = title;
+    }
+}
+
+- (void)setupTable {
+    self.view.backgroundColor = [BHDimPalette currentBackgroundColor];
+    self.tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleGrouped];
+    self.tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    self.tableView.dataSource = self;
+    self.tableView.delegate = self;
+    self.tableView.backgroundColor = [BHDimPalette currentBackgroundColor];
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    self.tableView.rowHeight = UITableViewAutomaticDimension;
+    self.tableView.estimatedRowHeight = 80;
+    [self.tableView registerClass:[ModernSettingsToggleCell class] forCellReuseIdentifier:@"ToggleCell"];
+    [self.tableView registerClass:[ModernSettingsSimpleButtonCell class] forCellReuseIdentifier:@"SimpleButtonCell"];
+    [self.view addSubview:self.tableView];
+}
+
+- (void)buildSettingsList {
+    self.settings = @[
+        // Message UI enhancements
+        @{ @"key": @"dm_avatars", @"titleKey": @"DM_AVATARS_TITLE", @"subtitleKey": @"DM_AVATARS_DETAIL_TITLE", @"default": @NO, @"type": @"toggle" },
+        @{ @"key": @"dm_compose_bar_v2_enabled", @"titleKey": @"DM_COMPOSE_BAR_V2_TITLE", @"subtitleKey": @"DM_COMPOSE_BAR_V2_DETAIL_TITLE", @"default": @NO, @"type": @"toggle" },
+        @{ @"key": @"dm_voice_creation_enabled", @"titleKey": @"DM_VOICE_CREATION_TITLE", @"subtitleKey": @"DM_VOICE_CREATION_DETAIL_TITLE", @"default": @NO, @"type": @"toggle" },
+        
+        // Chat features
+        @{ @"key": @"disable_xchat", @"titleKey": @"DISABLE_XCHAT_OPTION_TITLE", @"subtitleKey": @"DISABLE_XCHAT_OPTION_DETAIL_TITLE", @"default": @NO, @"type": @"toggle" },
+        
+        // Background customization
+        @{ @"titleKey": @"CUSTOM_DIRECT_BACKGROUND_VIEW_TITLE", @"subtitleKey": @"CUSTOM_DIRECT_BACKGROUND_VIEW_DETAIL_TITLE", @"action": @"showCustomBackgroundOptions:", @"type": @"button" }
+    ];
+}
+
+#pragma mark - UITableViewDataSource
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { 
+    return self.settings.count; 
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    NSDictionary *settingData = self.settings[indexPath.row];
+    NSString *type = settingData[@"type"];
+    
+    if ([type isEqualToString:@"button"]) {
+        ModernSettingsSimpleButtonCell *cell = [tableView dequeueReusableCellWithIdentifier:@"SimpleButtonCell" forIndexPath:indexPath];
+        
+        NSString *title = [[BHTBundle sharedBundle] localizedStringForKey:settingData[@"titleKey"]];
+        [cell configureWithTitle:title];
+        
+        return cell;
+    } else { // Default to toggle cell
+        ModernSettingsToggleCell *cell = [tableView dequeueReusableCellWithIdentifier:@"ToggleCell" forIndexPath:indexPath];
+        
+        NSString *title = [[BHTBundle sharedBundle] localizedStringForKey:settingData[@"titleKey"]];
+        NSString *subtitleKey = settingData[@"subtitleKey"];
+        NSString *subtitle = (subtitleKey.length > 0) ? [[BHTBundle sharedBundle] localizedStringForKey:subtitleKey] : @"";
+        
+        [cell configureWithTitle:title subtitle:subtitle];
+        
+        NSString *key = settingData[@"key"];
+        BOOL isEnabled = [[[NSUserDefaults standardUserDefaults] objectForKey:key] ?: settingData[@"default"] boolValue];
+        cell.toggleSwitch.on = isEnabled;
+        
+        objc_setAssociatedObject(cell.toggleSwitch, @"prefKey", key, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        [cell addTarget:self action:@selector(switchChanged:) forControlEvents:UIControlEventValueChanged];
+        
+        return cell;
+    }
+}
+
+#pragma mark - UITableViewDelegate
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    
+    NSDictionary *data = self.settings[indexPath.row];
+    if ([data[@"type"] isEqualToString:@"button"]) {
+        NSString *actionName = data[@"action"];
+        if (actionName) {
+            SEL action = NSSelectorFromString(actionName);
+            if ([self respondsToSelector:action]) {
+                #pragma clang diagnostic push
+                #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                [self performSelector:action withObject:data];
+                #pragma clang diagnostic pop
+            }
+        }
+    }
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
+    UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 0)];
+    UILabel *label = [[UILabel alloc] init];
+    label.translatesAutoresizingMaskIntoConstraints = NO;
+    label.text = [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_MESSAGES_SUBTITLE"];
+    label.numberOfLines = 0;
+    
+    id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
+    label.font = [fontGroup performSelector:@selector(subtext2Font)];
+    Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
+    id settings = [TAEColorSettingsCls sharedSettings];
+    id colorPalette = [[settings currentColorPalette] colorPalette];
+    UIColor *subtitleColor = [colorPalette performSelector:@selector(tabBarItemColor)];
+    label.textColor = subtitleColor;
+    
+    [header addSubview:label];
+    [NSLayoutConstraint activateConstraints:@[
+        [label.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:20],
+        [label.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-20],
+        [label.topAnchor constraintEqualToAnchor:header.topAnchor constant:8],
+        [label.bottomAnchor constraintEqualToAnchor:header.bottomAnchor constant:-8]
+    ]];
+    return header;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
+    return UITableViewAutomaticDimension;
+}
+
+#pragma mark - Actions
+
+- (void)switchChanged:(UISwitch *)sender {
+    NSString *key = objc_getAssociatedObject(sender, @"prefKey");
+    if (key) {
+        [[NSUserDefaults standardUserDefaults] setBool:sender.isOn forKey:key];
+    }
+}
+
+- (void)showCustomBackgroundOptions:(NSDictionary *)sender {
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"NeoFreeBird" message:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_DIRECT_BACKGROUND_VIEW_DETAIL_TITLE"] preferredStyle:UIAlertControllerStyleActionSheet];
+    
+    if (alert.popoverPresentationController != nil) {
+        UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:[NSIndexPath indexPathForRow:self.settings.count - 1 inSection:0]];
+        alert.popoverPresentationController.sourceView = cell;
+        alert.popoverPresentationController.sourceRect = cell.bounds;
+    }
+    
+    UIAlertAction *imageAction = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_1"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [self showImagePicker];
+    }];
+    
+    UIAlertAction *colorAction = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_2"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [self showColorPicker];
+    }];
+    
+    UIAlertAction *resetAction = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_3"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [self resetBackgroundCustomization];
+    }];
+    
+    UIAlertAction *cancel = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"] style:UIAlertActionStyleCancel handler:nil];
+    
+    [alert addAction:imageAction];
+    [alert addAction:colorAction];
+    [alert addAction:resetAction];
+    [alert addAction:cancel];
+    
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)showImagePicker {
+    UIImagePickerController *imagePicker = [[UIImagePickerController alloc] init];
+    imagePicker.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
+    imagePicker.delegate = (id<UIImagePickerControllerDelegate, UINavigationControllerDelegate>)self;
+    [self presentViewController:imagePicker animated:YES completion:nil];
+}
+
+- (void)showColorPicker {
+    if (@available(iOS 14.0, *)) {
+        UIColorPickerViewController *colorPicker = [[UIColorPickerViewController alloc] init];
+        colorPicker.delegate = (id<UIColorPickerViewControllerDelegate>)self;
+        [self presentViewController:colorPicker animated:YES completion:nil];
+    }
+}
+
+- (void)resetBackgroundCustomization {
+    [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"change_msg_background"];
+    [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"background_image"];
+    [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"background_color"];
+    
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESET_COMPLETE_TITLE"] 
+                                                                   message:[[BHTBundle sharedBundle] localizedStringForKey:@"BACKGROUND_RESET_MESSAGE"] 
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"OK_BUTTON_TITLE"] 
+                                              style:UIAlertActionStyleDefault 
+                                            handler:nil]];
+    
     [self presentViewController:alert animated:YES completion:nil];
 }
 
