@@ -28,6 +28,12 @@
 
 @class T1SettingsViewController;
 
+// Declare topViewController to silence compiler warnings, as it's a private API.
+@interface T1AppDelegate (BHTwitter)
+@property (nonatomic, readonly) UIViewController *topViewController;
+@end
+
+
 // Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
 static void BHT_applyThemeToWindow(UIWindow *window);
@@ -402,87 +408,41 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     }
 }
 
-- (BOOL)application:(UIApplication *)app handleOpenURL:(NSURL *)url {
-    NSLog(@"[BHTwitter] application:handleOpenURL: called with URL: %@", [url absoluteString]);
-    if ([url.scheme isEqualToString:@"twitter"] && [url.host isEqualToString:@"neofreebird"]) {
-        TFNTwitterAccount *account = nil;
-        UIViewController *presentingVC = topMostController();
-
-        if ([presentingVC respondsToSelector:@selector(account)]) {
-            account = [presentingVC performSelector:@selector(account)];
-        }
-
-        if (!account) {
-            id rootVC = self.window.rootViewController;
-            if ([rootVC isKindOfClass:objc_getClass("T1TabBarViewController")]) {
-                id tabBarVC = rootVC;
-                id selectedVC = [tabBarVC selectedViewController];
-                if ([selectedVC isKindOfClass:[UINavigationController class]]) {
-                    selectedVC = [selectedVC topViewController];
-                }
-                if ([selectedVC respondsToSelector:@selector(account)]) {
-                    account = [selectedVC performSelector:@selector(account)];
-                }
-            }
-        }
-
-        if (account) {
-            ModernSettingsViewController *settingsVC = [[%c(ModernSettingsViewController) alloc] initWithAccount:account];
-            UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:settingsVC];
-            [navController setModalPresentationStyle:UIModalPresentationFullScreen];
-            [presentingVC presentViewController:navController animated:YES completion:nil];
-            return YES;
-        } else {
-            NSLog(@"[BHTwitter] Could not open Modern Settings via URL scheme (handleOpenURL), no account found.");
-        }
-    }
-    return %orig(app, url);
-}
-
-- (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey, id> *)options {
-    NSLog(@"[BHTwitter] application:openURL:options: called with URL: %@", [url absoluteString]);
-    if ([url.scheme isEqualToString:@"twitter"] && [url.host isEqualToString:@"neofreebird"]) {
-        NSLog(@"[BHTwitter] Detected neofreebird URL scheme.");
+- (_Bool)application:(UIApplication *)application openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey, id> *)options {
+    if ([[url scheme] isEqualToString:@"twitter"] && [[url host] isEqualToString:@"neofreebird"]) {
         
-        TFNTwitterAccount *account = nil;
-        UIViewController *presentingVC = topMostController();
+        UIViewController *topVC = self.topViewController;
+        UINavigationController *navController = nil;
 
-        // Try to get account from the top view controller.
-        if ([presentingVC respondsToSelector:@selector(account)]) {
-            account = [presentingVC performSelector:@selector(account)];
-        }
-
-        // If that fails, try to get it from the root view controller's hierarchy.
-        if (!account) {
-            id rootVC = self.window.rootViewController;
-            if ([rootVC isKindOfClass:objc_getClass("T1TabBarViewController")]) {
-                id tabBarVC = rootVC;
-                id selectedVC = [tabBarVC selectedViewController];
-            
-                if ([selectedVC isKindOfClass:[UINavigationController class]]) {
-                    selectedVC = [selectedVC topViewController];
-                }
-            
-                if ([selectedVC respondsToSelector:@selector(account)]) {
-                    account = [selectedVC performSelector:@selector(account)];
-                }
+        if ([topVC isKindOfClass:[UINavigationController class]]) {
+            navController = (UINavigationController *)topVC;
+        } else if ([topVC isKindOfClass:[UITabBarController class]]) {
+            UIViewController *selectedVC = ((UITabBarController *)topVC).selectedViewController;
+            if ([selectedVC isKindOfClass:[UINavigationController class]]) {
+                navController = (UINavigationController *)selectedVC;
+            } else {
+                navController = selectedVC.navigationController;
             }
+        } else {
+            navController = topVC.navigationController;
         }
 
-        if (account) {
-            ModernSettingsViewController *settingsVC = [[%c(ModernSettingsViewController) alloc] initWithAccount:account];
-            UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:settingsVC];
-            [navController setModalPresentationStyle:UIModalPresentationFullScreen];
-
-            [presentingVC presentViewController:navController animated:YES completion:nil];
-            return YES; // We handled the URL.
-        } else {
-            // Can't get account, can't open settings.
-            NSLog(@"[BHTwitter] Could not open Modern Settings via URL scheme (openURL:options:), no account found.");
+        if (navController) {
+            TFNTwitterAccount *account = nil;
+            if ([self respondsToSelector:@selector(_t1_currentAccount)]) {
+                account = [self performSelector:@selector(_t1_currentAccount)];
+            }
+            ModernSettingsViewController *settingsVC = [[ModernSettingsViewController alloc] initWithAccount:account];
+            
+            // Check if already on top to prevent double-pushing
+            if (![navController.topViewController isKindOfClass:[ModernSettingsViewController class]]) {
+                [navController pushViewController:settingsVC animated:YES];
+            }
+            return YES;
         }
     }
     
-    return %orig(app, url, options);
+    return %orig;
 }
 %end
 
