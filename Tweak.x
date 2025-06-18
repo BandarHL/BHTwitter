@@ -402,8 +402,47 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     }
 }
 
-- (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey, id> *)options {
+- (BOOL)application:(UIApplication *)app handleOpenURL:(NSURL *)url {
+    NSLog(@"[BHTwitter] application:handleOpenURL: called with URL: %@", [url absoluteString]);
     if ([url.scheme isEqualToString:@"twitter"] && [url.host isEqualToString:@"neofreebird"]) {
+        TFNTwitterAccount *account = nil;
+        UIViewController *presentingVC = topMostController();
+
+        if ([presentingVC respondsToSelector:@selector(account)]) {
+            account = [presentingVC performSelector:@selector(account)];
+        }
+
+        if (!account) {
+            id rootVC = self.window.rootViewController;
+            if ([rootVC isKindOfClass:objc_getClass("T1TabBarViewController")]) {
+                id tabBarVC = rootVC;
+                id selectedVC = [tabBarVC selectedViewController];
+                if ([selectedVC isKindOfClass:[UINavigationController class]]) {
+                    selectedVC = [selectedVC topViewController];
+                }
+                if ([selectedVC respondsToSelector:@selector(account)]) {
+                    account = [selectedVC performSelector:@selector(account)];
+                }
+            }
+        }
+
+        if (account) {
+            ModernSettingsViewController *settingsVC = [[%c(ModernSettingsViewController) alloc] initWithAccount:account];
+            UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:settingsVC];
+            [navController setModalPresentationStyle:UIModalPresentationFullScreen];
+            [presentingVC presentViewController:navController animated:YES completion:nil];
+            return YES;
+        } else {
+            NSLog(@"[BHTwitter] Could not open Modern Settings via URL scheme (handleOpenURL), no account found.");
+        }
+    }
+    return %orig(app, url);
+}
+
+- (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey, id> *)options {
+    NSLog(@"[BHTwitter] application:openURL:options: called with URL: %@", [url absoluteString]);
+    if ([url.scheme isEqualToString:@"twitter"] && [url.host isEqualToString:@"neofreebird"]) {
+        NSLog(@"[BHTwitter] Detected neofreebird URL scheme.");
         
         TFNTwitterAccount *account = nil;
         UIViewController *presentingVC = topMostController();
@@ -439,7 +478,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             return YES; // We handled the URL.
         } else {
             // Can't get account, can't open settings.
-            NSLog(@"[BHTwitter] Could not open Modern Settings via URL scheme, no account found.");
+            NSLog(@"[BHTwitter] Could not open Modern Settings via URL scheme (openURL:options:), no account found.");
         }
     }
     
