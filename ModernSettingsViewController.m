@@ -936,10 +936,12 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         if (actionName) {
             SEL action = NSSelectorFromString(actionName);
             if ([self respondsToSelector:action]) {
-                // Pass the data dictionary as the sender
+                // Pass the data dictionary as the sender, but with indexPath
+                NSMutableDictionary *actionInfo = [data mutableCopy];
+                actionInfo[@"indexPath"] = indexPath;
                 #pragma clang diagnostic push
                 #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-                [self performSelector:action withObject:data];
+                [self performSelector:action withObject:actionInfo];
                 #pragma clang diagnostic pop
             }
         }
@@ -1118,7 +1120,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
 // Translate configuration input methods
 - (void)showURLHostSelectionViewController:(NSDictionary *)sender {
-    NSIndexPath *indexPath = [self.tableView indexPathForSelectedRow];
+    NSIndexPath *indexPath = sender[@"indexPath"];
     UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:indexPath];
 
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"NeoFreeBird" message:@"URL" preferredStyle:UIAlertControllerStyleActionSheet];
@@ -1130,19 +1132,19 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
     UIAlertAction *xHostAction = [UIAlertAction actionWithTitle:@"x.com" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
         [[NSUserDefaults standardUserDefaults] setObject:@"x.com" forKey:@"tweet_url_host"];
-        [self.tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
+        if (indexPath) [self.tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
     }];
     UIAlertAction *twitterHostAction = [UIAlertAction actionWithTitle:@"twitter.com" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
         [[NSUserDefaults standardUserDefaults] setObject:@"twitter.com" forKey:@"tweet_url_host"];
-        [self.tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
+        if (indexPath) [self.tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
     }];
     UIAlertAction *fxHostAction = [UIAlertAction actionWithTitle:@"fxtwitter.com" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
         [[NSUserDefaults standardUserDefaults] setObject:@"fxtwitter.com" forKey:@"tweet_url_host"];
-        [self.tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
+        if (indexPath) [self.tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
     }];
     UIAlertAction *vxHostAction = [UIAlertAction actionWithTitle:@"vxtwitter.com" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
         [[NSUserDefaults standardUserDefaults] setObject:@"vxtwitter.com" forKey:@"tweet_url_host"];
-        [self.tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
+        if (indexPath) [self.tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
     }];
 
     UIAlertAction *cancel = [UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"] style:UIAlertActionStyleCancel handler:nil];
@@ -1157,7 +1159,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 }
 
 - (void)showTranslateEndpointInput:(NSDictionary *)sender {
-    NSIndexPath *indexPath = [self.tableView indexPathForSelectedRow];
+    NSIndexPath *indexPath = sender[@"indexPath"];
     NSString *currentValue = [[NSUserDefaults standardUserDefaults] stringForKey:@"translate_endpoint"];
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TRANSLATE_ENDPOINT_OPTION_TITLE"]
                                                                    message:@"Enter the API endpoint URL for translation"
@@ -1184,7 +1186,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 }
 
 - (void)showTranslateAPIKeyInput:(NSDictionary *)sender {
-    NSIndexPath *indexPath = [self.tableView indexPathForSelectedRow];
+    NSIndexPath *indexPath = sender[@"indexPath"];
     NSString *currentValue = [[NSUserDefaults standardUserDefaults] stringForKey:@"translate_api_key"];
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TRANSLATE_API_KEY_OPTION_TITLE"]
                                                                    message:@"Enter your API key for the translation service"
@@ -1211,7 +1213,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 }
 
 - (void)showTranslateModelInput:(NSDictionary *)sender {
-    NSIndexPath *indexPath = [self.tableView indexPathForSelectedRow];
+    NSIndexPath *indexPath = sender[@"indexPath"];
     NSString *currentValue = [[NSUserDefaults standardUserDefaults] stringForKey:@"translate_model"];
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"TRANSLATE_MODEL_OPTION_TITLE"]
                                                                    message:@"Enter the model name to use for translation"
