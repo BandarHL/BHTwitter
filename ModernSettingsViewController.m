@@ -13,6 +13,10 @@
 - (instancetype)initWithAccount:(TFNTwitterAccount *)account;
 @end
 
+@interface MediaDownloadsSettingsViewController : UIViewController
+- (instancetype)initWithAccount:(TFNTwitterAccount *)account;
+@end
+
 // Forward declaration for the view-controller implemented later in this file
 @class GeneralSettingsViewController;
 
@@ -853,7 +857,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 }
 
 - (void)showDownloadsSettings {
-    UIViewController *vc = [self placeholderViewControllerWithTitle:@"MODERN_SETTINGS_MEDIA_TITLE"];
+    MediaDownloadsSettingsViewController *vc = [[MediaDownloadsSettingsViewController alloc] initWithAccount:self.account];
     [self.navigationController pushViewController:vc animated:YES];
 }
 
@@ -1064,6 +1068,140 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
             [customTabBarVC.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE"] subtitle:self.account.displayUsername]];
         }
         [self.navigationController pushViewController:customTabBarVC animated:YES];
+    }
+}
+
+@end
+
+#pragma mark - Media Downloads Settings Page
+
+@interface MediaDownloadsSettingsViewController () <UITableViewDataSource, UITableViewDelegate>
+@property (nonatomic, strong) TFNTwitterAccount *account;
+@property (nonatomic, strong) UITableView *tableView;
+@property (nonatomic, strong) NSArray<NSDictionary *> *settings;
+@end
+
+@implementation MediaDownloadsSettingsViewController
+
+- (instancetype)initWithAccount:(TFNTwitterAccount *)account {
+    if ((self = [super init])) {
+        self.account = account;
+        [self buildSettingsList];
+    }
+    return self;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    [self setupNav];
+    [self setupTable];
+}
+
+- (void)setupNav {
+    NSString *title = [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_MEDIA_TITLE"];
+    if (self.account) {
+        self.navigationItem.titleView = [objc_getClass("TFNTitleView") titleViewWithTitle:title subtitle:self.account.displayUsername];
+    } else {
+        self.title = title;
+    }
+}
+
+- (void)setupTable {
+    self.view.backgroundColor = [BHDimPalette currentBackgroundColor];
+    self.tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleGrouped];
+    self.tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    self.tableView.dataSource = self;
+    self.tableView.delegate = self;
+    self.tableView.backgroundColor = [BHDimPalette currentBackgroundColor];
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    self.tableView.rowHeight = UITableViewAutomaticDimension;
+    self.tableView.estimatedRowHeight = 80;
+    [self.tableView registerClass:[ModernSettingsToggleCell class] forCellReuseIdentifier:@"ToggleCell"];
+    [self.view addSubview:self.tableView];
+}
+
+- (void)buildSettingsList {
+    self.settings = @[
+        // Download settings
+        @{ @"key": @"dw_v", @"titleKey": @"DOWNLOAD_VIDEOS_OPTION_TITLE", @"subtitleKey": @"DOWNLOAD_VIDEOS_OPTION_DETAIL_TITLE", @"default": @YES, @"type": @"toggle" },
+        @{ @"key": @"direct_save", @"titleKey": @"DIRECT_SAVE_OPTION_TITLE", @"subtitleKey": @"DIRECT_SAVE_OPTION_DETAIL_TITLE", @"default": @NO, @"type": @"toggle" },
+        
+        // Video/Media settings
+        @{ @"key": @"video_layer_caption", @"titleKey": @"DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE", @"subtitleKey": @"", @"default": @NO, @"type": @"toggle" },
+        @{ @"key": @"autoHighestLoad", @"titleKey": @"AUTO_HIGHEST_LOAD_OPTION_TITLE", @"subtitleKey": @"AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE", @"default": @YES, @"type": @"toggle" },
+        @{ @"key": @"force_tweet_full_frame", @"titleKey": @"FORCE_TWEET_FULL_FRAME_TITLE", @"subtitleKey": @"", @"default": @NO, @"type": @"toggle" },
+        @{ @"key": @"restore_video_timestamp", @"titleKey": @"RESTORE_VIDEO_TIMESTAMP_TITLE", @"subtitleKey": @"RESTORE_VIDEO_TIMESTAMP_DETAIL_TITLE", @"default": @NO, @"type": @"toggle" }
+    ];
+}
+
+#pragma mark - UITableViewDataSource
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { 
+    return self.settings.count; 
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    NSDictionary *settingData = self.settings[indexPath.row];
+    
+    ModernSettingsToggleCell *cell = [tableView dequeueReusableCellWithIdentifier:@"ToggleCell" forIndexPath:indexPath];
+    
+    NSString *title = [[BHTBundle sharedBundle] localizedStringForKey:settingData[@"titleKey"]];
+    NSString *subtitleKey = settingData[@"subtitleKey"];
+    NSString *subtitle = (subtitleKey.length > 0) ? [[BHTBundle sharedBundle] localizedStringForKey:subtitleKey] : @"";
+    
+    [cell configureWithTitle:title subtitle:subtitle];
+    
+    NSString *key = settingData[@"key"];
+    BOOL isEnabled = [[[NSUserDefaults standardUserDefaults] objectForKey:key] ?: settingData[@"default"] boolValue];
+    cell.toggleSwitch.on = isEnabled;
+    
+    objc_setAssociatedObject(cell.toggleSwitch, @"prefKey", key, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    [cell addTarget:self action:@selector(switchChanged:) forControlEvents:UIControlEventValueChanged];
+    
+    return cell;
+}
+
+#pragma mark - UITableViewDelegate
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
+    UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 0)];
+    UILabel *label = [[UILabel alloc] init];
+    label.translatesAutoresizingMaskIntoConstraints = NO;
+    label.text = [[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_SETTINGS_MEDIA_SUBTITLE"];
+    label.numberOfLines = 0;
+    
+    id fontGroup = [objc_getClass("TAEStandardFontGroup") sharedFontGroup];
+    label.font = [fontGroup performSelector:@selector(subtext2Font)];
+    Class TAEColorSettingsCls = objc_getClass("TAEColorSettings");
+    id settings = [TAEColorSettingsCls sharedSettings];
+    id colorPalette = [[settings currentColorPalette] colorPalette];
+    UIColor *subtitleColor = [colorPalette performSelector:@selector(tabBarItemColor)];
+    label.textColor = subtitleColor;
+    
+    [header addSubview:label];
+    [NSLayoutConstraint activateConstraints:@[
+        [label.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:20],
+        [label.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-20],
+        [label.topAnchor constraintEqualToAnchor:header.topAnchor constant:8],
+        [label.bottomAnchor constraintEqualToAnchor:header.bottomAnchor constant:-8]
+    ]];
+    return header;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
+    return UITableViewAutomaticDimension;
+}
+
+#pragma mark - Actions
+
+- (void)switchChanged:(UISwitch *)sender {
+    NSString *key = objc_getAssociatedObject(sender, @"prefKey");
+    if (key) {
+        [[NSUserDefaults standardUserDefaults] setBool:sender.isOn forKey:key];
     }
 }
 
