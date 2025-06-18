@@ -411,37 +411,39 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 - (_Bool)application:(UIApplication *)application openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey, id> *)options {
     if ([[url scheme] isEqualToString:@"twitter"] && [[url host] isEqualToString:@"neofreebird"]) {
         
-        UIViewController *topVC = self.topViewController;
+        // Use the established helper method from BHTManager to get the top-most view controller.
+        UIViewController *topController = topMostController();
+        
         UINavigationController *navController = nil;
 
-        if ([topVC isKindOfClass:[UINavigationController class]]) {
-            navController = (UINavigationController *)topVC;
-        } else if ([topVC isKindOfClass:[UITabBarController class]]) {
-            UIViewController *selectedVC = ((UITabBarController *)topVC).selectedViewController;
-            if ([selectedVC isKindOfClass:[UINavigationController class]]) {
-                navController = (UINavigationController *)selectedVC;
-            } else {
-                navController = selectedVC.navigationController;
-            }
+        // Find the navigation controller from the top-most view controller.
+        if ([topController isKindOfClass:[UINavigationController class]]) {
+            navController = (UINavigationController *)topController;
         } else {
-            navController = topVC.navigationController;
+            navController = topController.navigationController;
         }
 
         if (navController) {
             TFNTwitterAccount *account = nil;
+            // Safely get the current account from the app delegate.
             if ([self respondsToSelector:@selector(_t1_currentAccount)]) {
+                #pragma clang diagnostic push
+                #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
                 account = [self performSelector:@selector(_t1_currentAccount)];
+                #pragma clang diagnostic pop
             }
+            
             ModernSettingsViewController *settingsVC = [[ModernSettingsViewController alloc] initWithAccount:account];
             
-            // Check if already on top to prevent double-pushing
+            // Prevent pushing the same view controller twice.
             if (![navController.topViewController isKindOfClass:[ModernSettingsViewController class]]) {
                 [navController pushViewController:settingsVC animated:YES];
             }
-            return YES;
+            return YES; // We handled the URL.
         }
     }
     
+    // If we didn't handle the URL, pass it to the original implementation.
     return %orig;
 }
 %end
