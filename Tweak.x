@@ -28,12 +28,6 @@
 
 @class T1SettingsViewController;
 
-// Declare topViewController to silence compiler warnings, as it's a private API.
-@interface T1AppDelegate (BHTwitter)
-@property (nonatomic, readonly) UIViewController *topViewController;
-@end
-
-
 // Forward declarations
 static void BHT_UpdateAllTabBarIcons(void);
 static void BHT_applyThemeToWindow(UIWindow *window);
@@ -406,45 +400,6 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     if ([BHTManager FLEX]) {
         [[%c(FLEXManager) sharedManager] showExplorer];
     }
-}
-
-- (_Bool)application:(UIApplication *)application openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey, id> *)options {
-    if ([[url scheme] isEqualToString:@"twitter"] && [[url host] isEqualToString:@"neofreebird"]) {
-        
-        // Use the established helper method from BHTManager to get the top-most view controller.
-        UIViewController *topController = topMostController();
-        
-        UINavigationController *navController = nil;
-
-        // Find the navigation controller from the top-most view controller.
-        if ([topController isKindOfClass:[UINavigationController class]]) {
-            navController = (UINavigationController *)topController;
-        } else {
-            navController = topController.navigationController;
-        }
-
-        if (navController) {
-            TFNTwitterAccount *account = nil;
-            // Safely get the current account from the app delegate.
-            if ([self respondsToSelector:@selector(_t1_currentAccount)]) {
-                #pragma clang diagnostic push
-                #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-                account = [self performSelector:@selector(_t1_currentAccount)];
-                #pragma clang diagnostic pop
-            }
-            
-            ModernSettingsViewController *settingsVC = [[ModernSettingsViewController alloc] initWithAccount:account];
-            
-            // Prevent pushing the same view controller twice.
-            if (![navController.topViewController isKindOfClass:[ModernSettingsViewController class]]) {
-                [navController pushViewController:settingsVC animated:YES];
-            }
-            return YES; // We handled the URL.
-        }
-    }
-    
-    // If we didn't handle the URL, pass it to the original implementation.
-    return %orig;
 }
 %end
 
