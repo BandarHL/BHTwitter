@@ -1742,7 +1742,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
 #pragma mark - General Settings Page
 
-@interface GeneralSettingsViewController () <UITableViewDataSource, UITableViewDelegate>
+@interface GeneralSettingsViewController () <UITableViewDataSource, UITableViewDelegate, UIFontPickerViewControllerDelegate>
 @property (nonatomic, strong) TFNTwitterAccount *account;
 @property (nonatomic, strong) UITableView *tableView;
 @property (nonatomic, strong) NSArray<NSDictionary *> *toggles;
@@ -1804,12 +1804,23 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         @{ @"type": @"button", @"parentKey": @"enable_translate", @"key": @"translate_endpoint_button", @"titleKey": @"TRANSLATE_ENDPOINT_OPTION_TITLE", @"action": @"showTranslateEndpointInput:", @"prefKeyForSubtitle": @"translate_endpoint", @"subtitleDefault": @"Default Gemini API", @"icon": @"sparkle_stroke" },
         @{ @"type": @"button", @"parentKey": @"enable_translate", @"key": @"translate_api_key_button", @"titleKey": @"TRANSLATE_API_KEY_OPTION_TITLE", @"action": @"showTranslateAPIKeyInput:", @"prefKeyForSubtitle": @"translate_api_key", @"subtitleDefault": @"Not Set", @"isSecure": @YES, @"icon": @"sparkle_stroke" },
         @{ @"type": @"button", @"parentKey": @"enable_translate", @"key": @"translate_model_button", @"titleKey": @"TRANSLATE_MODEL_OPTION_TITLE", @"action": @"showTranslateModelInput:", @"prefKeyForSubtitle": @"translate_model", @"subtitleDefault": @"gemini-1.5-flash", @"icon": @"sparkle_stroke" },
+        
+        // Search section toggles
+        @{ @"key": @"no_his", @"titleKey": @"NO_HISTORY_OPTION_TITLE", @"subtitleKey": @"NO_HISTORY_OPTION_DETAIL_TITLE", @"default": @NO },
+        @{ @"key": @"hide_trend_videos", @"titleKey": @"HIDE_TREND_VIDEOS_OPTION_TITLE", @"subtitleKey": @"HIDE_TREND_VIDEOS_OPTION_DETAIL_TITLE", @"default": @NO },
+        
+        // Layout and interface settings
         @{ @"key": @"hide_spaces", @"titleKey": @"HIDE_SPACE_OPTION_TITLE", @"subtitleKey": @"", @"default": @NO },
         @{ @"key": @"no_tab_bar_hiding", @"titleKey": @"STOP_HIDING_TAB_BAR_TITLE", @"subtitleKey": @"STOP_HIDING_TAB_BAR_TITLE", @"default": @NO },
         @{ @"key": @"tab_bar_theming", @"titleKey": @"CLASSIC_TAB_BAR_SETTINGS_TITLE", @"subtitleKey": @"CLASSIC_TAB_BAR_SETTINGS_DETAIL", @"default": @NO },
         @{ @"key": @"restore_tab_labels", @"titleKey": @"RESTORE_TAB_LABELS_TITLE", @"subtitleKey": @"RESTORE_TAB_LABELS_DETAIL", @"default": @NO },
         @{ @"key": @"dis_rtl", @"titleKey": @"DISABLE_RTL_OPTION_TITLE", @"subtitleKey": @"DISABLE_RTL_OPTION_DETAIL_TITLE", @"default": @NO },
-        @{ @"key": @"showScollIndicator", @"titleKey": @"SHOW_SCOLL_INDICATOR_OPTION_TITLE", @"subtitleKey": @"", @"default": @NO }
+        @{ @"key": @"showScollIndicator", @"titleKey": @"SHOW_SCOLL_INDICATOR_OPTION_TITLE", @"subtitleKey": @"", @"default": @NO },
+        
+        // Font settings
+        @{ @"key": @"en_font", @"titleKey": @"FONT_OPTION_TITLE", @"subtitleKey": @"FONT_OPTION_DETAIL_TITLE", @"default": @NO },
+        @{ @"type": @"button", @"parentKey": @"en_font", @"key": @"regular_font_button", @"titleKey": @"REQULAR_FONTS_PICKER_OPTION_TITLE", @"action": @"showRegularFontPicker:", @"prefKeyForSubtitle": @"bhtwitter_font_1", @"subtitleDefault": @"System Default", @"icon": @"text_formatting" },
+        @{ @"type": @"button", @"parentKey": @"en_font", @"key": @"bold_font_button", @"titleKey": @"BOLD_FONTS_PICKER_OPTION_TITLE", @"action": @"showBoldFontPicker:", @"prefKeyForSubtitle": @"bhtwitter_font_2", @"subtitleDefault": @"System Default", @"icon": @"text_formatting" }
     ];
 }
 
@@ -2188,6 +2199,65 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
     
     [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"] style:UIAlertActionStyleCancel handler:nil]];
     [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)showRegularFontPicker:(NSDictionary *)sender {
+    UIFontPickerViewControllerConfiguration *configuration = [[UIFontPickerViewControllerConfiguration alloc] init];
+    [configuration setFilteredTraits:UIFontDescriptorClassMask];
+    [configuration setIncludeFaces:NO];
+    
+    UIFontPickerViewController *fontPicker = [[UIFontPickerViewController alloc] initWithConfiguration:configuration];
+    fontPicker.delegate = (id<UIFontPickerViewControllerDelegate>)self;
+    
+    // Store which font type this is for
+    objc_setAssociatedObject(fontPicker, @"fontType", @"regular", OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    
+    if (self.account) {
+        [fontPicker.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"REQULAR_FONTS_PICKER_OPTION_TITLE"] subtitle:self.account.displayUsername]];
+    } else {
+        fontPicker.title = [[BHTBundle sharedBundle] localizedStringForKey:@"REQULAR_FONTS_PICKER_OPTION_TITLE"];
+    }
+    
+    [self.navigationController pushViewController:fontPicker animated:YES];
+}
+
+- (void)showBoldFontPicker:(NSDictionary *)sender {
+    UIFontPickerViewControllerConfiguration *configuration = [[UIFontPickerViewControllerConfiguration alloc] init];
+    [configuration setIncludeFaces:YES];
+    [configuration setFilteredTraits:UIFontDescriptorClassModernSerifs];
+    [configuration setFilteredTraits:UIFontDescriptorClassMask];
+    
+    UIFontPickerViewController *fontPicker = [[UIFontPickerViewController alloc] initWithConfiguration:configuration];
+    fontPicker.delegate = (id<UIFontPickerViewControllerDelegate>)self;
+    
+    // Store which font type this is for
+    objc_setAssociatedObject(fontPicker, @"fontType", @"bold", OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    
+    if (self.account) {
+        [fontPicker.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"BOLD_FONTS_PICKER_OPTION_TITLE"] subtitle:self.account.displayUsername]];
+    } else {
+        fontPicker.title = [[BHTBundle sharedBundle] localizedStringForKey:@"BOLD_FONTS_PICKER_OPTION_TITLE"];
+    }
+    
+    [self.navigationController pushViewController:fontPicker animated:YES];
+}
+
+- (void)fontPickerViewControllerDidPickFont:(UIFontPickerViewController *)viewController {
+    NSString *fontName = viewController.selectedFontDescriptor.fontAttributes[UIFontDescriptorNameAttribute];
+    NSString *fontFamily = viewController.selectedFontDescriptor.fontAttributes[UIFontDescriptorFamilyAttribute];
+    NSString *fontType = objc_getAssociatedObject(viewController, @"fontType");
+    
+    if ([fontType isEqualToString:@"bold"]) {
+        [[NSUserDefaults standardUserDefaults] setObject:fontName forKey:@"bhtwitter_font_2"];
+    } else {
+        [[NSUserDefaults standardUserDefaults] setObject:fontFamily forKey:@"bhtwitter_font_1"];
+    }
+    
+    // Update visible toggles to refresh the subtitle
+    [self updateVisibleToggles];
+    [self.tableView reloadData];
+    
+    [viewController.navigationController popViewControllerAnimated:YES];
 }
 
 @end
