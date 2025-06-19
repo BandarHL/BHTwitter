@@ -49,6 +49,9 @@
 "STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE" = "Choose a custom URL for links, and remove tracking.";
 "SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE" = "Pick a custom URL";
 
+"DISABLE_XCHAT_OPTION_TITLE" = "Disable XChat";
+"DISABLE_XCHAT_OPTION_DETAIL_TITLE" = "Remove XChat button on the sidebar.";
+
 
 /*Tweets*/
 "TWEETS_SECTION_HEADER_TITLE" = "Tweets";
@@ -348,9 +351,6 @@
 "VOICE_OPTION_TITLE" = "Voice mode";
 "VOICE_OPTION_DETAIL_TITLE" = "Reply to Tweets and replies using your voice.";
 
-"DISABLE_XCHAT_OPTION_TITLE" = "Disable XChat";
-"DISABLE_XCHAT_OPTION_DETAIL_TITLE" = "Disable XChat on the sidebar.";
-
 /*Modern Settings Layout*/
 
 "MODERN_SETTINGS_LAYOUT_TITLE" = "General";
@@ -372,4 +372,6 @@
 "MODERN_SETTINGS_MESSAGES_SUBTITLE" = "Customize your Twitter messaging experience.";
 
 "MODERN_SETTINGS_EXPERIMENTAL_TITLE" = "Experimental";
-"MODERN_SETTINGS_EXPERIMENTAL_SUBTITLE" = "Try features that may be unstable. like using the new Solarium UI for iOS 26.";
+"MODERN_SETTINGS_EXPERIMENTAL_SUBTITLE" = "Try features that may be unstable.";
+
+"MODERN_SETTINGS_PLACEHOLDER_TITLE" = "Nothing to see here — yet.";
