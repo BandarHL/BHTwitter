@@ -9,10 +9,11 @@
 /*Alerts and popups*/
 "RESTART_REQUIRED_ALERT_TITLE" = "Restart required";
 "RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC" = "You need to restart Twitter for this change to take effect.";
-"RESTART_REQUIRED_ALERT_MESSAGE_SQUARE_AVATARS" = "You need to restart Twitter for square profile pictures to take effect.";
+"RESTART_REQUIRED_ALERT_MESSAGE_SQUARE_AVATARS" = "To apply this change, the application needs to be restarted.";
 "RESTART_REQUIRED_ALERT_MESSAGE_GENERIC" = "You need to restart Twitter for this change to take effect.";
 "RESTART_REQUIRED_ALERT_MESSAGE_NAVBAR" = "You need to restart Twitter for your custom navigation to take effect.";
-"RESTART_NOW_BUTTON_TITLE" = "Restart";
+"RESTART_NOW_BUTTON_TITLE" = "Restart Now";
+"MODERN_LAYOUT_RESTART_MESSAGE" = "To switch between the modern and classic layouts, the application needs to be restarted.";
 
 "CONFIRM_ALERT_MESSAGE" = "Sure you meant to do that?";
 "YES_BUTTON_TITLE" = "Yes";
@@ -47,6 +48,9 @@
 "STRIP_URL_TRACKING_PARAMETERS_TITLE" = "Customize links";
 "STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE" = "Choose a custom URL for links, and remove tracking.";
 "SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE" = "Pick a custom URL";
+
+"DISABLE_XCHAT_OPTION_TITLE" = "Disable XChat";
+"DISABLE_XCHAT_OPTION_DETAIL_TITLE" = "Remove XChat button on the sidebar.";
 
 
 /*Tweets*/
@@ -346,3 +350,28 @@
 
 "VOICE_OPTION_TITLE" = "Voice mode";
 "VOICE_OPTION_DETAIL_TITLE" = "Reply to Tweets and replies using your voice.";
+
+/*Modern Settings Layout*/
+
+"MODERN_SETTINGS_LAYOUT_TITLE" = "General";
+"MODERN_SETTINGS_LAYOUT_SUBTITLE" = "Make your Timeline yours with custom fonts, nav bar theming, and other options.";
+
+"MODERN_SETTINGS_MEDIA_TITLE" = "Media and Downloads";
+"MODERN_SETTINGS_MEDIA_SUBTITLE" = "Download videos, enable 4k uploads, and other improvements.";
+
+"MODERN_SETTINGS_TWITTER_BLUE_TITLE" = "Twitter Blue";
+"MODERN_SETTINGS_TWITTER_BLUE_SUBTITLE" = "Get an ad-free experience and unlock Blue features like Undo Tweet, themes, and custom app icons";
+
+"MODERN_SETTINGS_PROFILES_TITLE" = "Profiles";
+"MODERN_SETTINGS_PROFILES_SUBTITLE" = "Control what you see on profiles and how you interact with them.";
+
+"MODERN_SETTINGS_TWEETS_TITLE" = "Tweets and Replies";
+"MODERN_SETTINGS_TWEETS_SUBTITLE" = "Change how Tweets look and bring back old features like Source Labels.";
+
+"MODERN_SETTINGS_MESSAGES_TITLE" = "Direct Messages";
+"MODERN_SETTINGS_MESSAGES_SUBTITLE" = "Customize your Twitter messaging experience.";
+
+"MODERN_SETTINGS_EXPERIMENTAL_TITLE" = "Experimental";
+"MODERN_SETTINGS_EXPERIMENTAL_SUBTITLE" = "Try features that may be unstable.";
+
+"MODERN_SETTINGS_PLACEHOLDER_TITLE" = "Nothing to see here — yet.";

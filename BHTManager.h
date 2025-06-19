@@ -85,6 +85,7 @@
 + (void)clearSourceLabelCache;
 
 + (BOOL)restoreReplyContext;
++ (BOOL)disableXChat;
 
 @end
 

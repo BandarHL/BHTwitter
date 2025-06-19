@@ -1,0 +1,860 @@
+Jun 10 14:02:44 appstored[68328] <Notice>: Purging impressions from Twitter
+Jun 10 14:02:44 ReportCrash[69992] <Notice>: Formulating fatal 309 report for corpse[75718] Twitter
+Jun 10 14:02:44 ReportCrash[69992] <Notice>: loadStoreInfo [platform 2] com.atebits.Tweetie2 from file:///private/var/containers/Bundle/Application/06C1F1EC-8812-472B-B2B5-B01F315D4506/Twitter.app/
+Jun 10 14:02:45 TwitterNotificationServiceExtension(PlugInKit)[75155] <Notice>: [u 5199A980-DE83-4032-BEBC-EF330D739FD3] [<private>(<private>)] Removed sole personality.
+Jun 10 14:02:45 TwitterNotificationServiceExtension(PlugInKit)[75155] <Notice>: [u 5199A980-DE83-4032-BEBC-EF330D739FD3] [<private>(<private>)] host connection from pid 74932 invalidated
+Jun 10 14:02:45 Twitter(libMobileGestalt.dylib)[75866] <Notice>: Cache loaded with 4896 pre-cached in CacheData and 51 items in CacheExtra.
+Jun 10 14:02:45 kernel[0] <Notice>: memorystatus: set assertion priority(0) target TwitterNotificationServiceExtens:75155
+Jun 10 14:02:45 mediaserverd(AudioToolbox)[73215] <Notice>:           SSServerImp.cpp:1252  pid 75155(TwitterNotificat)
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Faulting in NSHTTPCookieStorage singleton
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Faulting in CFHTTPCookieStorage singleton
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Creating default cookie storage with default identifier
+Jun 10 14:02:45 kernel(Sandbox)[0] <Error>: Sandbox: Twitter(75866) deny(2) file-test-existence /private/etc/.mdns_debug
+Jun 10 14:02:45 Twitter(Snowboard.dylib)[75866] <Notice>: [SnowBoard Launcher] Loader check passed. Loading SnowBoard...
+Jun 10 14:02:45 Twitter(SnowBoardBase.dylib)[75866] <Notice>: Initialising Snowboard (Version: 1.5.37-Beta4-rootless Compiled: Jul  9 2024 : 00:24:55) in app: Twitter...
+Jun 10 14:02:45 Twitter(TwitterSPMMigration)[75866] <Notice>: just setting up my twttr; launched 1.279 s ago
+Jun 10 14:02:45 Twitter(T1Twitter)[75866] <Notice>: +[T1AppDelegate load]
+Jun 10 14:02:45 Twitter(CoreFoundation)[75866] <Error>: Couldn't read values in CFPrefsPlistSource<0x280c4d400> (Domain: group.com.atebits.Tweetie2, User: kCFPreferencesAnyUser, ByHost: Yes, Container: (null), Contents Need Refresh: Yes): Using kCFPreferencesAnyUser with a container is only allowed for System Containers, detaching from cfprefsd
+Jun 10 14:02:45 Twitter(RunningBoardServices)[75866] <Notice>: Initializing connection
+Jun 10 14:02:45 Twitter(RunningBoardServices)[75866] <Notice>: Removing all cached process handles
+Jun 10 14:02:45 Twitter(RunningBoardServices)[75866] <Notice>: Sending handshake request attempt #1 to server
+Jun 10 14:02:45 Twitter(RunningBoardServices)[75866] <Notice>: Creating connection to com.apple.runningboard
+Jun 10 14:02:45 Twitter(RunningBoardServices)[75866] <Notice>: Handshake succeeded
+Jun 10 14:02:45 Twitter(RunningBoardServices)[75866] <Notice>: Identity resolved as application<com.atebits.Tweetie2>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: Deactivation reason added: 10; deactivation reasons: 0 -> 1024; animating application lifecycle event: 0
+Jun 10 14:02:45 Twitter(BoardServices)[75866] <Notice>: activating monitor for service com.apple.frontboard.open
+Jun 10 14:02:45 Twitter(BoardServices)[75866] <Notice>: activating monitor for service com.apple.frontboard.workspace-service
+Jun 10 14:02:45 Twitter(FrontBoardServices)[75866] <Notice>: FBSWorkspace connecting to endpoint : <private>
+Jun 10 14:02:45 Twitter(FrontBoardServices)[75866] <Notice>: FBSWorkspace registering source: <private>
+Jun 10 14:02:45 backboardd(IOKit)[74929] <Notice>: Connection added: IOHIDEventSystemConnection uuid:2749BDC4-BB04-4259-B197-9E6EEF836EBB pid:75866 process:Twitter type:Passive entitlements:0x0 caller:BackBoardServices: <redacted> + 340 attributes:{
+    HighFrequency = 1;
+    bundleID = "com.atebits.Tweetie2";
+    pid = 75866;
+} state:0x0 events:0 mask:0x0
+Jun 10 14:02:45 backboardd(BackBoardHIDEventFoundation)[74929] <Notice>: Adding client connection: <BKHIDClientConnection: 0x1058de020; IOHIDEventSystemConnectionRef: 0x10db4d460; vpid: 75866(v1913DE); taskPort: 0x7646B; bundleID: com.atebits.Tweetie2> for client: IOHIDEventSystemConnection uuid:2749BDC4-BB04-4259-B197-9E6EEF836EBB pid:75866 process:Twitter type:Passive entitlements:0x0 caller:BackBoardServices: <redacted> + 340 attributes:{
+    HighFrequency = 1;
+    bundleID = "com.atebits.Tweetie2";
+    pid = 75866;
+} state:0x0 events:0 mask:0x0
+Jun 10 14:02:45 Twitter(FrontBoardServices)[75866] <Notice>: FBSWorkspace connected to endpoint : <private>
+Jun 10 14:02:45 Twitter(RunningBoardServices)[75866] <Notice>: Added observer for process assertions expiration warning: <_RBSExpirationWarningClient: 0x282444ea0>
+Jun 10 14:02:45 Twitter(libAccessibility.dylib)[75866] <Notice>: Read CategoryName: per-app = 1, category name = (null)
+Jun 10 14:02:45 Twitter(libAccessibility.dylib)[75866] <Notice>: Read CategoryName: per-app = 0, category name = UICTContentSizeCategoryL
+Jun 10 14:02:45 Twitter(TwitterSPMMigration)[75866] <Notice>: Launch faults: 8971 minor, 7091 major
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: networkd_settings_read_from_file initialized networkd settings by reading plist directly
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: networkd_settings_read_from_file initialized networkd settings by reading plist directly
+Jun 10 14:02:45 Twitter(XCTTargetBootstrap)[75866] <Notice>: Registering for test daemon availability notify post.
+Jun 10 14:02:45 Twitter(XCTTargetBootstrap)[75866] <Notice>: notify_get_state check indicated test daemon not ready.
+Jun 10 14:02:45 Twitter(XCTTargetBootstrap)[75866] <Notice>: notify_get_state check indicated test daemon not ready.
+Jun 10 14:02:45 Twitter(XCTTargetBootstrap)[75866] <Notice>: notify_get_state check indicated test daemon not ready.
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_path_evaluator_start [8918B84D-395C-4680-ADE6-01C8DF4AE331 <NULL> generic, multipath service: 1, attribution: developer]
+        path: satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: [0x28095f640] Initialized with scene: <UIWindowScene: 0x10186f240>; behavior: <_UIEventDeferringBehavior_Default: 0x282442740>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: sceneOfRecord: sceneID: sceneID:com.atebits.Tweetie2-default  persistentID: 1CF6A35F-E7F5-4838-9C9E-6084FFF610EF
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: Deactivation reason added: 11; deactivation reasons: 1024 -> 3072; animating application lifecycle event: 0
+Jun 10 14:02:45 CommCenter[45743] <Notice>: App state[Twitter (75866)] is moving from kUnknown to kInBackgroundUnknownRestriction
+Jun 10 14:02:45 Twitter(UserNotifications)[75866] <Notice>: [com.atebits.Tweetie2] Creating a user notification center
+Jun 10 14:02:45 Twitter(UserNotifications)[75866] <Notice>: [com.atebits.Tweetie2] Getting badge number (sync)
+Jun 10 14:02:45 Twitter(UserNotifications)[75866] <Notice>: [com.atebits.Tweetie2] Got badge number [ badge: (null) ]
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: -canOpenURL: failed for URL: "cydia://package/com.example.package" - error: "The operation couldn\M-b\M^@\M^Yt be completed. (OSStatus error -10814.)"
+Jun 10 14:02:45 kernel(Sandbox)[0] <Error>: Sandbox: Twitter(75866) deny(2) file-test-existence /bin/bash
+Jun 10 14:02:45 Twitter(CoreTelephony)[75866] <Notice>: Sending selectors to server: <private>
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <AF02E6FF-013C-4CAF-BDED-7C2067AC0406>.<1> resuming, timeouts(30.0, 30.0) QOS(0x19) Voucher (null)
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: [Telemetry]: Activity <nw_activity 12:2 [77F0DEAC-E886-42DB-9268-5417AB6835D2] (reporting strategy default)> on Task <AF02E6FF-013C-4CAF-BDED-7C2067AC0406>.<1> was not selected for reporting
+Jun 10 14:02:45 Twitter(AppSSOCore)[75866] <Notice>: -[SOConfigurationClient init]  on <private>
+Jun 10 14:02:45 Twitter(AppSSOCore)[75866] <Notice>: <SOServiceConnection: 0x28245aca0>: new XPC connection
+Jun 10 14:02:45 Twitter(TwitterSPMMigration)[75866] <Notice>: 10.22.0 - [FirebaseCore][I-COR000008] The project's Bundle ID is inconsistent with either the Bundle ID in 'GoogleService-Info.plist', or the Bundle ID in the options if you are using a customized options. To ensure that everything can be configured correctly, you may need to make the Bundle IDs consistent. To continue with this plist file, you may change your app's bundle identifier to 'com.atebits.tweetie2'. Or you can download a new configuration file that matches your bundle identifier from https://console.firebase.google.com/ and replace the current one.
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 1: starting, TC(0x0)
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C1 3FAF6D9B-D627-4C71-AA2D-B2AC93069E16 Hostname#e4c91e6c:80 tcp, url hash: 4c480d71, definite, attribution: developer, context: com.apple.CFNetwork.NSURLSession.{69B95ADE-8B8D-482E-86F5-7BF6160C9200}{(null)}{Y}{2} (private), proc: D8C0BBE5-3D42-3DAD-A553-9BCEC75F41EF] start
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C1 Hostname#e4c91e6c:80 initial path ((null))] event: path:start @0.000s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C1 Hostname#e4c91e6c:80 waiting path (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: path:satisfied @0.000s, uuid: C522BDD6-BD09-46DD-837C-DB02C55752BF
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C1 Hostname#e4c91e6c:80 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: resolver:start_dns @0.000s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_connection_report_state_with_handler_on_nw_queue [C1] reporting state preparing
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <AF02E6FF-013C-4CAF-BDED-7C2067AC0406>.<1> setting up Connection 1
+Jun 10 14:02:45 mDNSResponder[45778] <Notice>: [R36161] getaddrinfo start -- flags: 0xC000D000, ifindex: 0, protocols: 0, hostname: <mask.hash: 'u6O5p8j9jgoJl6E5zUIjDQ=='>, options: 0x8 {use-failover}, client pid: 75866 (Twitter)
+Jun 10 14:02:45 Twitter(TwitterSPMMigration)[75866] <Notice>: 10.22.0 - [FirebaseAnalytics][I-ACS020006] Google App ID from GoogleService-Info.plist is empty. Please, define GOOGLE_APP_ID in GoogleService-Info.plist for Analytics to work reliably. See https://goo.gl/txkZbE
+Jun 10 14:02:45 Twitter(TwitterSPMMigration)[75866] <Notice>: 10.22.0 - [FirebaseAnalytics][I-ACS025020] Analytics requires Google App ID from GoogleService-Info.plist. Your data may be lost. Google App ID has been changed. Original, new ID: (nil), 1:370715374655:ios:c7caaa9b10ca2f78
+Jun 10 14:02:45 Twitter(CoreServicesInternal)[75866] <Notice>: kExcludedFromBackupXattrName set on path: <private>
+Jun 10 14:02:45 appstored[68328] <Notice>: StoreKitServiceListener: Accepting new connection (Twitter) <NSXPCConnection: 0x10ec0ceb0> connection from pid 75866 on mach service named com.apple.storekitservice
+Jun 10 14:02:45 appstored[68328] <Notice>: <StoreKitClient: 0x10ed79520>: Initializing client from bundle URL: file:///private/var/containers/Bundle/Application/06C1F1EC-8812-472B-B2B5-B01F315D4506/Twitter.app/
+Jun 10 14:02:45 Twitter(TwitterSPMMigration)[75866] <Notice>: [Firebase/Crashlytics] Version 10.22.0
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282cdd3b0>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Creating new assertion since assertion is nil
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created new assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 mDNSResponder[45778] <Notice>: [R36161] getaddrinfo stop -- hostname: <mask.hash: 'u6O5p8j9jgoJl6E5zUIjDQ=='>, client pid: 75866 (Twitter)
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_endpoint_resolver_update [C1 Hostname#e4c91e6c:80 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] Adding endpoint handler for IPv6#5c239f98.80
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_endpoint_resolver_update [C1 Hostname#e4c91e6c:80 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] Adding endpoint handler for IPv4#de4bd81f:80
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C1 Hostname#e4c91e6c:80 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: resolver:receive_dns @0.024s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C1.1 IPv6#5c239f98.80 initial path ((null))] event: path:start @0.025s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C1.1 IPv6#5c239f98.80 waiting path (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: path:satisfied @0.025s, uuid: 291ABDE8-A994-4FD5-A5BA-E606E8069BFF
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C1.1 IPv6#5c239f98.80 in_progress channel-flow (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: flow:start_nexus @0.025s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C1.1 IPv6#5c239f98.80 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:receive_nexus @0.025s
+Jun 10 14:02:45 Twitter(libsystem_containermanager.dylib)[75866] <Notice>: Requesting app group container lookup; personaid = 1000, type = DEFAULT, name = 9FBD6450-5E13-49A9-A49F-4E788E305E0A, identifier = <private>, euid = 501, uid = 501, platform = 2
+Jun 10 14:02:45 Twitter(libsystem_containermanager.dylib)[75866] <Notice>: container_create_or_lookup_app_group_path_by_app_group_identifier: success
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C1.1 IPv6#5c239f98.80 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:start_connect @0.027s
+Jun 10 14:02:45 Twitter(libusrtcp.dylib)[75866] <Notice>: tcp_output [C1.1:2] flags=[S] seq=4123956866, ack=0, win=65535 state=SYN_SENT rcv_nxt=0, snd_una=4123956866
+Jun 10 14:02:45 Twitter(libusrtcp.dylib)[75866] <Notice>: tcp_input [C1.1:2] flags=[S.] seq=1915281558, ack=4123956867, win=65535 state=SYN_SENT rcv_nxt=0, snd_una=4123956866
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_flow_connected [C1.1 IPv6#5c239f98.80 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] Transport protocol connected (tcp)
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C1.1 IPv6#5c239f98.80 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:finish_transport @0.055s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C1 Hostname#e4c91e6c:80 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: flow:finish_transport @0.055s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_flow_connected [C1.1 IPv6#5c239f98.80 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] Output protocol connected (CFNetworkConnection-1931003059)
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C1.1 IPv6#5c239f98.80 ready channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:finish_connect @0.055s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_connection_report_state_with_handler_on_nw_queue [C1] reporting state ready
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C1 Hostname#e4c91e6c:80 ready resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: flow:finish_connect @0.055s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C1.1 IPv6#5c239f98.80 ready channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:changed_viability @0.055s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C1 Hostname#e4c91e6c:80 ready resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: flow:changed_viability @0.055s
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 1: connected successfully
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 1: ready C(N) E(N)
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <AF02E6FF-013C-4CAF-BDED-7C2067AC0406>.<1> now using Connection 1
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 1: received viability advisory(Y)
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: -[NWConcrete_nw_resolver initWithEndpoint:parameters:path:log_str:] [R1] created for Hostname#0836e179:0 using: generic, attribution: developer
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_path_evaluator_start [34399F9F-5202-4A89-9D2C-AF117E342449 Hostname#0836e179:0 generic, attribution: developer]
+        path: satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <AF02E6FF-013C-4CAF-BDED-7C2067AC0406>.<1> sent request, body N 0
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_resolver_set_update_handler_block_invoke [R1] started
+Jun 10 14:02:45 mDNSResponder[45778] <Notice>: [R36163] getaddrinfo start -- flags: 0xC000D000, ifindex: 0, protocols: 0, hostname: <mask.hash: 'eLANC2EpuCcFUr+YjtMWnA=='>, options: 0x8 {use-failover}, client pid: 75866 (Twitter)
+Jun 10 14:02:45 Twitter(TwitterSPMMigration)[75866] <Notice>: 10.22.0 - [FirebaseAnalytics][I-ACS023007] Analytics v.10.22.0 started
+Jun 10 14:02:45 Twitter(TwitterSPMMigration)[75866] <Notice>: 10.22.0 - [FirebaseAnalytics][I-ACS023008] To enable debug logging set the following application argument: -FIRAnalyticsDebugEnabled (see http://goo.gl/RfcP7r)
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: -[NWConcrete_nw_resolver initWithEndpoint:parameters:path:log_str:] [R2] created for Hostname#0836e179:0 using: generic, attribution: developer
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_path_evaluator_start [1FE28A68-EFF3-4C44-8932-EB2FD8149C85 Hostname#0836e179:0 generic, attribution: developer]
+        path: satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_resolver_set_update_handler_block_invoke [R2] started
+Jun 10 14:02:45 mDNSResponder[45778] <Notice>: [R36164] getaddrinfo start -- flags: 0xC000D000, ifindex: 0, protocols: 0, hostname: <mask.hash: 'eLANC2EpuCcFUr+YjtMWnA=='>, options: 0x8 {use-failover}, client pid: 75866 (Twitter)
+Jun 10 14:02:45 Twitter(CoreServicesInternal)[75866] <Notice>: kExcludedFromBackupXattrName set on path: <private>
+Jun 10 14:02:45 Twitter(CoreServicesInternal)[75866] <Notice>: kExcludedFromBackupXattrName set on path: <private>
+Jun 10 14:02:45 Twitter(CoreServicesInternal)[75866] <Notice>: kExcludedFromBackupXattrName set on path: <private>
+Jun 10 14:02:45 Twitter(CoreServicesInternal)[75866] <Notice>: kExcludedFromBackupXattrName set on path: <private>
+Jun 10 14:02:45 Twitter(DuetActivityScheduler)[75866] <Notice>: Connecting to daemon; reconnect: 0
+Jun 10 14:02:45 Twitter(DuetActivityScheduler)[75866] <Notice>: Establish daemon connection; interrupted: 0
+Jun 10 14:02:45 Twitter(libsystem_containermanager.dylib)[75866] <Notice>: container_create_or_lookup_app_group_path_by_app_group_identifier: success
+Jun 10 14:02:45 Twitter(DuetActivityScheduler)[75866] <Notice>: Daemon connection established with BGTaskScheduler client
+Jun 10 14:02:45 mDNSResponder[45778] <Notice>: [R36163] getaddrinfo stop -- hostname: <mask.hash: 'eLANC2EpuCcFUr+YjtMWnA=='>, client pid: 75866 (Twitter)
+Jun 10 14:02:45 mDNSResponder[45778] <Notice>: [R36164] getaddrinfo stop -- hostname: <mask.hash: 'eLANC2EpuCcFUr+YjtMWnA=='>, client pid: 75866 (Twitter)
+Jun 10 14:02:45 Twitter(AppTrackingTransparency)[75866] <Notice>: [ATTrackingManager] trackingAuthorizationStatus API call invoked.
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282c45c50>
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"CLLocationManager", "event":"activity", "_cmd":"initWithEffectiveBundleIdentifier:bundle:delegate:silo:", "self":"0x282053ff0", "identifier":"", "bundle":""}
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"state transition", "event":"state_transition", "state":"LocationManager", "id":"0x282053ff0", "property":"init", "new":{"previousAuthorizationStatusValid":false,"paused":false,"requestingLocation":false,"updatingVehicleSpeed":false,"desiredAccuracy":-1,"allowsBackgroundLocationUpdates":false,"dynamicAccuracyReductionEnabled":false,"distanceFilter":-1,"allowsLocationPrompts":true,"activityType":0,"groundAltitudeEnabled":false,"pausesLocationUpdatesAutomatically":0,"fusionInfoEnabled":false,"isAuthorizedForWidgetUpdates":false,"updatingVehicleHeading":false,"batchingLocation":false,"showsBackgroundLocationIndicator":false,"updatingLocation":false,"requestingRanging":false,"updatingHeading":false,"previousAuthorizationStatus":0,"allowsMapCorrection":true,"matchInfoEnabled":false,"allowsAlteredAccessoryLocations":false,"updatingRanging":false,"limitsPrecision":false,"courtesyPromptNeeded":false,"headingFilter":1}}
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"state transition", "event":"state_transition", "state":"LocationManager", "id":"0x282053ff0", "property":"lifecycle", "old":"0x0", "new":"0x28095fd40"}
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"client allocated", "client":"0x102f8a840"}
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"_CLClientCreateConnection", "event":"activity", "client":"0x102f8a840"}
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"state transition", "event":"state_transition", "state":"LocationManager", "id":"0x282053ff0", "property":"pausesLocationUpdatesAutomatically", "old":{"type":"decode failure","raw value":0,"expected type":"Generic"}, "new":{"type":"decode failure","raw value":5,"expected type":"Generic"}}
+Jun 10 14:02:45 Twitter(LocationSupport)[75866] <Notice>: {"msg":"Sending cached messages to daemon", "event":"activity"}
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"CLLocationManager", "event":"activity", "_cmd":"setDelegate:", "self":"0x282053ff0", "delegate":"0x28246f540"}
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"CLLocationManager", "event":"activity", "_cmd":"setDesiredAccuracy:", "self":"0x282053ff0", "accuracy":"-1.000000"}
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"state transition", "event":"state_transition", "state":"LocationManager", "id":"0x282053ff0", "property":"desiredAccuracy", "old":"-1.000000", "new":"-1.000000"}
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"CLLocationManager", "event":"activity", "_cmd":"setDistanceFilter:", "self":"0x282053ff0", "distance":"-1.000000"}
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"state transition", "event":"state_transition", "state":"LocationManager", "id":"0x282053ff0", "property":"distanceFilter", "old":"-1.000000", "new":"-1.000000"}
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 2
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 2 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282c45c50>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 2: <private>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282cc0720>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 3
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 3 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282cc0720>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 3: <private>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282cc0570>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <AF02E6FF-013C-4CAF-BDED-7C2067AC0406>.<1> received response, status 204 content K
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <AF02E6FF-013C-4CAF-BDED-7C2067AC0406>.<1> response ended
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <AF02E6FF-013C-4CAF-BDED-7C2067AC0406>.<1> done using Connection 1
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <AF02E6FF-013C-4CAF-BDED-7C2067AC0406>.<1> summary for task success {transaction_duration_ms=90, response_status=204, connection=1, protocol="http/1.1", domain_lookup_duration_ms=24, connect_duration_ms=28, secure_connection_duration_ms=0, private_relay=false, request_start_ms=59, request_duration_ms=0, response_start_ms=90, response_duration_ms=0, request_bytes=226, response_bytes=127, cache_hit=false}
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <AF02E6FF-013C-4CAF-BDED-7C2067AC0406>.<1> finished successfully
+Jun 10 14:02:45 Twitter(CoreServicesInternal)[75866] <Notice>: kExcludedFromBackupXattrName set on path: <private>
+Jun 10 14:02:45 Twitter(CoreServicesInternal)[75866] <Notice>: kExcludedFromBackupXattrName set on path: <private>
+Jun 10 14:02:45 Twitter(CoreServicesInternal)[75866] <Notice>: kExcludedFromBackupXattrName set on path: <private>
+Jun 10 14:02:45 Twitter(AppTrackingTransparency)[75866] <Notice>: [ATTrackingManager] trackingAuthorizationStatus API call invoked.
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <5604B9FC-2E0D-4DCA-BDCD-FEDD2CBDEF78>.<1> resuming, timeouts(978307200.0, 978307200.0) QOS(0x15) Voucher <private>
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: [Telemetry]: Activity <nw_activity 12:2 [14667E96-E208-4B30-8BE4-7949A886A9B0] (reporting strategy default)> on Task <5604B9FC-2E0D-4DCA-BDCD-FEDD2CBDEF78>.<1> was not selected for reporting
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <0C378171-3BDE-4D2C-B711-27264B1A0D04>.<2> resuming, timeouts(978307200.0, 978307200.0) QOS(0x15) Voucher <private>
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: [Telemetry]: Activity <nw_activity 12:2 [1B38358B-14E6-4ED6-8D1E-BB3F3B00842E] (reporting strategy default)> on Task <0C378171-3BDE-4D2C-B711-27264B1A0D04>.<2> was not selected for reporting
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <9ED061EE-4219-411E-97C8-E55964EBA386>.<3> resuming, timeouts(978307200.0, 978307200.0) QOS(0x15) Voucher <private>
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: [Telemetry]: Activity <nw_activity 12:2 [C038BDCD-D705-47C8-A2C8-15D3A33072B1] (reporting strategy default)> on Task <9ED061EE-4219-411E-97C8-E55964EBA386>.<3> was not selected for reporting
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <5604B9FC-2E0D-4DCA-BDCD-FEDD2CBDEF78>.<1> {strength 1, tls 8, ct 0, sub 0, sig 0, ciphers 1, bundle 0, builtin 0}
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Faulting in AlternativeServices Storage singleton
+Jun 10 14:02:45 Twitter(CoreServicesInternal)[75866] <Notice>: kExcludedFromBackupXattrName set on path: <private>
+Jun 10 14:02:45 mediaserverd(AudioToolbox)[73215] <Notice>:  AudioSessionServerImp.mm:4879  { "action":"create_session", "session":{"ID":"0x11e02d9b","PID":75866,"name":"Twitter"}, "details":{"client_PID":75866,"client_mach_port":147843,"session_type":"Primary"} }
+Jun 10 14:02:45 Twitter(libsystem_containermanager.dylib)[75866] <Notice>: container_system_group_path_for_identifier: success
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Garbage collection for alternative services
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <0C378171-3BDE-4D2C-B711-27264B1A0D04>.<2> {strength 1, tls 8, ct 0, sub 0, sig 0, ciphers 1, bundle 0, builtin 0}
+Jun 10 14:02:45 Twitter(libsystem_containermanager.dylib)[75866] <Notice>: container_system_group_path_for_identifier: success
+Jun 10 14:02:45 Twitter(ManagedConfiguration)[75866] <Notice>: Got system group container path from MCM for systemgroup.com.apple.configurationprofiles: /private/var/containers/Shared/SystemGroup/systemgroup.com.apple.configurationprofiles
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <9ED061EE-4219-411E-97C8-E55964EBA386>.<3> {strength 1, tls 8, ct 0, sub 0, sig 0, ciphers 1, bundle 0, builtin 0}
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 2: enabling TLS
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 2: starting, TC(0x0)
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C2 08110F35-51CA-4638-B47F-21FEF6E6B4BF Hostname#cc80e9c4:443 tcp, url hash: 4937da0f, tls, attribution: developer, context: com.apple.CFNetwork.NSURLSession.{F8033E0C-69FA-46B1-BF05-F9C1596B0E93}{(null)}{Y}{2} (private), proc: D8C0BBE5-3D42-3DAD-A553-9BCEC75F41EF] start
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C2 Hostname#cc80e9c4:443 initial path ((null))] event: path:start @0.000s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C2 Hostname#cc80e9c4:443 waiting path (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: path:satisfied @0.000s, uuid: D2F26C58-CAF4-438C-9B34-EFDDB1F84698
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C2 Hostname#cc80e9c4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: resolver:start_dns @0.000s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_connection_report_state_with_handler_on_nw_queue [C2] reporting state preparing
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <5604B9FC-2E0D-4DCA-BDCD-FEDD2CBDEF78>.<1> setting up Connection 2
+Jun 10 14:02:45 mDNSResponder[45778] <Notice>: [R36165] getaddrinfo start -- flags: 0xC000D000, ifindex: 0, protocols: 0, hostname: <mask.hash: '8YhqZZOUF8dBpqjQdBtN8g=='>, options: 0x8 {use-failover}, client pid: 75866 (Twitter)
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 3: enabling TLS
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 3: starting, TC(0x0)
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C3 715107F1-96BD-4D48-AE2B-E70648A55271 Hostname#257a8a01:443 tcp, url hash: 7c53399d, tls, attribution: developer, context: com.apple.CFNetwork.NSURLSession.{F8033E0C-69FA-46B1-BF05-F9C1596B0E93}{(null)}{Y}{2} (private), proc: D8C0BBE5-3D42-3DAD-A553-9BCEC75F41EF] start
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C3 Hostname#257a8a01:443 initial path ((null))] event: path:start @0.000s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C3 Hostname#257a8a01:443 waiting path (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: path:satisfied @0.000s, uuid: 358EC2F1-2DBE-4C8E-9962-4755057C5A78
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C3 Hostname#257a8a01:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: resolver:start_dns @0.000s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_connection_report_state_with_handler_on_nw_queue [C3] reporting state preparing
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <0C378171-3BDE-4D2C-B711-27264B1A0D04>.<2> setting up Connection 3
+Jun 10 14:02:45 mDNSResponder[45778] <Notice>: [R36166] getaddrinfo start -- flags: 0xC000D000, ifindex: 0, protocols: 0, hostname: <mask.hash: 'K4LOoy3yzACNQ4lZMv2wmQ=='>, options: 0x8 {use-failover}, client pid: 75866 (Twitter)
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 4: enabling TLS
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 4: starting, TC(0x0)
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C4 0FF7C6DD-06A9-4901-AA8D-60859671A9E2 Hostname#b2e96efe:443 tcp, url hash: 159f7785, tls, attribution: developer, context: com.apple.CFNetwork.NSURLSession.{F8033E0C-69FA-46B1-BF05-F9C1596B0E93}{(null)}{Y}{2} (private), proc: D8C0BBE5-3D42-3DAD-A553-9BCEC75F41EF] start
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C4 Hostname#b2e96efe:443 initial path ((null))] event: path:start @0.000s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C4 Hostname#b2e96efe:443 waiting path (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: path:satisfied @0.000s, uuid: EC11994E-279A-492F-8B0A-EA79B5F4C4DA
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C4 Hostname#b2e96efe:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: resolver:start_dns @0.000s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_connection_report_state_with_handler_on_nw_queue [C4] reporting state preparing
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <9ED061EE-4219-411E-97C8-E55964EBA386>.<3> setting up Connection 4
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_endpoint_resolver_update [C2 Hostname#cc80e9c4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] Adding endpoint handler for IPv4#0d516eb6:443
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_endpoint_resolver_update [C2 Hostname#cc80e9c4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] Adding endpoint handler for IPv4#3b844270:443
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C2 Hostname#cc80e9c4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: resolver:receive_dns @0.001s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C2.1 IPv4#0d516eb6:443 initial path ((null))] event: path:start @0.001s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C2.1 IPv4#0d516eb6:443 waiting path (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: path:satisfied @0.001s, uuid: C7FB60E6-9CB8-4372-AB96-85921B2136C4
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C2.1 IPv4#0d516eb6:443 in_progress channel-flow (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: flow:start_nexus @0.001s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C2.1 IPv4#0d516eb6:443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:receive_nexus @0.001s
+Jun 10 14:02:45 mDNSResponder[45778] <Notice>: [R36167] getaddrinfo start -- flags: 0xC000D000, ifindex: 0, protocols: 0, hostname: <mask.hash: 'Cayo+lMiGpp706ZN3WcaBA=='>, options: 0x8 {use-failover}, client pid: 75866 (Twitter)
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C2.1 IPv4#0d516eb6:443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:start_connect @0.001s
+Jun 10 14:02:45 mDNSResponder[45778] <Notice>: [R36165] getaddrinfo stop -- hostname: <mask.hash: '8YhqZZOUF8dBpqjQdBtN8g=='>, client pid: 75866 (Twitter)
+Jun 10 14:02:45 Twitter(libusrtcp.dylib)[75866] <Notice>: tcp_output [C2.1:3] flags=[S] seq=561496304, ack=0, win=65535 state=SYN_SENT rcv_nxt=0, snd_una=561496304
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_endpoint_resolver_update [C3 Hostname#257a8a01:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] Adding endpoint handler for IPv6#7ca18bd0.443
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_endpoint_resolver_update [C3 Hostname#257a8a01:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] Adding endpoint handler for IPv6#dad6389a.443
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_endpoint_resolver_update [C3 Hostname#257a8a01:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] Adding endpoint handler for IPv4#7219d6ff:443
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_endpoint_resolver_update [C3 Hostname#257a8a01:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] Adding endpoint handler for IPv4#17a516b9:443
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C3 Hostname#257a8a01:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: resolver:receive_dns @0.001s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C3.1 IPv6#7ca18bd0.443 initial path ((null))] event: path:start @0.001s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C3.1 IPv6#7ca18bd0.443 waiting path (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: path:satisfied @0.001s, uuid: 760601D1-E979-4344-A626-D2DCF7C3F979
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C3.1 IPv6#7ca18bd0.443 in_progress channel-flow (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: flow:start_nexus @0.001s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C3.1 IPv6#7ca18bd0.443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:receive_nexus @0.001s
+Jun 10 14:02:45 mDNSResponder[45778] <Notice>: [R36166] getaddrinfo stop -- hostname: <mask.hash: 'K4LOoy3yzACNQ4lZMv2wmQ=='>, client pid: 75866 (Twitter)
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C3.1 IPv6#7ca18bd0.443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:start_connect @0.001s
+Jun 10 14:02:45 Twitter(libusrtcp.dylib)[75866] <Notice>: tcp_output [C3.1:3] flags=[S] seq=2936291945, ack=0, win=65535 state=SYN_SENT rcv_nxt=0, snd_una=2936291945
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_endpoint_resolver_update [C4 Hostname#b2e96efe:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] Adding endpoint handler for IPv6#400d6aa7.443
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_endpoint_resolver_update [C4 Hostname#b2e96efe:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] Adding endpoint handler for IPv6#da992b9c.443
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_endpoint_resolver_update [C4 Hostname#b2e96efe:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] Adding endpoint handler for IPv4#3752debf:443
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_endpoint_resolver_update [C4 Hostname#b2e96efe:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] Adding endpoint handler for IPv4#9f0c9917:443
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C4 Hostname#b2e96efe:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: resolver:receive_dns @0.001s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C4.1 IPv6#400d6aa7.443 initial path ((null))] event: path:start @0.001s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C4.1 IPv6#400d6aa7.443 waiting path (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: path:satisfied @0.001s, uuid: F6F6FBD3-81B2-4BFB-B89C-34C2D33F1B65
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C4.1 IPv6#400d6aa7.443 in_progress channel-flow (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: flow:start_nexus @0.001s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C4.1 IPv6#400d6aa7.443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:receive_nexus @0.001s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C4.1 IPv6#400d6aa7.443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:start_connect @0.001s
+Jun 10 14:02:45 Twitter(libusrtcp.dylib)[75866] <Notice>: tcp_output [C4.1:3] flags=[S] seq=2833705958, ack=0, win=65535 state=SYN_SENT rcv_nxt=0, snd_una=2833705958
+Jun 10 14:02:45 tccd[68250] <Notice>: AUTHREQ_ATTRIBUTION: msgID=75866.1, attribution={requesting={<TCCDProcess: identifier=com.atebits.Tweetie2, pid=75866, auid=501, euid=501, binary_path=/private/var/containers/Bundle/Application/06C1F1EC-8812-472B-B2B5-B01F315D4506/Twitter.app/Twitter>}, },
+Jun 10 14:02:45 Twitter(Security)[75866] <Notice>: Not internal release, disabling SIRL
+Jun 10 14:02:45 Twitter(Security)[75866] <Notice>: Adding securityd connection to pool, total now 1
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 4
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 4 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282cc0570>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 4: <private>
+Jun 10 14:02:45 Twitter(FrontBoardServices)[75866] <Notice>: Creating service facility connection with <private>
+Jun 10 14:02:45 Twitter(FrontBoardServices)[75866] <Notice>: [SBSApplicationClient:0x28062aa60] Activating service facility
+Jun 10 14:02:45 Twitter(FrontBoardServices)[75866] <Notice>: [SBSApplicationClient:0x28062aa60] Service facility connection activation received.
+Jun 10 14:02:45 Twitter(CoreServicesInternal)[75866] <Notice>: kExcludedFromBackupXattrName set on path: <private>
+Jun 10 14:02:45 Twitter(libusrtcp.dylib)[75866] <Notice>: tcp_input [C2.1:3] flags=[S.] seq=1083165415, ack=561496305, win=65535 state=SYN_SENT rcv_nxt=0, snd_una=561496304
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_flow_connected [C2.1 IPv4#0d516eb6:443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] Transport protocol connected (tcp)
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C2.1 IPv4#0d516eb6:443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:finish_transport @0.020s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C2 Hostname#cc80e9c4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: flow:finish_transport @0.020s
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_session_apply_protocol_options_for_transport_block_invoke(1745) [C2.1:2][0x102f925d0] TLS configured [min_version(0x0303) max_version(0x0304) name(<private>) tickets(false) false_start(false) enforce_ev(false) enforce_ats(false) ech(false)]
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2028) [C2.1:2][0x102f925d0] Client handshake started
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C2.1:2][0x102f925d0] Client handshake state: TLS client enter_early_data
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C2.1:2][0x102f925d0] Client handshake state: TLS client read_server_hello
+Jun 10 14:02:45 Twitter(libusrtcp.dylib)[75866] <Notice>: tcp_input [C3.1:3] flags=[S.] seq=3125012229, ack=2936291946, win=65535 state=SYN_SENT rcv_nxt=0, snd_una=2936291945
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_flow_connected [C3.1 IPv6#7ca18bd0.443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] Transport protocol connected (tcp)
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C3.1 IPv6#7ca18bd0.443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:finish_transport @0.025s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C3 Hostname#257a8a01:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: flow:finish_transport @0.025s
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_session_apply_protocol_options_for_transport_block_invoke(1745) [C3.1:2][0x102f950b0] TLS configured [min_version(0x0303) max_version(0x0304) name(<private>) tickets(false) false_start(false) enforce_ev(false) enforce_ats(false) ech(false)]
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2028) [C3.1:2][0x102f950b0] Client handshake started
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C3.1:2][0x102f950b0] Client handshake state: TLS client enter_early_data
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C3.1:2][0x102f950b0] Client handshake state: TLS client read_server_hello
+Jun 10 14:02:45 Twitter(libusrtcp.dylib)[75866] <Notice>: tcp_input [C4.1:3] flags=[S.] seq=3705324244, ack=2833705959, win=65535 state=SYN_SENT rcv_nxt=0, snd_una=2833705958
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_flow_connected [C4.1 IPv6#400d6aa7.443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] Transport protocol connected (tcp)
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C4.1 IPv6#400d6aa7.443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:finish_transport @0.025s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C4 Hostname#b2e96efe:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: flow:finish_transport @0.025s
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_session_apply_protocol_options_for_transport_block_invoke(1745) [C4.1:2][0x102f978d0] TLS configured [min_version(0x0303) max_version(0x0304) name(<private>) tickets(false) false_start(false) enforce_ev(false) enforce_ats(false) ech(false)]
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2028) [C4.1:2][0x102f978d0] Client handshake started
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C4.1:2][0x102f978d0] Client handshake state: TLS client enter_early_data
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C4.1:2][0x102f978d0] Client handshake state: TLS client read_server_hello
+Jun 10 14:02:45 mDNSResponder[45778] <Notice>: [R36167] getaddrinfo stop -- hostname: <mask.hash: 'Cayo+lMiGpp706ZN3WcaBA=='>, client pid: 75866 (Twitter)
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C2.1:2][0x102f925d0] Client handshake state: TLS 1.3 client read_hello_retry_request
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C2.1:2][0x102f925d0] Client handshake state: TLS 1.3 client read_server_hello
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C2.1:2][0x102f925d0] Client handshake state: TLS 1.3 client read_encrypted_extensions
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C2.1:2][0x102f925d0] Client handshake state: TLS 1.3 client read_certificate_request
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C2.1:2][0x102f925d0] Client handshake state: TLS 1.3 client read_server_certificate
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C2.1:2][0x102f925d0] Client handshake state: TLS 1.3 client read_server_certificate_verify
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_evaluate_trust_async(1631) [C2.1:2][0x102f925d0] Performing external trust evaluation
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_evaluate_trust_async_external(1616) [C2.1:2][0x102f925d0] Asyncing for external verify block
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 2: asked to evaluate TLS Trust
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <5604B9FC-2E0D-4DCA-BDCD-FEDD2CBDEF78>.<1> auth completion disp=0 cred=0x28206f6d0
+Jun 10 14:02:45 tccd[68250] <Notice>: AUTHREQ_ATTRIBUTION: msgID=45756.12438, attribution={accessing={<TCCDProcess: identifier=com.atebits.Tweetie2, pid=75866, auid=501, euid=501, binary_path=/private/var/containers/Bundle/Application/06C1F1EC-8812-472B-B2B5-B01F315D4506/Twitter.app/Twitter>}, requesting={<TCCDProcess: identifier=com.apple.lsd, pid=45756, auid=501, euid=501, binary_path=/usr/libexec/lsd>}, },
+Jun 10 14:02:45 tccd[68250] <Notice>: requestor: <TCCDProcess: identifier=com.apple.lsd, pid=45756, auid=501, euid=501, binary_path=/usr/libexec/lsd> is checking access for accessor <TCCDProcess: identifier=com.atebits.Tweetie2, pid=75866, auid=501, euid=501, binary_path=/private/var/containers/Bundle/Application/06C1F1EC-8812-472B-B2B5-B01F315D4506/Twitter.app/Twitter>
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: System Trust Evaluation yielded status(0)
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 2: TLS Trust result 0
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_evaluate_trust_async_external_block_invoke_3(1572) [C2.1:2][0x102f925d0] Returning from external verify block with result: true
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_certificate_verify_callback(1793) [C2.1:2][0x102f925d0] Certificate verification result: OK
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C2.1:2][0x102f925d0] Client handshake state: TLS 1.3 client read_server_finished
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C2.1:2][0x102f925d0] Client handshake state: TLS 1.3 client send_end_of_early_data
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C2.1:2][0x102f925d0] Client handshake state: TLS 1.3 client send_client_encrypted_extensions
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C2.1:2][0x102f925d0] Client handshake state: TLS 1.3 client send_client_certificate
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C2.1:2][0x102f925d0] Client handshake state: TLS 1.3 client complete_second_flight
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C2.1:2][0x102f925d0] Client handshake state: TLS 1.3 client done
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C2.1:2][0x102f925d0] Client handshake state: TLS client finish_client_handshake
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C2.1:2][0x102f925d0] Client handshake state: TLS client done
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2034) [C2.1:2][0x102f925d0] Client handshake done
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: nw_protocol_boringssl_signal_connected(724) [C2.1:2][0x102f925d0] TLS connected [version(0x0304) ciphersuite(TLS_AES_128_GCM_SHA256) group(0x001d) signature_alg(0x0403) alpn(h2) resumed(0) offered_ticket(0) false_started(0) ocsp_received(1) sct_received(1) connect_time(36ms) flight_time(30ms) rtt(30ms) write_stalls(0) read_stalls(7)]
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_flow_connected [C2.1 IPv4#0d516eb6:443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] Output protocol connected (CFNetworkConnection-1931003059)
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C2.1 IPv4#0d516eb6:443 ready channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:finish_connect @0.057s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_connection_report_state_with_handler_on_nw_queue [C2] reporting state ready
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C2 Hostname#cc80e9c4:443 ready resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: flow:finish_connect @0.057s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C2.1 IPv4#0d516eb6:443 ready channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:changed_viability @0.057s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C2 Hostname#cc80e9c4:443 ready resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: flow:changed_viability @0.057s
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 2: connected successfully
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 2: TLS handshake complete
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 2: ready C(N) E(N)
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <5604B9FC-2E0D-4DCA-BDCD-FEDD2CBDEF78>.<1> now using Connection 2
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 2: received viability advisory(Y)
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <5604B9FC-2E0D-4DCA-BDCD-FEDD2CBDEF78>.<1> sent request, body N 0
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C3.1:2][0x102f950b0] Client handshake state: TLS 1.3 client read_hello_retry_request
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C3.1:2][0x102f950b0] Client handshake state: TLS 1.3 client read_server_hello
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C3.1:2][0x102f950b0] Client handshake state: TLS 1.3 client read_encrypted_extensions
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C3.1:2][0x102f950b0] Client handshake state: TLS 1.3 client read_certificate_request
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C3.1:2][0x102f950b0] Client handshake state: TLS 1.3 client read_server_certificate
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C3.1:2][0x102f950b0] Client handshake state: TLS 1.3 client read_server_certificate_verify
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_evaluate_trust_async(1631) [C3.1:2][0x102f950b0] Performing external trust evaluation
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_evaluate_trust_async_external(1616) [C3.1:2][0x102f950b0] Asyncing for external verify block
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C4.1:2][0x102f978d0] Client handshake state: TLS 1.3 client read_hello_retry_request
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C4.1:2][0x102f978d0] Client handshake state: TLS 1.3 client read_server_hello
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C4.1:2][0x102f978d0] Client handshake state: TLS 1.3 client read_encrypted_extensions
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C4.1:2][0x102f978d0] Client handshake state: TLS 1.3 client read_certificate_request
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C4.1:2][0x102f978d0] Client handshake state: TLS 1.3 client read_server_certificate
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C4.1:2][0x102f978d0] Client handshake state: TLS 1.3 client read_server_certificate_verify
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_evaluate_trust_async(1631) [C4.1:2][0x102f978d0] Performing external trust evaluation
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_evaluate_trust_async_external(1616) [C4.1:2][0x102f978d0] Asyncing for external verify block
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 3: asked to evaluate TLS Trust
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 4: asked to evaluate TLS Trust
+Jun 10 14:02:45 tccd[68250] <Notice>: AUTHREQ_ATTRIBUTION: msgID=45756.12439, attribution={accessing={<TCCDProcess: identifier=com.atebits.Tweetie2, pid=75866, auid=501, euid=501, binary_path=/private/var/containers/Bundle/Application/06C1F1EC-8812-472B-B2B5-B01F315D4506/Twitter.app/Twitter>}, requesting={<TCCDProcess: identifier=com.apple.lsd, pid=45756, auid=501, euid=501, binary_path=/usr/libexec/lsd>}, },
+Jun 10 14:02:45 tccd[68250] <Notice>: requestor: <TCCDProcess: identifier=com.apple.lsd, pid=45756, auid=501, euid=501, binary_path=/usr/libexec/lsd> is checking access for accessor <TCCDProcess: identifier=com.atebits.Tweetie2, pid=75866, auid=501, euid=501, binary_path=/private/var/containers/Bundle/Application/06C1F1EC-8812-472B-B2B5-B01F315D4506/Twitter.app/Twitter>
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <0C378171-3BDE-4D2C-B711-27264B1A0D04>.<2> auth completion disp=0 cred=0x28206b100
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <9ED061EE-4219-411E-97C8-E55964EBA386>.<3> auth completion disp=0 cred=0x28204c820
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: Key window API is scene-level: YES
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: UIWindowScene: 0x10186f240: Window became key in scene: UIWindow: 0x102fefd30; contextId: 0x2332C521: reason: UIWindowScene: 0x10186f240: Window requested to become key in scene: 0x102fefd30
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: Key window needs update: 0; currentKeyWindowScene: 0x0; evaluatedKeyWindowScene: 0x0; currentApplicationKeyWindow: 0x0; evaluatedApplicationKeyWindow: 0x0; reason: UIWindowScene: 0x10186f240: Window requested to become key in scene: 0x102fefd30
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: [0x28095f640] Begin local event deferring requested for token: 0x2801e2800; environments: 1; reason: UIWindowScene: 0x10186f240: Begin event deferring in keyboardFocus for window: 0x102fefd30
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: System Trust Evaluation yielded status(0)
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 3: TLS Trust result 0
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_evaluate_trust_async_external_block_invoke_3(1572) [C3.1:2][0x102f950b0] Returning from external verify block with result: true
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_certificate_verify_callback(1793) [C3.1:2][0x102f950b0] Certificate verification result: OK
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: Deactivation reason removed: 10; deactivation reasons: 3072 -> 2048; animating application lifecycle event: 0
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C3.1:2][0x102f950b0] Client handshake state: TLS 1.3 client read_server_finished
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C3.1:2][0x102f950b0] Client handshake state: TLS 1.3 client send_end_of_early_data
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C3.1:2][0x102f950b0] Client handshake state: TLS 1.3 client send_client_encrypted_extensions
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C3.1:2][0x102f950b0] Client handshake state: TLS 1.3 client send_client_certificate
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C3.1:2][0x102f950b0] Client handshake state: TLS 1.3 client complete_second_flight
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C3.1:2][0x102f950b0] Client handshake state: TLS 1.3 client done
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C3.1:2][0x102f950b0] Client handshake state: TLS client finish_client_handshake
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C3.1:2][0x102f950b0] Client handshake state: TLS client done
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2034) [C3.1:2][0x102f950b0] Client handshake done
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: nw_protocol_boringssl_signal_connected(724) [C3.1:2][0x102f950b0] TLS connected [version(0x0304) ciphersuite(TLS_AES_128_GCM_SHA256) group(0x001d) signature_alg(0x0403) alpn(h2) resumed(0) offered_ticket(0) false_started(0) ocsp_received(1) sct_received(1) connect_time(44ms) flight_time(35ms) rtt(35ms) write_stalls(0) read_stalls(6)]
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_flow_connected [C3.1 IPv6#7ca18bd0.443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] Output protocol connected (CFNetworkConnection-1931003059)
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C3.1 IPv6#7ca18bd0.443 ready channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:finish_connect @0.069s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_connection_report_state_with_handler_on_nw_queue [C3] reporting state ready
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C3 Hostname#257a8a01:443 ready resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: flow:finish_connect @0.069s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C3.1 IPv6#7ca18bd0.443 ready channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:changed_viability @0.069s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C3 Hostname#257a8a01:443 ready resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: flow:changed_viability @0.069s
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 3: connected successfully
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 3: TLS handshake complete
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"state transition", "event":"state_transition", "state":"LocationManager", "id":"0x282053ff0", "property":"limitsPrecision", "old":0, "new":0}
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"state transition", "event":"state_transition", "state":"LocationManager", "id":"0x282053ff0", "property":"previousAuthorizationStatus", "old":"NotDetermined", "new":"NotDetermined"}
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"state transition", "event":"state_transition", "state":"LocationManager", "id":"0x282053ff0", "property":"previousAuthorizationStatusValid", "old":0, "new":1}
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"state transition", "event":"state_transition", "state":"LocationManager", "id":"0x282053ff0", "property":"isAuthorizedForWidgetUpdates", "old":0, "new":0}
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"#CLLocationManager invoking #delegate", "self":"0x282053ff0", "delegate":"0x28246f540", "selector":"locationManagerDidChangeAuthorization:", "authorizationStatus":"NotDetermined", "limitsPrecision":0, "isAuthorizedForWidgetUpdates":0}
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 3: ready C(N) E(N)
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <0C378171-3BDE-4D2C-B711-27264B1A0D04>.<2> now using Connection 3
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 3: received viability advisory(Y)
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <0C378171-3BDE-4D2C-B711-27264B1A0D04>.<2> sent request, body N 0
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: System Trust Evaluation yielded status(0)
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 4: TLS Trust result 0
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_evaluate_trust_async_external_block_invoke_3(1572) [C4.1:2][0x102f978d0] Returning from external verify block with result: true
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_certificate_verify_callback(1793) [C4.1:2][0x102f978d0] Certificate verification result: OK
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C4.1:2][0x102f978d0] Client handshake state: TLS 1.3 client read_server_finished
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C4.1:2][0x102f978d0] Client handshake state: TLS 1.3 client send_end_of_early_data
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C4.1:2][0x102f978d0] Client handshake state: TLS 1.3 client send_client_encrypted_extensions
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C4.1:2][0x102f978d0] Client handshake state: TLS 1.3 client send_client_certificate
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C4.1:2][0x102f978d0] Client handshake state: TLS 1.3 client complete_second_flight
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C4.1:2][0x102f978d0] Client handshake state: TLS 1.3 client done
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C4.1:2][0x102f978d0] Client handshake state: TLS client finish_client_handshake
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C4.1:2][0x102f978d0] Client handshake state: TLS client done
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2034) [C4.1:2][0x102f978d0] Client handshake done
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: nw_protocol_boringssl_signal_connected(724) [C4.1:2][0x102f978d0] TLS connected [version(0x0304) ciphersuite(TLS_AES_128_GCM_SHA256) group(0x001d) signature_alg(0x0403) alpn(h2) resumed(0) offered_ticket(0) false_started(0) ocsp_received(0) sct_received(1) connect_time(45ms) flight_time(35ms) rtt(35ms) write_stalls(0) read_stalls(6)]
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_flow_connected [C4.1 IPv6#400d6aa7.443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] Output protocol connected (CFNetworkConnection-1931003059)
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C4.1 IPv6#400d6aa7.443 ready channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:finish_connect @0.070s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_connection_report_state_with_handler_on_nw_queue [C4] reporting state ready
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C4 Hostname#b2e96efe:443 ready resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: flow:finish_connect @0.070s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C4.1 IPv6#400d6aa7.443 ready channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:changed_viability @0.070s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C4 Hostname#b2e96efe:443 ready resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: flow:changed_viability @0.070s
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 4: connected successfully
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 4: TLS handshake complete
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 4: ready C(N) E(N)
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <9ED061EE-4219-411E-97C8-E55964EBA386>.<3> now using Connection 4
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 4: received viability advisory(Y)
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <9ED061EE-4219-411E-97C8-E55964EBA386>.<3> sent request, body N 0
+Jun 10 14:02:45 Twitter(AggregateDictionary)[75866] <Notice>: AggregateDictionary is deprecated and will be removed in this release. Please migrate to Core Analytics.
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: sceneOfRecord: sceneID: sceneID:com.atebits.Tweetie2-default  persistentID: 1CF6A35F-E7F5-4838-9C9E-6084FFF610EF
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282c31590>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282d6da10>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 5
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 5 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282c31590>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 5: <private>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282cc0ea0>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 7
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 7 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282cc0ea0>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 7: <private>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282c31a70>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 8
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 8 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282c31a70>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 8: <private>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282cc0930>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 9
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 9 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282cc0930>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 9: <private>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282c31590>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"CLLocationManager", "event":"activity", "_cmd":"initWithEffectiveBundleIdentifier:bundle:delegate:silo:", "self":"0x28206ece0", "identifier":"", "bundle":""}
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"state transition", "event":"state_transition", "state":"LocationManager", "id":"0x28206ece0", "property":"init", "new":{"previousAuthorizationStatusValid":false,"paused":false,"requestingLocation":false,"updatingVehicleSpeed":false,"desiredAccuracy":-1,"allowsBackgroundLocationUpdates":false,"dynamicAccuracyReductionEnabled":false,"distanceFilter":-1,"allowsLocationPrompts":true,"activityType":0,"groundAltitudeEnabled":false,"pausesLocationUpdatesAutomatically":0,"fusionInfoEnabled":false,"isAuthorizedForWidgetUpdates":false,"updatingVehicleHeading":false,"batchingLocation":false,"showsBackgroundLocationIndicator":false,"updatingLocation":false,"requestingRanging":false,"updatingHeading":false,"previousAuthorizationStatus":0,"allowsMapCorrection":true,"matchInfoEnabled":false,"allowsAlteredAccessoryLocations":false,"updatingRanging":false,"limitsPrecision":false,"courtesyPromptNeeded":false,"headingFilter":1}}
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"state transition", "event":"state_transition", "state":"LocationManager", "id":"0x28206ece0", "property":"lifecycle", "old":"0x0", "new":"0x28091af40"}
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"client allocated", "client":"0x1018824a0"}
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 10
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"_CLClientCreateConnection", "event":"activity", "client":"0x1018824a0"}
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"state transition", "event":"state_transition", "state":"LocationManager", "id":"0x28206ece0", "property":"pausesLocationUpdatesAutomatically", "old":{"type":"decode failure","raw value":0,"expected type":"Generic"}, "new":{"type":"decode failure","raw value":5,"expected type":"Generic"}}
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"CLLocationManager", "event":"activity", "_cmd":"setDelegate:", "self":"0x28206ece0", "delegate":"0x282cfe520"}
+Jun 10 14:02:45 Twitter(LocationSupport)[75866] <Notice>: {"msg":"Sending cached messages to daemon", "event":"activity"}
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 10 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282c31590>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 10: <private>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282cc10e0>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 11
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 11 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282cc10e0>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 11: <private>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282c3c300>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 12
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 12 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282c3c300>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 12: <private>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282c31800>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 mediaserverd(MediaExperience)[73215] <Notice>: -CMSessionMgr- MXCoreSessionCopyProperty: returning someOtherNonAmbientAudioCategoryClientIsPlaying = NO for Client sid:0x11e02d9b, Twitter(75866), 'prim'
+Jun 10 14:02:45 mediaserverd(MediaExperience)[73215] <Notice>: -CMSessionMgr- MXCoreSessionCopyProperty: returning someOtherNonAmbientAudioCategoryClientIsPlaying = NO for Client sid:0x11e02d9b, Twitter(75866), 'prim'
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 13
+Jun 10 14:02:45 mediaserverd(AudioToolbox)[73215] <Notice>:  AudioSessionServerImp.mm:1306  { "action":"set_category", "session":{"ID":"0x11e02d9b","PID":75866,"name":"Twitter"}, "details":{"key":"AudioCategory","value":"AmbientSound"} }
+Jun 10 14:02:45 mediaserverd(MediaExperience)[73215] <Notice>: -CMSessionMgr- cmsSetAudioCategory: Client 'sid:0x11e02d9b, Twitter(75866), 'prim'' [0x11fe66490] set audioCategory to 'AmbientSound'
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 13 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282c31800>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 13: <private>
+Jun 10 14:02:45 Twitter(BackgroundTasks)[75866] <Notice>: Handling app launch
+Jun 10 14:02:45 mediaserverd(MediaExperience)[73215] <Notice>: -CMSessionMgr- cmsSetControlFlags: Session 'sid:0x11e02d9b, Twitter(75866), 'prim'' setting control flags: required = 0, desired = Volume_Routing
+Jun 10 14:02:45 mediaserverd(AudioToolbox)[73215] <Notice>:  AudioSessionServerImp.mm:3250  { "action":"set_property", "session":{"ID":"0x11e02d9b","PID":75866,"name":"Twitter"}, "details":{"key":"AudioMode","value":"Default"} }
+Jun 10 14:02:45 mediaserverd(AudioToolbox)[73215] <Notice>:  AudioSessionServerImp.mm:3250  { "action":"set_property", "session":{"ID":"0x11e02d9b","PID":75866,"name":"Twitter"}, "details":{"key":"InterruptionStyle","value":"Mix with others"} }
+Jun 10 14:02:45 mediaserverd(AudioToolbox)[73215] <Notice>:  AudioSessionServerImp.mm:3250  { "action":"set_property", "session":{"ID":"0x11e02d9b","PID":75866,"name":"Twitter"}, "details":{"key":"WantsToPauseSpokenAudio","value":false} }
+Jun 10 14:02:45 mediaserverd(AudioToolbox)[73215] <Notice>:    AudioToolboxServers.mm:594   ================= -> RoutingBehaviorChanged process 'sid:0x11e02d9b, Twitter(75866), 'prim'' =================
+Jun 10 14:02:45 mediaserverd(AudioToolbox)[73215] <Notice>:    AudioToolboxServers.mm:603   ================= <- RoutingBehaviorChanged process 'sid:0x11e02d9b, Twitter(75866), 'prim'' =================
+Jun 10 14:02:45 mediaserverd(AudioToolbox)[73215] <Notice>:    AudioToolboxServers.mm:594   ================= -> RoutingBehaviorChanged process 'sid:0x11e02d9b, Twitter(75866), 'prim'' =================
+Jun 10 14:02:45 mediaserverd(AudioToolbox)[73215] <Notice>:    AudioToolboxServers.mm:603   ================= <- RoutingBehaviorChanged process 'sid:0x11e02d9b, Twitter(75866), 'prim'' =================
+Jun 10 14:02:45 Twitter(libAudioStatistics.dylib)[75866] <Notice>:      CAReportingClient.mm:291   creating CAReportingClient useXPC 1 endpoint (null)
+Jun 10 14:02:45 Twitter(libAudioStatistics.dylib)[75866] <Notice>:      CAReportingClient.mm:508   message {
+    API = "-[AVAudioSession category]";
+    ElapsedTime = "0.059834";
+}: (
+    314456030576782
+)
+Jun 10 14:02:45 Twitter(libAudioStatistics.dylib)[75866] <Notice>:      CAReportingClient.mm:508   message {
+    API = "-[AVAudioSession privateSetCategoryWithOptions:modes:routeSharingPolicy:options:]";
+    ElapsedTime = "0.234542";
+}: (
+    314456030576782
+)
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282c31590>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UserNotifications)[75866] <Notice>: [com.atebits.Tweetie2] Getting delivered notifications
+Jun 10 14:02:45 Twitter(UserNotifications)[75866] <Notice>: [com.atebits.Tweetie2] Getting notification settings (async)
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"state transition", "event":"state_transition", "state":"LocationManager", "id":"0x28206ece0", "property":"limitsPrecision", "old":0, "new":0}
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"state transition", "event":"state_transition", "state":"LocationManager", "id":"0x28206ece0", "property":"previousAuthorizationStatus", "old":"NotDetermined", "new":"NotDetermined"}
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"state transition", "event":"state_transition", "state":"LocationManager", "id":"0x28206ece0", "property":"previousAuthorizationStatusValid", "old":0, "new":1}
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"state transition", "event":"state_transition", "state":"LocationManager", "id":"0x28206ece0", "property":"isAuthorizedForWidgetUpdates", "old":0, "new":0}
+Jun 10 14:02:45 Twitter(CoreLocation)[75866] <Notice>: {"msg":"#CLLocationManager invoking #delegate", "self":"0x28206ece0", "delegate":"0x282cfe520", "selector":"locationManagerDidChangeAuthorization:", "authorizationStatus":"NotDetermined", "limitsPrecision":0, "isAuthorizedForWidgetUpdates":0}
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: sceneOfRecord: sceneID: sceneID:com.atebits.Tweetie2-default  persistentID: 1CF6A35F-E7F5-4838-9C9E-6084FFF610EF
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 14
+Jun 10 14:02:45 Twitter(UserNotifications)[75866] <Notice>: [com.atebits.Tweetie2] Getting delivered notifications
+Jun 10 14:02:45 Twitter(UserNotifications)[75866] <Notice>: [com.atebits.Tweetie2] Getting delivered notifications
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 14 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282c31590>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 14: <private>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282c31a70>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 15
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 15 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282c31a70>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 15: <private>
+Jun 10 14:02:45 Twitter(UserNotifications)[75866] <Notice>: [com.atebits.Tweetie2] Got 0 delivered notifications [ hasCompletionHandler: 1 ]
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282c3c210>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 16
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 16 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282c3c210>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 16: <private>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282c3c150>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 17
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 17 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282c3c150>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 17: <private>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282c3c2d0>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 18
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 18 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282c3c2d0>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 18: <private>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282c3dd10>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 19
+Jun 10 14:02:45 Twitter(UserNotifications)[75866] <Notice>: [com.atebits.Tweetie2] Got notification settings [ hasResult: 1 hasCompletionHandler: 1 ]
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282ccc930>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(UserNotifications)[75866] <Notice>: [com.atebits.Tweetie2] Got 0 delivered notifications [ hasCompletionHandler: 1 ]
+Jun 10 14:02:45 Twitter(UserNotifications)[75866] <Notice>: [com.atebits.Tweetie2] Got 0 delivered notifications [ hasCompletionHandler: 1 ]
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 19 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282c3dd10>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 19: <private>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282c3cd20>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 21
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 21 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282c3cd20>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 21: <private>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282cc0930>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 22
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 22 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282cc0930>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 22: <private>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282cc0840>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 23
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 23 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282cc0840>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 23: <private>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282cc07e0>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 24
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 24 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282cc07e0>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 24: <private>
+Jun 10 14:02:45 Twitter(FrontBoardServices)[75866] <Notice>: Performing snapshot request 0x282d6fbd0 (type 1)
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <5604B9FC-2E0D-4DCA-BDCD-FEDD2CBDEF78>.<1> received response, status 200 content K
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <5604B9FC-2E0D-4DCA-BDCD-FEDD2CBDEF78>.<1> done using Connection 2
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <5604B9FC-2E0D-4DCA-BDCD-FEDD2CBDEF78>.<1> response ended
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <5604B9FC-2E0D-4DCA-BDCD-FEDD2CBDEF78>.<1> summary for task success {transaction_duration_ms=133, response_status=200, connection=2, protocol="h2", domain_lookup_duration_ms=1, connect_duration_ms=56, secure_connection_duration_ms=36, private_relay=false, request_start_ms=76, request_duration_ms=0, response_start_ms=132, response_duration_ms=0, request_bytes=166, response_bytes=1106, cache_hit=false}
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <5604B9FC-2E0D-4DCA-BDCD-FEDD2CBDEF78>.<1> finished successfully
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <9ED061EE-4219-411E-97C8-E55964EBA386>.<3> received response, status 200 content K
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <9ED061EE-4219-411E-97C8-E55964EBA386>.<3> done using Connection 4
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <9ED061EE-4219-411E-97C8-E55964EBA386>.<3> response ended
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <9ED061EE-4219-411E-97C8-E55964EBA386>.<3> summary for task success {transaction_duration_ms=137, response_status=200, connection=4, protocol="h2", domain_lookup_duration_ms=1, connect_duration_ms=69, secure_connection_duration_ms=45, private_relay=false, request_start_ms=89, request_duration_ms=0, response_start_ms=136, response_duration_ms=0, request_bytes=141, response_bytes=523, cache_hit=false}
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <9ED061EE-4219-411E-97C8-E55964EBA386>.<3> finished successfully
+Jun 10 14:02:45 Twitter(FrontBoardServices)[75866] <Notice>: Snapshot request 0x282d6fbd0 complete
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 20
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 20 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282cd0f90>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 20: <private>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: [0x28095f640] [keyboardFocus] Disabling event deferring records requested: adding recreation reason: detachedContext; for reason: _UIEventDeferringManager: 0x28095f640: disabling keyboardFocus: context detached for window: 0x102fefd30; contextID: 0x2332C521
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282c31710>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282c31800>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(CoreAnalytics)[75866] <Notice>: Received configuration update from daemon (initial)
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282d78cc0>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282d75050>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 25
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 25 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282c31710>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 25: <private>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 26
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 26 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282c31800>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 26: <private>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 27
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 27 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282d78cc0>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 27: <private>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 28
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 28 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282d75050>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 28: <private>
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_path_evaluator_start [7D74FE5E-71C8-4500-96A6-09FCB0F77C99 <NULL> generic, attribution: developer]
+        path: satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282d750b0>
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:45 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:45 Twitter(TwitterSPMMigration)[75866] <Notice>: 10.22.0 - [FirebaseAnalytics][I-ACS800023] No pending snapshot to activate. SDK name: app_measurement
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <0C378171-3BDE-4D2C-B711-27264B1A0D04>.<2> received response, status 200 content K
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <0C378171-3BDE-4D2C-B711-27264B1A0D04>.<2> done using Connection 3
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <0C378171-3BDE-4D2C-B711-27264B1A0D04>.<2> response ended
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <0C378171-3BDE-4D2C-B711-27264B1A0D04>.<2> summary for task success {transaction_duration_ms=165, response_status=200, connection=3, protocol="h2", domain_lookup_duration_ms=1, connect_duration_ms=68, secure_connection_duration_ms=44, private_relay=false, request_start_ms=88, request_duration_ms=0, response_start_ms=164, response_duration_ms=0, request_bytes=142, response_bytes=471, cache_hit=false}
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <0C378171-3BDE-4D2C-B711-27264B1A0D04>.<2> finished successfully
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <11CEFB6F-9054-424E-8630-A443351B5B3F>.<1> resuming, timeouts(60.0, 604800.0) QOS(0x21) Voucher <private>
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: [Telemetry]: Activity <nw_activity 12:2 [85FCBD99-EA9C-4346-925A-399B7A1EA728] (reporting strategy default)> on Task <11CEFB6F-9054-424E-8630-A443351B5B3F>.<1> was not selected for reporting
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <11CEFB6F-9054-424E-8630-A443351B5B3F>.<1> {strength 1, tls 8, ct 0, sub 0, sig 0, ciphers 1, bundle 0, builtin 0}
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 5: enabling TLS
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 5: starting, TC(0x0)
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C5 52664AAD-9288-4BC9-A3DC-A86C061A5AC2 Hostname#286ff342:443 tcp, url hash: d19ca612, tls, definite, attribution: developer, context: com.apple.CFNetwork.NSURLSession.{25FE87CD-86AC-4822-80F2-389024CFCF09}{(null)}{Y}{2} (private), proc: D8C0BBE5-3D42-3DAD-A553-9BCEC75F41EF] start
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C5 Hostname#286ff342:443 initial path ((null))] event: path:start @0.000s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C5 Hostname#286ff342:443 waiting path (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: path:satisfied @0.000s, uuid: 30CE125D-BFF4-41E9-8FCA-B1924DBBFE29
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C5 Hostname#286ff342:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: resolver:start_dns @0.000s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_connection_report_state_with_handler_on_nw_queue [C5] reporting state preparing
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <11CEFB6F-9054-424E-8630-A443351B5B3F>.<1> setting up Connection 5
+Jun 10 14:02:45 mDNSResponder[45778] <Notice>: [R36168] getaddrinfo start -- flags: 0xC000D000, ifindex: 0, protocols: 0, hostname: <mask.hash: 'kL04SEiDycuRRzn65sxuJA=='>, options: 0x8 {use-failover}, client pid: 75866 (Twitter)
+Jun 10 14:02:45 Twitter(CoreServicesInternal)[75866] <Notice>: kExcludedFromBackupXattrName set on path: <private>
+Jun 10 14:02:45 Twitter(TwitterSPMMigration)[75866] <Notice>: 10.22.0 - [FirebaseAnalytics][I-ACS023012] Analytics collection enabled
+Jun 10 14:02:45 Twitter(TwitterSPMMigration)[75866] <Notice>: 10.22.0 - [FirebaseAnalytics][I-ACS023012] Analytics collection enabled
+Jun 10 14:02:45 mDNSResponder[45778] <Notice>: [R36168] getaddrinfo stop -- hostname: <mask.hash: 'kL04SEiDycuRRzn65sxuJA=='>, client pid: 75866 (Twitter)
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_endpoint_resolver_update [C5 Hostname#286ff342:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] Adding endpoint handler for IPv6#22468748.443
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_endpoint_resolver_update [C5 Hostname#286ff342:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] Adding endpoint handler for IPv4#091f0f1f:443
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C5 Hostname#286ff342:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: resolver:receive_dns @0.027s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C5.1 IPv6#22468748.443 initial path ((null))] event: path:start @0.027s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C5.1 IPv6#22468748.443 waiting path (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: path:satisfied @0.027s, uuid: DFC1ADF2-23A6-46A9-B8E4-61E9495245BA
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C5.1 IPv6#22468748.443 in_progress channel-flow (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: flow:start_nexus @0.027s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C5.1 IPv6#22468748.443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:receive_nexus @0.028s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C5.1 IPv6#22468748.443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:start_connect @0.028s
+Jun 10 14:02:45 Twitter(libusrtcp.dylib)[75866] <Notice>: tcp_output [C5.1:3] flags=[S] seq=2442748507, ack=0, win=65535 state=SYN_SENT rcv_nxt=0, snd_una=2442748507
+Jun 10 14:02:45 Twitter(libusrtcp.dylib)[75866] <Notice>: tcp_input [C5.1:3] flags=[S.] seq=2759552782, ack=2442748508, win=65535 state=SYN_SENT rcv_nxt=0, snd_una=2442748507
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_flow_connected [C5.1 IPv6#22468748.443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] Transport protocol connected (tcp)
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C5.1 IPv6#22468748.443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:finish_transport @0.052s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C5 Hostname#286ff342:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: flow:finish_transport @0.052s
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_session_apply_protocol_options_for_transport_block_invoke(1745) [C5.1:2][0x102ffbd70] TLS configured [min_version(0x0303) max_version(0x0304) name(<private>) tickets(false) false_start(false) enforce_ev(false) enforce_ats(false) ech(false)]
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2028) [C5.1:2][0x102ffbd70] Client handshake started
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C5.1:2][0x102ffbd70] Client handshake state: TLS client enter_early_data
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C5.1:2][0x102ffbd70] Client handshake state: TLS client read_server_hello
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C5.1:2][0x102ffbd70] Client handshake state: TLS 1.3 client read_hello_retry_request
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C5.1:2][0x102ffbd70] Client handshake state: TLS 1.3 client read_server_hello
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C5.1:2][0x102ffbd70] Client handshake state: TLS 1.3 client read_encrypted_extensions
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C5.1:2][0x102ffbd70] Client handshake state: TLS 1.3 client read_certificate_request
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C5.1:2][0x102ffbd70] Client handshake state: TLS 1.3 client read_server_certificate
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C5.1:2][0x102ffbd70] Client handshake state: TLS 1.3 client read_server_certificate_verify
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_evaluate_trust_async(1631) [C5.1:2][0x102ffbd70] Performing external trust evaluation
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_evaluate_trust_async_external(1616) [C5.1:2][0x102ffbd70] Asyncing for external verify block
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 5: asked to evaluate TLS Trust
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <11CEFB6F-9054-424E-8630-A443351B5B3F>.<1> auth completion disp=1 cred=0x0
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: System Trust Evaluation yielded status(0)
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 5: TLS Trust result 0
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_evaluate_trust_async_external_block_invoke_3(1572) [C5.1:2][0x102ffbd70] Returning from external verify block with result: true
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_certificate_verify_callback(1793) [C5.1:2][0x102ffbd70] Certificate verification result: OK
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C5.1:2][0x102ffbd70] Client handshake state: TLS 1.3 client read_server_finished
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C5.1:2][0x102ffbd70] Client handshake state: TLS 1.3 client send_end_of_early_data
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C5.1:2][0x102ffbd70] Client handshake state: TLS 1.3 client send_client_encrypted_extensions
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C5.1:2][0x102ffbd70] Client handshake state: TLS 1.3 client send_client_certificate
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C5.1:2][0x102ffbd70] Client handshake state: TLS 1.3 client complete_second_flight
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C5.1:2][0x102ffbd70] Client handshake state: TLS 1.3 client done
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C5.1:2][0x102ffbd70] Client handshake state: TLS client finish_client_handshake
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C5.1:2][0x102ffbd70] Client handshake state: TLS client done
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2034) [C5.1:2][0x102ffbd70] Client handshake done
+Jun 10 14:02:45 Twitter(libboringssl.dylib)[75866] <Notice>: nw_protocol_boringssl_signal_connected(724) [C5.1:2][0x102ffbd70] TLS connected [version(0x0304) ciphersuite(TLS_AES_128_GCM_SHA256) group(0x001d) signature_alg(0x0403) alpn(h2) resumed(0) offered_ticket(0) false_started(0) ocsp_received(0) sct_received(0) connect_time(37ms) flight_time(32ms) rtt(30ms) write_stalls(0) read_stalls(8)]
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_flow_connected [C5.1 IPv6#22468748.443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] Output protocol connected (CFNetworkConnection-1931003059)
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C5.1 IPv6#22468748.443 ready channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:finish_connect @0.090s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: nw_connection_report_state_with_handler_on_nw_queue [C5] reporting state ready
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C5 Hostname#286ff342:443 ready resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: flow:finish_connect @0.090s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C5.1 IPv6#22468748.443 ready channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:changed_viability @0.090s
+Jun 10 14:02:45 Twitter(libnetwork.dylib)[75866] <Notice>: [C5 Hostname#286ff342:443 ready resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: flow:changed_viability @0.090s
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 5: connected successfully
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 5: TLS handshake complete
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 5: ready C(N) E(N)
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <11CEFB6F-9054-424E-8630-A443351B5B3F>.<1> now using Connection 5
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Connection 5: received viability advisory(Y)
+Jun 10 14:02:45 Twitter(CFNetwork)[75866] <Notice>: Task <11CEFB6F-9054-424E-8630-A443351B5B3F>.<1> sent request, body S 47134
+Jun 10 14:02:46 ReportCrash(CoreAnalytics)[69992] <Notice>: Sending event: com.apple.stability.crash {"bundleID":"com.atebits.Tweetie2","bundleVersion":"10","exceptionCodes":"0x0000000000000001, 0x0000000000000010(\134n    1,\134n    16\134n)EXC_BAD_ACCESSSIGSEGVKERN_INVALID_ADDRESS at 0x0000000000000010","incidentID":"79F1CF3F-8C30-4863-A881-0433D61EB2DF","logwritten":0,"process":"Twitter","terminationReasonExceptionCode":"0xb","terminationReasonNamespace":"SIGNAL"}
+Jun 10 14:02:46 analyticsd[45776] <Notice>: Received event: com.apple.stability.crash {"bundleID":"com.atebits.Tweetie2","bundleVersion":"10","exceptionCodes":"0x0000000000000001, 0x0000000000000010(\134n    1,\134n    16\134n)EXC_BAD_ACCESSSIGSEGVKERN_INVALID_ADDRESS at 0x0000000000000010","incidentID":"79F1CF3F-8C30-4863-A881-0433D61EB2DF","logwritten":0,"process":"Twitter","terminationReasonExceptionCode":"0xb","terminationReasonNamespace":"SIGNAL"}
+Jun 10 14:02:46 analyticsd[45776] <Notice>: Aggregated. Transform: StabilityCrashNumerator3WithBundleVersion Dirty: 1 Event: com.apple.stability.crash {"bundleID":"com.atebits.Tweetie2","bundleVersion":"10","exceptionCodes":"0x0000000000000001, 0x0000000000000010(\134n    1,\134n    16\134n)EXC_BAD_ACCESSSIGSEGVKERN_INVALID_ADDRESS at 0x0000000000000010","incidentID":"79F1CF3F-8C30-4863-A881-0433D61EB2DF","logwritten":0,"process":"Twitter","terminationReasonExceptionCode":"0xb","terminationReasonNamespace":"SIGNAL","timestamp":1749582166384728}
+Jun 10 14:02:46 analyticsd[45776] <Notice>: Aggregated. Transform: StabilityCrashNumerator3WithIncidentID Dirty: 1 Event: com.apple.stability.crash {"bundleID":"com.atebits.Tweetie2","bundleVersion":"10","exceptionCodes":"0x0000000000000001, 0x0000000000000010(\134n    1,\134n    16\134n)EXC_BAD_ACCESSSIGSEGVKERN_INVALID_ADDRESS at 0x0000000000000010","incidentID":"79F1CF3F-8C30-4863-A881-0433D61EB2DF","logwritten":0,"process":"Twitter","terminationReasonExceptionCode":"0xb","terminationReasonNamespace":"SIGNAL","timestamp":1749582166384728}
+Jun 10 14:02:46 analyticsd[45776] <Notice>: Aggregated. Transform: StabilityCrashNumerator3 Dirty: 1 Event: com.apple.stability.crash {"bundleID":"com.atebits.Tweetie2","bundleVersion":"10","exceptionCodes":"0x0000000000000001, 0x0000000000000010(\134n    1,\134n    16\134n)EXC_BAD_ACCESSSIGSEGVKERN_INVALID_ADDRESS at 0x0000000000000010","incidentID":"79F1CF3F-8C30-4863-A881-0433D61EB2DF","logwritten":0,"process":"Twitter","terminationReasonExceptionCode":"0xb","terminationReasonNamespace":"SIGNAL","timestamp":1749582166384728}
+Jun 10 14:02:46 Twitter(MetricKit)[75866] <Notice>: Diagnostic Directory: <private>
+Jun 10 14:02:46 Twitter(MetricKit)[75866] <Notice>: Delivering diagnostic reports: <private>
+Jun 10 14:02:46 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 6
+Jun 10 14:02:46 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 6 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282d6da10>
+Jun 10 14:02:46 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 6: <private>
+Jun 10 14:02:47 Twitter(TwitterSPMMigration)[75866] <Notice>: 10.22.0 - [FirebaseCrashlytics][I-CLS000000] Warning: NSUncaughtExceptionHandler is '_T1UncaughtExceptionHandler' in '/private/var/containers/Bundle/Application/06C1F1EC-8812-472B-B2B5-B01F315D4506/Twitter.app/Frameworks/T1Twitter.framework/T1Twitter'
+Jun 10 14:02:47 Twitter(CFNetwork)[75866] <Notice>: Task <11CEFB6F-9054-424E-8630-A443351B5B3F>.<1> received response, status 200 content K
+Jun 10 14:02:47 Twitter(CFNetwork)[75866] <Notice>: Task <11CEFB6F-9054-424E-8630-A443351B5B3F>.<1> done using Connection 5
+Jun 10 14:02:47 Twitter(CFNetwork)[75866] <Notice>: Task <11CEFB6F-9054-424E-8630-A443351B5B3F>.<1> response ended
+Jun 10 14:02:47 Twitter(CFNetwork)[75866] <Notice>: Task <11CEFB6F-9054-424E-8630-A443351B5B3F>.<1> summary for task success {transaction_duration_ms=1893, response_status=200, connection=5, protocol="h2", domain_lookup_duration_ms=27, connect_duration_ms=62, secure_connection_duration_ms=37, private_relay=false, request_start_ms=106, request_duration_ms=0, response_start_ms=1890, response_duration_ms=1, request_bytes=47356, response_bytes=409, cache_hit=true}
+Jun 10 14:02:47 Twitter(CFNetwork)[75866] <Notice>: Task <11CEFB6F-9054-424E-8630-A443351B5B3F>.<1> finished successfully
+Jun 10 14:02:47 Twitter(CFNetwork)[75866] <Notice>: Connection 5: cleaning up
+Jun 10 14:02:47 Twitter(libnetwork.dylib)[75866] <Notice>: [C5 52664AAD-9288-4BC9-A3DC-A86C061A5AC2 Hostname#286ff342:443 tcp, url hash: d19ca612, tls, definite, attribution: developer] cancel
+Jun 10 14:02:47 Twitter(libnetwork.dylib)[75866] <Notice>: [C5 52664AAD-9288-4BC9-A3DC-A86C061A5AC2 Hostname#286ff342:443 tcp, url hash: d19ca612, tls, definite, attribution: developer] cancelled
+        [C5.1 DFC1ADF2-23A6-46A9-B8E4-61E9495245BA 2601:4c4:4000:7f50:d976:6be0:909a:ff92.50907<->IPv6#22468748.443]
+        Connected Path: satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns
+        Privacy Stance: Not Eligible
+        Duration: 1.880s, DNS @0.000s took 0.027s, TCP @0.028s took 0.024s, TLS 1.3 took 0.038s
+        bytes in/out: 4425/48192, packets in/out: 26/47, rtt: 0.030s, retransmitted bytes: 0, out-of-order bytes: 0
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 29
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282c92700>
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 29 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282d750b0>
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 29: <private>
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:47 Twitter(libusrtcp.dylib)[75866] <Notice>: nw_protocol_tcp_log_summary [C5.1:3]
+        [A792E7E4-D8C1-4339-AEB1-CD8B4425949C <private>:50907<-><private>:443]
+        Init: 1, Conn_Time: 24.615ms, SYNs: 1, WR_T: 0/0, RD_T: 0/0, TFO: 0/0/0, ECN: 0/0/0, TS: 1
+        rtt_cache: process, rtt_upd: 22, rtt: 30.562ms, rtt_var: 1.500ms rtt_nc: 30.218ms, rtt_var_nc: 1.750ms base rtt: 25ms
+        ACKs-compressed: 0, ACKs delayed: 0 delayed ACKs sent: 0
+Jun 10 14:02:47 Twitter(libnetwork.dylib)[75866] <Notice>: nw_flow_disconnected [C5.1 IPv6#22468748.443 cancelled channel-flow ((null))] Output protocol disconnected
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 30
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 30 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282c92700>
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 30: <private>
+Jun 10 14:02:47 Twitter(libnetwork.dylib)[75866] <Notice>: nw_connection_report_state_with_handler_on_nw_queue [C5] reporting state cancelled
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282c843c0>
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:47 Twitter(libusrtcp.dylib)[75866] <Notice>: tcp_output [C5.1:3] flags=[F.] seq=2442796724, ack=2759557169, win=2039 state=FIN_WAIT_1 rcv_nxt=2759557169, snd_una=2442796622
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 31
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 31 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282c843c0>
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 31: <private>
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282cc1290>
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 32
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Will add backgroundTask with taskName: <private>, expirationHandler: <__NSMallocBlock__: 0x282c31620>
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Created background task <private>. Assertion will be assigned soon
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 32 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282cc1290>
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 32: <private>
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Reusing assertion <BKSProcessAssertion: 0x280177750>
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 33
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 33 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282c31620>
+Jun 10 14:02:47 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 33: <private>
+Jun 10 14:02:47 Twitter(libusrtcp.dylib)[75866] <Notice>: tcp_input [C5.1:3] flags=[F.] seq=2759557169, ack=2442796724, win=876 state=FIN_WAIT_1 rcv_nxt=2759557169, snd_una=2442796724
+Jun 10 14:02:47 Twitter(libusrtcp.dylib)[75866] <Notice>: tcp_output [C5.1:3] flags=[F.] seq=2442796724, ack=2759557170, win=2039 state=CLOSING rcv_nxt=2759557170, snd_una=2442796724
+Jun 10 14:03:00 tccd[68250] <Notice>: AUTHREQ_ATTRIBUTION: msgID=45756.12440, attribution={accessing={<TCCDProcess: identifier=com.atebits.Tweetie2, pid=75866, auid=501, euid=501, binary_path=/private/var/containers/Bundle/Application/06C1F1EC-8812-472B-B2B5-B01F315D4506/Twitter.app/Twitter>}, requesting={<TCCDProcess: identifier=com.apple.lsd, pid=45756, auid=501, euid=501, binary_path=/usr/libexec/lsd>}, },
+Jun 10 14:03:00 tccd[68250] <Notice>: requestor: <TCCDProcess: identifier=com.apple.lsd, pid=45756, auid=501, euid=501, binary_path=/usr/libexec/lsd> is checking access for accessor <TCCDProcess: identifier=com.atebits.Tweetie2, pid=75866, auid=501, euid=501, binary_path=/private/var/containers/Bundle/Application/06C1F1EC-8812-472B-B2B5-B01F315D4506/Twitter.app/Twitter>
+Jun 10 14:03:00 Twitter(AppTrackingTransparency)[75866] <Notice>: [ATTrackingManager] trackingAuthorizationStatus API call invoked.
+Jun 10 14:03:00 tccd[68250] <Notice>: AUTHREQ_ATTRIBUTION: msgID=45756.12441, attribution={accessing={<TCCDProcess: identifier=com.atebits.Tweetie2, pid=75866, auid=501, euid=501, binary_path=/private/var/containers/Bundle/Application/06C1F1EC-8812-472B-B2B5-B01F315D4506/Twitter.app/Twitter>}, requesting={<TCCDProcess: identifier=com.apple.lsd, pid=45756, auid=501, euid=501, binary_path=/usr/libexec/lsd>}, },
+Jun 10 14:03:00 tccd[68250] <Notice>: requestor: <TCCDProcess: identifier=com.apple.lsd, pid=45756, auid=501, euid=501, binary_path=/usr/libexec/lsd> is checking access for accessor <TCCDProcess: identifier=com.atebits.Tweetie2, pid=75866, auid=501, euid=501, binary_path=/private/var/containers/Bundle/Application/06C1F1EC-8812-472B-B2B5-B01F315D4506/Twitter.app/Twitter>
+Jun 10 14:03:00 Twitter(CFNetwork)[75866] <Notice>: Task <5903CC17-E291-40CB-9038-7C4639E797C0>.<1> resuming, timeouts(60.0, 60.0) QOS(0x9) Voucher (null)
+Jun 10 14:03:00 Twitter(CFNetwork)[75866] <Notice>: [Telemetry]: Activity <nw_activity 12:2 [3122C0D6-9512-4C64-A7DA-3B39E914C131] (reporting strategy default)> on Task <5903CC17-E291-40CB-9038-7C4639E797C0>.<1> was not selected for reporting
+Jun 10 14:03:00 Twitter(CFNetwork)[75866] <Notice>: Task <5903CC17-E291-40CB-9038-7C4639E797C0>.<1> {strength 1, tls 8, ct 0, sub 0, sig 0, ciphers 1, bundle 0, builtin 0}
+Jun 10 14:03:00 Twitter(CFNetwork)[75866] <Notice>: Connection 6: enabling TLS
+Jun 10 14:03:00 Twitter(CFNetwork)[75866] <Notice>: Connection 6: starting, TC(0x0)
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: [C6 3172FB5E-A1B0-4C1D-808E-EBB60EB1A242 Hostname#0836e179:443 tcp, url hash: 1d2b4e0c, tls, definite, attribution: developer, context: com.apple.CFNetwork.NSURLSession.{0C52F97B-7B95-4E50-9400-70FFE34D9F17}{(null)}{Y}{2} (private), proc: D8C0BBE5-3D42-3DAD-A553-9BCEC75F41EF] start
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: [C6 Hostname#0836e179:443 initial path ((null))] event: path:start @0.000s
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: [C6 Hostname#0836e179:443 waiting path (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: path:satisfied @0.000s, uuid: 36FF2B03-FDA2-4B9D-B976-3E4F8A05B496
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: [C6 Hostname#0836e179:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: resolver:start_dns @0.000s
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: nw_connection_report_state_with_handler_on_nw_queue [C6] reporting state preparing
+Jun 10 14:03:00 Twitter(CFNetwork)[75866] <Notice>: Task <5903CC17-E291-40CB-9038-7C4639E797C0>.<1> setting up Connection 6
+Jun 10 14:03:00 mDNSResponder[45778] <Notice>: [R36169] getaddrinfo start -- flags: 0xC000D000, ifindex: 0, protocols: 0, hostname: <mask.hash: 'eLANC2EpuCcFUr+YjtMWnA=='>, options: 0x8 {use-failover}, client pid: 75866 (Twitter)
+Jun 10 14:03:00 mDNSResponder[45778] <Notice>: [R36169] getaddrinfo stop -- hostname: <mask.hash: 'eLANC2EpuCcFUr+YjtMWnA=='>, client pid: 75866 (Twitter)
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: nw_endpoint_resolver_update [C6 Hostname#0836e179:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] Adding endpoint handler for IPv6#7c9c9be0.443, tracker
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: nw_endpoint_resolver_update [C6 Hostname#0836e179:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] Adding endpoint handler for IPv6#939b8c21.443, tracker
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: nw_endpoint_resolver_update [C6 Hostname#0836e179:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] Adding endpoint handler for IPv4#57368e34:443, tracker
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: nw_endpoint_resolver_update [C6 Hostname#0836e179:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] Adding endpoint handler for IPv6#8044d562.443, tracker
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: nw_endpoint_resolver_update [C6 Hostname#0836e179:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] Adding endpoint handler for IPv6#3a1e39ae.443, tracker
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: nw_endpoint_resolver_update [C6 Hostname#0836e179:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] Adding endpoint handler for IPv4#5ce2ea6f:443, tracker
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: nw_endpoint_resolver_update [C6 Hostname#0836e179:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] Adding endpoint handler for IPv4#436ddcf8:443, tracker
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: nw_endpoint_resolver_update [C6 Hostname#0836e179:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] Adding endpoint handler for IPv4#ed0bcf93:443, tracker
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: nw_endpoint_resolver_update [C6 Hostname#0836e179:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] Adding endpoint handler for IPv4#1ac87d8c:443, tracker
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: nw_endpoint_resolver_update [C6 Hostname#0836e179:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] Adding endpoint handler for IPv4#0f63e1e6:443, tracker
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: [C6 Hostname#0836e179:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: resolver:receive_dns @0.029s
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: [C6.1 IPv6#7c9c9be0.443 initial path ((null))] event: path:start @0.029s
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: [C6.1 IPv6#7c9c9be0.443 waiting path (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: path:satisfied @0.030s, uuid: 6384F7C0-38F6-41EA-80B0-F136C7970E52
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: [C6.1 IPv6#7c9c9be0.443 in_progress channel-flow (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: flow:start_nexus @0.030s
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: [C6.1 IPv6#7c9c9be0.443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:receive_nexus @0.030s
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: [C6.1 IPv6#7c9c9be0.443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:start_connect @0.031s
+Jun 10 14:03:00 Twitter(libusrtcp.dylib)[75866] <Notice>: tcp_output [C6.1:3] flags=[S] seq=579378507, ack=0, win=65535 state=SYN_SENT rcv_nxt=0, snd_una=579378507
+Jun 10 14:03:00 Twitter(libusrtcp.dylib)[75866] <Notice>: tcp_input [C6.1:3] flags=[S.] seq=275185982, ack=579378508, win=65535 state=SYN_SENT rcv_nxt=0, snd_una=579378507
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: nw_flow_connected [C6.1 IPv6#7c9c9be0.443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] Transport protocol connected (tcp)
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: [C6.1 IPv6#7c9c9be0.443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:finish_transport @0.057s
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: [C6 Hostname#0836e179:443 in_progress resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: flow:finish_transport @0.057s
+Jun 10 14:03:00 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_session_apply_protocol_options_for_transport_block_invoke(1745) [C6.1:2][0x103b10ef0] TLS configured [min_version(0x0303) max_version(0x0304) name(<private>) tickets(false) false_start(false) enforce_ev(false) enforce_ats(false) ech(false)]
+Jun 10 14:03:00 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2028) [C6.1:2][0x103b10ef0] Client handshake started
+Jun 10 14:03:00 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C6.1:2][0x103b10ef0] Client handshake state: TLS client enter_early_data
+Jun 10 14:03:00 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C6.1:2][0x103b10ef0] Client handshake state: TLS client read_server_hello
+Jun 10 14:03:00 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C6.1:2][0x103b10ef0] Client handshake state: TLS 1.3 client read_hello_retry_request
+Jun 10 14:03:00 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C6.1:2][0x103b10ef0] Client handshake state: TLS 1.3 client read_server_hello
+Jun 10 14:03:00 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C6.1:2][0x103b10ef0] Client handshake state: TLS 1.3 client read_encrypted_extensions
+Jun 10 14:03:00 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C6.1:2][0x103b10ef0] Client handshake state: TLS 1.3 client read_certificate_request
+Jun 10 14:03:00 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C6.1:2][0x103b10ef0] Client handshake state: TLS 1.3 client read_server_certificate
+Jun 10 14:03:00 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C6.1:2][0x103b10ef0] Client handshake state: TLS 1.3 client read_server_certificate_verify
+Jun 10 14:03:00 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_evaluate_trust_async(1631) [C6.1:2][0x103b10ef0] Performing external trust evaluation
+Jun 10 14:03:00 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_evaluate_trust_async_external(1616) [C6.1:2][0x103b10ef0] Asyncing for external verify block
+Jun 10 14:03:00 Twitter(CFNetwork)[75866] <Notice>: Connection 6: asked to evaluate TLS Trust
+Jun 10 14:03:00 Twitter(CFNetwork)[75866] <Notice>: Task <5903CC17-E291-40CB-9038-7C4639E797C0>.<1> auth completion disp=0 cred=0x28204e730
+Jun 10 14:03:00 Twitter(CFNetwork)[75866] <Notice>: System Trust Evaluation yielded status(0)
+Jun 10 14:03:00 Twitter(CFNetwork)[75866] <Notice>: Connection 6: TLS Trust result 0
+Jun 10 14:03:00 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_evaluate_trust_async_external_block_invoke_3(1572) [C6.1:2][0x103b10ef0] Returning from external verify block with result: true
+Jun 10 14:03:00 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_certificate_verify_callback(1793) [C6.1:2][0x103b10ef0] Certificate verification result: OK
+Jun 10 14:03:00 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C6.1:2][0x103b10ef0] Client handshake state: TLS 1.3 client read_server_finished
+Jun 10 14:03:00 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C6.1:2][0x103b10ef0] Client handshake state: TLS 1.3 client send_end_of_early_data
+Jun 10 14:03:00 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C6.1:2][0x103b10ef0] Client handshake state: TLS 1.3 client send_client_encrypted_extensions
+Jun 10 14:03:00 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C6.1:2][0x103b10ef0] Client handshake state: TLS 1.3 client send_client_certificate
+Jun 10 14:03:00 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C6.1:2][0x103b10ef0] Client handshake state: TLS 1.3 client complete_second_flight
+Jun 10 14:03:00 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C6.1:2][0x103b10ef0] Client handshake state: TLS 1.3 client done
+Jun 10 14:03:00 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C6.1:2][0x103b10ef0] Client handshake state: TLS client finish_client_handshake
+Jun 10 14:03:00 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2045) [C6.1:2][0x103b10ef0] Client handshake state: TLS client done
+Jun 10 14:03:00 Twitter(libboringssl.dylib)[75866] <Notice>: boringssl_context_info_handler(2034) [C6.1:2][0x103b10ef0] Client handshake done
+Jun 10 14:03:00 Twitter(libboringssl.dylib)[75866] <Notice>: nw_protocol_boringssl_signal_connected(724) [C6.1:2][0x103b10ef0] TLS connected [version(0x0304) ciphersuite(TLS_AES_128_GCM_SHA256) group(0x001d) signature_alg(0x0403) alpn(h2) resumed(0) offered_ticket(0) false_started(0) ocsp_received(0) sct_received(0) connect_time(70ms) flight_time(33ms) rtt(31ms) write_stalls(0) read_stalls(7)]
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: nw_flow_connected [C6.1 IPv6#7c9c9be0.443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] Output protocol connected (CFNetworkConnection-1931003059)
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: [C6.1 IPv6#7c9c9be0.443 ready channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:finish_connect @0.129s
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: nw_connection_report_state_with_handler_on_nw_queue [C6] reporting state ready
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: [C6 Hostname#0836e179:443 ready resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: flow:finish_connect @0.130s
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: [C6.1 IPv6#7c9c9be0.443 ready channel-flow (satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns)] event: flow:changed_viability @0.130s
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: [C6 Hostname#0836e179:443 ready resolver (satisfied (Path is satisfied), interface: en0, ipv4, ipv6, dns)] event: flow:changed_viability @0.130s
+Jun 10 14:03:00 Twitter(CFNetwork)[75866] <Notice>: Connection 6: connected successfully
+Jun 10 14:03:00 Twitter(CFNetwork)[75866] <Notice>: Connection 6: TLS handshake complete
+Jun 10 14:03:00 Twitter(CFNetwork)[75866] <Notice>: Connection 6: ready C(N) E(N)
+Jun 10 14:03:00 Twitter(CFNetwork)[75866] <Notice>: Task <5903CC17-E291-40CB-9038-7C4639E797C0>.<1> now using Connection 6
+Jun 10 14:03:00 Twitter(CFNetwork)[75866] <Notice>: Connection 6: received viability advisory(Y)
+Jun 10 14:03:00 Twitter(CFNetwork)[75866] <Notice>: Task <5903CC17-E291-40CB-9038-7C4639E797C0>.<1> sent request, body S 614
+Jun 10 14:03:00 Twitter(CFNetwork)[75866] <Notice>: Task <5903CC17-E291-40CB-9038-7C4639E797C0>.<1> received response, status 204 content U
+Jun 10 14:03:00 Twitter(CFNetwork)[75866] <Notice>: Task <5903CC17-E291-40CB-9038-7C4639E797C0>.<1> done using Connection 6
+Jun 10 14:03:00 Twitter(CFNetwork)[75866] <Notice>: Task <5903CC17-E291-40CB-9038-7C4639E797C0>.<1> response ended
+Jun 10 14:03:00 Twitter(CFNetwork)[75866] <Notice>: Task <5903CC17-E291-40CB-9038-7C4639E797C0>.<1> summary for task success {transaction_duration_ms=163, response_status=204, connection=6, protocol="h2", domain_lookup_duration_ms=29, connect_duration_ms=98, secure_connection_duration_ms=70, private_relay=false, request_start_ms=133, request_duration_ms=0, response_start_ms=162, response_duration_ms=0, request_bytes=758, response_bytes=498, cache_hit=false}
+Jun 10 14:03:00 Twitter(CFNetwork)[75866] <Notice>: Task <5903CC17-E291-40CB-9038-7C4639E797C0>.<1> finished successfully
+Jun 10 14:03:00 Twitter(CFNetwork)[75866] <Notice>: Connection 6: cleaning up
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: [C6 3172FB5E-A1B0-4C1D-808E-EBB60EB1A242 Hostname#0836e179:443 tcp, url hash: 1d2b4e0c, tls, definite, attribution: developer] cancel
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: [C6 3172FB5E-A1B0-4C1D-808E-EBB60EB1A242 Hostname#0836e179:443 tcp, url hash: 1d2b4e0c, tls, definite, attribution: developer] cancelled
+        [C6.1 6384F7C0-38F6-41EA-80B0-F136C7970E52 2601:4c4:4000:7f50:d976:6be0:909a:ff92.50908<->IPv6#7c9c9be0.443]
+        Connected Path: satisfied (Path is satisfied), viable, interface: en0, ipv4, ipv6, dns
+        Privacy Stance: Not Eligible
+        Duration: 0.163s, DNS @0.000s took 0.029s, TCP @0.031s took 0.026s, TLS 1.3 took 0.072s
+        bytes in/out: 4596/1528, packets in/out: 5/12, rtt: 0.031s, retransmitted bytes: 0, out-of-order bytes: 0
+Jun 10 14:03:00 Twitter(libusrtcp.dylib)[75866] <Notice>: nw_protocol_tcp_log_summary [C6.1:3]
+        [B5BBC1F8-CDDE-44CB-AF2F-E1947B8FF63A <private>:50908<-><private>:443]
+        Init: 1, Conn_Time: 26.090ms, SYNs: 1, WR_T: 0/0, RD_T: 0/0, TFO: 0/0/0, ECN: 0/0/0, TS: 1
+        rtt_cache: kernel, rtt_upd: 3, rtt: 31.843ms, rtt_var: 4.937ms rtt_nc: 27.937ms, rtt_var_nc: 9.250ms base rtt: 27ms
+        ACKs-compressed: 0, ACKs delayed: 0 delayed ACKs sent: 0
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: nw_flow_disconnected [C6.1 IPv6#7c9c9be0.443 cancelled channel-flow ((null))] Output protocol disconnected
+Jun 10 14:03:00 Twitter(libnetwork.dylib)[75866] <Notice>: nw_connection_report_state_with_handler_on_nw_queue [C6] reporting state cancelled
+Jun 10 14:03:00 Twitter(CFNetwork)[75866] <Notice>: Connection 6: done
+Jun 10 14:03:00 Twitter(libusrtcp.dylib)[75866] <Notice>: tcp_output [C6.1:3] flags=[F.] seq=579380060, ack=275190579, win=2048 state=FIN_WAIT_1 rcv_nxt=275190579, snd_una=579379949
+Jun 10 14:03:00 Twitter(libusrtcp.dylib)[75866] <Notice>: tcp_input [C6.1:3] flags=[F.] seq=275190579, ack=579380060, win=1050 state=FIN_WAIT_1 rcv_nxt=275190579, snd_una=579380060
+Jun 10 14:03:00 Twitter(libusrtcp.dylib)[75866] <Notice>: tcp_output [C6.1:3] flags=[F.] seq=579380060, ack=275190580, win=2048 state=CLOSING rcv_nxt=275190580, snd_una=579380060
+Jun 10 14:03:05 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending background task with UIBackgroundTaskIdentifier: 1
+Jun 10 14:03:05 Twitter(UIKitCore)[75866] <Notice>: <private>: Ending task with identifier 1 and description: <private>, _expireHandler: <__NSMallocBlock__: 0x282cdd3b0>
+Jun 10 14:03:05 Twitter(UIKitCore)[75866] <Notice>: <private>: Decrementing reference count for assertion used by background task with identifier 1: <private>
+Jun 10 14:03:05 Twitter(UIKitCore)[75866] <Notice>: <private>: Will invalidate assertion: <BKSProcessAssertion: 0x280177750> for task identifier: 1
+Jun 10 14:03:05 kernel[0] <Notice>: memorystatus: set assertion priority(0) target Twitter:75866
+Jun 10 14:03:05 mediaserverd(AudioToolbox)[73215] <Notice>:           SSServerImp.cpp:1252  pid 75866(Twitter)
+Jun 10 14:03:05 mediaserverd(AudioToolbox)[73215] <Notice>:  AudioSessionServerImp.mm:3980  { "action":"application_state_changed", "session":{"ID":"0x11e02d9b","PID":75866,"name":"Twitter"}, "details":{"new_state":"Background Task Suspended"} }
+Jun 10 14:03:05 CommCenter[45743] <Notice>: App state[Twitter (75866)] is suspended

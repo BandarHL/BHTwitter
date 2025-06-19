@@ -8,6 +8,7 @@
 #import "BHTManager.h"
 #import "SettingsViewController.h"
 #import "BHTBundle/BHTBundle.h"
+#import "ModernSettingsViewController.h"
 
 @implementation BHTManager
 + (bool)isDMVideoCell:(T1InlineMediaView *)view {
@@ -338,9 +339,13 @@
 }
 
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount {
+    if ([[[NSUserDefaults standardUserDefaults] objectForKey:@"enable_modern_layout"] boolValue]) {
+        ModernSettingsViewController *modernSettings = [[ModernSettingsViewController alloc] initWithAccount:twAccount];
+        return modernSettings;
+    } else {
     SettingsViewController *pref = [[SettingsViewController alloc] initWithTwitterAccount:twAccount];
-    [pref.navigationItem setTitleView:[objc_getClass("TFNTitleView") titleViewWithTitle:@"NeoFreeBird" subtitle:twAccount.displayUsername]];
     return pref;
+    }
 }
 
 // https://stackoverflow.com/a/45356575/9910699
@@ -374,6 +379,10 @@
 
 + (BOOL)restoreReplyContext {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"restore_reply_context"];
+}
+
++ (BOOL)disableXChat {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"disable_xchat"];
 }
 
 @end

@@ -422,6 +422,8 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         
         PSSpecifier *padLock = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"PADLOCK_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"PADLOCK_OPTION_DETAIL_TITLE"] key:@"padlock" defaultValue:false changeAction:nil];
         
+        PSSpecifier *disableXChat = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_XCHAT_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_XCHAT_OPTION_DETAIL_TITLE"] key:@"disable_xchat" defaultValue:false changeAction:nil];
+        
         PSSpecifier *autoHighestLoad = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"AUTO_HIGHEST_LOAD_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE"] key:@"autoHighestLoad" defaultValue:true changeAction:nil];
         
         PSSpecifier *disableSensitiveTweetWarnings = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE"] detailTitle:nil key:@"disableSensitiveTweetWarnings" defaultValue:true changeAction:nil];
@@ -545,6 +547,8 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
         // debug section
         PSSpecifier *flex = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"FLEX_OPTION_DETAIL_TITLE"] key:@"flex_twitter" defaultValue:false changeAction:@selector(FLEXAction:)];
         
+        PSSpecifier *modernLayout = [self newSwitchCellWithTitle:@"Enable Modern Layout" detailTitle:@"Switches to the new, redesigned settings UI." key:@"enable_modern_layout" defaultValue:false changeAction:@selector(modernLayoutAction:)];
+
         PSSpecifier *clearSourceLabelCache = [self newButtonCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CLEAR_SOURCE_LABEL_CACHE_TITLE"]
                                                        detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CLEAR_SOURCE_LABEL_CACHE_DETAIL_TITLE"]
                                                        dynamicRule:nil
@@ -618,6 +622,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             dmAvatars,
             dmComposeBarV2,
             dmVoiceCreation,
+            disableXChat,
             customDirectBackgroundView,
 
             photosVideosSection, // 5
@@ -652,6 +657,7 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
             
             debug, // 9
             flex,
+            modernLayout,
             clearSourceLabelCache,
             
             developer, // 10
@@ -965,6 +971,31 @@ PSSpecifier *photosVideosSection = [self newSectionWithTitle:[[BHTBundle sharedB
     } else {
         [[objc_getClass("FLEXManager") sharedManager] hideExplorer];
     }
+}
+
+- (void)modernLayoutAction:(UISwitch *)sender {
+    BOOL enabled = sender.isOn;
+    NSString *key = @"enable_modern_layout";
+    BOOL previousValue = !enabled;
+
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_REQUIRED_ALERT_TITLE"]
+                                                                   message:[[BHTBundle sharedBundle] localizedStringForKey:@"MODERN_LAYOUT_RESTART_MESSAGE"]
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"RESTART_NOW_BUTTON_TITLE"] style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
+        [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:key];
+        [[NSUserDefaults standardUserDefaults] synchronize];
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            exit(0);
+        });
+    }]];
+
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"] style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
+        // Revert switch state if cancelled
+        [sender setOn:previousValue animated:YES];
+    }]];
+
+    [self presentViewController:alert animated:YES completion:nil];
 }
 
 - (void)clearSourceLabelCacheAction:(PSSpecifier *)specifier {

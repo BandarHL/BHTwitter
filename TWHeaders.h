@@ -638,6 +638,7 @@ static UIViewController * _Nonnull topMostController() {
 + (void)initializeCookiesWithRetry;
 + (void)retryFetchCookies;
 + (void)updateFooterTextViewsForTweetID:(NSString *)tweetID;
++ (void)cleanupTimersForBackground;
 @end
 
 // Forward declaration for WKWebView
