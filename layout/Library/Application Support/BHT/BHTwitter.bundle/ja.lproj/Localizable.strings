@@ -1,5 +1,5 @@
 /*
-  Language: ja
+  Language: en
   NeoFreeBird
 */
 
@@ -50,7 +50,7 @@
 "SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE" = "カスタムURLを選択";
 
 "DISABLE_XCHAT_OPTION_TITLE" = "チャットを無効化";
-"DISABLE_XCHAT_OPTION_DETAIL_TITLE" = "サイドバーにある「チャット」ボタンを非表示にします。";
+"DISABLE_XCHAT_OPTION_DETAIL_TITLE" = "サイドバーにある [チャット] ボタンを非表示にします。";
 
 
 /*Tweets*/
