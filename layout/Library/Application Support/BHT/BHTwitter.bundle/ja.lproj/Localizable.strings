@@ -9,10 +9,11 @@
 /*Alerts and popups*/
 "RESTART_REQUIRED_ALERT_TITLE" = "再起動が必要です";
 "RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC" = "この変更を反映するには、Twitterを再起動する必要があります。";
-"RESTART_REQUIRED_ALERT_MESSAGE_SQUARE_AVATARS" = "この変更を反映するには、Twitterを再起動する必要があります。";
+"RESTART_REQUIRED_ALERT_MESSAGE_SQUARE_AVATARS" = "この変更を適用するには、アプリを再起動する必要があります。";
 "RESTART_REQUIRED_ALERT_MESSAGE_GENERIC" = "この変更を反映するには、Twitterを再起動する必要があります。";
 "RESTART_REQUIRED_ALERT_MESSAGE_NAVBAR" = "この変更を反映するには、Twitterを再起動する必要があります。";
-"RESTART_NOW_BUTTON_TITLE" = "再起動";
+"RESTART_NOW_BUTTON_TITLE" = "今すぐアプリを再起動";
+"MODERN_LAYOUT_RESTART_MESSAGE" = "モダンレイアウトとクラシックレイアウトを切り替えるには、アプリを再起動する必要があります。";
 
 "CONFIRM_ALERT_MESSAGE" = "続行しますか？";
 "YES_BUTTON_TITLE" = "はい";
@@ -47,6 +48,9 @@
 "STRIP_URL_TRACKING_PARAMETERS_TITLE" = "リンクのカスタマイズ";
 "STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE" = "リンクのカスタムURLを選択し、トラッキングを削除します。";
 "SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE" = "カスタムURLを選択";
+
+"DISABLE_XCHAT_OPTION_TITLE" = "チャットを無効化";
+"DISABLE_XCHAT_OPTION_DETAIL_TITLE" = "サイドバーにある [チャット] ボタンを非表示にします。";
 
 
 /*Tweets*/
@@ -346,3 +350,28 @@
 
 "VOICE_OPTION_TITLE" = "音声モード";
 "VOICE_OPTION_DETAIL_TITLE" = "音声を使用してツイートやリプライに返信します。";
+
+/*Modern Settings Layout*/
+
+"MODERN_SETTINGS_LAYOUT_TITLE" = "一般";
+"MODERN_SETTINGS_LAYOUT_SUBTITLE" = "カスタムフォント、ナビゲーションバーのテーマ、その他のオプションを使用して、タイムラインを自分好みにカスタマイズできます。";
+
+"MODERN_SETTINGS_MEDIA_TITLE" = "メディアとダウンロード";
+"MODERN_SETTINGS_MEDIA_SUBTITLE" = "動画のダウンロード、4Kアップロードの有効化、その他の改善。";
+
+"MODERN_SETTINGS_TWITTER_BLUE_TITLE" = "Twitter Blue";
+"MODERN_SETTINGS_TWITTER_BLUE_SUBTITLE" = "広告の非表示、ツイートの取り消し、テーマ、カスタムアプリアイコンなどのTwitter Blue機能のロックを解除しましょう";
+
+"MODERN_SETTINGS_PROFILES_TITLE" = "プロフィール";
+"MODERN_SETTINGS_PROFILES_SUBTITLE" = "プロフィールに表示する内容や操作方法を自由にカスタマイズできます。";
+
+"MODERN_SETTINGS_TWEETS_TITLE" = "ツイートと返信";
+"MODERN_SETTINGS_TWEETS_SUBTITLE" = "ツイートの外観を変更し、ソースラベルなどの昔の機能を復活させます。";
+
+"MODERN_SETTINGS_MESSAGES_TITLE" = "ダイレクトメッセージ";
+"MODERN_SETTINGS_MESSAGES_SUBTITLE" = "Twitterのメッセージ機能をカスタマイズします。";
+
+"MODERN_SETTINGS_EXPERIMENTAL_TITLE" = "実験的機能";
+"MODERN_SETTINGS_EXPERIMENTAL_SUBTITLE" = "不安定になる可能性がある機能を試してください。";
+
+"MODERN_SETTINGS_PLACEHOLDER_TITLE" = "ここには何もありません — 今はまだ。";
