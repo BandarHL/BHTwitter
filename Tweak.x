@@ -308,6 +308,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     if (![[NSUserDefaults standardUserDefaults] objectForKey:@"FirstRun_4.3"]) {
         [[NSUserDefaults standardUserDefaults] setValue:@"1strun" forKey:@"FirstRun_4.3"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"dw_v"];
+        [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"enable_modern_layout"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"hide_promoted"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"voice"];
         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"undo_tweet"];
@@ -4912,52 +4913,6 @@ static GeminiTranslator *_sharedInstance;
 }
 %end
 
-// MARK: Remove all sections from the Explore "for you" tab except the trending cells.
-static BOOL BHT_isInGuideContainerHierarchy(UIViewController *viewController) {
-    if (!viewController) return NO;
-    
-    // Check all view controllers up the hierarchy
-    UIViewController *currentVC = viewController;
-    while (currentVC) {
-        NSString *className = NSStringFromClass([currentVC class]);
-        
-        // Check for GuideContainerViewController (handles both naming variants)
-        if ([className containsString:@"GuideContainerViewController"]) {
-            return YES;
-        }
-        
-        // Move up the hierarchy
-        if (currentVC.parentViewController) {
-            currentVC = currentVC.parentViewController;
-        } else if (currentVC.navigationController) {
-            currentVC = currentVC.navigationController;
-        } else if (currentVC.presentingViewController) {
-            currentVC = currentVC.presentingViewController;
-        } else {
-            break;
-        }
-    }
-    
-    return NO;
-}
-
-// Hook TFNItemsDataViewController to filter sections array
-%hook TFNItemsDataViewController
-
-- (void)setSections:(NSArray *)sections {
-    // Only filter if we're in the GuideContainerViewController hierarchy
-    if (BHT_isInGuideContainerHierarchy(self)) {
-        // Keep only entry 3 (index 2), remove everything else
-        if (sections.count > 2) {
-            sections = @[sections[2]]; // Extract only the 3rd entry
-        }
-    }
-    
-    %orig(sections);
-}
-
-%end
-
 // Helper function to check if we're in the T1ConversationContainerViewController hierarchy
 static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewController) {
     if (!viewController) return NO;
@@ -5007,13 +4962,6 @@ static BOOL BHT_isInConversationContainerHierarchy(UIViewController *viewControl
     %orig(sections);
 }
 
-%end
-
-// MARK: should hopefully remove reply boost upsells
-%hook T1SubscriptionJourneyManager
-- (_Bool)shouldShowReplyBoostUpsellWithAccount {
-        return false;
-}
 %end
 
 %hook T1SuperFollowControl
