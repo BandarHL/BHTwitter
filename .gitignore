@@ -4,3 +4,4 @@
 classdump/
 autopush.sh
 *.ipa
+packages/stuff/*
