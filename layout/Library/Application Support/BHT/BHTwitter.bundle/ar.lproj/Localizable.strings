@@ -3,24 +3,30 @@
   NeoFreeBird
 */
 
+
 "BHTWITTER_SETTINGS_TITLE" = "NeoFreeBird";
 "BHTWITTER_SETTINGS_DETAIL" = "عدّل تويتر: أخفِ الإعلانات، فعّل ميزات Blue، والمزيد.";
-"SETTINGS_HEADER_TITLE" = "خصّص تجربتك على تويتر مع هذه الإعدادات";
+
+/*Alerts and popups*/
+"RESTART_REQUIRED_ALERT_TITLE" = "مطلوب إعادة التشغيل";
+"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC" = "يجب إعادة تشغيل تويتر لتفعيل هذا التغيير.";
+"RESTART_REQUIRED_ALERT_MESSAGE_SQUARE_AVATARS" = "لتطبيق هذا التغيير، يجب إعادة تشغيل تويتر.";
+"RESTART_REQUIRED_ALERT_MESSAGE_GENERIC" = "يجب إعادة تشغيل تويتر لتفعيل هذا التغيير.";
+"RESTART_REQUIRED_ALERT_MESSAGE_NAVBAR" = "أعد تشغيل تويتر لتفعيل التنقل المخصص.";
+"RESTART_NOW_BUTTON_TITLE" = "أعد التشغيل الآن";
+"MODERN_LAYOUT_RESTART_MESSAGE" = "للتبديل بين التخطيط الحديث والكلاسيكي، يجب إعادة تشغيل تويتر.";
 
 "CONFIRM_ALERT_MESSAGE" = "هل أنت متأكد أنك تقصد ذلك؟";
 "YES_BUTTON_TITLE" = "نعم";
 "NO_BUTTON_TITLE" = "لا";
 "OK_BUTTON_TITLE" = "موافق";
 "CANCEL_BUTTON_TITLE" = "إلغاء";
-
+"SAVE_BUTTON_TITLE" = "حفظ";
 
 /*Main menu start*/
 
 /*General*/
 "MAIN_SECTION_HEADER_TITLE" = "عام";
-
-"VOICE_OPTION_TITLE" = "تغريدات صوتية";
-"VOICE_OPTION_DETAIL_TITLE" = "تفعيل أو تعطيل التغريدات الصوتية (iOS فقط).";
 
 "UPLOAD_CUSTOM_VOICE_OPTION_TITLE" = "تغريدات صوتية";
 "UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE" = "تفعيل أو تعطيل التغريدات الصوتية (iOS فقط).";
@@ -31,6 +37,9 @@
 "HIDE_TOPICS_TO_FOLLOW_OPTION" = "لا 'مواضيع للمتابعة'";
 "HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "إزالة المواضيع المقترحة.";
 
+"HIDE_WHO_FOLLOW_OPTION" = "لا 'من تتابع'";
+"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE" = "إخفاء اقتراحات المتابعة.";
+
 "PADLOCK_OPTION_TITLE" = "قفل تويتر";
 "PADLOCK_OPTION_DETAIL_TITLE" = "يتطلب Face ID أو رمز مرور لفتح تويتر.";
 
@@ -40,6 +49,9 @@
 "STRIP_URL_TRACKING_PARAMETERS_TITLE" = "تخصيص الروابط";
 "STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE" = "اختر رابطًا مخصصًا واحذف التتبع.";
 "SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE" = "اختيار رابط مخصص";
+
+"DISABLE_XCHAT_OPTION_TITLE" = "تعطيل XChat";
+"DISABLE_XCHAT_OPTION_DETAIL_TITLE" = "إزالة زر XChat من الشريط الجانبي.";
 
 
 /*Tweets*/
@@ -68,6 +80,25 @@
 
 "DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE" = "بدون تحذيرات محتوى حساس";
 
+"HIDE_GROK_ANALYZE_BUTTON_TITLE" = "إخفاء أزرار تحليل Grok";
+"HIDE_GROK_ANALYZE_BUTTON_DETAIL_TITLE" = "إخفاء زر Grok Analyze في التغريدات.";
+
+"SQUARE_AVATARS_TITLE" = "صور ملف شخصي مربعة";
+"SQUARE_AVATARS_DETAIL_TITLE" = "يعرض صور ملف شخصي مربعة للجميع، مثل الحسابات التجارية في تويتر القديم.";
+
+"REPLY_SORTING_TITLE" = "بدون ترتيب للردود";
+"REPLY_SORTING_DETAIL_TITLE" = "تعطيل ميزة ترتيب الردود في المحادثات.";
+
+"RESTORE_REPLY_CONTEXT_TITLE" = "استعادة سياق الرد";
+"RESTORE_REPLY_CONTEXT_DETAIL_TITLE" = "يعرض لمن تم توجيه الرد أسفل التغريدة.";
+
+"ENABLE_TRANSLATE_OPTION_TITLE" = "زر الترجمة بالذكاء الاصطناعي (تجريبي)";
+"ENABLE_TRANSLATE_OPTION_DETAIL_TITLE" = "إضافة زر ترجمة بتقنية الذكاء الاصطناعي للتغريدات بلغة مختلفة. يتطلب مفتاح API.";
+
+"TRANSLATE_ENDPOINT_OPTION_TITLE" = "عنوان API";
+"TRANSLATE_API_KEY_OPTION_TITLE" = "مفتاح API";
+"TRANSLATE_MODEL_OPTION_TITLE" = "النموذج";
+
 
 /*Profiles*/
 "PROFILES_SECTION_HEADER_TITLE" = "الملفات الشخصية";
@@ -81,9 +112,6 @@
 "BIO_TRANSALTE_OPTION_TITLE" = "ترجمة النبذات";
 "BIO_TRANSALTE_OPTION_DETAIL_TITLE" = "عرض النبذة بلغتك.";
 
-"HIDE_WHO_FOLLOW_OPTION" = "لا 'من تتابع'";
-"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE" = "إخفاء اقتراحات المتابعة.";
-
 "DISABLE_MEDIA_TAB_OPTION_TITLE" = "بدون تبويبات وسائط منفصلة";
 "DISABLE_MEDIA_TAB_OPTION_DETAIL_TITLE" = "دمج الصور والفيديو في تبويب واحد.";
 
@@ -92,6 +120,12 @@
 
 "DISABLE_HIGHLIGHTS_OPTION_TITLE" = "بدون تبويب أبرز التغريدات";
 "DISABLE_HIGHLIGHTS_OPTION_DETAIL_TITLE" = "إخفاء تبويب المميز.";
+
+"HIDE_FOLLOW_BUTTON_TITLE" = "بدون زر متابعة في التغريدات";
+"HIDE_FOLLOW_BUTTON_DETAIL_TITLE" = "إخفاء زر المتابعة في التغريدات.";
+
+"RESTORE_FOLLOW_BUTTON_TITLE" = "بدون زر الاشتراك";
+"RESTORE_FOLLOW_BUTTON_DETAIL_TITLE" = "إخفاء زر الاشتراك في التغريدات والملفات الشخصية.";
 
 
 /*Search*/
@@ -104,18 +138,32 @@
 "HIDE_TREND_VIDEOS_OPTION_DETAIL_TITLE" = "إخفاء الفيديوهات الرائجة من البحث.";
 
 
+/*Messages*/
+"MESSAGES_SECTION_HEADER_TITLE" = "الرسائل";
+
+"DM_AVATARS_TITLE" = "صور الملف في الرسائل الخاصة";
+"DM_AVATARS_DETAIL_TITLE" = "إضافة صور ملف شخصي لجميع المستلمين، وليس فقط في المجموعات.";
+
+"DM_COMPOSE_BAR_V2_TITLE" = "شريط كتابة قديم";
+"DM_COMPOSE_BAR_V2_DETAIL_TITLE" = "استخدم شريط كتابة الرسائل القديم.";
+
+"DM_VOICE_CREATION_TITLE" = "لا رسائل صوتية";
+"DM_VOICE_CREATION_DETAIL_TITLE" = "تعطيل إرسال الرسائل الصوتية في شريط الكتابة.";
+
+
 /*Photos & Videos*/
 "PHOTOS_VIDEOS_SECTION_HEADER_TITLE" = "الصور والفيديو";
 
 "AUTO_HIGHEST_LOAD_OPTION_TITLE" = "وسائط عالية الجودة";
 "AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE" = "رفع وعرض الوسائط بأفضل جودة متوفرة.";
 
+
 "DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "بدون ترجمات للفيديو";
 
 "FORCE_TWEET_FULL_FRAME_TITLE" = "صور كبيرة";
 
-"DISABLE_IMMERSIVE_PLAYER_TITLE" = "إيقاف المشغل الغامر";
-
+"RESTORE_VIDEO_TIMESTAMP_TITLE" = "الطابع الزمني للفيديو";
+"RESTORE_VIDEO_TIMESTAMP_DETAIL_TITLE" = "عرض الطابع الزمني في مشغل الفيديو الكامل.";
 
 /*Twitter Blue*/
 "TWITTER_BLUE_SECTION_HEADER_TITLE" = "تويتر Blue";
@@ -129,6 +177,9 @@
 
 "READER_MODE_OPTION_TITLE" = "وضع القراءة";
 "READER_MODE_OPTION_DETAIL_TITLE" = "قراءة السلاسل الطويلة بسهولة.";
+
+"MEDIA_UPLOAD_4K_ENABLED_OPTION_TITLE" = "رفع بدقة 4K";
+"MEDIA_UPLOAD_4K_ENABLED_OPTION_DETAIL_TITLE" = "رفع الصور ومقاطع الفيديو بدقة 4K.";
 
 "DOWNLOAD_VIDEOS_OPTION_TITLE" = "تحميل الوسائط";
 "DOWNLOAD_VIDEOS_OPTION_DETAIL_TITLE" = "حفظ الفيديوهات أو الصور المتحركة مباشرة.";
@@ -160,6 +211,9 @@
 "STOP_HIDING_TAB_BAR_TITLE" = "إبقاء شريط التبويبات مرئيًا";
 "STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "لا تُخفِ الشريط عند التمرير.";
 
+"CLASSIC_TAB_BAR_SETTINGS_TITLE" = "شريط تنقل كلاسيكي";
+"CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "تطبيق لون التمييز على عنصر التنقل المحدد.";
+
 "DISABLE_RTL_OPTION_TITLE" = "استخدام تخطيط من اليسار لليمين";
 "DISABLE_RTL_OPTION_DETAIL_TITLE" = "فرض تخطيط LTR حتى في اللغات RTL.";
 
@@ -186,9 +240,18 @@
 "FLEX_OPTION_TITLE" = "وضع تصحيح FLEX";
 "FLEX_OPTION_DETAIL_TITLE" = "استخدم FLEX لتصحيح تويتر.";
 
+"CLEAR_SOURCE_LABEL_CACHE_TITLE" = "مسح الكوكيز";
+"CLEAR_SOURCE_LABEL_CACHE_DETAIL_TITLE" = "مسح كوكيز تسميات المصدر وإجبارها على التحديث.";
+"CLEAR_CACHE_BUTTON_TITLE" = "مسح";
+"CACHE_CLEARED_TITLE" = "تم مسح الكوكيز";
+"CACHE_CLEARED_MESSAGE" = "تم مسح كوكيز تسميات المصدر. إذا لم تكن تظهر، يجب أن تظهر الآن.";
+
 
 /*Developers*/
 "DEVELOPER_SECTION_HEADER_TITLE" = "المطورون";
+
+
+/*Main menu end*/
 
 
 /*Custom fonts*/
@@ -197,18 +260,28 @@
 "CUSTOM_FONTS_MENU_TITLE" = "\nاختيار خط";
 "CUSTOM_FONTS_TUT_ALERT_MESSAGE" = "لا توجد خطوط مخصصة بعد. ثبّت تطبيق iFont من App Store.";
 
-
-/*Download*/
+/*Dwonload*/
 "DOWNLOAD_MENU_TITLE" = "\nاختيار جودة الفيديو";
 "PROGRESS_DOWNLOADING_STATUS_TITLE" = "جارٍ التحميل...";
 "FETCHING_PROGRESS_TITLE" = "لحظة فقط...";
 "FFMPEG_DOWNLOAD_OPTION_TITLE" = "التحميل باستخدام FFmpeg";
 
-
 /*App icon*/
 "APP_ICON_NAV_TITLE" = "تغيير أيقونة التطبيق";
 "APP_ICON_HEADER_TITLE" = "اختر أيقونة أو مظهرًا جديدًا لتويتر.";
-
+"APP_ICON_SEASONS_HEADER_TITLE" = "الفصول";
+"APP_ICON_SEASONS_HEADER_DETAIL" = "اجعل أيقونة التطبيق تتطابق مع الفصل الحالي.";
+"APP_ICON_HOLIDAYS_HEADER_TITLE" = "العطلات";
+"APP_ICON_HOLIDAYS_HEADER_DETAIL" = "احتفل بالمناسبات مع أيقونة تطبيق مخصصة.";
+"APP_ICON_SPORTS_HEADER_TITLE" = "الرياضة";
+"APP_ICON_SPORTS_HEADER_DETAIL" = "اعرض رياضتك المفضلة بأيقونة مخصصة.";
+"APP_ICON_EVENTS_HEADER_TITLE" = "الفعاليات";
+"APP_ICON_EVENTS_HEADER_DETAIL" = "احتفل بالفعاليات الخاصة بأيقونة تطبيق مخصصة.";
+"APP_ICON_PRIDE_HEADER_TITLE" = "الفخر";
+"APP_ICON_PRIDE_HEADER_DETAIL" = "عبّر عن نفسك بأيقونة بتصميم فخر.";
+"APP_ICON_LEGACY_HEADER_TITLE" = "قديم";
+"APP_ICON_LEGACY_HEADER_DETAIL" = "العودة إلى أيقونات تويتر القديمة.";
+"APP_ICON_OTHER_HEADER_TITLE" = "أخرى";
 
 /*Copy profile info*/
 "COPY_PROFILE_INFO_MENU_OPTION_1" = "نسخ النبذة";
@@ -217,9 +290,9 @@
 "COPY_PROFILE_INFO_MENU_OPTION_4" = "نسخ رابط النبذة";
 "COPY_PROFILE_INFO_MENU_OPTION_5" = "نسخ الموقع";
 
-
 /*Theme*/
 "THEME_SETTINGS_NAVIGATION_TITLE" = "تغيير المظهر";
+"THEME_SETTINGS_NAVIGATION_DETAIL" = "اختر لون سمة مرئي لك فقط.";
 "THEME_OPTION_1" = "أزرق";
 "THEME_OPTION_2" = "أصفر";
 "THEME_OPTION_3" = "أحمر";
@@ -227,27 +300,39 @@
 "THEME_OPTION_5" = "برتقالي";
 "THEME_OPTION_6" = "أخضر";
 
-
 /*Tab bar*/
 "CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE" = "تعديل شريط التبويبات";
-"CUSTOM_TAB_BAR_REST_MESSAGE" = "هل أنت متأكد أنك تريد إعادة ضبط الشريط؟";
+"CUSTOM_TAB_BAR_NAVIGATION_DETAIL" = "خصص شريط التنقل باستخدام أقسام تويتر التي تستخدمها أكثر.";
+"CUSTOM_TAB_BAR_HOME" = "الرئيسية";
+"CUSTOM_TAB_BAR_EXPLORE" = "استكشاف";
+"CUSTOM_TAB_BAR_SPACES" = "مساحات";
+"CUSTOM_TAB_BAR_COMMUNITIES" = "مجتمعات";
+"CUSTOM_TAB_BAR_NOTIFICATIONS" = "الإشعارات";
+"CUSTOM_TAB_BAR_MESSAGES" = "الرسائل";
+"CUSTOM_TAB_BAR_GROK" = "Grok";
+"CUSTOM_TAB_BAR_VIDEO" = "فيديو";
 "CUSTOM_TAB_BAR_SECTION_1_TITLE" = "مُفعل";
 "CUSTOM_TAB_BAR_SECTION_2_TITLE" = "معطل";
-"CUSTOM_TAB_BAR_OPTION_1" = "الرئيسية";
-"CUSTOM_TAB_BAR_OPTION_2" = "استكشاف";
-"CUSTOM_TAB_BAR_OPTION_3" = "المساحات";
-"CUSTOM_TAB_BAR_OPTION_4" = "المجتمعات";
-"CUSTOM_TAB_BAR_OPTION_5" = "الإشعارات";
-"CUSTOM_TAB_BAR_OPTION_6" = "الرسائل";
-"CUSTOM_TAB_BAR_OPTION_7" = "Grok";
-"CUSTOM_TAB_BAR_OPTION_8" = "فيديو";
+"CUSTOM_TAB_BAR_RESET_BUTTON" = "إعادة للوضع الافتراضي";
+"CUSTOM_TAB_BAR_RESET_MESSAGE" = "هل أنت متأكد أنك تريد استعادة شريط التنقل إلى الإعدادات الافتراضية؟";
 
+
+/* Classic navigation bar */
+"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_ON" = "يجب إعادة تشغيل تويتر لتفعيل هذا الإعداد.";
+"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_OFF" = "للتعطيل والعودة للأيقونات الافتراضية، أعد تشغيل تويتر.";
+"CLASSIC_TAB_BAR_DISABLED_NOTIFICATION_NAME" = "BHTClassicTabBarSettingChangedNotification";
+
+/* Restore tab labels */
+"RESTORE_TAB_LABELS_TITLE" = "تسميات التنقل";
+"RESTORE_TAB_LABELS_DETAIL" = "عرض التسميات أسفل الأيقونات في شريط التنقل كما في تويتر القديم.";
 
 /*Message customization*/
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_1" = "استخدام صورة";
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_2" = "استخدام لون";
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_3" = "العودة إلى الافتراضي";
 
+/*Refresh pill text*/
+"REFRESH_PILL_TEXT" = "تم التغريد";
 
 /*Deprecated*/
 "TRUSTED_FRIENSS_OPTION_TITLE" = "دوائر تويتر";
@@ -263,3 +348,31 @@
 
 "VIDEO_ZOOM_OPTION_TITLE" = "تكبير الفيديو";
 "VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "انقر مرتين للتكبير أو التصغير.";
+
+"VOICE_OPTION_TITLE" = "تغريدات صوتية";
+"VOICE_OPTION_DETAIL_TITLE" = "تفعيل أو تعطيل التغريدات الصوتية (iOS فقط).";
+
+/*Modern Settings Layout*/
+
+"MODERN_SETTINGS_LAYOUT_TITLE" = "عام";
+"MODERN_SETTINGS_LAYOUT_SUBTITLE" = "خصص الخطوط، الألوان، والمزيد من مظهر الخط الزمني الخاص بك.";
+
+"MODERN_SETTINGS_MEDIA_TITLE" = "الوسائط";
+"MODERN_SETTINGS_MEDIA_SUBTITLE" = "تنزيل الفيديوهات، تفعيل الطوابع الزمنية، والمزيد.";
+
+"MODERN_SETTINGS_TWITTER_BLUE_TITLE" = "تويتر الأزرق";
+"MODERN_SETTINGS_TWITTER_BLUE_SUBTITLE" = "تجربة خالية من الإعلانات والوصول لميزات Blue مثل التراجع عن التغريدة، السمات، وأيقونات مخصصة.";
+
+"MODERN_SETTINGS_PROFILES_TITLE" = "الملف الشخصي";
+"MODERN_SETTINGS_PROFILES_SUBTITLE" = "غيّر ما تراه في ملفات المستخدمين.";
+
+"MODERN_SETTINGS_TWEETS_TITLE" = "التغريدات والردود";
+"MODERN_SETTINGS_TWEETS_SUBTITLE" = "غيّر طريقة عمل التغريدات واحذف الميزات غير المستخدمة.";
+
+"MODERN_SETTINGS_MESSAGES_TITLE" = "الرسائل";
+"MODERN_SETTINGS_MESSAGES_SUBTITLE" = "خصص تجربة الرسائل على تويتر.";
+
+"MODERN_SETTINGS_EXPERIMENTAL_TITLE" = "تجريبي";
+"MODERN_SETTINGS_EXPERIMENTAL_SUBTITLE" = "جرّب الميزات غير المستقرة.";
+
+"MODERN_SETTINGS_PLACEHOLDER_TEXT" = "لا يوجد شيء هنا — حتى الآن.";

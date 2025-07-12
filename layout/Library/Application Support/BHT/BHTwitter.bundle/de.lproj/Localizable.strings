@@ -1,0 +1,376 @@
+/*
+  Language: de
+  NeoFreeBird
+*/
+
+"BHTWITTER_SETTINGS_TITLE" = "NeoFreeBird";
+"BHTWITTER_SETTINGS_DETAIL" = "Passe dein Twitter-Erlebnis an. Verstecke Werbung, aktiviere Blue-Funktionen und mehr.";
+
+/*Alerts and popups*/
+"RESTART_REQUIRED_ALERT_TITLE" = "Neustart erforderlich";
+"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC" = "Twitter muss neu gestartet werden, damit diese Änderung wirksam wird.";
+"RESTART_REQUIRED_ALERT_MESSAGE_SQUARE_AVATARS" = "Um diese Änderung anzuwenden, muss Twitter neu gestartet werden.";
+"RESTART_REQUIRED_ALERT_MESSAGE_GENERIC" = "Twitter muss neu gestartet werden, damit diese Änderung wirksam wird.";
+"RESTART_REQUIRED_ALERT_MESSAGE_NAVBAR" = "Starte Twitter neu, um deine benutzerdefinierte Navigation zu aktivieren.";
+"RESTART_NOW_BUTTON_TITLE" = "Jetzt neu starten";
+"MODERN_LAYOUT_RESTART_MESSAGE" = "Um zwischen modernem und klassischem Layout zu wechseln, muss Twitter neu gestartet werden.";
+
+"CONFIRM_ALERT_MESSAGE" = "Bist du dir sicher, dass du das tun wolltest?";
+"YES_BUTTON_TITLE" = "Ja";
+"NO_BUTTON_TITLE" = "Nein";
+"OK_BUTTON_TITLE" = "OK";
+"CANCEL_BUTTON_TITLE" = "Abbrechen";
+"SAVE_BUTTON_TITLE" = "Speichern";
+
+/*Main menu start*/
+
+/*General*/
+"MAIN_SECTION_HEADER_TITLE" = "Allgemein";
+
+"UPLOAD_CUSTOM_VOICE_OPTION_TITLE" = "Sprachnachrichten";
+"UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE" = "Sprach-Tweets ein- oder ausschalten (nur iOS).";
+
+"HIDE_TOPICS_OPTION_TITLE" = "Keine Themen-Tweets";
+"HIDE_TOPICS_OPTION_DETAIL_TITLE" = "Tweets zu vorgeschlagenen Themen entfernen.";
+
+"HIDE_TOPICS_TO_FOLLOW_OPTION" = "Keine „Themen zum Folgen“";
+"HIDE_TOPICS_TO_FOLLOW_OPTION_DETAIL_TITLE" = "Vorgeschlagene Themen entfernen.";
+
+"HIDE_WHO_FOLLOW_OPTION" = "Keine „Wem folgen?“";
+"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE" = "Folge-Empfehlungen entfernen.";
+
+"PADLOCK_OPTION_TITLE" = "Twitter sperren";
+"PADLOCK_OPTION_DETAIL_TITLE" = "Face ID oder einen Code verlangen, um Twitter zu öffnen.";
+
+"ALWAYS_OPEN_SAFARI_OPTION_TITLE" = "Externen Browser verwenden";
+"ALWAYS_OPEN_SAFARI_OPTION_DETAIL_TITLE" = "Links in Safari oder deinem Standardbrowser öffnen.";
+
+"STRIP_URL_TRACKING_PARAMETERS_TITLE" = "Links anpassen";
+"STRIP_URL_TRACKING_PARAMETERS_DETAIL_TITLE" = "Wähle eine benutzerdefinierte URL für Links und entferne Tracking.";
+"SELECT_URL_HOST_AFTER_COPY_OPTION_TITLE" = "Wähle eine benutzerdefinierte URL";
+
+"DISABLE_XCHAT_OPTION_TITLE" = "XChat deaktivieren";
+"DISABLE_XCHAT_OPTION_DETAIL_TITLE" = "Entfernt die XChat-Schaltfläche aus der Seitenleiste.";
+
+
+/*Tweets*/
+"TWEETS_SECTION_HEADER_TITLE" = "Tweets";
+
+"ORIG_TWEET_STYLE_OPTION_TITLE" = "Kompakte Ansicht deaktivieren";
+"ORIG_TWEET_STYLE_OPTION_DETAIL_TITLE" = "Zeige Likes, Retweets und Antworten in einer separaten Zeile anstatt inline in der Tweet-Detailansicht.";
+
+"TWEET_TO_IMAGE_OPTION_TITLE" = "Tweet als Bild speichern";
+"TWEET_TO_IMAGE_OPTION_DETAIL_TITLE" = "Halte die Teilen-Taste gedrückt, um Tweets als Bilder zu exportieren.";
+
+"ENABLE_TWEET_LABELS_OPTION_TITLE" = "Tweet-Quellenbeschriftungen anzeigen (Beta)";
+"ENABLE_TWEET_LABELS_OPTION_DETAIL_TITLE" = "Zeigt, mit welchem Client der Tweet erstellt wurde.";
+
+"LIKE_CONFIRM_OPTION_TITLE" = "Likes bestätigen";
+"LIKE_CONFIRM_OPTION_DETAIL_TITLE" = "Vor dem Liken eines Tweets nachfragen.";
+
+"TWEET_CONFIRM_OPTION_TITLE" = "Tweets bestätigen";
+"TWEET_CONFIRM_OPTION_DETAIL_TITLE" = "Vor dem Posten eines Tweets nachfragen.";
+
+"HIDE_VIEW_COUNT_OPTION_TITLE" = "Aufrufe ausblenden";
+"HIDE_VIEW_COUNT_OPTION_DETAIL_TITLE" = "Aufrufe unter Tweets nicht anzeigen.";
+
+"HIDE_MARKBOOK_BUTTON_OPTION_TITLE" = "Lesezeichen ausblenden";
+"HIDE_MARKBOOK_BUTTON_OPTION_DETAIL_TITLE" = "Entferne den Lesezeichen-Button aus Tweets.";
+
+"DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE" = "Keine Warnungen wegen sensibler Inhalte";
+
+"HIDE_GROK_ANALYZE_BUTTON_TITLE" = "Grok-Analyse-Schaltfläche ausblenden";
+"HIDE_GROK_ANALYZE_BUTTON_DETAIL_TITLE" = "Blendet die Grok-Analyse-Schaltfläche in Tweets aus.";
+
+"SQUARE_AVATARS_TITLE" = "Quadratische Profilbilder";
+"SQUARE_AVATARS_DETAIL_TITLE" = "Zeigt für alle Nutzer quadratische Profilbilder wie bei Marken im alten Twitter.";
+
+"REPLY_SORTING_TITLE" = "Keine Antwortsortierung";
+"REPLY_SORTING_DETAIL_TITLE" = "Deaktiviert die Sortierung von Antworten in Tweet-Unterhaltungen.";
+
+"RESTORE_REPLY_CONTEXT_TITLE" = "Antwortkontext wiederherstellen";
+"RESTORE_REPLY_CONTEXT_DETAIL_TITLE" = "Zeigt unter dem Tweet an, auf wen geantwortet wurde.";
+
+"ENABLE_TRANSLATE_OPTION_TITLE" = "KI-Übersetzungsschaltfläche (Beta)";
+"ENABLE_TRANSLATE_OPTION_DETAIL_TITLE" = "Fügt Tweets, die nicht in deiner Sprache sind, eine KI-Übersetzungsschaltfläche hinzu. Erfordert einen API-Schlüssel.";
+
+"TRANSLATE_ENDPOINT_OPTION_TITLE" = "API-Endpunkt";
+"TRANSLATE_API_KEY_OPTION_TITLE" = "API-Schlüssel";
+"TRANSLATE_MODEL_OPTION_TITLE" = "Modell";
+
+
+/*Profiles*/
+"PROFILES_SECTION_HEADER_TITLE" = "Profile";
+
+"FOLLOW_CONFIRM_OPTION_TITLE" = "Folgen bestätigen";
+"FOLLOW_CONFIRM_OPTION_DETAIL_TITLE" = "Vor dem Folgen nachfragen.";
+
+"COPY_PROFILE_INFO_OPTION_TITLE" = "Profildetails kopieren";
+"COPY_PROFILE_INFO_OPTION_DETAIL_TITLE" = "Benutzernamen, Bios und mehr mit einem Tipp kopieren.";
+
+"BIO_TRANSALTE_OPTION_TITLE" = "Bios übersetzen";
+"BIO_TRANSALTE_OPTION_DETAIL_TITLE" = "Bios in deiner Sprache anzeigen.";
+
+"DISABLE_MEDIA_TAB_OPTION_TITLE" = "Kein separater Medien-Tab";
+"DISABLE_MEDIA_TAB_OPTION_DETAIL_TITLE" = "Fasst die Tabs „Fotos“ und „Videos“ zu einem Tab zusammen.";
+
+"DISABLE_ARTICLES_OPTION_TITLE" = "Kein Artikel-Tab";
+"DISABLE_ARTICLES_OPTION_DETAIL_TITLE" = "Blendet den Artikel-Tab in Profilen aus.";
+
+"DISABLE_HIGHLIGHTS_OPTION_TITLE" = "Kein Highlights-Tab";
+"DISABLE_HIGHLIGHTS_OPTION_DETAIL_TITLE" = "Blendet den Highlights-Tab in Profilen aus.";
+
+"HIDE_FOLLOW_BUTTON_TITLE" = "Keine Folgen-Schaltfläche bei Tweets";
+"HIDE_FOLLOW_BUTTON_DETAIL_TITLE" = "Blendet die Folgen-Schaltfläche in Tweets aus.";
+
+"RESTORE_FOLLOW_BUTTON_TITLE" = "Keine Abonnieren-Schaltfläche";
+"RESTORE_FOLLOW_BUTTON_DETAIL_TITLE" = "Blendet die Abonnieren-Schaltfläche in Tweets und Profilen aus.";
+
+
+/*Search*/
+"SEARCH_SECTION_HEADER_TITLE" = "Suche";
+
+"NO_HISTORY_OPTION_TITLE" = "Kein Suchverlauf";
+"NO_HISTORY_OPTION_DETAIL_TITLE" = "Twitter wird deine Suchanfragen nicht mehr speichern.";
+
+"HIDE_TREND_VIDEOS_OPTION_TITLE" = "Keine trendenden Videos";
+"HIDE_TREND_VIDEOS_OPTION_DETAIL_TITLE" = "Entferne die trendenden Videos aus dem Suchmenü.";
+
+
+/*Messages*/
+"MESSAGES_SECTION_HEADER_TITLE" = "Nachrichten";
+
+"DM_AVATARS_TITLE" = "Profilbilder in DMs";
+"DM_AVATARS_DETAIL_TITLE" = "Fügt Profilbilder für alle Empfänger hinzu, nicht nur in Gruppen.";
+
+"DM_COMPOSE_BAR_V2_TITLE" = "Alte Eingabeleiste";
+"DM_COMPOSE_BAR_V2_DETAIL_TITLE" = "Verwendet die alte Eingabeleiste für Nachrichten.";
+
+"DM_VOICE_CREATION_TITLE" = "Keine Sprachnachrichten";
+"DM_VOICE_CREATION_DETAIL_TITLE" = "Deaktiviert Sprachnachrichten in der Eingabeleiste.";
+
+
+/*Photos & Videos*/
+"PHOTOS_VIDEOS_SECTION_HEADER_TITLE" = "Fotos und Videos";
+
+"AUTO_HIGHEST_LOAD_OPTION_TITLE" = "Hochqualitative Medien";
+"AUTO_HIGHEST_LOAD_OPTION_DETAIL_TITLE" = "Fotos und Videos stets in höchster verfügbarer Auflösung laden.";
+
+"DISABLE_VIDEO_LAYER_CAPTIONS_OPTION_TITLE" = "Keine Videountertitel";
+
+"FORCE_TWEET_FULL_FRAME_TITLE" = "Große Bilder";
+
+"RESTORE_VIDEO_TIMESTAMP_TITLE" = "Video-Zeitstempel";
+"RESTORE_VIDEO_TIMESTAMP_DETAIL_TITLE" = "Zeigt Zeitstempel im Vollbild-Videoplayer an.";
+
+/*Twitter Blue*/
+"TWITTER_BLUE_SECTION_HEADER_TITLE" = "Twitter Blue";
+"TWITTER_BLUE_SECTION_FOOTER_TITLE" = "Starte Twitter neu, um die Änderungen anzuwenden.";
+
+"HIDE_ADS_OPTION_TITLE" = "Keine Werbung";
+"HIDE_ADS_OPTION_DETAIL_TITLE" = "Alle Werbeanzeigen entfernen.";
+
+"UNDO_TWEET_OPTION_TITLE" = "Tweet zurücknehmen";
+"UNDO_TWEET_OPTION_DETAIL_TITLE" = "Füge eine kurze Verzögerung ein, bevor Tweets gesendet werden, damit du sie zurücknehmen kannst.";
+
+"READER_MODE_OPTION_TITLE" = "Lesemodus";
+"READER_MODE_OPTION_DETAIL_TITLE" = "Lange Threads ohne Ablenkung lesen.";
+
+"MEDIA_UPLOAD_4K_ENABLED_OPTION_TITLE" = "In 4K hochladen";
+"MEDIA_UPLOAD_4K_ENABLED_OPTION_DETAIL_TITLE" = "Fotos und Videos in 4K hochladen.";
+
+"DOWNLOAD_VIDEOS_OPTION_TITLE" = "Medien herunterladen";
+"DOWNLOAD_VIDEOS_OPTION_DETAIL_TITLE" = "Speichere Videos oder GIFs direkt aus Tweets.";
+
+"DIRECT_SAVE_OPTION_TITLE" = "In „Fotos“ speichern";
+"DIRECT_SAVE_OPTION_DETAIL_TITLE" = "Gespeicherte Videos werden direkt in deiner Fotos-App abgelegt.";
+
+"HIDE_PREMIUM_OFFER_OPTION" = "Keine Twitter-Blue-Hinweise";
+"HIDE_PREMIUM_OFFER_OPTION_DETAIL_TITLE" = "Entferne die Buttons „Verifiziert werden“ und „Upgrade“.";
+
+"THEME_OPTION_TITLE" = "Theme ändern";
+"THEME_OPTION_DETAIL_TITLE" = "Wähle ein Theme. Nur du wirst es sehen.";
+
+"APP_ICON_TITLE" = "App-Symbol ändern";
+"APP_ICON_DETAIL_TITLE" = "Wähle ein anderes App-Symbol.";
+
+"CUSTOM_TAB_BAR_OPTION_TITLE" = "Navigationsleiste bearbeiten";
+
+
+/*Layout*/
+"LAYOUT_CUS_SECTION_HEADER_TITLE" = "Layout";
+"LAYOUT_CUS_SECTION_FOOTER_TITLE" = "Starte Twitter neu, um die Änderungen anzuwenden.";
+
+"CUSTOM_DIRECT_BACKGROUND_VIEW_TITLE" = "Benutzerdefinierter Nachrichten-Hintergrund";
+"CUSTOM_DIRECT_BACKGROUND_VIEW_DETAIL_TITLE" = "Wähle einen benutzerdefinierten Hintergrund für deine Direktnachrichten.";
+
+"HIDE_SPACE_OPTION_TITLE" = "Spaces-Leiste ausblenden";
+
+"STOP_HIDING_TAB_BAR_TITLE" = "Navigationsleiste sichtbar lassen";
+"STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "Navigationsleiste beim Scrollen nicht ausblenden.";
+
+"CLASSIC_TAB_BAR_SETTINGS_TITLE" = "Klassische Navigationsleiste";
+"CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "Wendet deine Akzentfarbe auf das gewählte Navigationselement an.";
+
+"DISABLE_RTL_OPTION_TITLE" = "Links-nach-rechts-Layout verwenden";
+"DISABLE_RTL_OPTION_DETAIL_TITLE" = "Erzwingt ein Links-nach-Rechts-Layout, selbst für Sprachen, die von rechts nach links gelesen werden.";
+
+"SHOW_SCOLL_INDICATOR_OPTION_TITLE" = "Scrollleiste immer anzeigen";
+
+"FONT_OPTION_TITLE" = "Benutzerdefinierte Schriftarten";
+"FONT_OPTION_DETAIL_TITLE" = "Wähle eine benutzerdefinierte Schriftart für Twitter.";
+
+"REQULAR_FONTS_PICKER_OPTION_TITLE" = "Eine Schriftart wählen";
+
+"BOLD_FONTS_PICKER_OPTION_TITLE" = "Eine fette Schriftart wählen";
+
+
+/*Legal*/
+"LEGAL_SECTION_HEADER_TITLE" = "Rechtliches";
+
+"LEGAL_BUTTON_TITLE" = "Rechtliche Hinweise";
+"ACKNOWLEDGEMENTS_SETTINGS_NAVIGATION_TITLE" = "Rechtliche Hinweise";
+
+
+/*Debug*/
+"DEBUG_SECTION_HEADER_TITLE" = "Debuggen";
+
+"FLEX_OPTION_TITLE" = "FLEX-Debug-Modus";
+"FLEX_OPTION_DETAIL_TITLE" = "FLEX verwenden, um Twitter zu debuggen.";
+
+"CLEAR_SOURCE_LABEL_CACHE_TITLE" = "Cookies löschen";
+"CLEAR_SOURCE_LABEL_CACHE_DETAIL_TITLE" = "Löscht Quellbezeichnungs-Cookies und erzwingt ein Neuladen.";
+"CLEAR_CACHE_BUTTON_TITLE" = "Löschen";
+"CACHE_CLEARED_TITLE" = "Cookies gelöscht";
+"CACHE_CLEARED_MESSAGE" = "Die Quellbezeichnungs-Cookies wurden gelöscht. Sollten diese zuvor nicht angezeigt worden sein, erscheinen sie jetzt.";
+
+
+/*Developers*/
+"DEVELOPER_SECTION_HEADER_TITLE" = "Entwickler";
+
+
+/*Main menu end*/
+
+
+/*Custom fonts*/
+"CUSTOM_FONTS_NAVIGATION_BUTTON_TITLE" = "Benutzerdefinierte Schriftarten";
+"CUSTOM_FONTS_NAVIGATION_TITLE" = "Eine Schriftart wählen";
+"CUSTOM_FONTS_MENU_TITLE" = "\nSchriftart auswählen";
+"CUSTOM_FONTS_TUT_ALERT_MESSAGE" = "Noch keine benutzerdefinierten Schriftarten. Installiere welche mit der iFont-App aus dem App Store.";
+
+/*Download*/
+"DOWNLOAD_MENU_TITLE" = "\nVideoqualität auswählen";
+"PROGRESS_DOWNLOADING_STATUS_TITLE" = "Wird heruntergeladen...";
+"FETCHING_PROGRESS_TITLE" = "Einen Moment...";
+"FFMPEG_DOWNLOAD_OPTION_TITLE" = "Mit FFmpeg herunterladen";
+
+/*App icon*/
+"APP_ICON_NAV_TITLE" = "App-Symbol";
+"APP_ICON_HEADER_TITLE" = "Wähle ein benutzerdefiniertes App-Symbol für den Home-Bildschirm deines Geräts. Du kannst es jederzeit ändern.";
+"APP_ICON_SEASONS_HEADER_TITLE" = "Jahreszeiten";
+"APP_ICON_SEASONS_HEADER_DETAIL" = "Passt das App-Symbol an die aktuelle Jahreszeit an.";
+"APP_ICON_HOLIDAYS_HEADER_TITLE" = "Feiertage";
+"APP_ICON_HOLIDAYS_HEADER_DETAIL" = "Feiere Feiertage mit einem besonderen App-Symbol.";
+"APP_ICON_SPORTS_HEADER_TITLE" = "Sport";
+"APP_ICON_SPORTS_HEADER_DETAIL" = "Zeige deine Lieblingssportart mit einem angepassten Symbol.";
+"APP_ICON_EVENTS_HEADER_TITLE" = "Events";
+"APP_ICON_EVENTS_HEADER_DETAIL" = "Feiere besondere Ereignisse mit einem speziellen App-Symbol.";
+"APP_ICON_PRIDE_HEADER_TITLE" = "Pride";
+"APP_ICON_PRIDE_HEADER_DETAIL" = "Drücke dich mit einem Pride-App-Symbol aus.";
+"APP_ICON_LEGACY_HEADER_TITLE" = "Klassisch";
+"APP_ICON_LEGACY_HEADER_DETAIL" = "Verwende die alten Twitter-Symbole.";
+"APP_ICON_OTHER_HEADER_TITLE" = "Andere";
+
+/*Copy profile info*/
+"COPY_PROFILE_INFO_MENU_OPTION_1" = "Bio kopieren";
+"COPY_PROFILE_INFO_MENU_OPTION_2" = "Benutzernamen kopieren";
+"COPY_PROFILE_INFO_MENU_OPTION_3" = "Vollen Benutzernamen kopieren";
+"COPY_PROFILE_INFO_MENU_OPTION_4" = "Bio-Link kopieren";
+"COPY_PROFILE_INFO_MENU_OPTION_5" = "Ort kopieren";
+
+/*Theme*/
+"THEME_SETTINGS_NAVIGATION_TITLE" = "Theme";
+"THEME_SETTINGS_NAVIGATION_DETAIL" = "Wähle eine Themenfarbe, die nur du sehen kannst.";
+"THEME_OPTION_1" = "Blau";
+"THEME_OPTION_2" = "Gelb";
+"THEME_OPTION_3" = "Rot";
+"THEME_OPTION_4" = "Lila";
+"THEME_OPTION_5" = "Orange";
+"THEME_OPTION_6" = "Grün";
+
+/*Tab bar*/
+"CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE" = "Benutzerdefinierte Navigation";
+"CUSTOM_TAB_BAR_NAVIGATION_DETAIL" = "Passe die Navigationsleiste mit den Twitter-Bereichen an, die du am häufigsten verwendest.";
+"CUSTOM_TAB_BAR_HOME" = "Startseite";
+"CUSTOM_TAB_BAR_EXPLORE" = "Entdecken";
+"CUSTOM_TAB_BAR_SPACES" = "Spaces";
+"CUSTOM_TAB_BAR_COMMUNITIES" = "Communities";
+"CUSTOM_TAB_BAR_NOTIFICATIONS" = "Benachrichtigungen";
+"CUSTOM_TAB_BAR_MESSAGES" = "Nachrichten";
+"CUSTOM_TAB_BAR_GROK" = "Grok";
+"CUSTOM_TAB_BAR_VIDEO" = "Videos";
+"CUSTOM_TAB_BAR_SECTION_1_TITLE" = "Aktiviert";
+"CUSTOM_TAB_BAR_SECTION_2_TITLE" = "Deaktiviert";
+"CUSTOM_TAB_BAR_RESET_BUTTON" = "Zurücksetzen";
+"CUSTOM_TAB_BAR_RESET_MESSAGE" = "Möchtest du die Navigationsleiste wirklich auf Standard zurücksetzen?";
+
+
+/* Classic navigation bar */
+"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_ON" = "Twitter muss neu gestartet werden, damit dies wirksam wird.";
+"RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_OFF" = "Zum Deaktivieren und Wiederherstellen der Standardsymbole starte Twitter neu.";
+"CLASSIC_TAB_BAR_DISABLED_NOTIFICATION_NAME" = "BHTClassicTabBarSettingChangedNotification";
+
+/* Restore tab labels */
+"RESTORE_TAB_LABELS_TITLE" = "Navigationsbeschriftungen";
+"RESTORE_TAB_LABELS_DETAIL" = "Zeigt Beschriftungen unter Symbolen wie im alten Twitter an.";
+
+/*Message customization*/
+"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_1" = "Ein Bild verwenden";
+"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_2" = "Eine Farbe verwenden";
+"CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_3" = "Auf Standard zurücksetzen";
+
+/*Refresh pill text*/
+"REFRESH_PILL_TEXT" = "Tweet gesendet";
+
+/*Deprecated*/
+"TRUSTED_FRIENSS_OPTION_TITLE" = "Twitter Circles";
+
+"ALWAYS_FOLLOWING_PAGE_OPTION_TITLE" = "„Für dich“-Tab deaktivieren";
+"ALWAYS_FOLLOWING_PAGE_OPTION_DETAIL_TITLE" = "Twitter immer auf dem „Folge ich“-Tab öffnen.";
+
+"DN_MODULAR_SEARCH_OPTION_TITLE" = "Verbesserte Nachrichten-Suche";
+"DN_MODULAR_SEARCH_OPTION_DETAIL_TITLE" = "Durchsuche deine Direktnachrichten mit erweiterten Filtern.";
+
+"ADVANCED_SEARCH_TITLE" = "Erweiterte Suche";
+"ADVANCED_SEARCH_DETAIL_TITLE" = "Schalte weitere Suchfilter frei.";
+
+"VIDEO_ZOOM_OPTION_TITLE" = "Videos zoomen";
+"VIDEO_ZOOM_OPTION_DETAIL_TITLE" = "Zum Ein- und Auszoomen doppelt tippen.";
+
+"VOICE_OPTION_TITLE" = "Sprachmodus";
+"VOICE_OPTION_DETAIL_TITLE" = "Antworte auf Tweets und Antworten mit deiner Stimme.";
+
+/*Modern Settings Layout*/
+
+"MODERN_SETTINGS_LAYOUT_TITLE" = "Allgemein";
+"MODERN_SETTINGS_LAYOUT_SUBTITLE" = "Passe Schriftarten, Farben und mehr in deiner Timeline an.";
+
+"MODERN_SETTINGS_MEDIA_TITLE" = "Medien";
+"MODERN_SETTINGS_MEDIA_SUBTITLE" = "Videos herunterladen, Zeitstempel aktivieren u. v. m.";
+
+"MODERN_SETTINGS_TWITTER_BLUE_TITLE" = "Twitter Blue";
+"MODERN_SETTINGS_TWITTER_BLUE_SUBTITLE" = "Werbefrei tweeten und Funktionen wie Rückgängig, Designs und Symbole freischalten.";
+
+"MODERN_SETTINGS_PROFILES_TITLE" = "Profil";
+"MODERN_SETTINGS_PROFILES_SUBTITLE" = "Passe an, was in Profilen angezeigt wird.";
+
+"MODERN_SETTINGS_TWEETS_TITLE" = "Tweets und Antworten";
+"MODERN_SETTINGS_TWEETS_SUBTITLE" = "Ändere, wie Tweets funktionieren, und blende unnötige Funktionen aus.";
+
+"MODERN_SETTINGS_MESSAGES_TITLE" = "Nachrichten";
+"MODERN_SETTINGS_MESSAGES_SUBTITLE" = "Passe deine Direktnachrichten-Erfahrung auf Twitter an.";
+
+"MODERN_SETTINGS_EXPERIMENTAL_TITLE" = "Lab";
+"MODERN_SETTINGS_EXPERIMENTAL_SUBTITLE" = "Teste experimentelle Funktionen.";
+
+"MODERN_SETTINGS_PLACEHOLDER_TEXT" = "Hier gibt es noch nichts zu sehen.";

@@ -9,11 +9,11 @@
 /*Alerts and popups*/
 "RESTART_REQUIRED_ALERT_TITLE" = "Restart required";
 "RESTART_REQUIRED_ALERT_MESSAGE_CLASSIC_TAB_BAR_GENERIC" = "You need to restart Twitter for this change to take effect.";
-"RESTART_REQUIRED_ALERT_MESSAGE_SQUARE_AVATARS" = "To apply this change, the application needs to be restarted.";
+"RESTART_REQUIRED_ALERT_MESSAGE_SQUARE_AVATARS" = "To apply this change, you need to restart Twitter";
 "RESTART_REQUIRED_ALERT_MESSAGE_GENERIC" = "You need to restart Twitter for this change to take effect.";
 "RESTART_REQUIRED_ALERT_MESSAGE_NAVBAR" = "You need to restart Twitter for your custom navigation to take effect.";
-"RESTART_NOW_BUTTON_TITLE" = "Restart Now";
-"MODERN_LAYOUT_RESTART_MESSAGE" = "To switch between the modern and classic layouts, the application needs to be restarted.";
+"RESTART_NOW_BUTTON_TITLE" = "Restart";
+"MODERN_LAYOUT_RESTART_MESSAGE" = "To switch between the modern and classic layouts, you need to restart Twitter";
 
 "CONFIRM_ALERT_MESSAGE" = "Sure you meant to do that?";
 "YES_BUTTON_TITLE" = "Yes";
@@ -80,7 +80,7 @@
 "DISABLE_SENSITIVE_TWEET_WARNINGS_OPTION_TITLE" = "No sensitive content warnings";
 
 "HIDE_GROK_ANALYZE_BUTTON_TITLE" = "Hide Grok analyze buttons";
-"HIDE_GROK_ANALYZE_BUTTON_DETAIL_TITLE" = "Hides the Grok Analyze button in tweets.";
+"HIDE_GROK_ANALYZE_BUTTON_DETAIL_TITLE" = "Hides the Grok Analyze button in Tweets.";
 
 "SQUARE_AVATARS_TITLE" = "Square profile pictures";
 "SQUARE_AVATARS_DETAIL_TITLE" = "Gives everyone square profile pictures like brand accounts, just like old twitter.";
@@ -88,8 +88,8 @@
 "REPLY_SORTING_TITLE" = "No reply sorting";
 "REPLY_SORTING_DETAIL_TITLE" = "Disable the reply sorting feature in tweet conversations.";
 
-"RESTORE_REPLY_CONTEXT_TITLE" = "Restore Reply Context";
-"RESTORE_REPLY_CONTEXT_DETAIL_TITLE" = "Shows the people that are being replied to under tweets.";
+"RESTORE_REPLY_CONTEXT_TITLE" = "Restore reply context";
+"RESTORE_REPLY_CONTEXT_DETAIL_TITLE" = "Shows the people that are being replied to under Tweets.";
 
 "ENABLE_TRANSLATE_OPTION_TITLE" = "AI translate button (beta)";
 "ENABLE_TRANSLATE_OPTION_DETAIL_TITLE" = "Adds an AI translate button to Tweets that are not in your language. Requires an API key.";
@@ -161,7 +161,7 @@
 
 "FORCE_TWEET_FULL_FRAME_TITLE" = "Large images";
 
-"RESTORE_VIDEO_TIMESTAMP_TITLE" = "Video Timestamp";
+"RESTORE_VIDEO_TIMESTAMP_TITLE" = "Video timestamp";
 "RESTORE_VIDEO_TIMESTAMP_DETAIL_TITLE" = "Shows timestamp on immersive player.";
 
 /*Twitter Blue*/
@@ -210,8 +210,8 @@
 "STOP_HIDING_TAB_BAR_TITLE" = "Keep the navigation bar visible";
 "STOP_HIDING_TAB_BAR_DETAIL_TITLE" = "Don't fade the navigation bar when you scroll.";
 
-"CLASSIC_TAB_BAR_SETTINGS_TITLE" = "Classic Tab Bar";
-"CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "Applies your accent color to the currently selected tab.";
+"CLASSIC_TAB_BAR_SETTINGS_TITLE" = "Classic navigation bar";
+"CLASSIC_TAB_BAR_SETTINGS_DETAIL" = "Applies your accent color to the currently selected navigation item.";
 
 "DISABLE_RTL_OPTION_TITLE" = "Use left-to-right layout";
 "DISABLE_RTL_OPTION_DETAIL_TITLE" = "Force a a left-to-right layout, even for languages that are read from right-to-left.";
@@ -302,7 +302,7 @@
 /*Tab bar*/
 "CUSTOM_TAB_BAR_SETTINGS_NAVIGATION_TITLE" = "Custom navigation";
 "CUSTOM_TAB_BAR_NAVIGATION_DETAIL" = "Customize the naviagtion bar with your most-used Twitter destinations.";
-"CUSTOM_TAB_BAR_HOME" = "Home";
+"CUSTOM_TAB_BAR_HOME" = "Home"; 
 "CUSTOM_TAB_BAR_EXPLORE" = "Explore";
 "CUSTOM_TAB_BAR_SPACES" = "Spaces";
 "CUSTOM_TAB_BAR_COMMUNITIES" = "Communities";
@@ -322,8 +322,8 @@
 "CLASSIC_TAB_BAR_DISABLED_NOTIFICATION_NAME" = "BHTClassicTabBarSettingChangedNotification";
 
 /* Restore tab labels */
-"RESTORE_TAB_LABELS_TITLE" = "Restore Tab labels";
-"RESTORE_TAB_LABELS_DETAIL" = "Show labels under tab bar icons like legacy Twitter versions.";
+"RESTORE_TAB_LABELS_TITLE" = "Navigation labels";
+"RESTORE_TAB_LABELS_DETAIL" = "Show labels under icons in the navigation bar like legacy Twitter versions.";
 
 /*Message customization*/
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_1" = "Use an image";
@@ -354,24 +354,24 @@
 /*Modern Settings Layout*/
 
 "MODERN_SETTINGS_LAYOUT_TITLE" = "General";
-"MODERN_SETTINGS_LAYOUT_SUBTITLE" = "Make your Timeline yours with Custom fonts, Tab bar theming, and more.";
+"MODERN_SETTINGS_LAYOUT_SUBTITLE" = "Make your timeline yours with custom fonts, navigation bar theming, and much more.";
 
-"MODERN_SETTINGS_MEDIA_TITLE" = "Media and Downloads";
-"MODERN_SETTINGS_MEDIA_SUBTITLE" = "Download videos, Enable video timestamp, and more.";
+"MODERN_SETTINGS_MEDIA_TITLE" = "Media";
+"MODERN_SETTINGS_MEDIA_SUBTITLE" = "Download videos, enable video timestamps, and more.";
 
 "MODERN_SETTINGS_TWITTER_BLUE_TITLE" = "Twitter Blue";
-"MODERN_SETTINGS_TWITTER_BLUE_SUBTITLE" = "Get an ad-free experience and unlock Blue features like Undo Tweet, Color Themes, and Custom Icons.";
+"MODERN_SETTINGS_TWITTER_BLUE_SUBTITLE" = "Get an ad-free experience and unlock Blue features like Undo Tweet, themes, and custom app icons.";
 
 "MODERN_SETTINGS_PROFILES_TITLE" = "Profile";
 "MODERN_SETTINGS_PROFILES_SUBTITLE" = "Change what you see on profiles.";
 
-"MODERN_SETTINGS_TWEETS_TITLE" = "Tweets and Replies";
+"MODERN_SETTINGS_TWEETS_TITLE" = "Tweets and replies";
 "MODERN_SETTINGS_TWEETS_SUBTITLE" = "Change how tweets work and remove features you may not use.";
 
-"MODERN_SETTINGS_MESSAGES_TITLE" = "Direct Messages";
+"MODERN_SETTINGS_MESSAGES_TITLE" = "Messages";
 "MODERN_SETTINGS_MESSAGES_SUBTITLE" = "Customize your Twitter messaging experience.";
 
-"MODERN_SETTINGS_EXPERIMENTAL_TITLE" = "Experiments";
-"MODERN_SETTINGS_EXPERIMENTAL_SUBTITLE" = "Try the newest unstable features.";
+"MODERN_SETTINGS_EXPERIMENTAL_TITLE" = "Labs";
+"MODERN_SETTINGS_EXPERIMENTAL_SUBTITLE" = "Try unstable features.";
 
-"MODERN_SETTINGS_PLACEHOLDER_TEXT" = "Nothing to see here —— yet.";
+"MODERN_SETTINGS_PLACEHOLDER_TEXT" = "Nothing to see here - yet.";

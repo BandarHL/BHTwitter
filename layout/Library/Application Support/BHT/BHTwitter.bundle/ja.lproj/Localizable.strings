@@ -23,8 +23,8 @@
 "SAVE_BUTTON_TITLE" = "保存";
 
 /*Main menu start*/
-/*General*/
 
+/*General*/
 "MAIN_SECTION_HEADER_TITLE" = "一般";
 
 "UPLOAD_CUSTOM_VOICE_OPTION_TITLE" = "音声ツイート";
@@ -251,9 +251,9 @@
 
 
 /*Main menu end*/
+
+
 /*Custom fonts*/
-
-
 "CUSTOM_FONTS_NAVIGATION_BUTTON_TITLE" = "カスタムフォント";
 "CUSTOM_FONTS_NAVIGATION_TITLE" = "フォントを選択";
 "CUSTOM_FONTS_MENU_TITLE" = "\nフォントを選択";
@@ -374,4 +374,4 @@
 "MODERN_SETTINGS_EXPERIMENTAL_TITLE" = "実験的機能";
 "MODERN_SETTINGS_EXPERIMENTAL_SUBTITLE" = "不安定になる可能性がある機能を試してください。";
 
-"MODERN_SETTINGS_PLACEHOLDER_TITLE" = "ここには何もありません — 今はまだ。";
+"MODERN_SETTINGS_PLACEHOLDER_TEXT" = "まだ表示するものはありません。";
