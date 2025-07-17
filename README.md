@@ -5,7 +5,7 @@ the ultimate way to tweak your Twitter/X experience.
 
 ## Disclaimer: 
 these builds are considered beta. even though they should work fine. you may run into some issues.
-currently we're building it against Twitter/X v10.94. recent versions may have issues that havent been fixed yet.
+currently we're building it against Twitter/X v11.5.5. recent versions may have issues that havent been fixed yet.
 
 | | | |
 |:-------------------------:|:-------------------------:|:-------------------------:|
