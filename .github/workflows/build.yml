@@ -10,7 +10,7 @@ on:
         type: string
       target_version:
         description: "Target iOS Version"
-        default: "14.0"
+        default: "15.0"
         required: true
       decrypted_ipa_url:
         description: "Direct URL of the decrypted X ipa"
@@ -19,7 +19,7 @@ on:
         type: string
       deploy_format:
         description: "Deployment format"
-        default: rootfull
+        default: sideloaded
         required: true
         type: choice
         options:
