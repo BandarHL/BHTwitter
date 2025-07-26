@@ -101,8 +101,8 @@ No option: Build BHTwitter project for rootfull deployment.
 
 
 ## Build for Rootfull Deployment
-- Just run the build command without any flag.
+- Just run the build command with rootfull flag.
 ```bash
-./build.sh
+./build.sh --rootfull
 ```
 - After the build we'll find `com.bandarhl.bhtwitter_4.2_iphoneos-arm.deb` inside `packages` folder.
