@@ -5,8 +5,8 @@ An awesome tweak for Twitter that enhances your experience with additional featu
 # Supported App Versions Per iOS
 - iOS 15: Latest
 - iOS 14: Twitter 9.44
-- iOS 13: Twitter 9.3 (Use 15.6 SDK)
-- iOS 12: Twitter 8.61 (Use 13.7 SDK)
+- iOS 13: Twitter 9.3 (Untested)
+- iOS 12 and below: Incompatible, build will fail
 
 ## 🧩 Features
 *Please note that we heavily rely on feature flags. If a feature doesn't work anymore, it's beacuse Twitter most likely removed support for it.*
