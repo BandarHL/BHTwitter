@@ -5,7 +5,7 @@ An awesome tweak for Twitter that enhances your experience with additional featu
 ## 🧩 Features
 *Please note that we heavily rely on feature flags. If a feature doesn't work anymore, it's beacuse Twitter most likely removed support for it.*
 
-###  General enhancments 
+###  General Enhancements 
 - Download videos (even from private accounts)
 - Load photos in highest quality available
 - Save Tweets as images
