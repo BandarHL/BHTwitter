@@ -262,7 +262,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
 
         // people who contributed section
         PSSpecifier *actuallyaridan = [self newHBTwitterCellWithTitle:@"aridan" twitterUsername:@"actuallyaridan" customAvatarURL:@"https://avatars.githubusercontent.com/u/96298432?v=4"];
-        PSSpecifier *tulugaak = [self newHBTwitterCellWithTitle:@"tekkeitsertok" twitterUsername:@"tulugaak1" customAvatarURL:@"https://pbs.twimg.com/profile_images/1916637241935360000/QcBqwGBT_400x400.jpg"];
+        PSSpecifier *tulugaak = [self newHBTwitterCellWithTitle:@"tekkeitsertok" twitterUsername:@"tulugaak1" customAvatarURL:@"https://unavatar.io/x/tulugaak1"];
         PSSpecifier *timi2506 = [self newHBTwitterCellWithTitle:@"timi2506" twitterUsername:@"timi2506" customAvatarURL:@"https://avatars.githubusercontent.com/u/172171055?v=4"];
         PSSpecifier *nyathea = [self newHBTwitterCellWithTitle:@"nyathea" twitterUsername:@"nyaathea" customAvatarURL:@"https://avatars.githubusercontent.com/u/108613931?v=4"];
         
