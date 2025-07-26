@@ -2,7 +2,7 @@
 
 An awesome tweak for Twitter that enhances your experience with additional features and customization options. Get rid of ads, gain access to Twitter Blue features for free and much much more! 
 
-# Supported App Versions Per iOS
+## 🍎 Supported App Versions Per iOS
 - iOS 15+: Latest
 - iOS 14: Twitter 9.44
 - iOS 13: Twitter 9.3 (Untested)
