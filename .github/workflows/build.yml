@@ -50,7 +50,7 @@ concurrency:
 jobs:
   build:
     name: Build BHTwitter
-    runs-on: macos-13
+    runs-on: macos
     permissions:
       contents: write
 
