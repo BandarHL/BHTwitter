@@ -1,0 +1,9 @@
+Package: com.caun.bhtwitter.hidereposts
+Name: Hide Reposts for X
+Version: 1.0.0
+Architecture: iphoneos-arm64e
+Description: 在 X/Twitter 时间线中自动隐藏转推内容
+Maintainer: caun1112
+Author: caun1112
+Section: Tweaks
+Depends: mobilesubstrate
