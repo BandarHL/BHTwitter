@@ -1,6 +1,10 @@
 # 屏蔽转推（roothide）
 
-这是从 BHTwitter 独立出来的常开 tweak，仅负责隐藏 X/Twitter 时间线里的转推内容，不依赖 BHTwitter 的设置页、资源包或 Cephei。
+这是从 BHTwitter 独立出来的 tweak，仅负责隐藏 X/Twitter 时间线里的转推内容，不依赖 BHTwitter 的设置页、资源包或 Cephei。
+
+## 开关
+
+在 X/Twitter 应用内的“设置与隐私”页面会新增“屏蔽转推”入口，点入后可用开关控制是否隐藏转推（默认开启）。开关状态保存在应用自身的 NSUserDefaults 中，更改后请刷新时间线或重启应用以完全生效。
 
 ## 目标环境
 

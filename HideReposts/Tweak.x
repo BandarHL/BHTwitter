@@ -13,7 +13,9 @@
 @end
 
 @interface TFNItemsDataViewControllerBackingStore : NSObject
+- (void)insertSection:(id)section atIndex:(NSUInteger)index;
 - (void)insertItem:(id)item atIndexPath:(NSIndexPath *)indexPath;
+- (void)_tfn_insertSection:(id)section atIndex:(NSUInteger)index;
 - (void)_tfn_insertItem:(id)item atIndexPath:(NSIndexPath *)indexPath;
 @end
 
@@ -21,8 +23,33 @@
 @property(nonatomic, readonly) BOOL isRetweet;
 @end
 
+@interface TFNSettingsNavigationItem : NSObject
+- (instancetype)initWithTitle:(NSString *)title detail:(NSString *)detail iconName:(NSString *)iconName controllerFactory:(UIViewController *(^)(void))controllerFactory;
+@end
+
+@interface TFNTextCell : UITableViewCell
+@end
+
+@interface T1GenericSettingsViewController : UIViewController
+@property(nonatomic, strong) TFNItemsDataViewControllerBackingStore *backingStore;
+@property(nonatomic, strong) NSArray *sections;
+@end
+
+@interface T1SettingsViewController : UIViewController
+@property(nonatomic, strong) TFNItemsDataViewControllerBackingStore *backingStore;
+@property(nonatomic, strong) NSArray *sections;
+@end
+
+// MARK: 开关状态（存于 Twitter 进程自身的 NSUserDefaults，默认开启以保持旧版常开行为）
+static NSString * const HRHideRepostsDefaultsKey = @"hr_hide_reposts";
+
+static BOOL HRHideRepostsEnabled(void) {
+    NSNumber *value = [[NSUserDefaults standardUserDefaults] objectForKey:HRHideRepostsDefaultsKey];
+    return value == nil ? YES : value.boolValue;
+}
+
 static BOOL HRIsRepostItem(id item) {
-    if (item == nil) {
+    if (!HRHideRepostsEnabled() || item == nil) {
         return NO;
     }
 
@@ -40,7 +67,7 @@ static BOOL HRDataContainsUTF8String(NSData *data, const char *string) {
 }
 
 static BOOL HRShouldFilterRepostJSONData(NSData *data) {
-    if (![data isKindOfClass:NSData.class] || data.length == 0) {
+    if (!HRHideRepostsEnabled() || ![data isKindOfClass:NSData.class] || data.length == 0) {
         return NO;
     }
 
@@ -273,6 +300,112 @@ static void HRScheduleRepostSectionPurge(TFNItemsDataViewController *controller)
         return;
     }
     %orig;
+}
+
+%end
+
+// MARK: 设置界面（单开关页，由 Twitter 设置页入口推入）
+@interface HRSettingsViewController : UITableViewController
+@end
+
+@implementation HRSettingsViewController
+
+- (instancetype)init {
+    return [super initWithStyle:UITableViewStyleInsetGrouped];
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.title = @"屏蔽转推";
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    return 1;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    cell.textLabel.text = @"隐藏时间线中的转推";
+    UISwitch *toggle = [[UISwitch alloc] init];
+    toggle.on = HRHideRepostsEnabled();
+    [toggle addTarget:self action:@selector(hr_toggleChanged:) forControlEvents:UIControlEventValueChanged];
+    cell.accessoryView = toggle;
+    return cell;
+}
+
+- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
+    return @"更改后请刷新时间线或重启应用以完全生效。";
+}
+
+- (void)hr_toggleChanged:(UISwitch *)sender {
+    [[NSUserDefaults standardUserDefaults] setBool:sender.isOn forKey:HRHideRepostsDefaultsKey];
+}
+
+@end
+
+// MARK: 在 Twitter 设置页插入“屏蔽转推”入口（与 BHTwitter 主包相同的注入方式）
+%hook T1GenericSettingsViewController
+
+- (void)viewWillAppear:(BOOL)animated {
+    %orig;
+    if ([self.sections count] == 1) {
+        TFNItemsDataViewControllerBackingStore *backingStore = self.backingStore;
+        TFNSettingsNavigationItem *entry = [[%c(TFNSettingsNavigationItem) alloc] initWithTitle:@"屏蔽转推" detail:@"隐藏时间线中的转推" iconName:@"arrow.2.squarepath" controllerFactory:^UIViewController *{
+            return [[HRSettingsViewController alloc] init];
+        }];
+        [entry setValue:[UIImage systemImageNamed:@"arrow.2.squarepath"] forKey:@"_icon"];
+
+        if ([backingStore respondsToSelector:@selector(insertSection:atIndex:)]) {
+            [backingStore insertSection:0 atIndex:1];
+        } else {
+            [backingStore _tfn_insertSection:0 atIndex:1];
+        }
+        if ([backingStore respondsToSelector:@selector(insertItem:atIndexPath:)]) {
+            [backingStore insertItem:entry atIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
+        } else {
+            [backingStore _tfn_insertItem:entry atIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
+        }
+    }
+}
+
+%end
+
+%hook T1SettingsViewController
+
+- (void)viewWillAppear:(BOOL)animated {
+    %orig;
+    if ([self.sections count] == 2) {
+        TFNItemsDataViewControllerBackingStore *backingStore = self.backingStore;
+        [backingStore insertSection:0 atIndex:1];
+        [backingStore insertItem:@"HRHeader" atIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
+        [backingStore insertItem:@"HREntry" atIndexPath:[NSIndexPath indexPathForRow:1 inSection:0]];
+    }
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    if (indexPath.section == 0 && indexPath.row == 0) {
+        TFNTextCell *headerCell = [[%c(TFNTextCell) alloc] init];
+        [headerCell setBackgroundColor:[UIColor clearColor]];
+        headerCell.textLabel.textColor = [UIColor colorWithRed:0.40 green:0.47 blue:0.53 alpha:1.0];
+        [headerCell.textLabel setText:@"屏蔽转推"];
+        return headerCell;
+    }
+    if (indexPath.section == 0 && indexPath.row == 1) {
+        TFNTextCell *entryCell = [[%c(TFNTextCell) alloc] init];
+        [entryCell setAccessoryType:UITableViewCellAccessoryDisclosureIndicator];
+        [entryCell.textLabel setText:@"屏蔽转推设置"];
+        return entryCell;
+    }
+    return %orig;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    if (indexPath.section == 0 && indexPath.row == 1) {
+        [self.navigationController pushViewController:[[HRSettingsViewController alloc] init] animated:true];
+    } else {
+        %orig;
+    }
 }
 
 %end
