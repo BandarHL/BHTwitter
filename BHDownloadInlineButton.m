@@ -149,6 +149,7 @@ static void _bh_callSuperIfPossible(__unsafe_unretained id self,
 
 BH_METRIC(extraWidth,                 40.0)
 BH_METRIC(extraWidthWithStyle,        40.0)
+BH_METRIC(horizontalLayoutOffset,      0.0)
 BH_METRIC(trailingEdgeInset,          6.0)
 BH_METRIC(visibility,                 1)
 BH_METRIC(alternateInlineActionType,  6)

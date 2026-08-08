@@ -39,6 +39,7 @@ NS_ASSUME_NONNULL_BEGIN
                      fitSize:(CGSize)fitSize 
                    fillColor:(nullable id)fillColor;
 - (BOOL)shouldShowCount;
+- (CGFloat)horizontalLayoutOffset;
 - (double)extraWidth;
 - (CGFloat)trailingEdgeInset;
 - (NSUInteger)touchInsetPriority;
