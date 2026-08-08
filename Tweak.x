@@ -122,13 +122,15 @@ static BOOL BHTimelineEntryContainsRepost(NSDictionary *entry) {
         return true;
     }
 
-    for (id moduleItemObject in BHArrayValue(content, @"items")) {
+    NSArray *items = BHArrayValue(content, @"items");
+    NSUInteger itemLimit = MIN(items.count, 4);
+    for (NSUInteger index = 0; index < itemLimit; index++) {
+        id moduleItemObject = items[index];
         if (![moduleItemObject isKindOfClass:NSDictionary.class]) {
             continue;
         }
 
-        NSDictionary *moduleItem = moduleItemObject;
-        NSDictionary *item = BHDictionaryValue(moduleItem, @"item");
+        NSDictionary *item = BHDictionaryValue(moduleItemObject, @"item");
         if (BHItemContentContainsRepost(BHDictionaryValue(item, @"itemContent"))) {
             return true;
         }
@@ -144,13 +146,14 @@ static id BHJSONObjectByFilteringRepostEntries(id object, BOOL *changed) {
         NSMutableArray *filteredArray = [NSMutableArray arrayWithCapacity:array.count];
 
         for (id item in array) {
-            if ([item isKindOfClass:NSDictionary.class] && BHTimelineEntryContainsRepost(item)) {
+            BOOL isTimelineEntry = [item isKindOfClass:NSDictionary.class] && ([(NSDictionary *)item objectForKey:@"entryId"] != nil || [(NSDictionary *)item objectForKey:@"entry_id"] != nil);
+            if (isTimelineEntry && BHTimelineEntryContainsRepost(item)) {
                 arrayChanged = true;
                 BHSetChanged(changed);
                 continue;
             }
 
-            if ([item isKindOfClass:NSDictionary.class] && ([(NSDictionary *)item objectForKey:@"entryId"] != nil || [(NSDictionary *)item objectForKey:@"entry_id"] != nil)) {
+            if (isTimelineEntry) {
                 [filteredArray addObject:item];
                 continue;
             }
