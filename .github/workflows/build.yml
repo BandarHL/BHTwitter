@@ -38,7 +38,7 @@ on:
         required: false
         type: boolean
       create_release:
-        description: "Create a draft release (Private)"
+        description: "Create a public GitHub release"
         default: true
         required: false
         type: boolean
@@ -94,7 +94,6 @@ jobs:
       - name: Download iOS SDK
         if: steps.SDK.outputs.cache-hit != 'true'
         run: |
-          # Only download the specific SDK version
           git clone -n --depth=1 --filter=tree:0 https://github.com/theos/sdks/
           cd sdks
           git sparse-checkout set --no-cone iPhoneOS${{ inputs.sdk_version }}.sdk
@@ -114,7 +113,6 @@ jobs:
         run: |
           wget "$IPA_URL" --no-verbose -O main/packages/com.atebits.Tweetie2.ipa
           unzip -q main/packages/com.atebits.Tweetie2.ipa -d main/tmp
-          # Get the version number of the X app and store it
           X_VERSION=$(grep -A 1 '<key>CFBundleShortVersionString</key>' main/tmp/Payload/Twitter.app/Info.plist |
             grep '<string>' | awk -F'[><]' '{print $3}')
           echo "X_VERSION=${X_VERSION}" >> "$GITHUB_ENV"
@@ -151,7 +149,7 @@ jobs:
           path: ${{ github.workspace }}/main/packages/${{ steps.package_name.outputs.package }}
           if-no-files-found: error
 
-      - name: Create Draft Release
+      - name: Create Public Release
         if: ${{ inputs.create_release }}
         id: create_release
         uses: softprops/action-gh-release@v2
@@ -159,6 +157,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: v${{ env.BHTWITTER_VERSION }}
-          name: v${{ env.BHTWITTER_VERSION }} - BHTwitter
+          name: BHTwitter ${{ env.BHTWITTER_VERSION }} - X ${{ env.X_VERSION }}
+          body: |
+            ## BHTwitter ${{ env.BHTWITTER_VERSION }}
+
+            **Supported X version:** ${{ env.X_VERSION }}
+
+            This release targets X ${{ env.X_VERSION }} and includes compatibility updates for the newer X UI and BHTwitter hooks.
           files: main/packages/${{ steps.package_name.outputs.package }}
-          draft: true
+          draft: false
+          prerelease: false

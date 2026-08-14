@@ -1,14 +1,20 @@
 # BHTwitter
 
-An awesome tweak for Twitter that enhances your experience with additional features and customization options. Get rid of ads, gain access to Twitter Blue features for free and much much more! 
+An awesome tweak for Twitter that enhances your experience with additional features and customization options. Get rid of ads, gain access to Twitter Blue features for free and much much more!
 
-> [!WARNING]  
-> <b>Please do not create issues regarding sign in or Tweeting.</b><br>Twitter/X have added Attestation to prevent the use of third-paty or modified clients. We cannot do anything against this. Please do not create new issues regarding this. 
+## BHTwitter 5.0
+
+- **Compatibility target:** X 12.16
+- **Release:** BHTwitter 5.0
+- Includes compatibility work for newer X profile UI and related BHTwitter hooks.
+
+> [!WARNING]
+> <b>Please do not create issues regarding sign in or Tweeting.</b><br>Twitter/X have added Attestation to prevent the use of third-paty or modified clients. We cannot do anything against this. Please do not create new issues regarding this.
 
 ## Features
 *Please note that we heavily rely on feature flags. If a feature doesn't work anymore, it's beacuse Twitter most likely removed support for it.*
 
-###  General Enhancements 
+###  General Enhancements
 - Download videos (even from private accounts)
 - Load photos in highest quality available
 - Save Tweets as images
@@ -42,13 +48,11 @@ An awesome tweak for Twitter that enhances your experience with additional featu
 ###  Developer Tools
 - FLEX debugging tool
 
-
 ## Screenshots
 
 | ![](1.png) | ![](2.png) | ![](3.png) |
 |:----------:|:----------:|:----------:|
 | ![](4.png) |
-
 
 ## Building BHTwitter
 
@@ -68,8 +72,7 @@ chmod +x ./build.sh
 - `--rootfull` : Build for rootfull deployment
 - `--rootless` : Build for rootless deployment
 - `--trollstore` : Build for TrollStore deployment
-- *(No option)* or `--sideloaded` : Build for sideloaded deployment 
-
+- *(No option)* or `--sideloaded` : Build for sideloaded deployment
 
 ###  GitHub Actions
 
@@ -80,7 +83,6 @@ chmod +x ./build.sh
    - Choose deployment type (`rootfull`, `rootless`, `sideloaded`, `trollstore`)
    - For sideloaded/trollstore: provide a valid URL to decrypted IPA
    - For rootfull/rootless: any value works
-
 
 ## Examples
 
@@ -104,16 +106,12 @@ chmod +x ./build.sh
 
 ###  Rootless
 ```bash
-# Simply run
-
 ./build.sh --rootless
-# You'll get: com.bandarhl.bhTwitter_4.2_iphoneos-arm64.deb
+# You'll get: com.bandarhl.bhTwitter_5.0_iphoneos-arm64.deb
 ```
 
 ###  Rootfull
 ```bash
-# Simply run
-
 ./build.sh --rootfull
-# You'll get: com.bandarhl.bhTwitter_4.2_iphoneos-arm.deb
+# You'll get: com.bandarhl.bhTwitter_5.0_iphoneos-arm.deb
 ```

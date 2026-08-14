@@ -69,6 +69,8 @@ NS_ASSUME_NONNULL_BEGIN
                           overrideSize:(nullable id)overrideSize 
                                account:(nullable id)account;
 
+- (void)DownloadHandler:(UIButton * _Nullable)sender;
+
 @end
 
 NS_ASSUME_NONNULL_END
