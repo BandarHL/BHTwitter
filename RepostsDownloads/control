@@ -1,0 +1,10 @@
+Package: com.caun.bhtwitter.repostsdownloads
+Name: X 随心
+Version: 2.3.0
+Architecture: iphoneos-arm64
+Description: 统一时间线过滤与作者校验；原画质视频下载、下载文件管理、分享图片和界面定制。
+Maintainer: caun1112
+Author: caun1112, Bandar Alruwaili
+Section: Tweaks
+Depends: firmware (>= 15.0), mobilesubstrate
+Conflicts: com.bandarhl.bhtwitter, com.caun.bhtwitter.hidereposts

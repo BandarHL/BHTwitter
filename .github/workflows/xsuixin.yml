@@ -1,0 +1,65 @@
+name: X Suixin Rootless
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'RepostsDownloads/**'
+      - 'JGProgressHUD/**'
+      - 'lib/**'
+      - 'ffmpeg/**'
+      - '.github/workflows/xsuixin.yml'
+  pull_request:
+    paths:
+      - 'RepostsDownloads/**'
+      - 'JGProgressHUD/**'
+      - 'lib/**'
+      - 'ffmpeg/**'
+      - '.github/workflows/xsuixin.yml'
+permissions:
+  contents: read
+jobs:
+  rootless:
+    runs-on: macos-15
+    env:
+      THEOS: ${{ github.workspace }}/theos
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: source
+      - name: Install tools
+        run: brew install make dpkg ldid ffmpeg
+      - name: Add GNU Make
+        run: echo "$(brew --prefix make)/libexec/gnubin" >> "$GITHUB_PATH"
+      - uses: actions/checkout@v4
+        with:
+          repository: theos/theos
+          ref: 9bc73406cf80b711ef4d02c15ff1dedc4478a275
+          path: theos
+          submodules: recursive
+      - uses: actions/checkout@v4
+        with:
+          repository: theos/sdks
+          ref: 0222fd5413cf4b9af096f37b4621afa2688572f7
+          path: sdk-source
+          sparse-checkout: iPhoneOS16.5.sdk
+      - name: Install iOS SDK
+        run: cp -R sdk-source/iPhoneOS16.5.sdk "$THEOS/sdks/"
+      - name: Regression tests
+        run: sh source/RepostsDownloads/tests/run_all.sh
+      - name: Build and verify
+        run: |
+          sh source/RepostsDownloads/build.sh
+          cd source/RepostsDownloads
+          VERSION=$(awk '/^Version:/ {print $2}' control)
+          PACKAGE="packages/com.caun.bhtwitter.repostsdownloads_${VERSION}_iphoneos-arm64.deb"
+          python3 scripts/verify_deb.py "$PACKAGE" --version "$VERSION"
+          cp "$PACKAGE" "packages/XSuixin_${VERSION}_rootless.deb"
+          cd packages
+          shasum -a 256 "XSuixin_${VERSION}_rootless.deb" > "XSuixin_${VERSION}_rootless.deb.sha256"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: XSuixin-rootless
+          path: |
+            source/RepostsDownloads/packages/XSuixin_*_rootless.deb
+            source/RepostsDownloads/packages/XSuixin_*_rootless.deb.sha256
+          if-no-files-found: error
