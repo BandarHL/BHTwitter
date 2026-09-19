@@ -38,7 +38,7 @@ NSArray<NSArray<NSString *> *> *BHRDSettingsKeys(void) {
              @[BHRDConfirmLikeKey, BHRDConfirmTweetKey, BHRDConfirmFollowKey]];
 }
 NSArray<NSArray<NSString *> *> *BHRDSettingsTitles(void) {
-    return @[@[@"隐藏转推", @"屏蔽广告"],
+    return @[@[@"隐藏转推", @"屏蔽广告与订阅推广"],
              @[@"启用视频与动图下载", @"直接保存到相册", @"启用私信视频下载", @"全屏右侧独立下载按钮"],
              @[@"隐藏评论按钮", @"隐藏转发按钮", @"隐藏点赞按钮", @"隐藏浏览量", @"隐藏书签按钮", @"显示分享图片按钮"],
              @[@"隐藏主页", @"隐藏搜索", @"隐藏 Grok", @"隐藏通知", @"隐藏私信", @"首页仅保留推荐和关注"],

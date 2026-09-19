@@ -1,8 +1,10 @@
 // Related NeoFreeBird feature-switch paths, adapted to X Suixin preferences.
 #import "BHRDPreferences.h"
+#import "BHRDAdFilter.h"
 #import <objc/runtime.h>
 static NSNumber *RecommendationOverride(NSString *key) {
     if (![key isKindOfClass:NSString.class]) return nil;
+    if (BHRDPreference(BHRDHideAdsKey) && BHRDShouldDisableAdFeature(key)) return @NO;
     if ([key isEqual:@"wtf_device_follow_nudge_turn_off_reactive_blending_enabled"]) return BHRDPreference(BHRDHideWhoKey) ? @YES : nil;
     if ([key isEqualToString:@"ios_profile_analytics_upsell_enabled"] ||
         [key isEqualToString:@"ios_profile_analytics_upsell_possible_enabled"] ||
@@ -33,7 +35,7 @@ static NSNumber *RecommendationOverride(NSString *key) {
         [key isEqualToString:@"ios_notifications_blue_verified_introductory_"
                              @"offer_prefix_visible"] ||
         [key isEqualToString:@"dash_items_download_grok_enabled"]) {
-        return BHRDPreference(BHRDHidePremiumKey) ? @NO : nil;
+        return (BHRDPreference(BHRDHidePremiumKey) || BHRDPreference(BHRDHideAdsKey)) ? @NO : nil;
     }
 
     return nil;

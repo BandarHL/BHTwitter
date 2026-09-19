@@ -16,7 +16,9 @@ CGRect BHRDFloatingDownloadFrame(CGRect bounds, double top, double left, double 
     CGFloat y = bounds.origin.y + bounds.size.height * 0.65 - height / 2;
     x = MAX(bounds.origin.x + left + 12, x);
     y = MAX(bounds.origin.y + top + 12, MIN(y, CGRectGetMaxY(bounds) - bottom - 12 - height));
-    return CGRectMake(x, y, width, height);
+    // Preserve the previous capsule center in both orientations.
+    CGFloat side = MIN(44, MIN(width, height));
+    return CGRectMake(x + (width - side) / 2, y + (height - side) / 2, side, side);
 }
 CGRect BHRDAlignedInlineActionFrame(CGRect columns, CGRect original, NSArray<NSNumber *> *minimumWidths, NSUInteger index) {
     NSUInteger count = minimumWidths.count;

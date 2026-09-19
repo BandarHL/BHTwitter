@@ -47,7 +47,7 @@ int main(void) {
         }
         CGRect portrait = BHRDFloatingDownloadFrame(CGRectMake(0, 0, 390, 844), 47, 0, 34, 0);
         Check(Near(CGRectGetMidY(portrait), 844 * 0.65), @"Portrait download button center is at 65 percent of screen height");
-        Check(Near(CGRectGetMaxX(portrait), 390 - 16), @"Button stays 16 points from the right edge");
+        Check(Near(CGRectGetMidX(portrait), 390 - 16 - 52), @"Icon-only button preserves the previous capsule center");
         CGRect landscape = BHRDFloatingDownloadFrame(CGRectMake(0, 0, 844, 390), 0, 47, 21, 47);
         Check(Near(CGRectGetMidY(landscape), 390 * 0.65), @"Landscape also uses screen-height 65 percent");
         Check(CGRectGetMaxX(landscape) <= 844 - 47 - 12, @"Landscape button avoids the notch safe area");

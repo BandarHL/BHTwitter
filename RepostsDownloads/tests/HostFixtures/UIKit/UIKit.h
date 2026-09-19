@@ -12,8 +12,13 @@
 @property(nonatomic,strong) NSMutableArray<UIView *> *subviews;
 @property(nonatomic,strong) CALayer *layer;
 @property(nonatomic,copy) NSString *accessibilityLabel;
+@property(nonatomic,copy) NSString *accessibilityIdentifier;
+- (void)setNeedsLayout;
 - (void)addSubview:(UIView *)view;
 - (CGRect)convertRect:(CGRect)rect toView:(UIView *)view;
+@end
+@interface UILabel : UIView
+@property(nonatomic,copy) NSString *text;
 @end
 @interface UIControl : UIView @end
 @interface UITableViewCell : UIView @end

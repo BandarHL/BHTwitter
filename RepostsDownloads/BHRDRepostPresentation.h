@@ -9,3 +9,5 @@ void BHRDResetExpandedReposts(void);
 void BHRDRepostPreferencesChanged(void);
 void BHRDRepostMetadataChanged(void);
 void BHRDRepostNativeImageChanged(UIImageView *view);
+
+void BHRDForgetAdCell(UITableViewCell *cell);

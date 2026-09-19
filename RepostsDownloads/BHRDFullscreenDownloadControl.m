@@ -13,13 +13,13 @@
         self.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         self.backgroundColor = UIColor.clearColor;
         _button = [UIButton buttonWithType:UIButtonTypeSystem];
-        [_button setTitle:@"下载" forState:UIControlStateNormal];
+        [_button setTitle:nil forState:UIControlStateNormal];
         [_button setImage:[UIImage systemImageNamed:@"square.and.arrow.down"] forState:UIControlStateNormal];
         _button.tintColor = UIColor.whiteColor;
         _button.backgroundColor = [UIColor colorWithWhite:0 alpha:0.72];
         _button.layer.cornerRadius = 22;
-        _button.contentEdgeInsets = UIEdgeInsetsMake(8, 12, 8, 12);
-        _button.imageEdgeInsets = UIEdgeInsetsMake(0, -6, 0, 0);
+        _button.contentEdgeInsets = UIEdgeInsetsMake(10, 10, 10, 10);
+        _button.imageEdgeInsets = UIEdgeInsetsZero;
         _button.accessibilityLabel = @"下载当前全屏视频";
         [_button addTarget:self action:@selector(activate) forControlEvents:UIControlEventPrimaryActionTriggered];
         [self addSubview:_button];
