@@ -2,20 +2,11 @@
 #import "BHRDManager.h"
 #import "BHRDConversationScope.h"
 #import "BHRDAdFilter.h"
-#import "BHRDAdPresentation.h"
 #import "BHRDContentFilter.h"
 #import "BHRDRepostAuthor.h"
 #import <objc/runtime.h>
 #import <objc/message.h>
 
-@interface BHRDAdCellBinding : NSObject
-@property(nonatomic, strong) id model;
-@property(nonatomic, weak) id controller;
-@property(nonatomic) BOOL evidence;
-@property(nonatomic) BOOL dirty;
-@end
-@implementation BHRDAdCellBinding @end
-static char AdBindingKey;
 static char BHRDCellStateKey, BHRDExpandedKey, BHRDReloadKey, BHRDForceReloadKey;
 static NSHashTable *Controllers(void) {
     static NSHashTable *controllers;
@@ -276,17 +267,6 @@ void BHRDRestoreRepostCell(UITableViewCell *cell) {
     cell.selectionStyle = state.selection;
 }
 void BHRDLayoutRepostCell(UITableViewCell *cell) {
-    BHRDAdCellBinding *binding=objc_getAssociatedObject(cell,&AdBindingKey);
-    if (binding.dirty && binding.controller && BHRDPreference(BHRDHideAdsKey) && !BHRDIsConversationContext(binding.controller)) {
-        binding.dirty=NO;
-        BOOL evidence=BHRDAdViewEvidence(cell);
-        if (evidence != binding.evidence) {
-            binding.evidence=evidence;
-            BHRDSetNativeAdEvidence(binding.model,evidence);
-            BHRDConfigureRepostCell(cell,binding.model,binding.controller);
-            BHRDScheduleTimelineRefresh(binding.controller);
-        }
-    }
     BHRDRepostCellState *state = objc_getAssociatedObject(cell, &BHRDCellStateKey);
     if (!state) return;
     if (BHRDIsConversationContext(cell) || BHRDIsConversationContext(state.controller)) {
@@ -308,10 +288,6 @@ void BHRDLayoutRepostCell(UITableViewCell *cell) {
 }
 void BHRDConfigureRepostCell(UITableViewCell *cell, id model, id controller) {
     if (![cell isKindOfClass:UITableViewCell.class]) return;
-    BHRDAdCellBinding *binding=[BHRDAdCellBinding new]; binding.model=model; binding.controller=controller;
-    binding.evidence=BHRDPreference(BHRDHideAdsKey) && !BHRDIsConversationContext(controller) && BHRDAdViewEvidence(cell);
-    BHRDSetNativeAdEvidence(model,binding.evidence);
-    objc_setAssociatedObject(cell,&AdBindingKey,binding,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     NSInteger mode = BHRDIsConversationContext(cell) ? -1 : Presentation(controller, model);
     BHRDRepostCellState *old = objc_getAssociatedObject(cell, &BHRDCellStateKey);
     NSString *identity = mode < 0 ? nil : BHRDRepostIdentity(model);
@@ -429,7 +405,3 @@ void BHRDConfigureRepostCell(UITableViewCell *cell, id model, id controller) {
     BHRDLayoutRepostCell(cell);
     ScheduleAuthorCapture(state);
 }
-
-void BHRDForgetAdCell(UITableViewCell *cell) { objc_setAssociatedObject(cell,&AdBindingKey,nil,OBJC_ASSOCIATION_RETAIN_NONATOMIC); }
-
-void BHRDInvalidateAdCell(UITableViewCell *cell) { BHRDAdCellBinding *binding=objc_getAssociatedObject(cell,&AdBindingKey); binding.dirty=YES; [cell setNeedsLayout]; }

@@ -1,21 +1,19 @@
 #import "BHRDPreferences.h"
-#import "BHRDAdPresentation.h"
-#import "BHRDModelAccess.h"
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
 %group PremiumProfile
 %hook T1ProfileSummaryView
-- (BOOL)shouldShowGetVerifiedButton { return (BHRDPreference(BHRDHidePremiumKey) || BHRDPreference(BHRDHideAdsKey)) ? NO : %orig; }
+- (BOOL)shouldShowGetVerifiedButton { return BHRDPreference(BHRDHidePremiumKey) ? NO : %orig; }
 %end
 %end
 %group PremiumHome
 %hook THFHomeTimelineContainerViewController
-- (void)_t1_showPremiumUpsellIfNeeded { if (!(BHRDPreference(BHRDHidePremiumKey) || BHRDPreference(BHRDHideAdsKey))) { %orig; } }
+- (void)_t1_showPremiumUpsellIfNeeded { if (!BHRDPreference(BHRDHidePremiumKey)) { %orig; } }
 %end
 %end
 %group PremiumHomeScribe
 %hook THFHomeTimelineContainerViewController
-- (void)_t1_showPremiumUpsellIfNeededWithScribing:(BOOL)scribe { if (!(BHRDPreference(BHRDHidePremiumKey) || BHRDPreference(BHRDHideAdsKey))) { %orig(scribe); } }
+- (void)_t1_showPremiumUpsellIfNeededWithScribing:(BOOL)scribe { if (!BHRDPreference(BHRDHidePremiumKey)) { %orig(scribe); } }
 %end
 %end
 // Upstream iPad recommendation sidebar surface. Restore our changes when disabled.
@@ -24,8 +22,6 @@ static char SidebarStateKey;
 %hook UIView
 - (void)didMoveToWindow {
     %orig;
-    BHRDUpdateStandaloneAdView(self);
-    BHRDAdAnnotationDidChange(self, BHRDModelValue(self,@"text"));
     NSArray *previous = objc_getAssociatedObject(self, &SidebarStateKey);
     BOOL hide = UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPad && BHRDPreference(BHRDHideWhoKey) && [self.accessibilityIdentifier isEqual:@"T1UserRecommendationsViewController"];
     if (hide) {

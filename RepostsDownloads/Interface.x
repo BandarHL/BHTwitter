@@ -1,5 +1,4 @@
 #import "BHRDHomeHeaderView.h"
-#import "BHRDAdPresentation.h"
 #import "BHRDHomeHeader.h"
 #import "BHRDHomePaging.h"
 #import "BHRDFullscreenDownloadControl.h"
@@ -11,17 +10,8 @@
 %end
 %hook UILabel
 - (void)setText:(NSString *)text {
-    NSString *previous=self.text;
     %orig;
-    BHRDAdAnnotationDidChange(self, previous);
-    BHRDAdAnnotationDidChange(self, text);
     if (BHRDHomeHeaderRole(text) != BHRDHomeTabNone) BHRDScheduleHomeHeaderUpdate(self.window);
-}
-- (void)setAttributedText:(NSAttributedString *)text {
-    NSString *previous=self.attributedText.string;
-    %orig;
-    BHRDAdAnnotationDidChange(self,previous);
-    BHRDAdAnnotationDidChange(self,text.string);
 }
 %end
 %hook UIViewController

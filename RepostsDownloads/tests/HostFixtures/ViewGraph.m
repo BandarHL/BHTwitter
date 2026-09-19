@@ -2,14 +2,12 @@
 #import "../../BHRDShareLoadedMedia.h"
 @implementation UIView
 - (instancetype)init { if ((self=[super init])) { _alpha=1; _subviews=[NSMutableArray array]; _layer=[CALayer layer]; } return self; }
-- (void)setNeedsLayout {}
 - (void)addSubview:(UIView *)view { view.superview=self; [self.subviews addObject:view]; }
 - (CGRect)convertRect:(CGRect)rect toView:(UIView *)target {
     for (UIView *view=self; view && view!=target; view=view.superview) { rect.origin.x+=view.frame.origin.x; rect.origin.y+=view.frame.origin.y; }
     return rect;
 }
 @end
-@implementation UILabel @end
 @implementation UIControl @end
 @implementation UITableViewCell @end
 @implementation UITableView

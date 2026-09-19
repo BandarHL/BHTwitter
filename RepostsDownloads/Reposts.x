@@ -68,7 +68,6 @@
 }
 - (void)prepareForReuse {
     BHRDRestoreRepostCell(self);
-    BHRDForgetAdCell(self);
     %orig;
 }
 %end
