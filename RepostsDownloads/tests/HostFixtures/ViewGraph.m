@@ -13,7 +13,9 @@
 @implementation UITableView
 - (NSIndexPath *)indexPathForCell:(UITableViewCell *)cell { return [NSIndexPath indexPathWithIndex:[self.visibleCells indexOfObject:cell]]; }
 @end
+@implementation UIImageView @end
 @implementation UIImage
+- (CGImageRef)CGImage { return NULL; }
 + (instancetype)imageWithCGImage:(CGImageRef)image { (void)image; return [self new]; }
 @end
 NSData *UIImagePNGRepresentation(UIImage *image) { return image.fixtureData; }

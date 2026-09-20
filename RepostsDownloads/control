@@ -1,8 +1,8 @@
 Package: com.caun.bhtwitter.repostsdownloads
 Name: X 随心
-Version: 2.3.2
+Version: 2.3.3
 Architecture: iphoneos-arm64
-Description: 统一时间线过滤与作者校验；原画质视频下载、下载文件管理、分享图片和界面定制。
+Description: 全屏复制图片到剪贴板，保留视频下载、转推管理、分享图片和界面定制。
 Maintainer: caun1112
 Author: caun1112, Bandar Alruwaili
 Section: Tweaks

@@ -9,6 +9,7 @@
 @property(nonatomic) BOOL hidden;
 @property(nonatomic) CGFloat alpha;
 @property(nonatomic,weak) UIView *superview;
+@property(nonatomic,weak) UIView *window;
 @property(nonatomic,strong) NSMutableArray<UIView *> *subviews;
 @property(nonatomic,strong) CALayer *layer;
 @property(nonatomic,copy) NSString *accessibilityLabel;
@@ -23,7 +24,11 @@
 @property(nonatomic,weak) id delegate;
 - (NSIndexPath *)indexPathForCell:(UITableViewCell *)cell;
 @end
+@interface UIImageView : UIView
+@property(nonatomic,strong) id image;
+@end
 @interface UIImage : NSObject
+@property(nonatomic,readonly) CGImageRef CGImage;
 @property(nonatomic,copy) NSData *fixtureData;
 + (instancetype)imageWithCGImage:(CGImageRef)image;
 @end

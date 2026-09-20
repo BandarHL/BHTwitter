@@ -2,6 +2,7 @@
 #import "BHRDDownloadButton.h"
 #import "BHRDSettingsViewController.h"
 #import "BHRDFullscreenDownloadControl.h"
+#import "BHRDFullscreenPhotoCopy.h"
 #import "BHRDHomeHeaderView.h"
 #import "BHRDInlineLayout.h"
 #import "BHRDInlineButtonStyle.h"
@@ -165,6 +166,7 @@ static NSArray *BHRDResolveFullscreenMedia(UIViewController *controller) {
     return media.count ? media : BHRDResolveMedia(root);
 }
 void BHRDRefreshFullscreenController(UIViewController *controller) {
+    if (BHRDRefreshFullscreenPhotoCopy(controller)) return;
     if (!BHRDIsFullscreenController(controller) && !objc_getAssociatedObject(controller, &BHRDFloatingSourceKey)) return;
     UIView *root = controller.viewIfLoaded;
     if (!root) return;
@@ -201,6 +203,7 @@ void BHRDFullscreenControllerDidAppear(UIViewController *controller) {
     BHRDRefreshFullscreenController(controller);
 }
 void BHRDFullscreenControllerDidDisappear(UIViewController *controller) {
+    BHRDRemoveFullscreenPhotoCopy(controller);
     if (!BHRDIsFullscreenController(controller) && !objc_getAssociatedObject(controller, &BHRDFloatingSourceKey)) return;
     [BHRDFloatingVisibility(controller) didDisappear];
     BHRDRemoveFloatingDownloadControl(controller);
