@@ -33,3 +33,12 @@
 + (instancetype)imageWithCGImage:(CGImageRef)image;
 @end
 NSData *UIImagePNGRepresentation(UIImage *image);
+
+FOUNDATION_EXPORT NSString * const UIPasteboardOptionLocalOnly;
+FOUNDATION_EXPORT NSString * const UIPasteboardOptionExpirationDate;
+@interface UIPasteboard : NSObject
++ (instancetype)generalPasteboard;
+@property(nonatomic,copy) NSArray *fixtureItems;
+@property(nonatomic,copy) NSDictionary *fixtureOptions;
+- (void)setItems:(NSArray *)items options:(NSDictionary *)options;
+@end
