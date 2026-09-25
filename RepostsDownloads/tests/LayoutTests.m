@@ -47,10 +47,21 @@ int main(void) {
         }
         CGRect portrait = BHRDFloatingDownloadFrame(CGRectMake(0, 0, 390, 844), 47, 0, 34, 0);
         Check(Near(CGRectGetMidY(portrait), 844 * 0.65), @"Portrait download button center is at 65 percent of screen height");
-        Check(Near(CGRectGetMidX(portrait), 390 - 16 - 52), @"Icon-only button preserves the previous capsule center");
+        Check(Near(CGRectGetMaxX(portrait), 390 - 12), @"Icon-only button is anchored 12 points from the right edge");
+        Check(Near(portrait.size.width, 44) && Near(portrait.size.height, 44), @"Portrait keeps a 44-point icon target");
         CGRect landscape = BHRDFloatingDownloadFrame(CGRectMake(0, 0, 844, 390), 0, 47, 21, 47);
         Check(Near(CGRectGetMidY(landscape), 390 * 0.65), @"Landscape also uses screen-height 65 percent");
-        Check(CGRectGetMaxX(landscape) <= 844 - 47 - 12, @"Landscape button avoids the notch safe area");
+        Check(Near(CGRectGetMaxX(landscape), 844 - 47 - 12), @"Landscape button follows the notch safe area with a 12-point gap");
+        Check(Near(landscape.size.width, 44) && Near(landscape.size.height, 44), @"Landscape keeps a 44-point icon target");
+        CGRect offset = BHRDFloatingDownloadFrame(CGRectMake(20, 30, 320, 600), 20, 10, 25, 18);
+        Check(Near(CGRectGetMaxX(offset), 20 + 320 - 18 - 12) && Near(CGRectGetMidY(offset), 30 + 600 * 0.65), @"Nonzero bounds origins and asymmetric safe insets retain the same anchors");
+        CGRect shortView = BHRDFloatingDownloadFrame(CGRectMake(0, 0, 150, 100), 10, 0, 35, 0);
+        Check(CGRectGetMinY(shortView) >= 22 && CGRectGetMaxY(shortView) <= 100 - 35 - 12, @"Short view clamps the button above the bottom safe area");
+        for (NSNumber *narrowWidth in @[@0, @10, @24, @50, @68, @120]) {
+            CGRect narrow = BHRDFloatingDownloadFrame(CGRectMake(7, 9, narrowWidth.doubleValue, 300), 20, 0, 20, 0);
+            Check(narrow.size.width >= 0 && Near(narrow.size.width, narrow.size.height), @"Narrow views retain a nonnegative square target");
+            Check(CGRectGetMinX(narrow) >= 7 && CGRectGetMaxX(narrow) <= 7 + narrowWidth.doubleValue, @"Narrow views never place the target outside their horizontal bounds");
+        }
         BHRDFullscreenVisibility *visibility = [BHRDFullscreenVisibility new];
         Check(![visibility shouldDisplayEnabled:YES attached:YES], @"Unverified non-video pages do not show a download button");
         [visibility observeMedia:YES];

@@ -3,6 +3,7 @@
 #import "BHRDSettingsViewController.h"
 #import "BHRDFullscreenDownloadControl.h"
 #import "BHRDFullscreenPhotoCopy.h"
+#import "BHRDFullscreenContext.h"
 #import "BHRDHomeHeaderView.h"
 #import "BHRDInlineLayout.h"
 #import "BHRDInlineButtonStyle.h"
@@ -23,8 +24,7 @@ static BOOL BHViewIsInImmersiveFullScreen(UIView *view) {
     for (NSUInteger depth = 0; responder != nil && depth < 64; depth++) {
         NSString *className = NSStringFromClass(responder.class);
         if ([responder isKindOfClass:UIViewController.class]) {
-            if ([className containsString:@"ImmersiveFullScreenViewController"] ||
-                [className containsString:@"ImmersiveViewController"]) {
+            if (BHRDIsFullscreenMediaController(responder)) {
                 return true;
             }
         }
@@ -82,10 +82,8 @@ static BHRDFullscreenVisibility *BHRDFloatingVisibility(UIViewController *contro
     }
     return state;
 }
-static BOOL BHRDIsFullscreenController(UIViewController *controller) {
-    NSString *name = NSStringFromClass(controller.class);
-    return [name containsString:@"ImmersiveFullScreenViewController"] || [name containsString:@"ImmersiveViewController"] || [name containsString:@"SlideshowViewController"];
-}
+static BOOL BHRDIsFullscreenController(UIViewController *controller) { return BHRDIsFullscreenMediaController(controller); }
+
 static id BHRDVideoModel(UIView *view) {
     return BHRDMediaObject(view, @"viewModel") ?: BHRDMediaObject(BHRDMediaObject(view, @"delegate"), @"viewModel");
 }
@@ -224,6 +222,7 @@ static void BHRDRegisterFloatingSource(UIView *shareButton) {
     }
     owner = owner ?: fallback;
     if (!owner) return;
+    BHRDRegisterFullscreenMediaSource(owner,shareButton);
     BHRDFullscreenMediaSource *source = objc_getAssociatedObject(owner, &BHRDFloatingSourceKey);
     if (!source) {
         source = [BHRDFullscreenMediaSource new];

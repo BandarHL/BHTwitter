@@ -7,6 +7,7 @@
 @property(nonatomic) CGRect frame;
 @property(nonatomic) CGRect bounds;
 @property(nonatomic) BOOL hidden;
+@property(nonatomic) BOOL clipsToBounds;
 @property(nonatomic) CGFloat alpha;
 @property(nonatomic,weak) UIView *superview;
 @property(nonatomic,weak) UIView *window;
@@ -29,6 +30,7 @@
 @end
 @interface UIImage : NSObject
 @property(nonatomic,readonly) CGImageRef CGImage;
+@property(nonatomic,strong) id fixtureBackingImage;
 @property(nonatomic,copy) NSData *fixtureData;
 + (instancetype)imageWithCGImage:(CGImageRef)image;
 @end

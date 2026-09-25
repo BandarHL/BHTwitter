@@ -8,7 +8,7 @@ include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME := BHRD
 BHRD_FILES := RecommendationFeatures.x BHRDContentFilter.m BHRDConfirmationGate.m Confirmations.x Recommendations.x Ads.x BHRDAdFilter.m BHRDShareMediaQuality.m BHRDShareTextCleanup.m BHRDInlineButtonStyle.m BHRDShareLoadedMedia.m BHRDShareVisibleData.m BHRDShareImageButton.m BHRDSharePost.m BHRDShareRenderer.m BHRDShareImageController.m BHRDShareGesture.m BHRDMediaResolver.m BHRDFullscreenVisibility.m BHRDLayoutGeometry.m BHRDInlineLayout.m BHRDTaskState.m BHRDDownloadProgress.m BHRDStreamJob.m BHRDHomePaging.m Interface.x BHRDHomeHeader.m BHRDHomeHeaderView.m BHRDFullscreenActionRouter.m BHRDFullscreenDownloadControl.m Tweak.x Reposts.x BHRDRepostModel.m BHRDRepostPresentation.m BHRDManager.m BHRDPreferences.m BHRDSettingsList.m BHRDDownload.m BHRDDownloadButton.m BHRDRepostFilter.m BHRDSettingsViewController.m $(wildcard ../JGProgressHUD/*.m)
-BHRD_FILES += BHRDPhotoClipboard.m BHRDFileNaming.m BHRDFullscreenPhotoResolver.m BHRDPhotoCopyData.m BHRDFullscreenPhotoCopy.m BHRDShareRenderState.m BHRDStreamArguments.m BHRDDownloadStore.m BHRDDownloadsViewController.m BHRDConversationScope.m BHRDRepostAuthor.m BHRDRepostAuthorRows.m
+BHRD_FILES += BHRDFullscreenContext.m BHRDPhotoClipboard.m BHRDFileNaming.m BHRDFullscreenPhotoResolver.m BHRDPhotoCopyData.m BHRDFullscreenPhotoCopy.m BHRDShareRenderState.m BHRDStreamArguments.m BHRDDownloadStore.m BHRDDownloadsViewController.m BHRDConversationScope.m BHRDRepostAuthor.m BHRDRepostAuthorRows.m
 BHRD_FRAMEWORKS := QuartzCore CoreText ImageIO UIKit Foundation AVFoundation AVKit VideoToolbox Accelerate CoreMedia CoreGraphics AudioToolbox Photos Security SystemConfiguration
 BHRD_OBJ_FILES := $(wildcard ../lib/*.a)
 BHRD_LIBRARIES := bz2 c++ iconv z

@@ -10,15 +10,19 @@ CGRect BHRDInlineActionFrame(CGRect columns, CGRect original, NSUInteger count, 
     return original;
 }
 CGRect BHRDFloatingDownloadFrame(CGRect bounds, double top, double left, double bottom, double right) {
-    CGFloat width = MIN(104, MAX(0, bounds.size.width - left - right - 24));
-    CGFloat height = MIN(44, MAX(0, bounds.size.height - top - bottom - 24));
-    CGFloat x = bounds.origin.x + bounds.size.width - right - 16 - width;
-    CGFloat y = bounds.origin.y + bounds.size.height * 0.65 - height / 2;
-    x = MAX(bounds.origin.x + left + 12, x);
-    y = MAX(bounds.origin.y + top + 12, MIN(y, CGRectGetMaxY(bounds) - bottom - 12 - height));
-    // Preserve the previous capsule center in both orientations.
-    CGFloat side = MIN(44, MIN(width, height));
-    return CGRectMake(x + (width - side) / 2, y + (height - side) / 2, side, side);
+    CGFloat safeMinX = bounds.origin.x + MIN(MAX(0, left), MAX(0, bounds.size.width));
+    CGFloat safeMinY = bounds.origin.y + MIN(MAX(0, top), MAX(0, bounds.size.height));
+    CGFloat safeMaxX = MAX(safeMinX, CGRectGetMaxX(bounds) - MAX(0, right));
+    CGFloat safeMaxY = MAX(safeMinY, CGRectGetMaxY(bounds) - MAX(0, bottom));
+    CGFloat marginX = MIN(12, (safeMaxX - safeMinX) / 2);
+    CGFloat marginY = MIN(12, (safeMaxY - safeMinY) / 2);
+    CGFloat side = MIN(44, MIN(safeMaxX - safeMinX - 2 * marginX, safeMaxY - safeMinY - 2 * marginY));
+    // Anchor the actual icon target to the safe right edge, not the center of
+    // the former text capsule. Preserve the existing 65-percent vertical anchor.
+    CGFloat x = safeMaxX - marginX - side;
+    CGFloat y = bounds.origin.y + bounds.size.height * 0.65 - side / 2;
+    y = MAX(safeMinY + marginY, MIN(y, safeMaxY - marginY - side));
+    return CGRectMake(x, y, side, side);
 }
 CGRect BHRDAlignedInlineActionFrame(CGRect columns, CGRect original, NSArray<NSNumber *> *minimumWidths, NSUInteger index) {
     NSUInteger count = minimumWidths.count;

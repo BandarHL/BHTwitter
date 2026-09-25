@@ -15,8 +15,8 @@
 @end
 @implementation UIImageView @end
 @implementation UIImage
-- (CGImageRef)CGImage { return NULL; }
-+ (instancetype)imageWithCGImage:(CGImageRef)image { (void)image; return [self new]; }
+- (CGImageRef)CGImage { return (__bridge CGImageRef)self.fixtureBackingImage; }
++ (instancetype)imageWithCGImage:(CGImageRef)image { UIImage *value=[self new]; value.fixtureBackingImage=(__bridge id)image; return value; }
 @end
 NSData *UIImagePNGRepresentation(UIImage *image) { return image.fixtureData; }
 void BHRDCaptureLoadedShareMedia(BHRDSharePost *post, UIView *card, NSArray *excluded) { (void)post; (void)card; (void)excluded; }
