@@ -4,8 +4,14 @@ cd "$(dirname "$0")"
 BHRD_TEST_DIR="$(mktemp -d -t bhrd-download-tests)"
 BHRD_SERVER_PID=''
 cleanup() {
-  if [ -n "$BHRD_SERVER_PID" ]; then kill "$BHRD_SERVER_PID" 2>/dev/null || true; fi
+  BHRD_TEST_STATUS=$?
+  trap - EXIT INT TERM
+  if [ -n "$BHRD_SERVER_PID" ]; then
+    kill "$BHRD_SERVER_PID" 2>/dev/null || true
+    wait "$BHRD_SERVER_PID" 2>/dev/null || true
+  fi
   rm -rf "$BHRD_TEST_DIR"
+  exit "$BHRD_TEST_STATUS"
 }
 trap cleanup EXIT
 xcrun clang -fobjc-arc -Wall -Wextra -Werror -framework Foundation \
