@@ -1,8 +1,8 @@
 Package: com.caun.bhtwitter.repostsdownloads
 Name: X 随心
-Version: 2.4.0
+Version: 2.4.1
 Architecture: iphoneos-arm64
-Description: 修复沉浸式全屏图片复制入口，新增可点击的图片工具箱入口，视频下载按钮靠右对齐。
+Description: 修复转推缩略图作者头像错配及详情返回后的作者丢失，保留图片工具箱和视频下载功能。
 Maintainer: caun1112
 Author: caun1112, Bandar Alruwaili
 Section: Tweaks

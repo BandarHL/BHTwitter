@@ -1,13 +1,18 @@
 #import "BHRDRepostPresentation.h"
-#import "BHRDManager.h"
+#import "BHRDPreferences.h"
 #import "BHRDConversationScope.h"
 #import "BHRDAdFilter.h"
 #import "BHRDContentFilter.h"
-#import "BHRDRepostAuthor.h"
 #import <objc/runtime.h>
 #import <objc/message.h>
+@protocol BHRDTimelineItems <NSObject>
+- (NSArray *)sections;
+- (void)setSections:(NSArray *)sections;
+- (id)itemAtIndexPath:(NSIndexPath *)path;
+@end
 
 static char BHRDCellStateKey, BHRDExpandedKey, BHRDReloadKey, BHRDForceReloadKey;
+static void RetryAvatar(UITableViewCell *cell);
 static NSHashTable *Controllers(void) {
     static NSHashTable *controllers;
     static dispatch_once_t once;
@@ -27,7 +32,7 @@ static NSInteger Presentation(id controller, id model) {
     [Controllers() addObject:controller];
     if (BHRDShouldHideRecommendation(model, controller)) return BHRDRepostModeHidden;
     if (BHRDPreference(BHRDHideAdsKey) && BHRDIsPromotedModel(model)) return BHRDRepostModeHidden;
-    if (![BHRDManager HideReposts] || !BHRDIsRepostModel(model)) return -1;
+    if (!BHRDPreference(BHRDHideRepostsKey) || !BHRDIsRepostModel(model)) return -1;
     if ([Expanded(controller) containsObject:BHRDRepostIdentity(model)]) return -1;
     return BHRDCurrentRepostMode();
 }
@@ -59,12 +64,12 @@ static void ScheduleRefresh(id controller, BOOL forceReload) {
         }
         BOOL changed = NO;
         if ([current respondsToSelector:@selector(sections)] && [current respondsToSelector:@selector(setSections:)]) {
-            NSArray *sections = [(TFNItemsDataViewController *)current sections];
+            NSArray *sections = [(id<BHRDTimelineItems>)current sections];
             NSArray *recommendations = BHRDFilterRecommendations(sections, current);
             NSArray *filtered = BHRDPreference(BHRDHideAdsKey) ? BHRDSectionsByRemovingAds(recommendations) : recommendations;
-            if ([BHRDManager HideReposts] && BHRDCurrentRepostMode() == BHRDRepostModeHidden) filtered = BHRDSectionsByRemovingReposts(filtered);
+            if (BHRDPreference(BHRDHideRepostsKey) && BHRDCurrentRepostMode() == BHRDRepostModeHidden) filtered = BHRDSectionsByRemovingReposts(filtered);
             if (filtered != sections) {
-                [(TFNItemsDataViewController *)current setSections:filtered];
+                [(id<BHRDTimelineItems>)current setSections:filtered];
                 changed = YES;
             }
         }
@@ -80,6 +85,17 @@ void BHRDResetExpandedReposts(void) {
     }
 }
 void BHRDRepostPreferencesChanged(void) { BHRDResetExpandedReposts(); }
+void BHRDRepostControllerDidAppear(id controller) {
+    if (![Controllers() containsObject:controller] || BHRDIsConversationContext(controller)) return;
+    UITableView *table=Table(controller);
+    if (!table.window || ![controller respondsToSelector:@selector(itemAtIndexPath:)]) return;
+    if (table.hasUncommittedUpdates) { ScheduleRefresh(controller,YES); return; }
+    for (UITableViewCell *cell in table.visibleCells) {
+        NSIndexPath *path=[table indexPathForCell:cell];
+        id model=path ? [(id<BHRDTimelineItems>)controller itemAtIndexPath:path] : nil;
+        if (model) { BHRDConfigureRepostCell(cell,model,controller); RetryAvatar(cell); }
+    }
+}
 double BHRDRepostRowHeight(id controller, id model, double originalHeight) {
     NSInteger mode = Presentation(controller, model);
     if (mode < 0) return originalHeight;
@@ -123,8 +139,9 @@ double BHRDRepostRowHeight(id controller, id model, double originalHeight) {
 @property(nonatomic, copy) NSURL *avatarURL;
 @property(nonatomic, copy) NSArray<NSURL *> *thumbnailURLs;
 @property(nonatomic, strong) BHRDRepostInfo *info;
-@property(nonatomic, strong) UIImage *nativeAvatar;
-@property(nonatomic) BOOL capturingAuthor;
+@property(nonatomic) BOOL refreshingMetadata;
+@property(nonatomic) BOOL avatarLoading;
+@property(nonatomic) BOOL avatarLoaded;
 @property(nonatomic) BOOL imageCaptureQueued;
 @property(nonatomic) BOOL originalClips;
 @property(nonatomic) BOOL originalAccessible;
@@ -146,11 +163,11 @@ void BHRDRepostMetadataChanged(void) {
     // Their row geometry is unchanged, so a full table reload is unnecessary.
     dispatch_async(dispatch_get_main_queue(), ^{
         static BOOL scheduled = NO;
-        if (scheduled || ![BHRDManager HideReposts] || BHRDCurrentRepostMode() != BHRDRepostModePreview) return;
+        if (scheduled || !BHRDPreference(BHRDHideRepostsKey) || BHRDCurrentRepostMode() != BHRDRepostModePreview) return;
         scheduled = YES;
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.10 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             scheduled = NO;
-            if (![BHRDManager HideReposts] || BHRDCurrentRepostMode() != BHRDRepostModePreview) return;
+            if (!BHRDPreference(BHRDHideRepostsKey) || BHRDCurrentRepostMode() != BHRDRepostModePreview) return;
             for (id controller in Controllers().allObjects) {
                 UITableView *table = Table(controller);
                 if (!table.window || ![controller respondsToSelector:@selector(itemAtIndexPath:)]) continue;
@@ -159,7 +176,7 @@ void BHRDRepostMetadataChanged(void) {
                     BHRDRepostCellState *state = objc_getAssociatedObject(cell, &BHRDCellStateKey);
                     if (state.controller != controller || state.mode != BHRDRepostModePreview) continue;
                     NSIndexPath *indexPath = [table indexPathForCell:cell];
-                    id model = indexPath ? [(TFNItemsDataViewController *)controller itemAtIndexPath:indexPath] : nil;
+                    id model = indexPath ? [(id<BHRDTimelineItems>)controller itemAtIndexPath:indexPath] : nil;
                     if (model) BHRDConfigureRepostCell(cell, model, controller);
                 }
             }
@@ -172,25 +189,40 @@ static NSCache *ImageCache(void) {
     dispatch_once(&once, ^{ cache = [NSCache new]; cache.countLimit = 100; cache.totalCostLimit = 20 * 1024 * 1024; });
     return cache;
 }
+static char ImageRequestKey;
 static void LoadImage(NSURL *url, UIImageView *view, BHRDRepostCellState *state) {
     if (!url) return;
+    NSString *request=NSUUID.UUID.UUIDString;
+    objc_setAssociatedObject(view,&ImageRequestKey,request,OBJC_ASSOCIATION_COPY_NONATOMIC);
+    BOOL avatar=view==[(BHRDRepostOverlay *)state.overlay avatar];
     UIImage *image = [ImageCache() objectForKey:url.absoluteString];
-    if (image) { view.image = image; return; }
+    if (image) { view.image = image; if (avatar) { state.avatarLoaded=YES; state.avatarLoading=NO; } return; }
+    if (avatar) { state.avatarLoading=YES; state.avatarLoaded=NO; }
     __weak BHRDRepostCellState *weakState = state;
     __weak UIImageView *weakView = view;
     NSURLSessionDataTask *task = [NSURLSession.sharedSession dataTaskWithURL:url completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
-        if (error || data.length > 8 * 1024 * 1024 || ![response.MIMEType hasPrefix:@"image/"]) return;
-        UIImage *downloaded = [UIImage imageWithData:data];
-        if (!downloaded) return;
-        [ImageCache() setObject:downloaded forKey:url.absoluteString cost:downloaded.size.width * downloaded.size.height * 4];
+        BOOL httpOK=![response isKindOfClass:NSHTTPURLResponse.class] || ([(NSHTTPURLResponse *)response statusCode]>=200 && [(NSHTTPURLResponse *)response statusCode]<300);
+        UIImage *downloaded = !error && httpOK && data.length>0 && data.length<=8*1024*1024 && [response.MIMEType hasPrefix:@"image/"] ? [UIImage imageWithData:data] : nil;
         dispatch_async(dispatch_get_main_queue(), ^{
             BHRDRepostCellState *current = weakState;
             // Reused cells must never display the previous tweet's asynchronous image.
-            if (current && objc_getAssociatedObject(current.cell, &BHRDCellStateKey) == current) weakView.image = downloaded;
+            if (current && objc_getAssociatedObject(current.cell, &BHRDCellStateKey) == current &&
+                [objc_getAssociatedObject(weakView,&ImageRequestKey) isEqual:request]) {
+                if (avatar) { current.avatarLoading=NO; current.avatarLoaded=downloaded!=nil; }
+                if (downloaded) {
+                    [ImageCache() setObject:downloaded forKey:url.absoluteString cost:downloaded.size.width * downloaded.size.height * 4];
+                    weakView.image = downloaded;
+                }
+            }
         });
     }];
     [state.tasks addObject:task];
     [task resume];
+}
+static void RetryAvatar(UITableViewCell *cell) {
+    BHRDRepostCellState *state=objc_getAssociatedObject(cell,&BHRDCellStateKey);
+    if (state.mode==BHRDRepostModePreview && state.avatarURL && !state.avatarLoaded && !state.avatarLoading)
+        LoadImage(state.avatarURL,[(BHRDRepostOverlay *)state.overlay avatar],state);
 }
 static UILabel *Label(NSString *text, CGFloat size, UIColor *color) {
     UILabel *label = [UILabel new];
@@ -200,41 +232,32 @@ static UILabel *Label(NSString *text, CGFloat size, UIColor *color) {
     label.lineBreakMode = NSLineBreakByTruncatingTail;
     return label;
 }
-static void CaptureNativeAuthor(BHRDRepostCellState *state) {
-    if (state.mode != BHRDRepostModePreview || !state.cell || state.capturingAuthor) return;
+static void RefreshPreviewMetadata(BHRDRepostCellState *state) {
+    if (state.mode != BHRDRepostModePreview || !state.cell || state.refreshingMetadata || BHRDIsConversationContext(state.controller)) return;
     UITableView *table = Table(state.controller);
     NSIndexPath *path = [table indexPathForCell:state.cell];
-    if (path && [state.controller respondsToSelector:@selector(itemAtIndexPath:)]) {
-        id model = [(TFNItemsDataViewController *)state.controller itemAtIndexPath:path];
-        if (![BHRDRepostIdentity(model) isEqual:state.identity]) return;
-    }
-    state.capturingAuthor = YES;
-    // The host's child header layout can run after the cell's own layout.
-    // Finish pending child layout before reading coordinates, including when
-    // this tweak has hidden the enclosing content view underneath its overlay.
-    for (UIView *view in state.cell.subviews) if (view != state.overlay) [view layoutIfNeeded];
-    UIImage *image = BHRDCaptureRepostAuthor(state.cell, state.overlay, state.hiddenViews, state.info);
-    BHRDRepostOverlay *overlay = (BHRDRepostOverlay *)state.overlay;
-    if (![state.author isEqual:state.info.author]) {
-        state.author = state.info.author;
-        overlay.author.text = state.author;
-    }
-    if (image) { state.nativeAvatar = image; overlay.avatar.image = image; }
-    if (state.info.avatar && ![state.avatarURL isEqual:state.info.avatar]) {
-        state.avatarURL = state.info.avatar;
-        if (!state.nativeAvatar) LoadImage(state.avatarURL, overlay.avatar, state);
-    }
-    state.capturingAuthor = NO;
+    if (!path || ![state.controller respondsToSelector:@selector(itemAtIndexPath:)]) return;
+    id model=[(id<BHRDTimelineItems>)state.controller itemAtIndexPath:path];
+    if (![BHRDRepostIdentity(model) isEqual:state.identity]) return;
+    BHRDRepostInfo *info=BHRDInfoForRepostModel(model);
+    BOOL sameAuthor=[(BHRDRepostAuthorKey(info) ?: @"") isEqual:(BHRDRepostAuthorKey(state.info) ?: @"")];
+    if (sameAuthor && [state.author isEqual:info.author] &&
+        (state.avatarURL==info.avatar || [state.avatarURL isEqual:info.avatar]) &&
+        [state.thumbnailURLs isEqual:info.thumbnails] &&
+        [(state.info.postIdentifier ?: @"") isEqual:(info.postIdentifier ?: @"")]) return;
+    state.refreshingMetadata=YES;
+    BHRDConfigureRepostCell(state.cell,model,state.controller);
+    state.refreshingMetadata=NO;
 }
-static void ScheduleAuthorCapture(BHRDRepostCellState *state) {
+static void ScheduleMetadataRefresh(BHRDRepostCellState *state) {
     if (state.mode != BHRDRepostModePreview) return;
     __weak BHRDRepostCellState *weakState = state;
-    // Host headers and image views may be populated after cellForRow returns.
+    // Native author models may be hydrated after cellForRow returns.
     // Bounded retries complement layout callbacks; never retain/reload the row.
     for (NSNumber *delay in @[@0.15, @0.6, @1.5, @4.0]) {
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay.doubleValue * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             BHRDRepostCellState *current = weakState;
-            if (current.cell.window && objc_getAssociatedObject(current.cell, &BHRDCellStateKey) == current) CaptureNativeAuthor(current);
+            if (current.cell.window && objc_getAssociatedObject(current.cell, &BHRDCellStateKey) == current) RefreshPreviewMetadata(current);
         });
     }
 }
@@ -250,7 +273,7 @@ void BHRDRepostNativeImageChanged(UIImageView *view) {
         dispatch_async(dispatch_get_main_queue(), ^{
             BHRDRepostCellState *current = weakState;
             current.imageCaptureQueued = NO;
-            if (current && objc_getAssociatedObject(current.cell, &BHRDCellStateKey) == current) CaptureNativeAuthor(current);
+            if (current && objc_getAssociatedObject(current.cell, &BHRDCellStateKey) == current) RefreshPreviewMetadata(current);
         });
         return;
     }
@@ -273,7 +296,9 @@ void BHRDLayoutRepostCell(UITableViewCell *cell) {
         BHRDRestoreRepostCell(cell);
         return;
     }
-    CaptureNativeAuthor(state);
+    RefreshPreviewMetadata(state);
+    state=objc_getAssociatedObject(cell,&BHRDCellStateKey);
+    if (!state) return;
     // Hide the original host subtree after each host layout, including newly added views.
     // The separate overlay does not inherit the tweet's text/media layout constraints.
     for (UIView *view in cell.subviews) {
@@ -293,27 +318,17 @@ void BHRDConfigureRepostCell(UITableViewCell *cell, id model, id controller) {
     NSString *identity = mode < 0 ? nil : BHRDRepostIdentity(model);
     BHRDRepostInfo *info = mode == BHRDRepostModePreview ? BHRDInfoForRepostModel(model) : nil;
     BOOL sameIdentity = old && old.controller == controller && [old.identity isEqual:identity];
-    UIImage *nativeAvatar = nil;
-    if (info) {
-        // Do not lose a native header snapshot when a partial network update
-        // reconfigures this same cell. Reuse never carries it to a different ID.
-        BOOL sameAuthor = !info.authorHandle.length || !old.info.authorHandle.length || [info.authorHandle caseInsensitiveCompare:old.info.authorHandle] == NSOrderedSame;
-        if (sameIdentity && sameAuthor) {
-            if (!info.authorName.length) info.authorName = old.info.authorName;
-            if (!info.authorHandle.length) info.authorHandle = old.info.authorHandle;
-            if (!info.avatar) info.avatar = old.info.avatar;
-            if (info.authorHandle.length) info.author = info.authorName.length ? [NSString stringWithFormat:@"%@ · @%@", info.authorName, info.authorHandle] : [@"@" stringByAppendingString:info.authorHandle];
-            nativeAvatar = old.nativeAvatar;
-        }
-        nativeAvatar = BHRDCaptureRepostAuthor(cell, old.overlay, old.hiddenViews, info) ?: nativeAvatar;
-    }
+    // The native header/UIImageView may still belong to the previous row.
+    // Preview identity and avatar URL come only from the bound model snapshot.
     // A reused identity can receive fuller metadata later. Keep value snapshots so
     // an earlier placeholder cannot mask an updated author, avatar or media list.
     BOOL samePreview = mode != BHRDRepostModePreview ||
         ([old.author isEqual:info.author] &&
+         [(BHRDRepostAuthorKey(old.info) ?: @"") isEqual:(BHRDRepostAuthorKey(info) ?: @"")] &&
+         [(old.info.postIdentifier ?: @"") isEqual:(info.postIdentifier ?: @"")] &&
          (old.avatarURL == info.avatar || [old.avatarURL isEqual:info.avatar]) &&
          [old.thumbnailURLs isEqual:info.thumbnails]);
-    if (sameIdentity && old.mode == mode && samePreview) { BHRDLayoutRepostCell(cell); return; }
+    if (sameIdentity && old.mode == mode && samePreview) { old.info=info; BHRDLayoutRepostCell(cell); return; }
     BHRDRestoreRepostCell(cell);
     if (mode < 0) return;
     BHRDRepostCellState *state = [BHRDRepostCellState new];
@@ -325,7 +340,6 @@ void BHRDConfigureRepostCell(UITableViewCell *cell, id model, id controller) {
     state.avatarURL = info.avatar;
     state.thumbnailURLs = info.thumbnails;
     state.info = info;
-    state.nativeAvatar = nativeAvatar;
     state.originalClips = cell.clipsToBounds;
     state.originalAccessible = cell.isAccessibilityElement;
     state.selection = cell.selectionStyle;
@@ -355,13 +369,13 @@ void BHRDConfigureRepostCell(UITableViewCell *cell, id model, id controller) {
         [overlay addSubview:show];
         if (mode == BHRDRepostModePreview) {
             UIImageView *avatar = [[UIImageView alloc] initWithFrame:CGRectMake(16, 54, 28, 28)];
-            avatar.image = nativeAvatar ?: [UIImage systemImageNamed:@"person.crop.circle"];
+            avatar.image = [UIImage systemImageNamed:@"person.crop.circle"];
             avatar.contentMode = UIViewContentModeScaleAspectFill;
             avatar.layer.cornerRadius = 14;
             avatar.clipsToBounds = YES;
             overlay.avatar = avatar;
             [overlay addSubview:avatar];
-            if (!nativeAvatar) LoadImage(info.avatar, avatar, state);
+            LoadImage(info.avatar, avatar, state);
             UILabel *author = Label(info.author, 13, UIColor.labelColor);
             author.frame = CGRectMake(52, 54, MAX(60, cell.bounds.size.width - 68), 28);
             author.autoresizingMask = UIViewAutoresizingFlexibleWidth;
@@ -403,5 +417,5 @@ void BHRDConfigureRepostCell(UITableViewCell *cell, id model, id controller) {
         }
     }
     BHRDLayoutRepostCell(cell);
-    ScheduleAuthorCapture(state);
+    ScheduleMetadataRefresh(state);
 }

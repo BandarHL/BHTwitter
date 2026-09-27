@@ -1,7 +1,10 @@
 #import <Foundation/Foundation.h>
 #import "BHRDPreferences.h"
 
-@interface BHRDRepostInfo : NSObject
+@interface BHRDRepostInfo : NSObject <NSCopying>
+@property(nonatomic, copy) NSString *postIdentifier;
+@property(nonatomic, copy) NSString *authorIdentifier;
+@property(nonatomic) NSUInteger authorPriority;
 @property(nonatomic, copy) NSString *author;
 @property(nonatomic, copy) NSString *authorName;
 @property(nonatomic, copy) NSString *authorHandle;
@@ -15,3 +18,4 @@ BOOL BHRDDataMayContainRepostMetadata(NSData *data);
 void BHRDCacheRepostMetadata(id object);
 NSArray *BHRDSectionsByRemovingReposts(NSArray *sections);
 NSURL *BHRDSafeThumbnailURL(id value);
+NSString *BHRDRepostAuthorKey(BHRDRepostInfo *info);

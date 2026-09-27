@@ -97,6 +97,6 @@ def verify(package, version):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("package", type=pathlib.Path)
-    parser.add_argument("--version", default="2.4.0")
+    parser.add_argument("--version", default="2.4.1")
     args = parser.parse_args()
     verify(args.package.resolve(), args.version)

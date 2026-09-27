@@ -2,6 +2,7 @@
 #import "BHRDHomeHeader.h"
 #import "BHRDHomePaging.h"
 #import "BHRDFullscreenDownloadControl.h"
+#import "BHRDRepostPresentation.h"
 %hook UIWindow
 - (void)layoutSubviews {
     %orig;
@@ -19,6 +20,7 @@
     %orig;
     BHRDScheduleHomeHeaderUpdate(self.viewIfLoaded.window);
     BHRDFullscreenControllerDidAppear(self);
+    BHRDRepostControllerDidAppear(self);
 }
 - (void)viewDidDisappear:(BOOL)animated {
     %orig;

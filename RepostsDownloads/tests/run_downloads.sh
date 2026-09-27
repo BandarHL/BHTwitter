@@ -16,7 +16,11 @@ cleanup() {
 trap cleanup EXIT
 xcrun clang -fobjc-arc -Wall -Wextra -Werror -framework Foundation \
   ../BHRDTaskState.m ../BHRDDownload.m DownloadLifecycleTests.m -o "$BHRD_TEST_DIR/tests"
-python3 download_server.py "$BHRD_TEST_DIR/port" > "$BHRD_TEST_DIR/server.log" 2>&1 &
+if [ -x /usr/bin/python3 ]; then
+  /usr/bin/python3 -u download_server.py "$BHRD_TEST_DIR/port" > "$BHRD_TEST_DIR/server.log" 2>&1 &
+else
+  python3 -u download_server.py "$BHRD_TEST_DIR/port" > "$BHRD_TEST_DIR/server.log" 2>&1 &
+fi
 BHRD_SERVER_PID=$!
 BHRD_RETRIES=0
 while [ ! -s "$BHRD_TEST_DIR/port" ]; do

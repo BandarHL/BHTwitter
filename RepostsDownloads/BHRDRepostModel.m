@@ -4,14 +4,18 @@
 #import <objc/runtime.h>
 #import <string.h>
 
-@interface BHRDRepostInfo ()
-@property(nonatomic, copy) NSString *postIdentifier;
-@property(nonatomic, copy) NSString *authorIdentifier;
-@end
 @implementation BHRDRepostInfo
 - (instancetype)init {
     if ((self = [super init])) { _author = @"转推作者"; _thumbnails = @[]; }
     return self;
+}
+- (id)copyWithZone:(NSZone *)zone {
+    BHRDRepostInfo *copy=[BHRDRepostInfo new];
+    copy.postIdentifier=self.postIdentifier; copy.authorIdentifier=self.authorIdentifier;
+    copy.authorPriority=self.authorPriority; copy.author=self.author;
+    copy.authorName=self.authorName; copy.authorHandle=self.authorHandle;
+    copy.avatar=self.avatar; copy.thumbnails=self.thumbnails;
+    return copy;
 }
 @end
 static NSCache *BHRDMetadataCache(void) {
@@ -57,7 +61,7 @@ static NSString *FirstText(id object, NSArray<NSString *> *paths) {
     return nil;
 }
 static NSString *IDText(id value) {
-    if (Text(value)) return Text(value);
+    if (Text(value)) return [Text(value) isEqual:@"0"] ? nil : Text(value);
     return [value isKindOfClass:NSNumber.class] && [value unsignedLongLongValue] ? [value stringValue] : nil;
 }
 static NSString *IDValue(id object, NSString *key) {
@@ -136,7 +140,10 @@ static NSDictionary *Unwrap(NSDictionary *result) {
 static NSString *FirstHandle(id object, NSArray<NSString *> *paths) {
     NSCharacterSet *invalid = [[NSCharacterSet characterSetWithCharactersInString:@"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"] invertedSet];
     for (NSString *path in paths) {
-        NSString *handle = [Text(Path(object, path)) stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"@ "]];
+        NSString *value=Text(Path(object,path));
+        NSCharacterSet *directions=[NSCharacterSet characterSetWithCharactersInString:@"\u061C\u200E\u200F\u202A\u202B\u202C\u202D\u202E\u2066\u2067\u2068\u2069"];
+        value=[[value componentsSeparatedByCharactersInSet:directions] componentsJoinedByString:@""];
+        NSString *handle = [value stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"@ "]];
         if (handle.length && handle.length <= 15 && [handle rangeOfCharacterFromSet:invalid].location == NSNotFound) return handle;
     }
     return nil;
@@ -147,7 +154,12 @@ static NSURL *FirstURL(id object, NSArray<NSString *> *paths) {
 }
 static void UpdateAuthor(BHRDRepostInfo *info) {
     NSString *handle = info.authorHandle.length ? [@"@" stringByAppendingString:info.authorHandle] : nil;
-    info.author = info.authorName.length && handle ? [NSString stringWithFormat:@"%@ · %@", info.authorName, handle] : info.authorName ?: handle ?: @"转推作者";
+    info.author = info.authorName.length && handle ? [NSString stringWithFormat:@"%@ · %@", info.authorName, handle] : info.authorName.length ? info.authorName : handle ?: @"转推作者";
+}
+NSString *BHRDRepostAuthorKey(BHRDRepostInfo *info) {
+    if (info.authorIdentifier.length) return [@"id:" stringByAppendingString:info.authorIdentifier];
+    if (info.authorHandle.length) return [@"handle:" stringByAppendingString:info.authorHandle.lowercaseString];
+    return nil;
 }
 static void MergeInfo(BHRDRepostInfo *target, BHRDRepostInfo *additional) {
     if (!additional) return;
@@ -157,11 +169,19 @@ static void MergeInfo(BHRDRepostInfo *target, BHRDRepostInfo *additional) {
     BOOL compatible = target.authorIdentifier.length && additional.authorIdentifier.length
         ? [target.authorIdentifier isEqual:additional.authorIdentifier]
         : (!target.authorHandle.length || !additional.authorHandle.length || [target.authorHandle caseInsensitiveCompare:additional.authorHandle] == NSOrderedSame);
-    if (compatible) {
-        if (!target.authorIdentifier) target.authorIdentifier = additional.authorIdentifier;
-        if (!target.authorName) target.authorName = additional.authorName;
-        if (!target.authorHandle) target.authorHandle = additional.authorHandle;
+    BOOL identityArrived=!BHRDRepostAuthorKey(target) && BHRDRepostAuthorKey(additional);
+    BOOL replace=(!compatible && additional.authorPriority>target.authorPriority) ||
+        (identityArrived && additional.authorPriority>=target.authorPriority);
+    if (replace) {
+        target.authorIdentifier=additional.authorIdentifier; target.authorName=additional.authorName;
+        target.authorHandle=additional.authorHandle; target.avatar=additional.avatar;
+        target.authorPriority=additional.authorPriority;
+    } else if (compatible) {
+        if (!target.authorIdentifier.length) target.authorIdentifier = additional.authorIdentifier;
+        if (!target.authorName.length) target.authorName = additional.authorName;
+        if (!target.authorHandle.length) target.authorHandle = additional.authorHandle;
         if (!target.avatar) target.avatar = additional.avatar;
+        target.authorPriority=MAX(target.authorPriority,additional.authorPriority);
     }
     NSMutableOrderedSet *urls = [NSMutableOrderedSet orderedSetWithArray:target.thumbnails];
     [urls addObjectsFromArray:additional.thumbnails];
@@ -169,7 +189,7 @@ static void MergeInfo(BHRDRepostInfo *target, BHRDRepostInfo *additional) {
     UpdateAuthor(target);
 }
 static BHRDRepostInfo *CopyInfo(BHRDRepostInfo *info) {
-    BHRDRepostInfo *copy = [BHRDRepostInfo new]; MergeInfo(copy, info); return copy;
+    return info ? [info copy] : [BHRDRepostInfo new];
 }
 static BHRDRepostInfo *Profile(id user) {
     if (Dict(user)) user = Unwrap(user);
@@ -179,6 +199,7 @@ static BHRDRepostInfo *Profile(id user) {
     info.authorName = FirstText(user, @[@"legacy.name", @"core.name", @"name", @"displayName", @"displayFullName", @"fullName"]);
     info.authorHandle = FirstHandle(user, @[@"legacy.screen_name", @"core.screen_name", @"screen_name", @"screenName", @"username", @"displayUsername"]);
     info.avatar = FirstURL(user, @[@"legacy.profile_image_url_https", @"profile_image_url_https", @"avatar.image_url", @"core.profile_image_url_https", @"profileImageURL", @"profileImageUrl", @"profileImageURLString", @"avatarURL", @"avatarImageURL"]);
+    info.authorPriority=(info.authorIdentifier.length || info.authorHandle.length || info.authorName.length || info.avatar) ? 1 : 0;
     UpdateAuthor(info);
     return info;
 }
@@ -198,20 +219,46 @@ static NSArray<NSURL *> *Thumbnails(id object) {
 static void HydrateProfile(BHRDRepostInfo *info) {
     if (info.authorIdentifier) MergeInfo(info, [BHRDUserCache() objectForKey:info.authorIdentifier]);
 }
+static BHRDRepostInfo *NativeProfile(id object, BOOL represented) {
+    BHRDRepostInfo *profile=Profile(Value(object,represented ? @"representedFromUser" : @"fromUser"));
+    if (!profile.authorIdentifier.length) profile.authorIdentifier=IDValue(object,represented ? @"representedFromUserID" : @"fromUserID");
+    if (!profile.authorHandle.length) profile.authorHandle=FirstHandle(object,represented ? @[@"representedFromUserName"] : @[@"fromUserName"]);
+    HydrateProfile(profile);
+    profile.authorPriority=(BHRDRepostAuthorKey(profile) || profile.authorName.length || profile.avatar) ? (represented ? 3 : 2) : 0;
+    UpdateAuthor(profile); return profile;
+}
 static BHRDRepostInfo *DirectInfo(id object) {
     BHRDRepostInfo *info = [BHRDRepostInfo new]; info.postIdentifier = Identifier(object);
+    BHRDRepostInfo *represented=NativeProfile(object,YES);
+    BHRDRepostInfo *raw=NativeProfile(object,NO);
+    BOOL repost=Flag(object,@"isRetweet") || Flag(object,@"isRepost");
+    BOOL reposterOnly=!represented.authorPriority && repost && raw.authorPriority;
+    if (represented.authorPriority) MergeInfo(info,represented);
+    // fromUser on an outer repost belongs to the reposter. Read it only on
+    // ordinary/original status objects; representedFromUser is the display author.
+    if (!represented.authorPriority && !repost) MergeInfo(info,raw);
     for (NSString *path in @[@"core.user_results.result", @"user_results.result", @"user", @"authorUser", @"statusUser", @"author", @"userViewModel", @"authorViewModel", @"userInfo"]) {
+        if (reposterOnly) break;
         id user = Path(object, path);
         if (!user) continue;
         BHRDRepostInfo *profile = Profile(user);
         if ([path isEqual:@"author"] && Text(user)) profile.authorName = Text(user);
+        if (info.authorPriority>=2) {
+            BOOL same=info.authorIdentifier.length && profile.authorIdentifier.length
+                ? [info.authorIdentifier isEqual:profile.authorIdentifier]
+                : (info.authorHandle.length && profile.authorHandle.length && [info.authorHandle caseInsensitiveCompare:profile.authorHandle]==NSOrderedSame);
+            if (!same) continue;
+        }
         MergeInfo(info, profile);
         for (NSString *key in @[@"user", @"userModel", @"profile"]) MergeInfo(info, Profile(Value(user, key)));
     }
-    if (!info.authorName) info.authorName = FirstText(object, @[@"authorName", @"authorDisplayName", @"userFullName", @"displayFullName"]);
-    if (!info.authorHandle) info.authorHandle = FirstHandle(object, @[@"authorScreenName", @"userScreenName", @"screenName", @"username"]);
-    if (!info.avatar) info.avatar = FirstURL(object, @[@"authorProfileImageURL", @"userProfileImageURL", @"authorAvatarURL", @"profileImageURL", @"profileImageURLString"]);
-    if (!info.authorIdentifier) info.authorIdentifier = IDValue(Value(object, @"legacy"), @"user_id_str") ?: IDValue(object, @"user_id_str") ?: IDValue(object, @"authorID") ?: IDValue(object, @"userID") ?: IDText(Value(object, @"user"));
+    if (info.authorPriority<2 && !reposterOnly) {
+        if (!info.authorName.length) info.authorName = FirstText(object, @[@"authorName", @"authorDisplayName", @"userFullName", @"displayFullName"]);
+        if (!info.authorHandle.length) info.authorHandle = FirstHandle(object, @[@"authorScreenName", @"userScreenName", @"screenName", @"username"]);
+        if (!info.avatar) info.avatar = FirstURL(object, @[@"authorProfileImageURL", @"userProfileImageURL", @"authorAvatarURL", @"profileImageURL", @"profileImageURLString"]);
+        if (!info.authorIdentifier.length) info.authorIdentifier = IDValue(Value(object, @"legacy"), @"user_id_str") ?: IDValue(object, @"user_id_str") ?: IDValue(object, @"authorID") ?: IDValue(object, @"userID") ?: IDText(Value(object, @"user"));
+        if (info.authorName.length || BHRDRepostAuthorKey(info) || info.avatar) info.authorPriority=MAX(info.authorPriority,1);
+    }
     info.thumbnails = Thumbnails(object);
     HydrateProfile(info); UpdateAuthor(info);
     return info;
@@ -252,7 +299,7 @@ static BHRDRepostInfo *CacheTweet(NSDictionary *outer, NSUInteger depth) {
     BHRDRepostInfo *info;
     if (original) info = CopyInfo(CacheTweet(original, depth + 1));
     else if (reference) { info = CopyInfo(CachedInfo(reference)); info.postIdentifier = reference; }
-    else info = DirectInfo(outer);
+    else { info = DirectInfo(outer); if (info.authorPriority) info.authorPriority=4; }
     if (!info.thumbnails.count) info.thumbnails = Thumbnails(outer);
     return StoreInfo(info, Identifier(outer));
 }
@@ -322,10 +369,13 @@ static NSArray *MainSources(id object) {
     }
     return sources;
 }
+static char NativeSnapshotKey;
 BHRDRepostInfo *BHRDInfoForRepostModel(id model) {
     model = BHRDUnwrapModel(model);
     NSArray *outerSources = MainSources(model), *sources = outerSources;
     BOOL explicitOriginal = NO;
+    NSString *reference=nil;
+    for (id source in outerSources) if ((reference=OriginalReference(source))) break;
     NSMutableSet *visited = [NSMutableSet set];
     for (NSUInteger depth = 0; depth < 8; depth++) {
         id original = nil;
@@ -337,28 +387,39 @@ BHRDRepostInfo *BHRDInfoForRepostModel(id model) {
     }
     @synchronized (BHRDMetadataCache()) {
         BHRDRepostInfo *info = [BHRDRepostInfo new];
-        BOOL cachedOriginal = NO;
+        NSString *rowIdentity=BHRDRepostIdentity(model);
+        NSString *canonical=explicitOriginal ? nil : reference;
+        if (!canonical) for (id source in sources.reverseObjectEnumerator) if ((canonical=Identifier(source))) break;
+        BHRDRepostInfo *rowCache=CachedInfo(rowIdentity);
+        if (!explicitOriginal && !reference && rowCache.postIdentifier.length && (!canonical || [canonical isEqual:rowIdentity])) canonical=rowCache.postIdentifier;
+        info.postIdentifier=canonical;
+        BOOL knownOriginal=explicitOriginal || reference.length || (rowCache.postIdentifier.length && ![rowCache.postIdentifier isEqual:rowIdentity]);
+        // Live original data comes first. Cache is a supplement, not a reason to
+        // ignore a corrected native identity. An outer reposter never wins.
         for (id source in sources.reverseObjectEnumerator) {
             NSString *identifier = Identifier(source);
-            BHRDRepostInfo *cached = CachedInfo(identifier);
-            if (cached.postIdentifier && ![cached.postIdentifier isEqual:identifier]) cachedOriginal = YES;
-            MergeInfo(info, cached);
+            if (knownOriginal && !explicitOriginal && ![identifier isEqual:canonical]) continue;
+            BHRDRepostInfo *direct=DirectInfo(source);
+            if (explicitOriginal && direct.authorPriority) direct.authorPriority=4;
+            MergeInfo(info,direct);
         }
-        // The outer repost ID is an alias for the original; never hydrate it from the reposter's user.
-        if (explicitOriginal) {
-            if (!info.postIdentifier) for (id source in sources.reverseObjectEnumerator) if ((info.postIdentifier = Identifier(source))) break;
-            for (id source in outerSources) MergeInfo(info, CachedInfo(Identifier(source)));
-        }
-        for (id source in sources.reverseObjectEnumerator) {
-            NSString *identifier = Identifier(source);
-            if (cachedOriginal && !explicitOriginal && ![identifier isEqual:info.postIdentifier]) continue;
-            MergeInfo(info, DirectInfo(source));
-        }
+        for (id source in outerSources) MergeInfo(info,NativeProfile(source,YES));
+        MergeInfo(info,CachedInfo(canonical));
+        MergeInfo(info,rowCache);
+        NSDictionary *saved=objc_getAssociatedObject(model,&NativeSnapshotKey);
+        if ([saved[@"row"] isEqual:rowIdentity]) MergeInfo(info,saved[@"info"]);
         if (!info.thumbnails.count) for (id source in outerSources) {
             NSArray *urls = Thumbnails(source); if (urls.count) { info.thumbnails = urls; break; }
         }
         HydrateProfile(info);
-        return info; // Snapshot: later network cache updates cannot mutate an on-screen cell's data.
+        UpdateAuthor(info);
+        // Preserve recovered native fields across cell teardown, navigation and
+        // rebuilt list wrappers. No UIView/UIImage is stored in this metadata.
+        if (rowIdentity && model) {
+            objc_setAssociatedObject(model,&NativeSnapshotKey,@{@"row":rowIdentity,@"info":[info copy]},OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            if (info.authorPriority || info.thumbnails.count) StoreInfo(info,rowIdentity);
+        }
+        return [info copy];
     }
 }
 NSArray *BHRDSectionsByRemovingReposts(NSArray *sections) {

@@ -10,7 +10,11 @@ cleanup() {
 trap cleanup EXIT
 xcrun clang -fobjc-arc -Wall -Wextra -Werror -framework Foundation -framework ImageIO \
  ../BHRDPhotoCopyData.m PhotoCopyTests.m -o "$BHRD_PHOTO_TEST_DIR/tests"
-python3 photo_server.py "$BHRD_PHOTO_TEST_DIR/port" > "$BHRD_PHOTO_TEST_DIR/server.log" 2>&1 &
+if [ -x /usr/bin/python3 ]; then
+    /usr/bin/python3 photo_server.py "$BHRD_PHOTO_TEST_DIR/port" > "$BHRD_PHOTO_TEST_DIR/server.log" 2>&1 &
+else
+    python3 photo_server.py "$BHRD_PHOTO_TEST_DIR/port" > "$BHRD_PHOTO_TEST_DIR/server.log" 2>&1 &
+fi
 BHRD_PHOTO_SERVER=$!
 BHRD_PHOTO_RETRIES=0
 while [ ! -s "$BHRD_PHOTO_TEST_DIR/port" ]; do
