@@ -20,6 +20,11 @@
 @end
 @interface TestConversationContainerViewController : NSObject @end
 @implementation TestConversationContainerViewController @end
+@interface TUIAvatarImageView : UIImageView
+@property(nonatomic,strong) id user;
+@property(nonatomic,strong) id userViewModel;
+@end
+@implementation TUIAvatarImageView @end
 @interface AvatarTask : NSObject
 @property(nonatomic,strong) NSURL *url;
 @property(nonatomic,copy) void (^completion)(NSData *,NSURLResponse *,NSError *);
@@ -151,6 +156,56 @@ int main(void) { @autoreleasepool {
     requests=session.tasks.count; Complete(session.tasks.lastObject,@"reuse-242-bytes");
     [NSRunLoop.mainRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:1.15]];
     Check(session.tasks.count==requests && [Avatar(cell) isEqual:[@"reuse-242-bytes" dataUsingEncoding:NSUTF8StringEncoding]],@"A discarded row's scheduled retry cannot restart its request or replace the new avatar");
+    TUIAvatarImageView *nativeAvatar=[[TUIAvatarImageView alloc] initWithFrame:CGRectMake(10,10,47,47)]; [native addSubview:nativeAvatar];
+    NSDictionary *nativeUser=@{@"userID":@24301,@"username":@"native243",@"fullName":@"Native Author"};
+    PreviewPost *nativePost=Post(@"243-late-native",nil); nativePost.representedFromUser=nativeUser;
+    nativeAvatar.user=nativeUser; controller.model=nativePost;
+    BHRDConfigureRepostCell(cell,controller.model,controller); requests=session.tasks.count;
+    Check(![Avatar(cell) isEqual:[@"native-243" dataUsingEncoding:NSUTF8StringEncoding]],@"Missing native bitmap starts as placeholder");
+    [NSRunLoop.mainRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.7]];
+    nativeAvatar.image=[UIImage imageWithData:[@"native-243" dataUsingEncoding:NSUTF8StringEncoding]];
+    // No setImage hook notification: the bounded poll must find the late image.
+    [NSRunLoop.mainRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:1.0]];
+    Check([Avatar(cell) isEqual:[@"native-243" dataUsingEncoding:NSUTF8StringEncoding]],@"No-URL polling displays a late bitmap from the verified native user");
+    Check(session.tasks.count==requests,@"Native fallback does not invent an avatar network request");
+    nativeAvatar.image=[UIImage imageWithData:[@"native-new-243" dataUsingEncoding:NSUTF8StringEncoding]];
+    BHRDRepostNativeImageChanged(nativeAvatar);
+    [NSRunLoop.mainRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.025]];
+    Check([Avatar(cell) isEqual:[@"native-new-243" dataUsingEncoding:NSUTF8StringEncoding]],@"Native image notification updates an already displayed avatar");
+    BHRDRestoreRepostCell(cell); BHRDRepostControllerDidAppear(controller);
+    Check([Avatar(cell) isEqual:[@"native-new-243" dataUsingEncoding:NSUTF8StringEncoding]],@"Return uses the matching image assignment stamp without losing avatar");
+    NSDictionary *secondUser=@{@"userID":@24302,@"username":@"second243",@"fullName":@"Second Author"};
+    nativeAvatar.user=secondUser;
+    nativePost=Post(@"243-reused-native",nil); nativePost.representedFromUser=secondUser; controller.model=nativePost;
+    BHRDConfigureRepostCell(cell,controller.model,controller);
+    Check(![Avatar(cell) isEqual:[@"native-new-243" dataUsingEncoding:NSUTF8StringEncoding]],@"New user binding alone cannot authorize the previous user's pixels");
+    nativeAvatar.image=[UIImage imageWithData:[@"second-243" dataUsingEncoding:NSUTF8StringEncoding]]; BHRDRepostNativeImageChanged(nativeAvatar);
+    [NSRunLoop.mainRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.025]];
+    Check([Avatar(cell) isEqual:[@"second-243" dataUsingEncoding:NSUTF8StringEncoding]],@"Reused row displays the new image only after matching assignment");
+    nativePost=Post(@"243-conflicting-native",nil); nativePost.representedFromUser=nativeUser; controller.model=nativePost;
+    nativeAvatar.user=@{@"userID":@24399,@"username":@"native243"};
+    BHRDConfigureRepostCell(cell,controller.model,controller);
+    nativeAvatar.image=[UIImage imageWithData:[@"wrong-id-243" dataUsingEncoding:NSUTF8StringEncoding]]; BHRDRepostNativeImageChanged(nativeAvatar);
+    [NSRunLoop.mainRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.025]];
+    Check(![Avatar(cell) isEqual:[@"wrong-id-243" dataUsingEncoding:NSUTF8StringEncoding]],@"Matching handle never overrides conflicting native numeric user ID");
+    nativeAvatar.user=nil; nativeAvatar.userViewModel=@{@"user":nativeUser};
+    nativeAvatar.image=[UIImage imageWithData:[@"view-model-243" dataUsingEncoding:NSUTF8StringEncoding]]; BHRDRepostNativeImageChanged(nativeAvatar);
+    [NSRunLoop.mainRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.025]];
+    Check([Avatar(cell) isEqual:[@"view-model-243" dataUsingEncoding:NSUTF8StringEncoding]],@"Native userViewModel.user can prove avatar identity");
+    nativePost=Post(@"243-no-native-owner",nil); nativePost.representedFromUser=nativeUser; controller.model=nativePost;
+    nativeAvatar.userViewModel=nil; BHRDConfigureRepostCell(cell,controller.model,controller);
+    nativeAvatar.image=[UIImage imageWithData:[@"unowned-243" dataUsingEncoding:NSUTF8StringEncoding]]; BHRDRepostNativeImageChanged(nativeAvatar);
+    [NSRunLoop.mainRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.025]];
+    Check(![Avatar(cell) isEqual:[@"unowned-243" dataUsingEncoding:NSUTF8StringEncoding]],@"Avatar class and geometry cannot substitute for native account identity");
+    nativeAvatar.user=nativeUser; nativeAvatar.image=nil; BHRDRepostNativeImageChanged(nativeAvatar);
+    [NSRunLoop.mainRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.15]]; BHRDLayoutRepostCell(cell);
+    CGColorSpaceRef space=CGColorSpaceCreateDeviceRGB();
+    CGContextRef context=CGBitmapContextCreate(NULL,32,32,8,0,space,(CGBitmapInfo)kCGImageAlphaPremultipliedLast);
+    CGImageRef cgimage=CGBitmapContextCreateImage(context); nativeAvatar.layer.contents=(__bridge id)cgimage;
+    [NSRunLoop.mainRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.15]]; BHRDLayoutRepostCell(cell);
+    UIImage *layerAvatar=[(UIImageView *)[Overlay(cell) valueForKey:@"avatar"] image];
+    Check(layerAvatar.CGImage==cgimage,@"Layer-only late native avatar works with the same identity guard");
+    CGImageRelease(cgimage); CGContextRelease(context); CGColorSpaceRelease(space);
     BHRDRestoreRepostCell(cell); method_setImplementation(shared,original); imp_removeBlock(replacement);
     if (oldHide) [defaults setObject:oldHide forKey:BHRDHideRepostsKey]; else [defaults removeObjectForKey:BHRDHideRepostsKey];
     if (oldMode) [defaults setObject:oldMode forKey:BHRDRepostModeKey]; else [defaults removeObjectForKey:BHRDRepostModeKey];

@@ -19,3 +19,5 @@ void BHRDCacheRepostMetadata(id object);
 NSArray *BHRDSectionsByRemovingReposts(NSArray *sections);
 NSURL *BHRDSafeThumbnailURL(id value);
 NSString *BHRDRepostAuthorKey(BHRDRepostInfo *info);
+BHRDRepostInfo *BHRDRepostAuthorForUser(id user);
+BOOL BHRDRepostAuthorsMatch(BHRDRepostInfo *a, BHRDRepostInfo *b);

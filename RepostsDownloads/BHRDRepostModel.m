@@ -166,7 +166,7 @@ static NSURL *AvatarURL(id value, NSUInteger depth) {
         parts.scheme=@"https";
         return parts.URL;
     }
-    for (NSString *key in @[@"URL",@"url",@"imageURL",@"image_url",@"URLString",@"urlString",@"request",@"imageRequest"]) {
+    for (NSString *key in @[@"URL",@"url",@"imageURL",@"image_url",@"URLString",@"urlString",@"mediaURL",@"media_url_https",@"request",@"imageRequest"]) {
         id child=Value(value,key);
         if (child==value) continue;
         NSURL *resolved=AvatarURL(child,depth+1); if (resolved) return resolved;
@@ -181,6 +181,7 @@ static BOOL SameAuthor(BHRDRepostInfo *a, BHRDRepostInfo *b) {
     if (a.authorIdentifier.length && b.authorIdentifier.length) return [a.authorIdentifier isEqual:b.authorIdentifier];
     return a.authorHandle.length && b.authorHandle.length && [a.authorHandle caseInsensitiveCompare:b.authorHandle]==NSOrderedSame;
 }
+BOOL BHRDRepostAuthorsMatch(BHRDRepostInfo *a, BHRDRepostInfo *b) { return SameAuthor(a,b); }
 static void UpdateAuthor(BHRDRepostInfo *info) {
     NSString *handle = info.authorHandle.length ? [@"@" stringByAppendingString:info.authorHandle] : nil;
     info.author = info.authorName.length && handle ? [NSString stringWithFormat:@"%@ · %@", info.authorName, handle] : info.authorName.length ? info.authorName : handle ?: @"转推作者";
@@ -227,9 +228,17 @@ static BHRDRepostInfo *Profile(id user) {
     // X can split a profile between legacy, core and avatar in the same response.
     info.authorName = FirstText(user, @[@"legacy.name", @"core.name", @"name", @"displayName", @"displayFullName", @"fullName"]);
     info.authorHandle = FirstHandle(user, @[@"legacy.screen_name", @"core.screen_name", @"screen_name", @"screenName", @"username", @"displayUsername"]);
-    info.avatar = FirstAvatar(user, @[@"legacy.profile_image_url_https", @"profile_image_url_https", @"avatar", @"core.profile_image_url_https", @"profileImageURL", @"profileImageUrl", @"profileImageURLString", @"avatarURL", @"avatarImageURL", @"profileImage", @"profileImageRequest", @"avatarImageRequest", @"legacy.profile_image_url", @"profile_image_url", @"core.profile_image_url"]);
+    info.avatar = FirstAvatar(user, @[@"legacy.profile_image_url_https", @"profile_image_url_https", @"avatar", @"core.profile_image_url_https", @"profileImageURL", @"profileImageUrl", @"profileImageURLString", @"avatarURL", @"avatarImageURL", @"profileImage", @"profileImageMediaEntity", @"avatarImage", @"profileImageRequest", @"avatarImageRequest", @"legacy.profile_image_url", @"profile_image_url", @"core.profile_image_url"]);
     info.authorPriority=(info.authorIdentifier.length || info.authorHandle.length || info.authorName.length || info.avatar) ? 1 : 0;
     UpdateAuthor(info);
+    return info;
+}
+BHRDRepostInfo *BHRDRepostAuthorForUser(id user) {
+    BHRDRepostInfo *info=Profile(user);
+    for (NSString *key in @[@"user",@"userModel"]) {
+        BHRDRepostInfo *nested=Profile(Value(user,key));
+        if (!info.authorPriority || SameAuthor(info,nested)) MergeInfo(info,nested);
+    }
     return info;
 }
 static NSArray<NSURL *> *Thumbnails(id object) {

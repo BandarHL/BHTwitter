@@ -127,5 +127,11 @@ int main(void) { @autoreleasepool {
     Check([BHRDInfoForRepostModel(late).avatar.path hasSuffix:@"242-late.jpg"],@"A later separate profile joins by normalized handle when native ID is absent");
     late=Post(@"242-handle-id-conflict",nil); late.representedFromUser=@{@"userID":@24223,@"username":@"late_avatar_242"};
     Check(!BHRDInfoForRepostModel(late).avatar,@"Handle cache cannot join a different numeric account ID");
+    IdentityPost *entity=Post(@"243-avatar-entity",nil);
+    entity.representedFromUser=@{@"userID":@24300,@"username":@"entity243",@"profileImageMediaEntity":@{@"mediaURL":@"https://pbs.twimg.com/profile_images/entity243.jpg"}};
+    Check([BHRDInfoForRepostModel(entity).avatar.path hasSuffix:@"entity243.jpg"],@"Profile image media entity supplies the avatar URL");
+    BHRDRepostInfo *nativeBinding=BHRDRepostAuthorForUser(@{@"user":entity.representedFromUser});
+    Check(BHRDRepostAuthorsMatch(nativeBinding,BHRDInfoForRepostModel(entity)),@"Wrapped native view user matches the resolved author");
+    Check(!BHRDRepostAuthorsMatch(BHRDRepostAuthorForUser(@{@"userID":@24399,@"username":@"entity243"}),nativeBinding),@"Native view user matching prioritizes conflicting IDs over equal handles");
     NSLog(@"PASS: %lu repost author and return-lifecycle checks",(unsigned long)checks);
 } return 0; }

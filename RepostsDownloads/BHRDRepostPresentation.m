@@ -14,6 +14,7 @@
 
 static char BHRDCellStateKey, BHRDExpandedKey, BHRDReloadKey, BHRDForceReloadKey;
 static void RetryAvatar(UITableViewCell *cell);
+static void RefreshNativeAvatar(UITableViewCell *cell);
 static NSHashTable *Controllers(void) {
     static NSHashTable *controllers;
     static dispatch_once_t once;
@@ -144,6 +145,9 @@ double BHRDRepostRowHeight(id controller, id model, double originalHeight) {
 @property(nonatomic) BOOL avatarLoading;
 @property(nonatomic) BOOL avatarLoaded;
 @property(nonatomic) NSUInteger avatarAttempts;
+@property(nonatomic,strong) NSMapTable<UIView *, NSDictionary *> *nativeAvatarBaselines;
+@property(nonatomic,strong) UIImage *nativeAvatarImage;
+@property(nonatomic) NSTimeInterval nativeAvatarScanTime;
 @property(nonatomic) BOOL imageCaptureQueued;
 @property(nonatomic) BOOL originalClips;
 @property(nonatomic) BOOL originalAccessible;
@@ -192,6 +196,93 @@ static NSCache *ImageCache(void) {
     return cache;
 }
 static char ImageRequestKey;
+static char NativeAvatarAssignmentKey;
+static char NativeAvatarLayerImageKey;
+static id AvatarObject(id object,NSString *key) {
+    if (!object) return nil;
+    @try {
+        SEL selector=NSSelectorFromString(key);
+        if (![object respondsToSelector:selector]) return nil;
+        NSMethodSignature *signature=[object methodSignatureForSelector:selector];
+        if (signature.numberOfArguments!=2 || signature.methodReturnType[0]!='@') return nil;
+        return ((id(*)(id,SEL))objc_msgSend)(object,selector);
+    } @catch (__unused NSException *exception) { return nil; }
+}
+static BOOL IsNativeAvatar(UIView *view) {
+    for (Class cls=view.class; cls && cls!=UIView.class; cls=class_getSuperclass(cls))
+        if ([NSStringFromClass(cls) isEqual:@"TUIAvatarImageView"]) return YES;
+    return NO;
+}
+static BHRDRepostInfo *NativeAvatarOwner(UIView *view) {
+    BHRDRepostInfo *user=BHRDRepostAuthorForUser(AvatarObject(view,@"user"));
+    BHRDRepostInfo *model=BHRDRepostAuthorForUser(AvatarObject(view,@"userViewModel"));
+    if (BHRDRepostAuthorKey(user) && BHRDRepostAuthorKey(model) && !BHRDRepostAuthorsMatch(user,model)) return nil;
+    return BHRDRepostAuthorKey(user) ? user : model;
+}
+static UIImage *NativeAvatarImage(UIView *view) {
+    id image=AvatarObject(view,@"image");
+    if ([image isKindOfClass:UIImage.class]) return image;
+    id contents=view.layer.contents;
+    if (contents && CFGetTypeID((__bridge CFTypeRef)contents)==CGImageGetTypeID()) {
+        NSDictionary *cached=objc_getAssociatedObject(view,&NativeAvatarLayerImageKey);
+        if (cached[@"contents"]==contents) return cached[@"image"];
+        UIImage *decoded=[UIImage imageWithCGImage:(__bridge CGImageRef)contents];
+        if (decoded) objc_setAssociatedObject(view,&NativeAvatarLayerImageKey,@{@"contents":contents,@"image":decoded},OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        return decoded;
+    }
+    objc_setAssociatedObject(view,&NativeAvatarLayerImageKey,nil,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    return nil;
+}
+static void RefreshNativeAvatar(UITableViewCell *cell) {
+    BHRDRepostCellState *state=objc_getAssociatedObject(cell,&BHRDCellStateKey);
+    if (!state || state.mode!=BHRDRepostModePreview || state.avatarURL || !BHRDRepostAuthorKey(state.info) || !cell.window) return;
+    // Verify the current row again before consuming delayed native pixels.
+    UITableView *table=Table(state.controller); NSIndexPath *path=[table indexPathForCell:cell];
+    if (!path || ![state.controller respondsToSelector:@selector(itemAtIndexPath:)]) return;
+    id model=[(id<BHRDTimelineItems>)state.controller itemAtIndexPath:path];
+    BHRDRepostInfo *current=BHRDInfoForRepostModel(model);
+    if (![state.identity isEqual:BHRDRepostIdentity(model)] || !BHRDRepostAuthorsMatch(state.info,current) ||
+        ![(current.postIdentifier ?: @"") isEqual:(state.info.postIdentifier ?: @"")]) return;
+    NSTimeInterval now=NSDate.timeIntervalSinceReferenceDate;
+    if (now-state.nativeAvatarScanTime<0.1) return;
+    state.nativeAvatarScanTime=now;
+    if (!state.nativeAvatarBaselines) state.nativeAvatarBaselines=[NSMapTable weakToStrongObjectsMapTable];
+    NSMutableArray *pending=[NSMutableArray arrayWithArray:cell.subviews]; NSUInteger budget=160;
+    while (pending.count && budget--) {
+        UIView *view=pending.firstObject; [pending removeObjectAtIndex:0];
+        if ([view isKindOfClass:BHRDRepostOverlay.class]) continue;
+        NSString *name=NSStringFromClass(view.class).lowercaseString;
+        if ([name containsString:@"quote"] || [name containsString:@"attachment"] || [name containsString:@"mediagrid"]) continue;
+        if (IsNativeAvatar(view)) {
+            BHRDRepostInfo *owner=NativeAvatarOwner(view);
+            UIImage *image=NativeAvatarImage(view);
+            NSDictionary *baseline=[state.nativeAvatarBaselines objectForKey:view];
+            if (!baseline || !BHRDRepostAuthorsMatch(baseline[@"owner"],owner)) {
+                baseline=@{@"image":image ?: NSNull.null,@"owner":owner ?: [BHRDRepostInfo new]};
+                [state.nativeAvatarBaselines setObject:baseline forKey:view];
+            }
+            CGRect rect=[view convertRect:view.bounds toView:cell];
+            BOOL header=rect.origin.x>=0 && rect.origin.x<90 && rect.origin.y>=0 && rect.origin.y<150 && rect.size.width>=24 && rect.size.width<=90 && rect.size.height>=24 && rect.size.height<=90;
+            BOOL matches=BHRDRepostAuthorsMatch(owner,state.info);
+            NSDictionary *assignment=objc_getAssociatedObject(view,&NativeAvatarAssignmentKey);
+            BOOL stamped=assignment[@"image"]==image && BHRDRepostAuthorsMatch(assignment[@"owner"],state.info);
+            BOOL fresh=baseline[@"image"]!=image && BHRDRepostAuthorsMatch(baseline[@"owner"],state.info);
+            // Matching labels/geometry alone never prove image ownership. A
+            // fresh bitmap must arrive while this native view belongs to the
+            // same original author, or carry an image-assignment identity stamp.
+            if (header && matches && image && (stamped || fresh)) {
+                if (state.nativeAvatarImage!=image) {
+                    state.nativeAvatarImage=image; state.avatarLoaded=YES;
+                    [(BHRDRepostOverlay *)state.overlay avatar].image=image;
+                    BHRDAvatarLog(@"native_avatar_assigned",@{@"row":state.identity,@"handle":state.info.authorHandle ?: @"",@"source":@"TUIAvatarImageView",@"stamped":@(stamped),@"fresh":@(fresh),@"result":@"identity_verified_native_image"});
+                }
+                return;
+            }
+            BHRDAvatarLog(@"native_avatar_candidate",@{@"row":state.identity,@"handle":state.info.authorHandle ?: @"",@"ownerID":owner.authorIdentifier ?: @"",@"ownerHandle":owner.authorHandle ?: @"",@"matches":@(matches),@"header":@(header),@"hasImage":@(image!=nil),@"stamped":@(stamped),@"fresh":@(fresh)});
+        }
+        if (pending.count<160) [pending addObjectsFromArray:view.subviews];
+    }
+}
 static void LoadImage(NSURL *url, UIImageView *view, BHRDRepostCellState *state) {
     if (!url) {
         if (view==[(BHRDRepostOverlay *)state.overlay avatar]) BHRDAvatarLog(@"avatar_missing_url",@{@"row":state.identity ?: @"",@"handle":state.info.authorHandle ?: @"",@"result":@"placeholder_no_request"});
@@ -283,11 +374,13 @@ static void ScheduleMetadataRefresh(BHRDRepostCellState *state) {
     __weak BHRDRepostCellState *weakState = state;
     // Native author models may be hydrated after cellForRow returns.
     // Bounded retries complement layout callbacks; never retain/reload the row.
-    for (NSNumber *delay in @[@0.15, @0.6, @1.5, @4.0]) {
+    if (!state.avatarURL) BHRDAvatarLog(@"native_avatar_poll_scheduled",@{@"row":state.identity ?: @"",@"handle":state.info.authorHandle ?: @"",@"delays":@[@0.15,@0.6,@1.5,@2.5,@4.0,@7.0,@12.0]});
+    for (NSNumber *delay in @[@0.15, @0.6, @1.5, @2.5, @4.0, @7.0, @12.0]) {
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay.doubleValue * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             BHRDRepostCellState *current = weakState;
             if (current.cell.window && objc_getAssociatedObject(current.cell, &BHRDCellStateKey) == current) {
                 RefreshPreviewMetadata(current);
+                RefreshNativeAvatar(current.cell);
 #if BHRD_AVATAR_DIAGNOSTICS
                 if (delay.doubleValue>=1.5) {
                     BHRDAvatarLog(@"overlay_state",@{@"row":current.identity ?: @"",@"handle":current.info.authorHandle ?: @"",@"url":BHRDAvatarDiagnosticURL(current.avatarURL),@"loaded":@(current.avatarLoaded),@"loading":@(current.avatarLoading),@"attempts":@(current.avatarAttempts),@"active":@(objc_getAssociatedObject(current.cell,&BHRDCellStateKey)==current),@"result":current.avatarLoaded ? @"decoded_image" : @"placeholder"});
@@ -302,6 +395,10 @@ static void ScheduleMetadataRefresh(BHRDRepostCellState *state) {
 }
 void BHRDRepostNativeImageChanged(UIImageView *view) {
     if (!NSThread.isMainThread) return;
+    if (IsNativeAvatar(view)) {
+        BHRDRepostInfo *owner=NativeAvatarOwner(view); UIImage *image=NativeAvatarImage(view);
+        objc_setAssociatedObject(view,&NativeAvatarAssignmentKey,(image && BHRDRepostAuthorKey(owner)) ? @{@"image":image,@"owner":owner} : nil,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
     for (UIView *parent = view.superview; parent; parent = parent.superview) {
         if ([parent isKindOfClass:BHRDRepostOverlay.class]) return;
         if (![parent isKindOfClass:UITableViewCell.class]) continue;
@@ -312,7 +409,9 @@ void BHRDRepostNativeImageChanged(UIImageView *view) {
         dispatch_async(dispatch_get_main_queue(), ^{
             BHRDRepostCellState *current = weakState;
             current.imageCaptureQueued = NO;
-            if (current && objc_getAssociatedObject(current.cell, &BHRDCellStateKey) == current) RefreshPreviewMetadata(current);
+            if (current && objc_getAssociatedObject(current.cell, &BHRDCellStateKey) == current) {
+                RefreshPreviewMetadata(current); current.nativeAvatarScanTime=0; RefreshNativeAvatar(current.cell);
+            }
         });
         return;
     }
@@ -349,6 +448,7 @@ void BHRDLayoutRepostCell(UITableViewCell *cell) {
     state.overlay.frame = cell.bounds;
     [state.overlay setNeedsLayout];
     [cell bringSubviewToFront:state.overlay];
+    RefreshNativeAvatar(cell);
 }
 void BHRDConfigureRepostCell(UITableViewCell *cell, id model, id controller) {
     if (![cell isKindOfClass:UITableViewCell.class]) return;

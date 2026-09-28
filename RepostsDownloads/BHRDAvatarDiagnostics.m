@@ -37,7 +37,7 @@ void BHRDAvatarLog(NSString *event, NSDictionary *fields) {
             if (![fm fileExistsAtPath:path]) [fm createFileAtPath:path contents:nil attributes:@{NSFilePosixPermissions:@0600}];
             NSMutableDictionary *record=[fields mutableCopy] ?: [NSMutableDictionary dictionary];
             record[@"event"]=event; record[@"time"]=@([NSDate.date timeIntervalSince1970]);
-            record[@"build"]=@"2.4.2+diag.1";
+            record[@"build"]=@"2.4.3+diag.1";
             NSData *json=[NSJSONSerialization dataWithJSONObject:record options:0 error:NULL];
             if (json && json.length<=32768) {
                 NSFileHandle *file=[NSFileHandle fileHandleForWritingAtPath:path];
@@ -67,7 +67,7 @@ static NSArray *Shape(id object) {
     if ([object isKindOfClass:NSDictionary.class]) {
         for (id key in object) if ([key isKindOfClass:NSString.class] && Relevant(key)) [names addObject:key];
     } else {
-        for (Class cls=[object class]; cls && cls!=NSObject.class && names.count<80; cls=class_getSuperclass(cls)) {
+        for (Class cls=[object class]; cls && cls!=NSObject.class && cls!=UIView.class && cls!=UIImageView.class && names.count<80; cls=class_getSuperclass(cls)) {
             unsigned count=0; Method *methods=class_copyMethodList(cls,&count);
             for (unsigned i=0;i<count && names.count<80;i++) {
                 NSString *name=NSStringFromSelector(method_getName(methods[i]));
@@ -105,8 +105,11 @@ void BHRDAvatarInspectModel(id model, NSString *row) {
         [seen addObject:address];
         BHRDAvatarLog(@"model_shape",@{@"row":row ?: @"",@"path":path,@"class":NSStringFromClass([source class]),@"getters":Shape(source)});
         if (depth>=5) continue;
-        for (NSString *key in @[@"item",@"tweet",@"status",@"viewModel",@"coreStatus",@"statusModel",@"representedStatus",@"retweetedStatus",@"originalStatus",@"representedFromUser",@"fromUser",@"user",@"userModel",@"userViewModel",@"authorViewModel",@"profile",@"core",@"legacy",@"avatar",@"profileImage",@"profileImageURL",@"profileImageURLString",@"profile_image_url_https",@"profile_image_url",@"avatarURL",@"avatarImageURL",@"profileImageRequest",@"avatarImageRequest",@"representedFromUserProfileImageURL",@"fromUserProfileImageURL",@"imageRequest",@"request",@"URL",@"url",@"imageURL",@"image_url"]) {
-            id value=Read(source,key); if (!value || value==NSNull.null) continue;
+        for (NSString *key in @[@"item",@"tweet",@"status",@"viewModel",@"coreStatus",@"statusModel",@"representedStatus",@"retweetedStatus",@"originalStatus",@"representedFromUser",@"fromUser",@"user",@"userModel",@"userViewModel",@"authorViewModel",@"profile",@"core",@"legacy",@"avatar",@"profileImage",@"profileImageURL",@"profileImageURLString",@"profileImageMediaEntity",@"avatarImage",@"profile_image_url_https",@"profile_image_url",@"avatarURL",@"avatarImageURL",@"profileImageRequest",@"avatarImageRequest",@"representedFromUserProfileImageURL",@"fromUserProfileImageURL",@"imageRequest",@"request",@"URL",@"url",@"imageURL",@"image_url",@"mediaURL",@"media_url_https"]) {
+            id value=Read(source,key);
+            if ([path hasSuffix:@"representedFromUser"] && (Relevant(key) || [key isEqual:@"avatar"]))
+                BHRDAvatarLog(@"avatar_field",@{@"row":row ?: @"",@"path":[path stringByAppendingFormat:@".%@",key],@"present":@(value && value!=NSNull.null),@"valueClass":value ? NSStringFromClass([value class]) : @""});
+            if (!value || value==NSNull.null) continue;
             NSString *childPath=[path stringByAppendingFormat:@".%@",key];
             if ([value isKindOfClass:NSString.class] || [value isKindOfClass:NSURL.class]) {
                 NSURL *url=[value isKindOfClass:NSURL.class] ? value : [NSURL URLWithString:value];

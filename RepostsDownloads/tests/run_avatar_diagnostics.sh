@@ -20,7 +20,7 @@ xcrun clang -fobjc-arc -Wall -Wextra -Werror -Wno-unused-parameter -I HostFixtur
 import json, pathlib, sys
 events = [json.loads(line) for line in pathlib.Path(sys.argv[1]).read_text().splitlines()]
 names = {e['event'] for e in events}
-required = {'preview_resolved', 'model_shape', 'model_url', 'native_image_view', 'avatar_missing_url', 'avatar_request_start', 'avatar_response', 'avatar_assigned', 'avatar_cache_hit', 'avatar_retry_scheduled', 'avatar_retries_exhausted', 'overlay_state'}
+required = {'preview_resolved', 'model_shape', 'model_url', 'native_image_view', 'avatar_missing_url', 'avatar_request_start', 'avatar_response', 'avatar_assigned', 'avatar_cache_hit', 'avatar_retry_scheduled', 'avatar_retries_exhausted', 'overlay_state', 'avatar_field', 'native_avatar_poll_scheduled', 'native_avatar_candidate', 'native_avatar_assigned'}
 assert required <= names, required - names
 assert any(e['event'] == 'avatar_response' and not e['current'] for e in events)
 print('PASS: diagnostic file contains every avatar lifecycle stage and discarded callbacks')

@@ -1,8 +1,8 @@
 Package: com.caun.bhtwitter.repostsdownloads
 Name: X 随心
-Version: 2.4.2
+Version: 2.4.3
 Architecture: iphoneos-arm64
-Description: 修复转推预览原作者头像缺失，补齐头像资料读取和加载重试，保留图片工具箱和视频下载功能。
+Description: 修复转推预览无头像地址时的占位问题，核对原生头像所属账号后接收延迟位图，保留图片工具箱和视频下载功能。
 Maintainer: caun1112
 Author: caun1112, Bandar Alruwaili
 Section: Tweaks
