@@ -152,6 +152,35 @@ static NSURL *FirstURL(id object, NSArray<NSString *> *paths) {
     for (NSString *path in paths) { NSURL *url = BHRDSafeThumbnailURL(Path(object, path)); if (url) return url; }
     return nil;
 }
+// Avatar resources may be URL strings or native image-request wrappers. Never
+// use a nearby UIImageView: its pixels can still belong to a reused row.
+static NSURL *AvatarURL(id value, NSUInteger depth) {
+    if (!value || depth > 4) return nil;
+    NSURL *url=[value isKindOfClass:NSURL.class] ? value : (Text(value) ? [NSURL URLWithString:Text(value)] : nil);
+    if (url) {
+        NSURLComponents *parts=[NSURLComponents componentsWithURL:url resolvingAgainstBaseURL:NO];
+        BOOL trusted=([parts.host.lowercaseString isEqual:@"pbs.twimg.com"] && [parts.path hasPrefix:@"/profile_images/"]) ||
+            ([parts.host.lowercaseString isEqual:@"abs.twimg.com"] && [parts.path hasPrefix:@"/sticky/default_profile_images/"]);
+        if (!trusted || parts.user || parts.password || parts.port ||
+            ![@[@"http",@"https"] containsObject:parts.scheme.lowercaseString]) return nil;
+        parts.scheme=@"https";
+        return parts.URL;
+    }
+    for (NSString *key in @[@"URL",@"url",@"imageURL",@"image_url",@"URLString",@"urlString",@"request",@"imageRequest"]) {
+        id child=Value(value,key);
+        if (child==value) continue;
+        NSURL *resolved=AvatarURL(child,depth+1); if (resolved) return resolved;
+    }
+    return nil;
+}
+static NSURL *FirstAvatar(id object, NSArray<NSString *> *paths) {
+    for (NSString *path in paths) { NSURL *url=AvatarURL(Path(object,path),0); if (url) return url; }
+    return nil;
+}
+static BOOL SameAuthor(BHRDRepostInfo *a, BHRDRepostInfo *b) {
+    if (a.authorIdentifier.length && b.authorIdentifier.length) return [a.authorIdentifier isEqual:b.authorIdentifier];
+    return a.authorHandle.length && b.authorHandle.length && [a.authorHandle caseInsensitiveCompare:b.authorHandle]==NSOrderedSame;
+}
 static void UpdateAuthor(BHRDRepostInfo *info) {
     NSString *handle = info.authorHandle.length ? [@"@" stringByAppendingString:info.authorHandle] : nil;
     info.author = info.authorName.length && handle ? [NSString stringWithFormat:@"%@ · %@", info.authorName, handle] : info.authorName.length ? info.authorName : handle ?: @"转推作者";
@@ -198,7 +227,7 @@ static BHRDRepostInfo *Profile(id user) {
     // X can split a profile between legacy, core and avatar in the same response.
     info.authorName = FirstText(user, @[@"legacy.name", @"core.name", @"name", @"displayName", @"displayFullName", @"fullName"]);
     info.authorHandle = FirstHandle(user, @[@"legacy.screen_name", @"core.screen_name", @"screen_name", @"screenName", @"username", @"displayUsername"]);
-    info.avatar = FirstURL(user, @[@"legacy.profile_image_url_https", @"profile_image_url_https", @"avatar.image_url", @"core.profile_image_url_https", @"profileImageURL", @"profileImageUrl", @"profileImageURLString", @"avatarURL", @"avatarImageURL"]);
+    info.avatar = FirstAvatar(user, @[@"legacy.profile_image_url_https", @"profile_image_url_https", @"avatar", @"core.profile_image_url_https", @"profileImageURL", @"profileImageUrl", @"profileImageURLString", @"avatarURL", @"avatarImageURL", @"profileImage", @"profileImageRequest", @"avatarImageRequest", @"legacy.profile_image_url", @"profile_image_url", @"core.profile_image_url"]);
     info.authorPriority=(info.authorIdentifier.length || info.authorHandle.length || info.authorName.length || info.avatar) ? 1 : 0;
     UpdateAuthor(info);
     return info;
@@ -218,11 +247,18 @@ static NSArray<NSURL *> *Thumbnails(id object) {
 }
 static void HydrateProfile(BHRDRepostInfo *info) {
     if (info.authorIdentifier) MergeInfo(info, [BHRDUserCache() objectForKey:info.authorIdentifier]);
+    if (info.authorHandle.length) {
+        BHRDRepostInfo *cached=[BHRDUserCache() objectForKey:[@"handle:" stringByAppendingString:info.authorHandle.lowercaseString]];
+        if (SameAuthor(info,cached)) MergeInfo(info,cached);
+    }
 }
 static BHRDRepostInfo *NativeProfile(id object, BOOL represented) {
     BHRDRepostInfo *profile=Profile(Value(object,represented ? @"representedFromUser" : @"fromUser"));
     if (!profile.authorIdentifier.length) profile.authorIdentifier=IDValue(object,represented ? @"representedFromUserID" : @"fromUserID");
     if (!profile.authorHandle.length) profile.authorHandle=FirstHandle(object,represented ? @[@"representedFromUserName"] : @[@"fromUserName"]);
+    if (!profile.avatar && BHRDRepostAuthorKey(profile)) profile.avatar=FirstAvatar(object,represented
+        ? @[@"representedFromUserProfileImageURL",@"representedFromUserProfileImageURLString",@"representedFromUserAvatarURL"]
+        : @[@"fromUserProfileImageURL",@"fromUserProfileImageURLString",@"fromUserAvatarURL"]);
     HydrateProfile(profile);
     profile.authorPriority=(BHRDRepostAuthorKey(profile) || profile.authorName.length || profile.avatar) ? (represented ? 3 : 2) : 0;
     UpdateAuthor(profile); return profile;
@@ -234,6 +270,9 @@ static BHRDRepostInfo *DirectInfo(id object) {
     BOOL repost=Flag(object,@"isRetweet") || Flag(object,@"isRepost");
     BOOL reposterOnly=!represented.authorPriority && repost && raw.authorPriority;
     if (represented.authorPriority) MergeInfo(info,represented);
+    // Some statuses expose a thin represented user and a complete fromUser for
+    // the SAME original. This is safe only with a matching ID or handle.
+    if (represented.authorPriority && SameAuthor(represented,raw)) MergeInfo(info,raw);
     // fromUser on an outer repost belongs to the reposter. Read it only on
     // ordinary/original status objects; representedFromUser is the display author.
     if (!represented.authorPriority && !repost) MergeInfo(info,raw);
@@ -242,20 +281,20 @@ static BHRDRepostInfo *DirectInfo(id object) {
         id user = Path(object, path);
         if (!user) continue;
         BHRDRepostInfo *profile = Profile(user);
+        for (NSString *key in @[@"user",@"userModel",@"profile"]) {
+            BHRDRepostInfo *child=Profile(Value(user,key));
+            if (!profile.authorPriority || SameAuthor(profile,child)) MergeInfo(profile,child);
+        }
         if ([path isEqual:@"author"] && Text(user)) profile.authorName = Text(user);
         if (info.authorPriority>=2) {
-            BOOL same=info.authorIdentifier.length && profile.authorIdentifier.length
-                ? [info.authorIdentifier isEqual:profile.authorIdentifier]
-                : (info.authorHandle.length && profile.authorHandle.length && [info.authorHandle caseInsensitiveCompare:profile.authorHandle]==NSOrderedSame);
-            if (!same) continue;
+            if (!SameAuthor(info,profile)) continue;
         }
         MergeInfo(info, profile);
-        for (NSString *key in @[@"user", @"userModel", @"profile"]) MergeInfo(info, Profile(Value(user, key)));
     }
     if (info.authorPriority<2 && !reposterOnly) {
         if (!info.authorName.length) info.authorName = FirstText(object, @[@"authorName", @"authorDisplayName", @"userFullName", @"displayFullName"]);
         if (!info.authorHandle.length) info.authorHandle = FirstHandle(object, @[@"authorScreenName", @"userScreenName", @"screenName", @"username"]);
-        if (!info.avatar) info.avatar = FirstURL(object, @[@"authorProfileImageURL", @"userProfileImageURL", @"authorAvatarURL", @"profileImageURL", @"profileImageURLString"]);
+        if (!info.avatar) info.avatar = FirstAvatar(object, @[@"authorProfileImageURL", @"userProfileImageURL", @"authorAvatarURL", @"profileImageURL", @"profileImageURLString"]);
         if (!info.authorIdentifier.length) info.authorIdentifier = IDValue(Value(object, @"legacy"), @"user_id_str") ?: IDValue(object, @"user_id_str") ?: IDValue(object, @"authorID") ?: IDValue(object, @"userID") ?: IDText(Value(object, @"user"));
         if (info.authorName.length || BHRDRepostAuthorKey(info) || info.avatar) info.authorPriority=MAX(info.authorPriority,1);
     }
@@ -306,9 +345,16 @@ static BHRDRepostInfo *CacheTweet(NSDictionary *outer, NSUInteger depth) {
 static void CacheUser(id user, NSString *fallbackID) {
     BHRDRepostInfo *profile = Profile(user);
     if (!profile.authorIdentifier) profile.authorIdentifier = fallbackID;
-    if (!profile.authorIdentifier) return;
-    MergeInfo(profile, [BHRDUserCache() objectForKey:profile.authorIdentifier]);
-    [BHRDUserCache() setObject:profile forKey:profile.authorIdentifier];
+    if (profile.authorIdentifier) {
+        MergeInfo(profile, [BHRDUserCache() objectForKey:profile.authorIdentifier]);
+        [BHRDUserCache() setObject:profile forKey:profile.authorIdentifier];
+    }
+    if (profile.authorHandle.length) {
+        NSString *key=[@"handle:" stringByAppendingString:profile.authorHandle.lowercaseString];
+        BHRDRepostInfo *old=[BHRDUserCache() objectForKey:key];
+        if (SameAuthor(profile,old)) MergeInfo(profile,old);
+        [BHRDUserCache() setObject:profile forKey:key];
+    }
 }
 static void Collect(id object, NSUInteger depth, NSUInteger *remaining, BOOL usersOnly) {
     if (depth > 40 || *remaining == 0) return;

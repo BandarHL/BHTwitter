@@ -20,6 +20,7 @@
 @property(nonatomic,strong) id user;
 @property(nonatomic,copy) NSString *authorName;
 @property(nonatomic,copy) NSArray *representedMediaEntities;
+@property(nonatomic,strong) id representedFromUserProfileImageURL;
 @end
 @implementation IdentityPost @end
 static NSUInteger checks;
@@ -88,5 +89,43 @@ int main(void) { @autoreleasepool {
     Check(IsAuthor(BHRDInfoForRepostModel(changingWrapper),other),@"A changed inner status cannot be redirected to an older cached alias");
     IdentityPost *sameMedia=Post(@"241-unrelated-same-media",nil);
     Check(!BHRDInfoForRepostModel(sameMedia).authorHandle.length,@"Equal media URLs do not imply equal tweet or author identity");
+    IdentityUser *thin=User(24200,@"Avatar Writer",@"avatar_writer"); thin.profileImageURL=nil;
+    IdentityUser *complete=User(24200,@"Avatar Writer",@"avatar_writer");
+    IdentityPost *split=Post(@"242-split-native",thin); split.fromUser=complete;
+    Check(IsAuthor(BHRDInfoForRepostModel(split),complete),@"Matching raw original fills a thin represented author's avatar");
+    IdentityUser *conflict=User(24201,@"Conflicting ID",@"avatar_writer");
+    split=Post(@"242-conflicting-id",thin); split.fromUser=conflict;
+    Check(!BHRDInfoForRepostModel(split).avatar,@"Matching handle cannot override conflicting numeric user IDs");
+    split=Post(@"242-wrapper-user",thin); split.user=@{@"userModel":@{@"userID":@24200,@"profileImageURL":complete.profileImageURL}};
+    Check([BHRDInfoForRepostModel(split).avatar isEqual:complete.profileImageURL],@"Identity inside user wrapper is checked before supplementing the avatar");
+    split=Post(@"242-wrapper-conflict",thin); split.user=@{@"userModel":@{@"userID":@24201,@"profileImageURL":conflict.profileImageURL}};
+    Check(!BHRDInfoForRepostModel(split).avatar,@"Wrong user's nested avatar is rejected");
+    split=Post(@"242-status-avatar",thin); split.representedFromUserProfileImageURL=@{@"request":[NSURLRequest requestWithURL:complete.profileImageURL]};
+    Check([BHRDInfoForRepostModel(split).avatar isEqual:complete.profileImageURL],@"Represented status avatar resource is unwrapped without reading pixels");
+    NSArray *resources=@[
+        @{@"profile_image_url":@"http://pbs.twimg.com/profile_images/242-legacy.jpg"},
+        @{@"profileImageRequest":@{@"imageRequest":@{@"URL":@"https://pbs.twimg.com/profile_images/242-request.jpg"}}},
+        @{@"avatar":@{@"image_url":@"https://pbs.twimg.com/profile_images/242-avatar.jpg"}},
+        @{@"profileImage":@{@"urlString":@"https://pbs.twimg.com/profile_images/242-resource.jpg"}},
+        @{@"profile_image_url_https":@"https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png"}
+    ];
+    for (NSUInteger i=0;i<resources.count;i++) {
+        NSMutableDictionary *user=[resources[i] mutableCopy]; user[@"username"]=@"resource_author";
+        IdentityPost *resource=Post([NSString stringWithFormat:@"242-resource-%lu",(unsigned long)i],nil); resource.representedFromUser=user;
+        NSURL *avatar=BHRDInfoForRepostModel(resource).avatar;
+        Check(avatar && [avatar.scheme isEqual:@"https"],@"Avatar schema resolves to HTTPS from the same user's profile");
+    }
+    NSArray *badURLs=@[@"https://pbs.twimg.com.evil.test/profile_images/a.jpg",@"https://evil.test/profile_images/a.jpg",@"file:///profile_images/a.jpg",@"https://pbs.twimg.com/media/a.jpg",@"https://user:password@pbs.twimg.com/profile_images/a.jpg",@"https://pbs.twimg.com:123/profile_images/a.jpg"];
+    for (NSUInteger i=0;i<badURLs.count;i++) {
+        IdentityPost *bad=Post([NSString stringWithFormat:@"242-reject-%lu",(unsigned long)i],nil);
+        bad.representedFromUser=@{@"username":@"bad_resource",@"profileImageURL":badURLs[i]};
+        Check(!BHRDInfoForRepostModel(bad).avatar,@"Untrusted or non-avatar resources are not accepted as avatars");
+    }
+    IdentityPost *late=Post(@"242-late-profile",nil); late.representedFromUser=@{@"username":@"late_avatar_242",@"fullName":@"Late Avatar"};
+    Check(!BHRDInfoForRepostModel(late).avatar,@"Known handle can precede the separate avatar response");
+    BHRDCacheRepostMetadata(@{@"__typename":@"User",@"rest_id":@"24222",@"core":@{@"screen_name":@"late_avatar_242"},@"avatar":@{@"image_url":@"https://pbs.twimg.com/profile_images/242-late.jpg"}});
+    Check([BHRDInfoForRepostModel(late).avatar.path hasSuffix:@"242-late.jpg"],@"A later separate profile joins by normalized handle when native ID is absent");
+    late=Post(@"242-handle-id-conflict",nil); late.representedFromUser=@{@"userID":@24223,@"username":@"late_avatar_242"};
+    Check(!BHRDInfoForRepostModel(late).avatar,@"Handle cache cannot join a different numeric account ID");
     NSLog(@"PASS: %lu repost author and return-lifecycle checks",(unsigned long)checks);
 } return 0; }

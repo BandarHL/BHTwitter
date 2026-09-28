@@ -142,6 +142,7 @@ double BHRDRepostRowHeight(id controller, id model, double originalHeight) {
 @property(nonatomic) BOOL refreshingMetadata;
 @property(nonatomic) BOOL avatarLoading;
 @property(nonatomic) BOOL avatarLoaded;
+@property(nonatomic) NSUInteger avatarAttempts;
 @property(nonatomic) BOOL imageCaptureQueued;
 @property(nonatomic) BOOL originalClips;
 @property(nonatomic) BOOL originalAccessible;
@@ -197,12 +198,14 @@ static void LoadImage(NSURL *url, UIImageView *view, BHRDRepostCellState *state)
     BOOL avatar=view==[(BHRDRepostOverlay *)state.overlay avatar];
     UIImage *image = [ImageCache() objectForKey:url.absoluteString];
     if (image) { view.image = image; if (avatar) { state.avatarLoaded=YES; state.avatarLoading=NO; } return; }
-    if (avatar) { state.avatarLoading=YES; state.avatarLoaded=NO; }
+    if (avatar) { state.avatarLoading=YES; state.avatarLoaded=NO; state.avatarAttempts++; }
     __weak BHRDRepostCellState *weakState = state;
     __weak UIImageView *weakView = view;
     NSURLSessionDataTask *task = [NSURLSession.sharedSession dataTaskWithURL:url completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
         BOOL httpOK=![response isKindOfClass:NSHTTPURLResponse.class] || ([(NSHTTPURLResponse *)response statusCode]>=200 && [(NSHTTPURLResponse *)response statusCode]<300);
-        UIImage *downloaded = !error && httpOK && data.length>0 && data.length<=8*1024*1024 && [response.MIMEType hasPrefix:@"image/"] ? [UIImage imageWithData:data] : nil;
+        NSString *mime=response.MIMEType.lowercaseString;
+        BOOL imageResponse=!mime.length || [mime hasPrefix:@"image/"] || [mime isEqual:@"application/octet-stream"];
+        UIImage *downloaded = !error && httpOK && imageResponse && data.length>0 && data.length<=8*1024*1024 ? [UIImage imageWithData:data] : nil;
         dispatch_async(dispatch_get_main_queue(), ^{
             BHRDRepostCellState *current = weakState;
             // Reused cells must never display the previous tweet's asynchronous image.
@@ -212,6 +215,15 @@ static void LoadImage(NSURL *url, UIImageView *view, BHRDRepostCellState *state)
                 if (downloaded) {
                     [ImageCache() setObject:downloaded forKey:url.absoluteString cost:downloaded.size.width * downloaded.size.height * 4];
                     weakView.image = downloaded;
+                } else if (avatar && current.avatarAttempts<3) {
+                    // Recover transient failures while the row stays onscreen.
+                    // A reused row or newer request invalidates this retry too.
+                    NSTimeInterval delay=current.avatarAttempts==1 ? 1.0 : 3.0;
+                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(delay*NSEC_PER_SEC)),dispatch_get_main_queue(),^{
+                        BHRDRepostCellState *retry=weakState;
+                        if (retry.cell.window && objc_getAssociatedObject(retry.cell,&BHRDCellStateKey)==retry &&
+                            [objc_getAssociatedObject(weakView,&ImageRequestKey) isEqual:request]) RetryAvatar(retry.cell);
+                    });
                 }
             }
         });
