@@ -4,6 +4,8 @@
 
 ## 安装
 
+头像仍显示占位图时，可安装基于 2.4.2 的文件诊断包。构建、日志位置和手机端导出步骤见 [头像诊断说明](AVATAR-DIAGNOSTICS.md)。此包用于定位故障，不代表真机问题已经解决。
+
 安装 `packages/XSuixin_2.4.2_rootless.deb`。
 
 - 面向 iOS 15.0 及以上的标准 rootless 越狱环境，使用 `/var/jb` 前缀。

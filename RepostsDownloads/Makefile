@@ -19,4 +19,9 @@ BHRD_FILES += Diagnostics.x
 BHRD_CFLAGS += -DBHRD_DIAGNOSTICS=1
 endif
 
+ifeq ($(BHRD_AVATAR_DIAGNOSTICS),1)
+BHRD_FILES += BHRDAvatarDiagnostics.m
+BHRD_CFLAGS += -DBHRD_AVATAR_DIAGNOSTICS=1
+endif
+
 include $(THEOS_MAKE_PATH)/tweak.mk

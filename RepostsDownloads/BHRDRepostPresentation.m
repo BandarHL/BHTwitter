@@ -3,6 +3,7 @@
 #import "BHRDConversationScope.h"
 #import "BHRDAdFilter.h"
 #import "BHRDContentFilter.h"
+#import "BHRDAvatarDiagnostics.h"
 #import <objc/runtime.h>
 #import <objc/message.h>
 @protocol BHRDTimelineItems <NSObject>
@@ -192,13 +193,24 @@ static NSCache *ImageCache(void) {
 }
 static char ImageRequestKey;
 static void LoadImage(NSURL *url, UIImageView *view, BHRDRepostCellState *state) {
-    if (!url) return;
+    if (!url) {
+        if (view==[(BHRDRepostOverlay *)state.overlay avatar]) BHRDAvatarLog(@"avatar_missing_url",@{@"row":state.identity ?: @"",@"handle":state.info.authorHandle ?: @"",@"result":@"placeholder_no_request"});
+        return;
+    }
     NSString *request=NSUUID.UUID.UUIDString;
     objc_setAssociatedObject(view,&ImageRequestKey,request,OBJC_ASSOCIATION_COPY_NONATOMIC);
     BOOL avatar=view==[(BHRDRepostOverlay *)state.overlay avatar];
     UIImage *image = [ImageCache() objectForKey:url.absoluteString];
-    if (image) { view.image = image; if (avatar) { state.avatarLoaded=YES; state.avatarLoading=NO; } return; }
+    if (image) {
+        view.image = image;
+        if (avatar) {
+            state.avatarLoaded=YES; state.avatarLoading=NO;
+            BHRDAvatarLog(@"avatar_cache_hit",@{@"row":state.identity ?: @"",@"handle":state.info.authorHandle ?: @"",@"url":BHRDAvatarDiagnosticURL(url),@"result":@"decoded_image_assigned"});
+        }
+        return;
+    }
     if (avatar) { state.avatarLoading=YES; state.avatarLoaded=NO; state.avatarAttempts++; }
+    if (avatar) BHRDAvatarLog(@"avatar_request_start",@{@"row":state.identity ?: @"",@"handle":state.info.authorHandle ?: @"",@"url":BHRDAvatarDiagnosticURL(url),@"request":request,@"attempt":@(state.avatarAttempts),@"loading":@YES});
     __weak BHRDRepostCellState *weakState = state;
     __weak UIImageView *weakView = view;
     NSURLSessionDataTask *task = [NSURLSession.sharedSession dataTaskWithURL:url completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
@@ -208,6 +220,7 @@ static void LoadImage(NSURL *url, UIImageView *view, BHRDRepostCellState *state)
         UIImage *downloaded = !error && httpOK && imageResponse && data.length>0 && data.length<=8*1024*1024 ? [UIImage imageWithData:data] : nil;
         dispatch_async(dispatch_get_main_queue(), ^{
             BHRDRepostCellState *current = weakState;
+            if (avatar) BHRDAvatarLog(@"avatar_response",@{@"row":current.identity ?: @"released",@"handle":current.info.authorHandle ?: @"",@"request":request,@"url":BHRDAvatarDiagnosticURL(url),@"finalURL":BHRDAvatarDiagnosticURL(response.URL),@"http":@([response isKindOfClass:NSHTTPURLResponse.class] ? [(NSHTTPURLResponse *)response statusCode] : 0),@"mime":mime ?: @"",@"bytes":@(data.length),@"decoded":@(downloaded!=nil),@"errorDomain":error.domain ?: @"",@"errorCode":@(error.code),@"cancelled":@(error.code==NSURLErrorCancelled),@"current":@(current && objc_getAssociatedObject(current.cell,&BHRDCellStateKey)==current && [objc_getAssociatedObject(weakView,&ImageRequestKey) isEqual:request])});
             // Reused cells must never display the previous tweet's asynchronous image.
             if (current && objc_getAssociatedObject(current.cell, &BHRDCellStateKey) == current &&
                 [objc_getAssociatedObject(weakView,&ImageRequestKey) isEqual:request]) {
@@ -215,15 +228,19 @@ static void LoadImage(NSURL *url, UIImageView *view, BHRDRepostCellState *state)
                 if (downloaded) {
                     [ImageCache() setObject:downloaded forKey:url.absoluteString cost:downloaded.size.width * downloaded.size.height * 4];
                     weakView.image = downloaded;
+                    if (avatar) BHRDAvatarLog(@"avatar_assigned",@{@"row":current.identity ?: @"",@"handle":current.info.authorHandle ?: @"",@"request":request,@"result":@"decoded_image",@"loaded":@(current.avatarLoaded),@"loading":@(current.avatarLoading)});
                 } else if (avatar && current.avatarAttempts<3) {
                     // Recover transient failures while the row stays onscreen.
                     // A reused row or newer request invalidates this retry too.
                     NSTimeInterval delay=current.avatarAttempts==1 ? 1.0 : 3.0;
+                    BHRDAvatarLog(@"avatar_retry_scheduled",@{@"row":current.identity ?: @"",@"handle":current.info.authorHandle ?: @"",@"request":request,@"attempt":@(current.avatarAttempts),@"delay":@(delay)});
                     dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(delay*NSEC_PER_SEC)),dispatch_get_main_queue(),^{
                         BHRDRepostCellState *retry=weakState;
                         if (retry.cell.window && objc_getAssociatedObject(retry.cell,&BHRDCellStateKey)==retry &&
                             [objc_getAssociatedObject(weakView,&ImageRequestKey) isEqual:request]) RetryAvatar(retry.cell);
                     });
+                } else if (avatar) {
+                    BHRDAvatarLog(@"avatar_retries_exhausted",@{@"row":current.identity ?: @"",@"handle":current.info.authorHandle ?: @"",@"attempts":@(current.avatarAttempts),@"result":@"placeholder"});
                 }
             }
         });
@@ -269,7 +286,17 @@ static void ScheduleMetadataRefresh(BHRDRepostCellState *state) {
     for (NSNumber *delay in @[@0.15, @0.6, @1.5, @4.0]) {
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay.doubleValue * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             BHRDRepostCellState *current = weakState;
-            if (current.cell.window && objc_getAssociatedObject(current.cell, &BHRDCellStateKey) == current) RefreshPreviewMetadata(current);
+            if (current.cell.window && objc_getAssociatedObject(current.cell, &BHRDCellStateKey) == current) {
+                RefreshPreviewMetadata(current);
+#if BHRD_AVATAR_DIAGNOSTICS
+                if (delay.doubleValue>=1.5) {
+                    BHRDAvatarLog(@"overlay_state",@{@"row":current.identity ?: @"",@"handle":current.info.authorHandle ?: @"",@"url":BHRDAvatarDiagnosticURL(current.avatarURL),@"loaded":@(current.avatarLoaded),@"loading":@(current.avatarLoading),@"attempts":@(current.avatarAttempts),@"active":@(objc_getAssociatedObject(current.cell,&BHRDCellStateKey)==current),@"result":current.avatarLoaded ? @"decoded_image" : @"placeholder"});
+                    BHRDAvatarInspectView(current.cell,current.identity);
+                    UITableView *table=Table(current.controller); NSIndexPath *path=[table indexPathForCell:current.cell];
+                    if (path && [current.controller respondsToSelector:@selector(itemAtIndexPath:)]) BHRDAvatarInspectModel([(id<BHRDTimelineItems>)current.controller itemAtIndexPath:path],current.identity);
+                }
+#endif
+            }
         });
     }
 }
@@ -341,6 +368,11 @@ void BHRDConfigureRepostCell(UITableViewCell *cell, id model, id controller) {
          (old.avatarURL == info.avatar || [old.avatarURL isEqual:info.avatar]) &&
          [old.thumbnailURLs isEqual:info.thumbnails]);
     if (sameIdentity && old.mode == mode && samePreview) { old.info=info; BHRDLayoutRepostCell(cell); return; }
+    if (mode==BHRDRepostModePreview) {
+        BHRDAvatarLog(@"preview_resolved",@{@"row":identity ?: @"",@"post":info.postIdentifier ?: @"",@"handle":info.authorHandle ?: @"",@"authorID":info.authorIdentifier ?: @"",@"priority":@(info.authorPriority),@"avatarURL":BHRDAvatarDiagnosticURL(info.avatar),@"cellClass":NSStringFromClass(cell.class),@"modelClass":NSStringFromClass([model class]),@"result":info.avatar ? @"model_url_found" : @"model_url_missing"});
+        BHRDAvatarInspectModel(model,identity);
+        BHRDAvatarInspectView(cell,identity);
+    }
     BHRDRestoreRepostCell(cell);
     if (mode < 0) return;
     BHRDRepostCellState *state = [BHRDRepostCellState new];

@@ -11,6 +11,9 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.title = @"X 随心";
+#if BHRD_AVATAR_DIAGNOSTICS
+    self.title = @"X 随心 2.4.2 头像诊断版";
+#endif
     BOOL isRoot = self.navigationController.viewControllers.firstObject == self;
     self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:isRoot ? @"完成" : @"返回" style:UIBarButtonItemStylePlain target:self action:@selector(bhrd_close)];
 }
