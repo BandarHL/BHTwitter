@@ -10,6 +10,9 @@
 %hook NSJSONSerialization
 + (id)JSONObjectWithData:(NSData *)data options:(NSJSONReadingOptions)options error:(NSError **)error {
     id object = %orig;
+    // A vertical video pager may not use TFNItemsDataViewController at all.
+    // Remove promoted URT slots before its models and page indices are built.
+    object=BHRDFilterAdResponse(object,data,BHRDPreference(BHRDHideAdsKey),NULL);
     if (object && BHRDPreference(BHRDShowShareImageKey)) BHRDCacheSharePosts(object, data);
     // Author/user responses can arrive separately from timeline entries. Keep
     // their metadata even when filtering is off, ready for preview mode later.

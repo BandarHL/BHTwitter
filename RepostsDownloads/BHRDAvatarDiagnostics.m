@@ -37,7 +37,7 @@ void BHRDAvatarLog(NSString *event, NSDictionary *fields) {
             if (![fm fileExistsAtPath:path]) [fm createFileAtPath:path contents:nil attributes:@{NSFilePosixPermissions:@0600}];
             NSMutableDictionary *record=[fields mutableCopy] ?: [NSMutableDictionary dictionary];
             record[@"event"]=event; record[@"time"]=@([NSDate.date timeIntervalSince1970]);
-            record[@"build"]=@"2.4.3+diag.1";
+            record[@"build"]=@"2.4.4+diag.1";
             NSData *json=[NSJSONSerialization dataWithJSONObject:record options:0 error:NULL];
             if (json && json.length<=32768) {
                 NSFileHandle *file=[NSFileHandle fileHandleForWritingAtPath:path];

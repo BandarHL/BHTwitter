@@ -36,7 +36,12 @@ static BOOL PhotoHost(UIViewController *controller);
     for (UIViewController *c=self.owner; c; c=c.parentViewController) if (c.presentedViewController && !c.presentedViewController.isBeingDismissed) return YES;
     return NO;
 }
-- (void)cancel { self.copying=NO; ++self.generation; [self.fetch cancel]; self.fetch=nil; self.overlay.button.enabled=YES; [self.overlay.button setTitle:@"复制图片" forState:UIControlStateNormal]; }
+- (void)setCopySymbol:(NSString *)symbol status:(NSString *)status {
+    [self.overlay.button setTitle:nil forState:UIControlStateNormal];
+    [self.overlay.button setImage:[UIImage systemImageNamed:symbol] forState:UIControlStateNormal];
+    self.overlay.button.accessibilityValue=status;
+}
+- (void)cancel { self.copying=NO; ++self.generation; [self.fetch cancel]; self.fetch=nil; self.overlay.button.enabled=YES; [self setCopySymbol:@"doc.on.doc" status:nil]; }
 - (BOOL)refresh {
     if (self.stopped) return NO;
     if (!PhotoHost(self.owner)) { [self stop]; return NO; }
@@ -53,9 +58,8 @@ static BOOL PhotoHost(UIViewController *controller);
         self.overlay=[BHRDPhotoCopyOverlay new]; self.overlay.backgroundColor=UIColor.clearColor;
         UIButton *button=[UIButton buttonWithType:UIButtonTypeSystem]; self.overlay.button=button;
         [button setImage:[UIImage systemImageNamed:@"doc.on.doc"] forState:UIControlStateNormal];
-        [button setTitle:@"复制图片" forState:UIControlStateNormal]; button.accessibilityLabel=@"复制当前全屏图片"; button.accessibilityHint=@"点按复制原图，长按或点右侧更多打开图片工具箱";
+        [button setTitle:nil forState:UIControlStateNormal]; button.accessibilityLabel=@"复制当前全屏图片"; button.accessibilityHint=@"点按复制原图，长按或点右侧更多打开图片工具箱";
         button.tintColor=UIColor.whiteColor; button.backgroundColor=[UIColor colorWithWhite:0 alpha:0.72]; button.layer.cornerRadius=22;
-        button.titleLabel.font=[UIFont systemFontOfSize:13 weight:UIFontWeightMedium];
         [button addGestureRecognizer:[[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(longPressTools:)]];
         [button addTarget:self action:@selector(copyPhoto) forControlEvents:UIControlEventTouchUpInside];
         [self.overlay addSubview:button];
@@ -70,16 +74,17 @@ static BOOL PhotoHost(UIViewController *controller);
     CGFloat y=MAX(window.safeAreaInsets.top+12,MIN(window.bounds.size.height*0.65-22,window.bounds.size.height-window.safeAreaInsets.bottom-56));
     CGFloat right=window.bounds.size.width-window.safeAreaInsets.right-12;
     self.overlay.toolsButton.frame=CGRectMake(right-44,y,44,44);
-    self.overlay.button.frame=CGRectMake(MAX(window.safeAreaInsets.left+12,right-164),y,112,44);
+    self.overlay.button.frame=CGRectMake(MAX(window.safeAreaInsets.left+12,right-96),y,44,44);
     self.overlay.button.enabled=!self.copying;
     [window bringSubviewToFront:self.overlay]; return YES;
 }
 - (void)feedback:(NSString *)title {
-    [self.overlay.button setTitle:title forState:UIControlStateNormal];
+    [self setCopySymbol:[title hasPrefix:@"已"] ? @"checkmark" : @"exclamationmark.triangle" status:title];
+    UIAccessibilityPostNotification(UIAccessibilityAnnouncementNotification,title);
     NSUInteger generation=self.generation; __weak BHRDPhotoCopyController *weakSelf=self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW,NSEC_PER_SEC*2),dispatch_get_main_queue(),^{
         BHRDPhotoCopyController *controller=weakSelf;
-        if (controller.generation==generation) [controller.overlay.button setTitle:@"复制图片" forState:UIControlStateNormal];
+        if (controller.generation==generation) [controller setCopySymbol:@"doc.on.doc" status:nil];
     });
 }
 - (void)longPressTools:(UILongPressGestureRecognizer *)gesture { if (gesture.state==UIGestureRecognizerStateBegan) [self openTools]; }
@@ -162,7 +167,7 @@ static BOOL PhotoHost(UIViewController *controller);
     if (self.copying || self.stopped || !PhotoHost(self.owner) || [self blocked]) return;
     BHRDPhotoSnapshot *snapshot=BHRDCurrentFullscreenPhoto(self.owner.viewIfLoaded); if (!snapshot) return;
     [self cancel]; self.photo=snapshot; NSUInteger generation=self.generation;
-    self.copying=YES; self.overlay.button.enabled=NO; [self.overlay.button setTitle:@"正在复制…" forState:UIControlStateNormal];
+    self.copying=YES; self.overlay.button.enabled=NO; [self setCopySymbol:@"hourglass" status:@"正在复制"];
     if (loadedOnly || !snapshot.url) { [self writeSnapshot:snapshot data:nil privateCopy:privateCopy generation:generation fallback:YES]; return; }
     __weak BHRDPhotoCopyController *weakSelf=self;
     self.fetch=[BHRDPhotoFetch fetchURL:snapshot.url completion:^(NSData *data,NSError *error) {

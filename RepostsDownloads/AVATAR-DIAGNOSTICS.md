@@ -1,10 +1,10 @@
-# 2.4.3+diag.1 头像文件诊断版
+# 2.4.4+diag.1 头像文件诊断版
 
-这是包含 2.4.3 原生头像回退修复的取证包。安装包版本为 `2.4.3+diag.1`，可覆盖安装 2.4.2+diag.1 或正式版，设置页标题显示“头像诊断版”。新逻辑已通过本地模拟验证，实际手机效果仍需复验。
+这是包含 2.4.4 原生头像回退修复的取证包。安装包版本为 `2.4.4+diag.1`，可覆盖安装 2.4.2+diag.1 或正式版，设置页标题显示“头像诊断版”。新逻辑已通过本地模拟验证，实际手机效果仍需复验。
 
 ## 安装与导出
 
-1. 安装 `packages/XSuixin_2.4.3_diag1_rootless.deb`，彻底退出并重新打开 X。
+1. 安装 `packages/XSuixin_2.4.4_diag1_rootless.deb`，彻底退出并重新打开 X。
 2. 刷新出现“已隐藏一条转推”的列表，让有占位头像的条目停留至少 12 秒，再上下滚动两次。
 3. 日志路径为 `<X 数据容器>/Library/Application Support/XSuixinDownloads/avatar-diag.log`。如果旁边存在 `avatar-diag.log.1`，请一起导出。容器 UUID 不写死，重装 X 后需重新定位。
 4. 手机端助手可复制到 `/var/mobile/Media/XSuixinLogs/`，然后把日志文件发回本对话。日志含帖子 ID、用户名、头像 URL 路径，不要将个人日志提交到公共 GitHub。
@@ -12,6 +12,8 @@
 文件直接由插件写入，无需 root、系统日志命令或 Console.app。日志是逐行 JSON；含启动版本、系统版本、事件时间戳。每个文件约 2 MB，最多保留当前文件及一个滚动备份；文件权限 0600。不记录正文、图片数据、Cookie、请求头或 URL 查询参数。只在诊断构建中写日志，普通构建不会编入写日志代码。
 
 ## 判断故障在哪一段
+
+- 2.4.4 也记录 `ad_response_checked`：`changed=true` 表示当前 JSON 响应中确实移除了广告条目，`false` 表示虽然数据含相关标记，但没有符合过滤规则的条目。该事件只含响应字节数和结果，不写 URL 或响应正文；未出现此事件不能证明没有广告，可能是不同数据解析路径。
 
 - 没有 `session_start`：先核对是否安装诊断包并重启 X，以及容器路径是否正确。
 - `preview_resolved` 显示 `model_url_missing`，随后 `avatar_missing_url`：头像还没有进入模型；看相同 `row` 的 `model_shape`、`model_url`，确定真实类名、字段及包装路径。`getters` 只列名称，含带参数的方法及相关 ivar，不会遍历执行未知方法。
@@ -35,8 +37,8 @@ sh RepostsDownloads/build-avatar-diagnostics.sh
 sh RepostsDownloads/tests/run_avatar_diagnostics.sh
 ```
 
-构建入口自动设置 `BHRD_AVATAR_DIAGNOSTICS=1 PACKAGE_VERSION=2.4.3+diag.1`，生成别名、校验签名与包结构并输出 SHA-256。普通 `build.sh` 生成正式版 2.4.3。两种构建都从 clean 开始，避免沿用另一种模式的对象文件。
+构建入口自动设置 `BHRD_AVATAR_DIAGNOSTICS=1 PACKAGE_VERSION=2.4.4+diag.1`，生成别名、校验签名与包结构并输出 SHA-256。普通 `build.sh` 生成正式版 2.4.4。两种构建都从 clean 开始，避免沿用另一种模式的对象文件。
 
-测试覆盖并发写入、JSON 行完整性、权限、轮转、URL 脱敏，并在开启真实日志实现的情况下再次执行 41 项生产预览生命周期检查，确认日志文件包含原生头像检查和赋图等完整过程。宿主视图由夹具模拟，不替代 X 12.24.1 / iOS 17.1.1 真机取证。当前版本完整验证结果与包校验值见 `RELEASE-2.4.3.md`。
+测试覆盖并发写入、JSON 行完整性、权限、轮转、URL 脱敏，并在开启真实日志实现的情况下再次执行 41 项生产预览生命周期检查，确认日志文件包含原生头像检查和赋图等完整过程。宿主视图由夹具模拟，不替代 X 12.24.1 / iOS 17.1.1 真机取证。当前版本完整验证结果与包校验值见 `RELEASE-2.4.4.md`。
 
 GitHub Actions 同时构建标准包与诊断包，诊断产物名为 `XSuixin-avatar-diagnostics`。云端重建的包有独立 SHA-256，以其随附校验文件为准。

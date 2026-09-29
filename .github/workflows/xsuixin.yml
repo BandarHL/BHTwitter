@@ -69,6 +69,6 @@ jobs:
         with:
           name: XSuixin-avatar-diagnostics
           path: |
-            source/RepostsDownloads/packages/XSuixin_2.4.3_diag1_rootless.deb
-            source/RepostsDownloads/packages/XSuixin_2.4.3_diag1_rootless.deb.sha256
+            source/RepostsDownloads/packages/XSuixin_2.4.4_diag1_rootless.deb
+            source/RepostsDownloads/packages/XSuixin_2.4.4_diag1_rootless.deb.sha256
           if-no-files-found: error
