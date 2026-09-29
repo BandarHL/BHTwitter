@@ -37,7 +37,7 @@ void BHRDAvatarLog(NSString *event, NSDictionary *fields) {
             if (![fm fileExistsAtPath:path]) [fm createFileAtPath:path contents:nil attributes:@{NSFilePosixPermissions:@0600}];
             NSMutableDictionary *record=[fields mutableCopy] ?: [NSMutableDictionary dictionary];
             record[@"event"]=event; record[@"time"]=@([NSDate.date timeIntervalSince1970]);
-            record[@"build"]=@"2.4.4+diag.1";
+            record[@"build"]=@"2.4.5";
             NSData *json=[NSJSONSerialization dataWithJSONObject:record options:0 error:NULL];
             if (json && json.length<=32768) {
                 NSFileHandle *file=[NSFileHandle fileHandleForWritingAtPath:path];
@@ -48,6 +48,39 @@ void BHRDAvatarLog(NSString *event, NSDictionary *fields) {
     }});
 }
 void BHRDAvatarDiagnosticFlush(void) { dispatch_sync(Queue(),^{}); }
+void BHRDAvatarReadLog(void (^completion)(NSString *)) {
+    dispatch_async(Queue(),^{
+        NSString *text=[NSString stringWithContentsOfFile:BHRDAvatarDiagnosticPath() encoding:NSUTF8StringEncoding error:NULL];
+        NSArray *lines=[text componentsSeparatedByString:@"\n"];
+        if (lines.count>300) text=[[lines subarrayWithRange:NSMakeRange(lines.count-300,300)] componentsJoinedByString:@"\n"];
+        dispatch_async(dispatch_get_main_queue(),^{ if (completion) completion(text.length ? text : @"暂无日志。请返回 X 复现问题，再点击刷新。"); });
+    });
+}
+void BHRDAvatarExportLogs(void (^completion)(NSArray<NSURL *> *,NSError *)) {
+    dispatch_async(Queue(),^{
+        NSFileManager *fm=NSFileManager.defaultManager;
+        NSURL *directory=[[NSURL fileURLWithPath:NSTemporaryDirectory() isDirectory:YES] URLByAppendingPathComponent:[@"XSuixinLogs-" stringByAppendingString:NSUUID.UUID.UUIDString] isDirectory:YES];
+        NSError *error=nil; NSMutableArray *files=[NSMutableArray array];
+        if ([fm createDirectoryAtURL:directory withIntermediateDirectories:YES attributes:@{NSFilePosixPermissions:@0700} error:&error]) {
+            for (NSString *suffix in @[@"",@".1"]) {
+                NSString *source=[BHRDAvatarDiagnosticPath() stringByAppendingString:suffix];
+                if (![fm fileExistsAtPath:source]) continue;
+                NSURL *target=[directory URLByAppendingPathComponent:[@"avatar-diag.log" stringByAppendingString:suffix]];
+                if (![fm copyItemAtURL:[NSURL fileURLWithPath:source] toURL:target error:&error]) break;
+                [files addObject:target];
+            }
+        }
+        if (!files.count && !error) error=[NSError errorWithDomain:@"XSuixinDiagnostics" code:1 userInfo:@{NSLocalizedDescriptionKey:@"暂无可导出的日志"}];
+        if (error) { [fm removeItemAtURL:directory error:NULL]; [files removeAllObjects]; }
+        dispatch_async(dispatch_get_main_queue(),^{ if (completion) completion([files copy],error); });
+    });
+}
+void BHRDAvatarRemoveExport(NSArray<NSURL *> *files) {
+    NSURL *directory=files.firstObject.URLByDeletingLastPathComponent;
+    if (![directory.lastPathComponent hasPrefix:@"XSuixinLogs-"] ||
+        ![directory.URLByDeletingLastPathComponent.URLByResolvingSymlinksInPath.path isEqual:[NSURL fileURLWithPath:NSTemporaryDirectory()].URLByResolvingSymlinksInPath.path]) return;
+    dispatch_async(Queue(),^{ [NSFileManager.defaultManager removeItemAtURL:directory error:NULL]; });
+}
 static id Read(id object, NSString *key) {
     @try {
         if ([object isKindOfClass:NSDictionary.class]) return object[key];

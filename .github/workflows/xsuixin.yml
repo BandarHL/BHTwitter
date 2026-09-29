@@ -63,12 +63,3 @@ jobs:
             source/RepostsDownloads/packages/XSuixin_*_rootless.deb
             source/RepostsDownloads/packages/XSuixin_*_rootless.deb.sha256
           if-no-files-found: error
-      - name: Build avatar diagnostic package
-        run: sh source/RepostsDownloads/build-avatar-diagnostics.sh
-      - uses: actions/upload-artifact@v4
-        with:
-          name: XSuixin-avatar-diagnostics
-          path: |
-            source/RepostsDownloads/packages/XSuixin_2.4.4_diag1_rootless.deb
-            source/RepostsDownloads/packages/XSuixin_2.4.4_diag1_rootless.deb.sha256
-          if-no-files-found: error

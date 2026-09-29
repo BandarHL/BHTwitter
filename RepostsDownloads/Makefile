@@ -12,6 +12,7 @@ BHRD_FILES += BHRDFullscreenContext.m BHRDPhotoClipboard.m BHRDFileNaming.m BHRD
 BHRD_FRAMEWORKS := QuartzCore CoreText ImageIO UIKit Foundation AVFoundation AVKit VideoToolbox Accelerate CoreMedia CoreGraphics AudioToolbox Photos Security SystemConfiguration
 BHRD_OBJ_FILES := $(wildcard ../lib/*.a)
 BHRD_LIBRARIES := bz2 c++ iconv z
+BHRD_FILES += BHRDAdRuntime.m BHRDAvatarDiagnostics.m BHRDDiagnosticsViewController.m
 BHRD_CFLAGS := -fobjc-arc -Wno-deprecated-declarations -Wno-nullability-completeness
 
 ifeq ($(BHRD_DIAGNOSTICS),1)
@@ -19,9 +20,7 @@ BHRD_FILES += Diagnostics.x
 BHRD_CFLAGS += -DBHRD_DIAGNOSTICS=1
 endif
 
-ifeq ($(BHRD_AVATAR_DIAGNOSTICS),1)
-BHRD_FILES += BHRDAvatarDiagnostics.m
+# All product builds include the bounded local log and its viewer/export UI.
 BHRD_CFLAGS += -DBHRD_AVATAR_DIAGNOSTICS=1
-endif
 
 include $(THEOS_MAKE_PATH)/tweak.mk

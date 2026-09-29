@@ -14,7 +14,7 @@ def check(condition, message):
         raise SystemExit(message)
 
 
-def verify(package, version, avatar_diagnostics=False):
+def verify(package, version):
     for key, expected in [("Package", "com.caun.bhtwitter.repostsdownloads"), ("Version", version), ("Architecture", "iphoneos-arm64")]:
         value = subprocess.check_output(["dpkg-deb", "-f", str(package), key], text=True).strip()
         check(value == expected, f"Unexpected {key}: {value}")
@@ -88,7 +88,7 @@ def verify(package, version, avatar_diagnostics=False):
             directories += 1
         check(directories > 0, "Missing CodeDirectory")
         check(b"[XSuixinDiag]" not in data, "Diagnostic code found in release")
-        check((b"avatar-diag.log" in data) == avatar_diagnostics, "Unexpected avatar diagnostic build mode")
+        check(b"avatar-diag.log" in data and b"BHRDDiagnosticsViewController" in data, "Missing default diagnostics and viewer/export UI")
         print(f"PASS: {version} rootless arm64, iOS 15.0, X-only injection; {directories} CodeDirectories / {pages} signed pages verified")
     digest = hashlib.sha256(package.read_bytes()).hexdigest()
     print(f"SHA256 {digest}  {package.name}")
@@ -98,7 +98,6 @@ def verify(package, version, avatar_diagnostics=False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("package", type=pathlib.Path)
-    parser.add_argument("--version", default="2.4.4")
-    parser.add_argument("--avatar-diagnostics", action="store_true")
+    parser.add_argument("--version", default="2.4.5")
     args = parser.parse_args()
-    verify(args.package.resolve(), args.version, args.avatar_diagnostics)
+    verify(args.package.resolve(), args.version)

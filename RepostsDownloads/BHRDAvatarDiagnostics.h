@@ -8,6 +8,9 @@ void BHRDAvatarInspectView(UIView *view, NSString *row);
 NSString *BHRDAvatarDiagnosticURL(NSURL *url);
 NSString *BHRDAvatarDiagnosticPath(void);
 void BHRDAvatarDiagnosticFlush(void);
+void BHRDAvatarReadLog(void (^completion)(NSString *text));
+void BHRDAvatarExportLogs(void (^completion)(NSArray<NSURL *> *files, NSError *error));
+void BHRDAvatarRemoveExport(NSArray<NSURL *> *files);
 #else
 #define BHRDAvatarLog(...) do {} while (0)
 #define BHRDAvatarInspectModel(...) do {} while (0)

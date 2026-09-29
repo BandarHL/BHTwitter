@@ -16,6 +16,12 @@ xcrun clang -fobjc-arc -Wall -Wextra -Werror -Wno-unused-parameter -I HostFixtur
   ../BHRDAdFilter.m ../BHRDContentFilter.m ../BHRDPreferences.m \
   HostFixtures/ViewGraph.m RepostPresentation241Tests.m -o "$BHRD_AVATAR_TEST_DIR/views-test"
 "$BHRD_AVATAR_TEST_DIR/views-test"
+xcrun clang -fobjc-arc -Wall -Wextra -Werror -Wno-unused-parameter -I HostFixtures \
+  -DBHRD_AVATAR_DIAGNOSTICS=1 -DBHRD_AVATAR_DIAGNOSTICS_TEST=1 \
+  -framework Foundation -framework CoreGraphics -framework QuartzCore \
+  ../BHRDAvatarDiagnostics.m ../BHRDAdRuntime.m ../BHRDAdFilter.m ../BHRDPreferences.m \
+  HostFixtures/ViewGraph.m SSPAds245Tests.m -o "$BHRD_AVATAR_TEST_DIR/ssp-test"
+"$BHRD_AVATAR_TEST_DIR/ssp-test"
 /usr/bin/python3 - "$BHRD_AVATAR_TEST_DIR/avatar-diag.log" <<'PY'
 import json, pathlib, sys
 events = [json.loads(line) for line in pathlib.Path(sys.argv[1]).read_text().splitlines()]
@@ -23,5 +29,8 @@ names = {e['event'] for e in events}
 required = {'preview_resolved', 'model_shape', 'model_url', 'native_image_view', 'avatar_missing_url', 'avatar_request_start', 'avatar_response', 'avatar_assigned', 'avatar_cache_hit', 'avatar_retry_scheduled', 'avatar_retries_exhausted', 'overlay_state', 'avatar_field', 'native_avatar_poll_scheduled', 'native_avatar_candidate', 'native_avatar_assigned'}
 assert required <= names, required - names
 assert any(e['event'] == 'avatar_response' and not e['current'] for e in events)
+assert any(e['event'] == 'ad_response_seen' and e.get('marker') is False for e in events)
+assert {'ad_switch_read', 'ad_runtime_inventory', 'immersive_ad_model', 'google_ad_request_blocked', 'google_ad_no_fill'} <= names
 print('PASS: diagnostic file contains every avatar lifecycle stage and discarded callbacks')
+print('PASS: SSP diagnostics include marker-free responses, switch reads, native models and SDK lifecycle')
 PY

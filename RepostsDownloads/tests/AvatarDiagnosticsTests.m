@@ -16,7 +16,7 @@ int main(void) { @autoreleasepool {
     for (NSString *line in [content componentsSeparatedByString:@"\n"]) {
         if (!line.length) continue;
         NSDictionary *row=[NSJSONSerialization JSONObjectWithData:[line dataUsingEncoding:NSUTF8StringEncoding] options:0 error:NULL];
-        Check(row[@"event"] && [row[@"build"] isEqual:@"2.4.4+diag.1"],@"Concurrent events remain complete JSON lines with build identifiers");
+        Check(row[@"event"] && [row[@"build"] isEqual:@"2.4.5"],@"Concurrent events remain complete JSON lines with build identifiers");
         if ([row[@"event"] isEqual:@"parallel"]) count++;
     }
     Check(count==32,@"Serial writer preserves all events below queue limit");
@@ -28,5 +28,20 @@ int main(void) { @autoreleasepool {
     BHRDAvatarLog(@"after_rotation",@{}); BHRDAvatarDiagnosticFlush();
     Check([NSFileManager.defaultManager fileExistsAtPath:[path stringByAppendingString:@".1"]],@"Oversized log rotates to one backup");
     Check([[NSFileManager.defaultManager attributesOfItemAtPath:path error:NULL] fileSize]<1024,@"New log starts small after rotation");
+    __block NSString *viewed=nil;
+    BHRDAvatarReadLog(^(NSString *text) { viewed=text; });
+    NSDate *deadline=[NSDate dateWithTimeIntervalSinceNow:3];
+    while (!viewed && deadline.timeIntervalSinceNow>0) [NSRunLoop.mainRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.01]];
+    Check([viewed containsString:@"after_rotation"],@"Viewer reads current log asynchronously");
+    __block NSArray<NSURL *> *exported=nil; __block NSError *exportError=nil;
+    BHRDAvatarExportLogs(^(NSArray<NSURL *> *files,NSError *error) { exported=files; exportError=error; });
+    deadline=[NSDate dateWithTimeIntervalSinceNow:3];
+    while (!exported && deadline.timeIntervalSinceNow>0) [NSRunLoop.mainRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.01]];
+    Check(exported.count==2 && !exportError,@"Export snapshots current and rotated files");
+    Check([[NSData dataWithContentsOfURL:exported.firstObject] isEqual:[NSData dataWithContentsOfFile:path]],@"Exported current log matches a consistent snapshot");
+    NSURL *directory=exported.firstObject.URLByDeletingLastPathComponent;
+    BHRDAvatarRemoveExport(exported); BHRDAvatarDiagnosticFlush();
+    Check(![NSFileManager.defaultManager fileExistsAtPath:directory.path],@"Share completion cleans only the export snapshot");
+    Check([NSFileManager.defaultManager fileExistsAtPath:path],@"Export cleanup preserves the original log");
     NSLog(@"PASS: %lu avatar diagnostic file checks",(unsigned long)checks);
 } return 0; }

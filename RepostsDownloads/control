@@ -1,8 +1,8 @@
 Package: com.caun.bhtwitter.repostsdownloads
 Name: X 随心
-Version: 2.4.4
+Version: 2.4.5
 Architecture: iphoneos-arm64
-Description: 全屏图片复制按钮仅显示图标，补齐视频流推广条目的数据过滤，保留原作者头像修复和下载功能。
+Description: 阻止 SSP/Google 原生广告加载，补齐广告开关入口，默认内置可查看和导出的诊断日志。
 Maintainer: caun1112
 Author: caun1112, Bandar Alruwaili
 Section: Tweaks
