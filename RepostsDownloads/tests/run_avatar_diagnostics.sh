@@ -19,9 +19,9 @@ xcrun clang -fobjc-arc -Wall -Wextra -Werror -Wno-unused-parameter -I HostFixtur
 xcrun clang -fobjc-arc -Wall -Wextra -Werror -Wno-unused-parameter -I HostFixtures \
   -DBHRD_AVATAR_DIAGNOSTICS=1 -DBHRD_AVATAR_DIAGNOSTICS_TEST=1 \
   -framework Foundation -framework CoreGraphics -framework QuartzCore \
-  ../BHRDAvatarDiagnostics.m ../BHRDAdRuntime.m ../BHRDAdFilter.m ../BHRDPreferences.m \
-  HostFixtures/ViewGraph.m SSPAds245Tests.m -o "$BHRD_AVATAR_TEST_DIR/ssp-test"
-"$BHRD_AVATAR_TEST_DIR/ssp-test"
+  ../BHRDAvatarDiagnostics.m ../BHRDAdFilter.m \
+  HostFixtures/ViewGraph.m AdDiagnostics244Tests.m -o "$BHRD_AVATAR_TEST_DIR/ad-test"
+"$BHRD_AVATAR_TEST_DIR/ad-test"
 /usr/bin/python3 - "$BHRD_AVATAR_TEST_DIR/avatar-diag.log" <<'PY'
 import json, pathlib, sys
 events = [json.loads(line) for line in pathlib.Path(sys.argv[1]).read_text().splitlines()]
@@ -30,7 +30,8 @@ required = {'preview_resolved', 'model_shape', 'model_url', 'native_image_view',
 assert required <= names, required - names
 assert any(e['event'] == 'avatar_response' and not e['current'] for e in events)
 assert any(e['event'] == 'ad_response_seen' and e.get('marker') is False for e in events)
-assert {'ad_switch_read', 'ad_runtime_inventory', 'immersive_ad_model', 'google_ad_request_blocked', 'google_ad_no_fill'} <= names
+assert any(e['event'] == 'ad_response_seen' and e.get('marker') is True for e in events)
+assert any(e['event'] == 'ad_response_checked' and bool(e.get('changed')) for e in events)
 print('PASS: diagnostic file contains every avatar lifecycle stage and discarded callbacks')
-print('PASS: SSP diagnostics include marker-free responses, switch reads, native models and SDK lifecycle')
+print('PASS: rollback diagnostics observe clean and filtered responses without SSP runtime hooks')
 PY

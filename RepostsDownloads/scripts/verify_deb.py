@@ -89,6 +89,10 @@ def verify(package, version):
         check(directories > 0, "Missing CodeDirectory")
         check(b"[XSuixinDiag]" not in data, "Diagnostic code found in release")
         check(b"avatar-diag.log" in data and b"BHRDDiagnosticsViewController" in data, "Missing default diagnostics and viewer/export UI")
+        check(b"BHRDInstallAdRuntimeHooks" not in data and b"google_ad_request_blocked" not in data,
+              "Unexpected 2.4.5 SSP runtime implementation in rollback package")
+        check(b"showSSPAdWhenNoPromotedMetadata" not in data and b"rollback-log-1" in data,
+              "Missing rollback revision or unexpected SSP override")
         print(f"PASS: {version} rootless arm64, iOS 15.0, X-only injection; {directories} CodeDirectories / {pages} signed pages verified")
     digest = hashlib.sha256(package.read_bytes()).hexdigest()
     print(f"SHA256 {digest}  {package.name}")
@@ -98,6 +102,6 @@ def verify(package, version):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("package", type=pathlib.Path)
-    parser.add_argument("--version", default="2.4.5")
+    parser.add_argument("--version", default="2.4.4")
     args = parser.parse_args()
     verify(args.package.resolve(), args.version)

@@ -109,8 +109,6 @@ static NSNumber *RecommendationOverride(NSString *key) {
 %end
 %end
 %group RecommendationGate2_0
-// Optional compatibility class; absent on some X releases, including 12.24.1.
-// The per-method ctor guards intentionally keep those versions untouched.
 %hook TFSInstrumentedFeatureSwitches
 - (BOOL)boolForKey:(NSString *)key { NSNumber *value = RecommendationOverride(key); return value ? value.boolValue : %orig; }
 %end

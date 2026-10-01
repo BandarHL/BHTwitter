@@ -6,15 +6,6 @@ static id Read(id object, NSString *key) {
     return BHRDModelValue(object, key);
 }
 static BOOL Marked(id object) {
-    // Exact native model families observed in X 12.24.1. No invented JSON
-    // payload schema: these can also be created after response hydration.
-    for (Class cls=[object class]; cls && cls!=NSObject.class; cls=class_getSuperclass(cls)) {
-        NSString *name=NSStringFromClass(cls);
-        if ([name hasSuffix:@"URTTimelineGoogleNativeAdViewModel"] || [name hasSuffix:@"ImmersiveGoogleNativeAdCardViewModel"]) {
-            BHRDAvatarLog(@"immersive_ad_model",@{@"class":name,@"recognized":@YES});
-            return YES;
-        }
-    }
     id identifier=Read(object,@"entryId") ?: Read(object,@"entry_id");
     if (([identifier isKindOfClass:NSString.class] && [identifier hasPrefix:@"cursor-"]) || Read(object,@"cursorType") ||
         [Read(object,@"entryType") isEqual:@"TimelineTimelineCursor"] || [Read(object,@"__typename") isEqual:@"TimelineTimelineCursor"]) return NO;
@@ -49,7 +40,7 @@ BOOL BHRDIsPromotedModel(id model) {
         if (Marked(item)) return YES;
         // Only wrappers of this entry, never quoted/reposted content, author,
         // captions, arbitrary descendants or a neighboring entry's metadata.
-        for (NSString *key in @[@"status",@"tweet",@"representedStatus",@"viewModel",@"item",@"content",@"itemContent",@"item_content"]) {
+        for (NSString *key in @[@"status",@"tweet",@"representedStatus",@"item",@"content",@"itemContent",@"item_content"]) {
             id child=Read(item,key);
             if (child && child!=item && ![child isKindOfClass:NSString.class] && ![child isKindOfClass:NSNumber.class] && ![child isKindOfClass:NSArray.class]) [pending addObject:child];
         }
@@ -130,16 +121,14 @@ static id FilterJSON(id object, NSString *parentKey, NSUInteger depth, NSUIntege
 }
 id BHRDFilterAdResponse(id object, NSData *data, BOOL enabled, BOOL *changed) {
     if (changed) *changed=NO;
-    if (!enabled || !object || !data.length || data.length>8*1024*1024) {
-        BHRDAvatarLog(@"ad_response_seen",@{@"bytes":@(data.length),@"eligible":@NO,@"enabled":@(enabled)});
-        return object;
-    }
+    if (!enabled || !object || !data.length || data.length>8*1024*1024) return object;
     BOOL marker=NO;
     for (NSString *key in @[@"\"promotedMetadata\"",@"\"promoted_metadata\"",@"promoted-tweet-",@"\"isPromoted\"",@"\"promoted_id\""]) {
         NSData *needle=[key dataUsingEncoding:NSUTF8StringEncoding];
         if ([data rangeOfData:needle options:0 range:NSMakeRange(0,data.length)].location!=NSNotFound) { marker=YES; break; }
     }
-    BHRDAvatarLog(@"ad_response_seen",@{@"bytes":@(data.length),@"eligible":@YES,@"enabled":@YES,@"marker":@(marker)});
+    // Observation only; preserve the 2.4.4 filtering and early-return behavior.
+    BHRDAvatarLog(@"ad_response_seen",@{@"bytes":@(data.length),@"marker":@(marker)});
     if (!marker) return object;
     NSUInteger budget=50000; BOOL exhausted=NO;
     BOOL mutableContainers=[object isKindOfClass:NSMutableDictionary.class] || [object isKindOfClass:NSMutableArray.class];
