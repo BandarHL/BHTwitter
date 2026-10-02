@@ -16,7 +16,7 @@ int main(void) { @autoreleasepool {
     for (NSString *line in [content componentsSeparatedByString:@"\n"]) {
         if (!line.length) continue;
         NSDictionary *row=[NSJSONSerialization JSONObjectWithData:[line dataUsingEncoding:NSUTF8StringEncoding] options:0 error:NULL];
-        Check(row[@"event"] && [row[@"build"] isEqual:@"2.4.4"],@"Concurrent events remain complete JSON lines with build identifiers");
+        Check(row[@"event"] && [row[@"build"] isEqual:@"2.4.5"],@"Concurrent events remain complete JSON lines with build identifiers");
         if ([row[@"event"] isEqual:@"parallel"]) count++;
     }
     Check(count==32,@"Serial writer preserves all events below queue limit");

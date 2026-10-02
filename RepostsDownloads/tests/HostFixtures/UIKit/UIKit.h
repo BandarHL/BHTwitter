@@ -3,11 +3,12 @@
 #import <Foundation/Foundation.h>
 #import <CoreGraphics/CoreGraphics.h>
 #import <QuartzCore/QuartzCore.h>
-@class UIColor, UIFont;
+@class UIColor, UIFont, UIEvent;
 enum { UIViewAutoresizingFlexibleWidth=2, UIViewAutoresizingFlexibleHeight=16, UIViewAutoresizingFlexibleLeftMargin=1,
     UITableViewCellSelectionStyleNone=0, UIViewContentModeScaleAspectFill=2, UIViewContentModeScaleAspectFit=1,
     UILayoutConstraintAxisHorizontal=0, UIStackViewDistributionFillEqually=1, UIButtonTypeSystem=1,
-    UIControlStateNormal=0, UIControlEventTouchUpInside=64, NSLineBreakByTruncatingTail=4 };
+    UIControlStateNormal=0, UIControlEventTouchUpInside=64, NSLineBreakByTruncatingTail=4,
+    UITableViewScrollPositionNone=0, UIAccessibilityTraitButton=1 };
 typedef NSInteger UITableViewCellSelectionStyle;
 @interface UIView : NSObject
 - (instancetype)initWithFrame:(CGRect)frame;
@@ -21,6 +22,8 @@ typedef NSInteger UITableViewCellSelectionStyle;
 @property(nonatomic,strong) NSMutableArray<UIView *> *subviews;
 @property(nonatomic,strong) CALayer *layer;
 @property(nonatomic,copy) NSString *accessibilityLabel;
+@property(nonatomic,copy) NSString *accessibilityHint;
+@property(nonatomic) NSUInteger accessibilityTraits;
 @property(nonatomic,strong) UIColor *backgroundColor;
 @property(nonatomic) NSUInteger autoresizingMask;
 @property(nonatomic) BOOL isAccessibilityElement;
@@ -33,9 +36,14 @@ typedef NSInteger UITableViewCellSelectionStyle;
 - (void)addGestureRecognizer:(id)recognizer;
 + (void)performWithoutAnimation:(void (^)(void))block;
 - (void)addSubview:(UIView *)view;
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event;
+- (BOOL)accessibilityActivate;
 - (CGRect)convertRect:(CGRect)rect toView:(UIView *)view;
 @end
-@interface UIControl : UIView @end
+@interface UIControl : UIView
+- (void)addTarget:(id)target action:(SEL)action forControlEvents:(NSUInteger)events;
+- (void)sendActionsForControlEvents:(NSUInteger)events;
+@end
 @interface UITableViewCell : UIView
 @property(nonatomic) UITableViewCellSelectionStyle selectionStyle;
 @end
@@ -48,6 +56,9 @@ typedef NSInteger UITableViewCellSelectionStyle;
 @property(nonatomic) BOOL decelerating;
 - (void)reloadData;
 - (NSIndexPath *)indexPathForCell:(UITableViewCell *)cell;
+- (void)selectRowAtIndexPath:(NSIndexPath *)path animated:(BOOL)animated scrollPosition:(NSInteger)position;
+@property(nonatomic,strong) NSIndexPath *indexPathForSelectedRow;
+@property(nonatomic) NSUInteger fixtureReloadCount;
 @end
 @interface UIImageView : UIView
 @property(nonatomic,strong) id image;
@@ -80,7 +91,6 @@ typedef NSInteger UITableViewCellSelectionStyle;
 @interface UIButton : UIControl
 + (instancetype)buttonWithType:(NSInteger)type;
 - (void)setTitle:(NSString *)title forState:(NSUInteger)state;
-- (void)addTarget:(id)target action:(SEL)action forControlEvents:(NSUInteger)events;
 @end
 @interface UIStackView : UIView
 @property(nonatomic) NSInteger axis;

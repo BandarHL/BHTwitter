@@ -12,22 +12,15 @@
 - (id)itemAtIndexPath:(NSIndexPath *)path;
 @end
 
-static char BHRDCellStateKey, BHRDExpandedKey, BHRDReloadKey, BHRDForceReloadKey;
+static char BHRDCellStateKey, BHRDReloadKey, BHRDForceReloadKey;
 static void RetryAvatar(UITableViewCell *cell);
 static void RefreshNativeAvatar(UITableViewCell *cell);
+static void ResetDetailNavigation(UITableViewCell *cell);
 static NSHashTable *Controllers(void) {
     static NSHashTable *controllers;
     static dispatch_once_t once;
     dispatch_once(&once, ^{ controllers = [NSHashTable weakObjectsHashTable]; });
     return controllers;
-}
-static NSMutableSet *Expanded(id controller) {
-    NSMutableSet *set = objc_getAssociatedObject(controller, &BHRDExpandedKey);
-    if (!set) {
-        set = [NSMutableSet set];
-        objc_setAssociatedObject(controller, &BHRDExpandedKey, set, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    }
-    return set;
 }
 static NSInteger Presentation(id controller, id model) {
     if (BHRDIsConversationContext(controller) || BHRDIsConversationContext(model)) return -1;
@@ -35,7 +28,6 @@ static NSInteger Presentation(id controller, id model) {
     if (BHRDShouldHideRecommendation(model, controller)) return BHRDRepostModeHidden;
     if (BHRDPreference(BHRDHideAdsKey) && BHRDIsPromotedModel(model)) return BHRDRepostModeHidden;
     if (!BHRDPreference(BHRDHideRepostsKey) || !BHRDIsRepostModel(model)) return -1;
-    if ([Expanded(controller) containsObject:BHRDRepostIdentity(model)]) return -1;
     return BHRDCurrentRepostMode();
 }
 static UITableView *Table(id controller) {
@@ -80,13 +72,12 @@ static void ScheduleRefresh(id controller, BOOL forceReload) {
     });
 }
 void BHRDScheduleTimelineRefresh(id controller) { ScheduleRefresh(controller, YES); }
-void BHRDResetExpandedReposts(void) {
+void BHRDRefreshHiddenReposts(void) {
     for (id controller in Controllers().allObjects) {
-        [Expanded(controller) removeAllObjects];
         BHRDScheduleTimelineRefresh(controller);
     }
 }
-void BHRDRepostPreferencesChanged(void) { BHRDResetExpandedReposts(); }
+void BHRDRepostPreferencesChanged(void) { BHRDRefreshHiddenReposts(); }
 void BHRDRepostControllerDidAppear(id controller) {
     if (![Controllers() containsObject:controller] || BHRDIsConversationContext(controller)) return;
     UITableView *table=Table(controller);
@@ -95,7 +86,7 @@ void BHRDRepostControllerDidAppear(id controller) {
     for (UITableViewCell *cell in table.visibleCells) {
         NSIndexPath *path=[table indexPathForCell:cell];
         id model=path ? [(id<BHRDTimelineItems>)controller itemAtIndexPath:path] : nil;
-        if (model) { BHRDConfigureRepostCell(cell,model,controller); RetryAvatar(cell); }
+        if (model) { BHRDConfigureRepostCell(cell,model,controller); ResetDetailNavigation(cell); RetryAvatar(cell); }
     }
 }
 double BHRDRepostRowHeight(id controller, id model, double originalHeight) {
@@ -111,7 +102,7 @@ double BHRDRepostRowHeight(id controller, id model, double originalHeight) {
 }
 
 // Lay out from the final row bounds, not the cell's pre-layout (possibly zero) width.
-@interface BHRDRepostOverlay : UIView
+@interface BHRDRepostOverlay : UIControl
 @property(nonatomic, strong) UILabel *title;
 @property(nonatomic, strong) UIButton *show;
 @property(nonatomic, strong) UIImageView *avatar;
@@ -120,6 +111,15 @@ double BHRDRepostRowHeight(id controller, id model, double originalHeight) {
 @property(nonatomic, strong) UIStackView *grid;
 @end
 @implementation BHRDRepostOverlay
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
+    // Every visible part of the card has one action. Child labels, thumbnails
+    // and the visual button cannot dispatch independent taps or host actions.
+    return [super hitTest:point withEvent:event] ? self : nil;
+}
+- (BOOL)accessibilityActivate {
+    [self sendActionsForControlEvents:UIControlEventTouchUpInside];
+    return YES;
+}
 - (void)layoutSubviews {
     [super layoutSubviews];
     CGFloat width = self.bounds.size.width;
@@ -149,6 +149,7 @@ double BHRDRepostRowHeight(id controller, id model, double originalHeight) {
 @property(nonatomic,strong) UIImage *nativeAvatarImage;
 @property(nonatomic) NSTimeInterval nativeAvatarScanTime;
 @property(nonatomic) BOOL imageCaptureQueued;
+@property(nonatomic) BOOL openingDetails;
 @property(nonatomic) BOOL originalClips;
 @property(nonatomic) BOOL originalAccessible;
 @property(nonatomic) UITableViewCellSelectionStyle selection;
@@ -157,13 +158,36 @@ double BHRDRepostRowHeight(id controller, id model, double originalHeight) {
 @property(nonatomic, strong) NSMutableArray<NSURLSessionDataTask *> *tasks;
 @end
 @implementation BHRDRepostCellState
-- (void)showThis {
-    id controller = self.controller;
-    if (!controller) return;
-    [Expanded(controller) addObject:self.identity];
-    BHRDScheduleTimelineRefresh(controller);
+- (void)openDetails {
+    UITableViewCell *cell=self.cell; id controller=self.controller;
+    if (self.openingDetails || !cell || objc_getAssociatedObject(cell,&BHRDCellStateKey)!=self ||
+        (self.mode!=BHRDRepostModePreview && self.mode!=BHRDRepostModeBar) ||
+        BHRDIsConversationContext(controller) || BHRDIsConversationContext(cell)) return;
+    UITableView *table=Table(controller); NSIndexPath *path=[table indexPathForCell:cell];
+    id model=path && [controller respondsToSelector:@selector(itemAtIndexPath:)] ? [(id<BHRDTimelineItems>)controller itemAtIndexPath:path] : nil;
+    if (!table.window || table.hasUncommittedUpdates || ![BHRDRepostIdentity(model) isEqual:self.identity]) {
+        BHRDAvatarLog(@"repost_detail_navigation",@{@"row":self.identity ?: @"",@"result":@"stale_or_unavailable_row"}); return;
+    }
+    SEL select=NSSelectorFromString(@"tableView:didSelectRowAtIndexPath:");
+    id target=table.delegate;
+    if (![target respondsToSelector:select]) target=controller;
+    NSMethodSignature *sig=[target respondsToSelector:select] ? [target methodSignatureForSelector:select] : nil;
+    if (sig.numberOfArguments!=4 || sig.methodReturnType[0]!='v' ||
+        [sig getArgumentTypeAtIndex:2][0]!='@' || [sig getArgumentTypeAtIndex:3][0]!='@') {
+        BHRDAvatarLog(@"repost_detail_navigation",@{@"row":self.identity ?: @"",@"result":@"native_selection_unavailable"}); return;
+    }
+    self.openingDetails=YES;
+    [table selectRowAtIndexPath:path animated:NO scrollPosition:UITableViewScrollPositionNone];
+    ((void(*)(id,SEL,id,id))objc_msgSend)(target,select,table,path);
+    BHRDAvatarLog(@"repost_detail_navigation",@{@"row":self.identity ?: @"",@"result":@"native_row_selection",@"targetClass":NSStringFromClass([target class])});
+    __weak BHRDRepostCellState *weakSelf=self;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(0.6*NSEC_PER_SEC)),dispatch_get_main_queue(),^{ weakSelf.openingDetails=NO; });
 }
 @end
+static void ResetDetailNavigation(UITableViewCell *cell) {
+    BHRDRepostCellState *state=objc_getAssociatedObject(cell,&BHRDCellStateKey);
+    state.openingDetails=NO;
+}
 void BHRDRepostMetadataChanged(void) {
     // Coalesce related network responses and only reconfigure visible previews.
     // Their row geometry is unchanged, so a full table reload is unnecessary.
@@ -495,6 +519,13 @@ void BHRDConfigureRepostCell(UITableViewCell *cell, id model, id controller) {
     overlay.backgroundColor = UIColor.systemBackgroundColor;
     overlay.clipsToBounds = YES;
     overlay.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    if (mode==BHRDRepostModePreview || mode==BHRDRepostModeBar) {
+        [overlay addTarget:state action:@selector(openDetails) forControlEvents:UIControlEventTouchUpInside];
+        overlay.isAccessibilityElement=YES;
+        overlay.accessibilityTraits=UIAccessibilityTraitButton;
+        overlay.accessibilityLabel=info.author.length ? [@"已隐藏一条转推，" stringByAppendingString:info.author] : @"已隐藏一条转推";
+        overlay.accessibilityHint=@"打开帖子详情，返回后仍保持隐藏";
+    }
     state.overlay = overlay;
     objc_setAssociatedObject(cell, &BHRDCellStateKey, state, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     [cell addSubview:overlay];
@@ -505,10 +536,10 @@ void BHRDConfigureRepostCell(UITableViewCell *cell, id model, id controller) {
         overlay.title = title;
         [overlay addSubview:title];
         UIButton *show = [UIButton buttonWithType:UIButtonTypeSystem];
-        [show setTitle:@"显示这条" forState:UIControlStateNormal];
+        [show setTitle:@"查看详情" forState:UIControlStateNormal];
         show.frame = CGRectMake(cell.bounds.size.width - 104, 10, 88, 40);
         show.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
-        [show addTarget:state action:@selector(showThis) forControlEvents:UIControlEventTouchUpInside];
+        show.userInteractionEnabled=NO;
         overlay.show = show;
         [overlay addSubview:show];
         if (mode == BHRDRepostModePreview) {
@@ -526,7 +557,7 @@ void BHRDConfigureRepostCell(UITableViewCell *cell, id model, id controller) {
             overlay.author = author;
             [overlay addSubview:author];
             if (!info.thumbnails.count) {
-                UILabel *empty = Label(@"暂无媒体缩略图，可点“显示这条”查看原文", 12, UIColor.secondaryLabelColor);
+                UILabel *empty = Label(@"暂无媒体缩略图，点按查看帖子详情", 12, UIColor.secondaryLabelColor);
                 empty.numberOfLines = 2;
                 empty.frame = CGRectMake(16, 94, MAX(60, cell.bounds.size.width - 32), 52);
                 empty.autoresizingMask = UIViewAutoresizingFlexibleWidth;
@@ -550,10 +581,7 @@ void BHRDConfigureRepostCell(UITableViewCell *cell, id model, id controller) {
                     thumb.clipsToBounds = YES;
                     thumb.layer.cornerRadius = 8;
                     thumb.backgroundColor = UIColor.secondarySystemBackgroundColor;
-                    thumb.accessibilityLabel = @"媒体缩略图，点击显示这条转推";
-                    thumb.isAccessibilityElement = YES;
-                    thumb.userInteractionEnabled = YES;
-                    [thumb addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:state action:@selector(showThis)]];
+                    thumb.userInteractionEnabled = NO;
                     [grid addArrangedSubview:thumb];
                     LoadImage(url, thumb, state);
                 }

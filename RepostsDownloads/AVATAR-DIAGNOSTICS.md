@@ -1,10 +1,10 @@
-# 2.4.4 统一日志包
+# 2.4.5 默认诊断日志
 
-本次恢复 2.4.4 的功能行为，只交付一个默认内置日志的 rootless DEB。日志的 build 为 2.4.4，revision 为 rollback-log-1；不再区分标准包和诊断包。
+当前版本新增隐藏转推整行打开帖子详情，只交付一个默认内置日志的 rootless DEB。日志的 build 为 2.4.5，revision 为 repost-details-1；不区分标准包和诊断包。
 
 ## 在 X 内查看与导出
 
-1. 安装新的 XSuixin_2.4.4_rootless.deb，彻底退出并重新打开 X。已装 2.4.5 需要降级，已装原 2.4.4 需要重新安装这个更新后的包。
+1. 安装新的 XSuixin_2.4.5_rootless.deb，彻底退出并重新打开 X。可从 2.4.4 升级，已装旧 2.4.5 需重新安装本次更新包。
 2. 复现需要排查的问题。例如进入视频流连续查看约 20 条视频，出现广告时停留 5 秒。
 3. 打开 **X 随心 → 文件与诊断 → 诊断日志（查看 / 导出）**。
 4. “刷新”显示当前日志最后最多 300 行；“导出”通过系统分享输出当前文件和上一份轮转文件的完整快照。
@@ -14,12 +14,18 @@
 
 ## 广告事件
 
+本次保留回退后 2.4.4 的广告逻辑，不恢复旧 2.4.5 的 SSP 试验代码。请按 revision 区分旧日志。
+
 - `ad_response_seen`：在 2.4.4 的推广 marker 判定后、提前返回前记录 bytes 和 marker。该打点不改变响应或过滤结果。关闭广告过滤、空数据、超大数据仍按 2.4.4 原逻辑跳过。
 - `ad_response_checked`：符合旧 URT 判定条件的响应是否实际发生过滤。
 
-本次已经移除 2.4.5 的 ad_switch_read、ad_runtime_inventory、immersive_ad_model、google_ad_request_blocked、google_ad_no_fill 等 SSP 运行时路径。旧文件里可能仍保留这些历史记录，请按 build/revision/session_start 时间区分。
+历史 SSP 试验路径已在此前回退中移除：ad_switch_read、ad_runtime_inventory、immersive_ad_model、google_ad_request_blocked、google_ad_no_fill。旧文件里可能仍保留这些记录，请按 revision/session_start 时间区分。
 
-marker=false 只表示该次 JSON 没有已知推广标记，不能据此单独确定广告来源。本次是功能回退，不承诺解决 2.4.4 中已知的视频流广告漏网问题。
+marker=false 只表示该次 JSON 没有已知推广标记，不能据此单独确定广告来源。本次是隐藏转推点击修复，不涉及新增视频流广告拦截。
+
+## 隐藏转推详情事件
+
+`repost_detail_navigation` 记录当前 row 与 result：`native_row_selection` 表示调用了原生行选择方法；`stale_or_unavailable_row` 表示行绑定失效或列表仍在批次更新；`native_selection_unavailable` 表示当前宿主没有签名匹配的选择处理器。它不记录正文，也不表示已经完成真机页面验收。
 
 ## 头像事件
 
@@ -34,4 +40,4 @@ sh RepostsDownloads/build.sh
 sh RepostsDownloads/tests/run_all.sh
 ```
 
-Makefile 默认编入日志及查看/导出界面；核验器要求这些代码存在，并拒绝仍包含 2.4.5 SSP hook 的包。旧 build-avatar-diagnostics.sh 只是 build.sh 的兼容入口，不生成额外版本。GitHub Actions 只输出 XSuixin-rootless 一份产物。修订说明见 RELEASE-2.4.4-r1.md。
+Makefile 默认编入日志及查看/导出界面；核验器检查新详情入口存在、旧时间线展开 handler 已移除，且没有重新带入 SSP 试验 hook。旧 build-avatar-diagnostics.sh 只是 build.sh 的兼容入口，不生成额外版本。GitHub Actions 只输出 XSuixin-rootless 一份产物。修订说明见 RELEASE-2.4.5-r1.md。

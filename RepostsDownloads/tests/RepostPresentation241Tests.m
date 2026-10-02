@@ -1,6 +1,7 @@
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
 #import "../BHRDRepostPresentation.h"
+#import "../BHRDAvatarDiagnostics.h"
 @interface PreviewPost : NSObject
 @property(nonatomic) BOOL isRetweet;
 @property(nonatomic,copy) NSString *statusID;
@@ -17,6 +18,25 @@
 @end
 @implementation PreviewController
 - (id)itemAtIndexPath:(NSIndexPath *)path { (void)path; return self.model; }
+@end
+@interface NativeSelectionDelegate : NSObject
+@property(nonatomic,weak) PreviewController *controller;
+@property(nonatomic) NSUInteger selections;
+@property(nonatomic,strong) NSIndexPath *lastPath;
+@property(nonatomic,strong) id selectedModel;
+- (void)tableView:(UITableView *)table didSelectRowAtIndexPath:(NSIndexPath *)path;
+@end
+@implementation NativeSelectionDelegate
+- (void)tableView:(UITableView *)table didSelectRowAtIndexPath:(NSIndexPath *)path {
+    self.selections++; self.lastPath=path; self.selectedModel=[self.controller itemAtIndexPath:path];
+}
+@end
+@interface WrongSelectionDelegate : NSObject
+@property(nonatomic) NSUInteger calls;
+- (id)tableView:(id)table didSelectRowAtIndexPath:(id)path;
+@end
+@implementation WrongSelectionDelegate
+- (id)tableView:(id)table didSelectRowAtIndexPath:(id)path { self.calls++; return nil; }
 @end
 @interface TestConversationContainerViewController : NSObject @end
 @implementation TestConversationContainerViewController @end
@@ -206,6 +226,66 @@ int main(void) { @autoreleasepool {
     UIImage *layerAvatar=[(UIImageView *)[Overlay(cell) valueForKey:@"avatar"] image];
     Check(layerAvatar.CGImage==cgimage,@"Layer-only late native avatar works with the same identity guard");
     CGImageRelease(cgimage); CGContextRelease(context); CGColorSpaceRelease(space);
+    // Tap the actual production overlay and call the same selection boundary
+    // that a normal host row uses. No test-only navigation implementation.
+    BHRDRestoreRepostCell(cell); controller.model=Post(@"245-detail-card",@"detail_author");
+    NativeSelectionDelegate *navigation=[NativeSelectionDelegate new]; navigation.controller=controller; controller.tableView.delegate=navigation;
+    BHRDConfigureRepostCell(cell,controller.model,controller); UIView *card=Overlay(cell); [card layoutSubviews];
+#if BHRD_AVATAR_DIAGNOSTICS
+    // A synthetic test emits all initial model/view samples in one burst.
+    // Drain those before testing navigation events under the bounded log queue.
+    BHRDAvatarDiagnosticFlush();
+#endif
+    NSUInteger reloads=controller.tableView.fixtureReloadCount;
+    NSArray *points=@[@[@8,@8],@[@60,@26],@[@30,@66],@[@120,@66],@[@120,@120],@[@335,@28],@[@385,@168]];
+    for (NSArray *point in points) {
+        UIView *hit=[card hitTest:CGPointMake([point[0] doubleValue],[point[1] doubleValue]) withEvent:nil];
+        Check(hit==card && [hit isKindOfClass:UIControl.class],@"Title, avatar, author, thumbnail, button, blank space and edge share one card action");
+        NSUInteger before=navigation.selections;
+        [(UIControl *)hit sendActionsForControlEvents:UIControlEventTouchUpInside];
+        [(UIControl *)hit sendActionsForControlEvents:UIControlEventTouchUpInside];
+        Check(navigation.selections==before+1 && navigation.selectedModel==controller.model && [navigation.lastPath isEqual:[controller.tableView indexPathForCell:cell]],@"Card dispatches one native selection for the bound post and suppresses duplicate taps");
+        Check(Overlay(cell)==card && native.hidden && BHRDRepostRowHeight(controller,controller.model,500)==172,@"Navigation leaves the timeline card hidden at preview height");
+        BHRDRepostControllerDidAppear(controller);
+        Check(Overlay(cell)==card && native.hidden,@"Returning resets click readiness without revealing the post");
+    }
+    Check(controller.tableView.fixtureReloadCount==reloads,@"Opening details never reloads or expands the timeline row");
+    Check([card hitTest:CGPointMake(-1,20) withEvent:nil]==nil,@"Overlay does not intercept outside its own row");
+    NSUInteger before=navigation.selections; Check([card accessibilityActivate] && navigation.selections==before+1,@"Accessibility activation opens the same native details route");
+    BHRDRepostControllerDidAppear(controller);
+    UITableViewCell *neighbor=[UITableViewCell new]; controller.tableView.visibleCells=@[neighbor,cell];
+    [(UIControl *)card sendActionsForControlEvents:UIControlEventTouchUpInside];
+    Check([navigation.lastPath isEqual:[NSIndexPath indexPathWithIndex:1]],@"Insertion above the preview uses its current index path");
+    BHRDRepostControllerDidAppear(controller); before=navigation.selections;
+#if BHRD_AVATAR_DIAGNOSTICS
+    BHRDAvatarDiagnosticFlush();
+#endif
+    controller.tableView.hasUncommittedUpdates=YES; [(UIControl *)card sendActionsForControlEvents:UIControlEventTouchUpInside]; controller.tableView.hasUncommittedUpdates=NO;
+    Check(navigation.selections==before && native.hidden,@"Batch updates cannot navigate an unstable row");
+    controller.tableView.delegate=nil;
+    [(UIControl *)card sendActionsForControlEvents:UIControlEventTouchUpInside];
+    Check(navigation.selections==before && BHRDRepostRowHeight(controller,controller.model,500)==172,@"Missing native selection handler keeps content hidden");
+    WrongSelectionDelegate *wrongHandler=[WrongSelectionDelegate new]; controller.tableView.delegate=wrongHandler;
+    [(UIControl *)card sendActionsForControlEvents:UIControlEventTouchUpInside];
+    Check(wrongHandler.calls==0 && native.hidden,@"Incorrect native method signature is rejected without revealing content");
+    controller.tableView.delegate=navigation;
+    controller.model=Post(@"245-changed-unconfigured",@"another_author");
+    [(UIControl *)card sendActionsForControlEvents:UIControlEventTouchUpInside];
+    Check(navigation.selections==before,@"A changed host model cannot be opened by an old row binding");
+    id staleTarget=[[[card valueForKey:@"fixtureActions"] firstObject] valueForKey:@"target"];
+    BHRDConfigureRepostCell(cell,controller.model,controller);
+    [(UIControl *)card sendActionsForControlEvents:UIControlEventTouchUpInside];
+    Check(staleTarget && navigation.selections==before,@"A retained action from a reused overlay cannot navigate the new cell state");
+    UIView *newCard=Overlay(cell); [newCard layoutSubviews]; [(UIControl *)newCard sendActionsForControlEvents:UIControlEventTouchUpInside];
+    Check(navigation.selections==before+1 && navigation.selectedModel==controller.model,@"New overlay navigates its own current model after reuse");
+    controller.parentViewController=[TestConversationContainerViewController new]; BHRDLayoutRepostCell(cell);
+    Check(!Overlay(cell) && !native.hidden,@"Detail scope restores complete native content");
+    controller.parentViewController=nil; BHRDRepostControllerDidAppear(controller);
+    Check(Overlay(cell) && native.hidden && BHRDRepostRowHeight(controller,controller.model,500)==172,@"Returning from detail recreates the hidden preview instead of full content");
+    [defaults setInteger:BHRDRepostModeBar forKey:BHRDRepostModeKey];
+    BHRDConfigureRepostCell(cell,controller.model,controller); before=navigation.selections;
+    [(UIControl *)Overlay(cell) sendActionsForControlEvents:UIControlEventTouchUpInside];
+    Check(navigation.selections==before+1 && BHRDRepostRowHeight(controller,controller.model,500)==60,@"Hidden bar also opens details and remains a hidden bar");
     BHRDRestoreRepostCell(cell); method_setImplementation(shared,original); imp_removeBlock(replacement);
     if (oldHide) [defaults setObject:oldHide forKey:BHRDHideRepostsKey]; else [defaults removeObjectForKey:BHRDHideRepostsKey];
     if (oldMode) [defaults setObject:oldMode forKey:BHRDRepostModeKey]; else [defaults removeObjectForKey:BHRDRepostModeKey];
