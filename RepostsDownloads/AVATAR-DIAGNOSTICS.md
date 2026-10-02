@@ -1,10 +1,10 @@
-# 2.4.5 默认诊断日志
+# 2.4.6 默认诊断日志
 
-当前版本新增隐藏转推整行打开帖子详情，只交付一个默认内置日志的 rootless DEB。日志的 build 为 2.4.5，revision 为 repost-details-1；不区分标准包和诊断包。
+当前版本新增全屏图片保存到照片，只交付一个默认内置日志的 rootless DEB。日志的 build 为 2.4.6，revision 为 photo-save-1；不区分标准包和诊断包。
 
 ## 在 X 内查看与导出
 
-1. 安装新的 XSuixin_2.4.5_rootless.deb，彻底退出并重新打开 X。可从 2.4.4 升级，已装旧 2.4.5 需重新安装本次更新包。
+1. 安装新的 XSuixin_2.4.6_rootless.deb，彻底退出并重新打开 X。
 2. 复现需要排查的问题。例如进入视频流连续查看约 20 条视频，出现广告时停留 5 秒。
 3. 打开 **X 随心 → 文件与诊断 → 诊断日志（查看 / 导出）**。
 4. “刷新”显示当前日志最后最多 300 行；“导出”通过系统分享输出当前文件和上一份轮转文件的完整快照。
@@ -29,6 +29,8 @@ marker=false 只表示该次 JSON 没有已知推广标记，不能据此单独�
 
 ## 头像事件
 
+保存图片时另有 `photo_save_start`、`photo_save_fetch`、`photo_save_prepare`、`photo_save_authorization`、`photo_save_committed` 和 `photo_save_result`。只记录是否有 URL/位图、字节数、格式、是否用了当前显示图、权限状态和错误域/码；不记录图片内容。若提交后已退出全屏，结果仍写入日志，原界面不接收过期反馈。
+
 保留 preview_resolved、avatar_missing_url、model_shape、model_url、avatar_field、avatar_request_start、avatar_response、avatar_assigned、avatar_cache_hit、avatar_retry_scheduled、avatar_retries_exhausted、overlay_state，以及 native_avatar_poll_scheduled、native_avatar_candidate、native_avatar_assigned。
 
 这些事件通过 row、handle 和请求 UUID 关联，区分 URL 缺失、下载失败、旧请求丢弃和原生位图回退。模型 shape 只列相关属性/方法名称，不遍历执行未知方法；最多采样 80 条帖子的模型，每条 3 次。
@@ -40,4 +42,4 @@ sh RepostsDownloads/build.sh
 sh RepostsDownloads/tests/run_all.sh
 ```
 
-Makefile 默认编入日志及查看/导出界面；核验器检查新详情入口存在、旧时间线展开 handler 已移除，且没有重新带入 SSP 试验 hook。旧 build-avatar-diagnostics.sh 只是 build.sh 的兼容入口，不生成额外版本。GitHub Actions 只输出 XSuixin-rootless 一份产物。修订说明见 RELEASE-2.4.5-r1.md。
+Makefile 默认编入日志及查看/导出界面；核验器检查详情入口和图片保存服务存在、旧时间线展开 handler 已移除，且没有重新带入 SSP 试验 hook。旧 build-avatar-diagnostics.sh 只是 build.sh 的兼容入口，不生成额外版本。GitHub Actions 只输出 XSuixin-rootless 一份产物。说明见 RELEASE-2.4.6.md。

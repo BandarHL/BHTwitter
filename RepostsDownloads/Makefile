@@ -13,6 +13,7 @@ BHRD_FRAMEWORKS := QuartzCore CoreText ImageIO UIKit Foundation AVFoundation AVK
 BHRD_OBJ_FILES := $(wildcard ../lib/*.a)
 BHRD_LIBRARIES := bz2 c++ iconv z
 BHRD_FILES += BHRDAvatarDiagnostics.m BHRDDiagnosticsViewController.m
+BHRD_FILES += BHRDPhotoLibrarySave.m
 BHRD_CFLAGS := -fobjc-arc -Wno-deprecated-declarations -Wno-nullability-completeness
 
 ifeq ($(BHRD_DIAGNOSTICS),1)

@@ -91,10 +91,12 @@ def verify(package, version):
         check(b"avatar-diag.log" in data and b"BHRDDiagnosticsViewController" in data, "Missing default diagnostics and viewer/export UI")
         check(b"BHRDInstallAdRuntimeHooks" not in data and b"google_ad_request_blocked" not in data,
               "Unexpected SSP runtime implementation")
-        check(b"showSSPAdWhenNoPromotedMetadata" not in data and b"repost-details-1" in data,
-              "Missing repost navigation revision or unexpected SSP override")
+        check(b"showSSPAdWhenNoPromotedMetadata" not in data and b"photo-save-1" in data,
+              "Missing photo saving revision or unexpected SSP override")
         check(b"openDetails" in data and b"showThis" not in data,
               "Missing detail navigation or obsolete inline expansion handler")
+        check(b"BHRDPhotoSaveJob" in data and b"startSavePhoto" in data,
+              "Missing full-screen photo saving service or tool action")
         print(f"PASS: {version} rootless arm64, iOS 15.0, X-only injection; {directories} CodeDirectories / {pages} signed pages verified")
     digest = hashlib.sha256(package.read_bytes()).hexdigest()
     print(f"SHA256 {digest}  {package.name}")
@@ -104,6 +106,6 @@ def verify(package, version):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("package", type=pathlib.Path)
-    parser.add_argument("--version", default="2.4.5")
+    parser.add_argument("--version", default="2.4.6")
     args = parser.parse_args()
     verify(args.package.resolve(), args.version)

@@ -6,8 +6,11 @@
 #import "BHRDMediaResolver.h"
 #import "BHRDFullscreenDownloadControl.h"
 #import "BHRDHomeHeaderView.h"
+#import "BHRDPhotoLibrarySave.h"
+#import "BHRDAvatarDiagnostics.h"
 #import <AVFoundation/AVFoundation.h>
 #import <objc/runtime.h>
+#import <math.h>
 static BOOL PhotoHost(UIViewController *controller);
 @interface BHRDPhotoCopyOverlay : UIView
 @property(nonatomic,strong) UIButton *button;
@@ -21,6 +24,7 @@ static BOOL PhotoHost(UIViewController *controller);
 @property(nonatomic,strong) BHRDPhotoCopyOverlay *overlay;
 @property(nonatomic,strong) BHRDPhotoSnapshot *photo;
 @property(nonatomic,strong) BHRDPhotoFetch *fetch;
+@property(nonatomic,strong) BHRDPhotoSaveJob *saveJob;
 @property(nonatomic,strong) NSTimer *timer;
 @property(atomic) NSUInteger generation;
 @property(nonatomic,strong) dispatch_queue_t encodingQueue;
@@ -41,7 +45,7 @@ static BOOL PhotoHost(UIViewController *controller);
     [self.overlay.button setImage:[UIImage systemImageNamed:symbol] forState:UIControlStateNormal];
     self.overlay.button.accessibilityValue=status;
 }
-- (void)cancel { self.copying=NO; ++self.generation; [self.fetch cancel]; self.fetch=nil; self.overlay.button.enabled=YES; [self setCopySymbol:@"doc.on.doc" status:nil]; }
+- (void)cancel { self.copying=NO; ++self.generation; [self.fetch cancel]; self.fetch=nil; [self.saveJob cancel]; self.saveJob=nil; self.overlay.button.enabled=YES; self.overlay.toolsButton.enabled=YES; [self setCopySymbol:@"doc.on.doc" status:nil]; }
 - (BOOL)refresh {
     if (self.stopped) return NO;
     if (!PhotoHost(self.owner)) { [self stop]; return NO; }
@@ -76,6 +80,7 @@ static BOOL PhotoHost(UIViewController *controller);
     self.overlay.toolsButton.frame=CGRectMake(right-44,y,44,44);
     self.overlay.button.frame=CGRectMake(MAX(window.safeAreaInsets.left+12,right-96),y,44,44);
     self.overlay.button.enabled=!self.copying;
+    self.overlay.toolsButton.enabled=!self.copying;
     [window bringSubviewToFront:self.overlay]; return YES;
 }
 - (void)feedback:(NSString *)title {
@@ -103,6 +108,7 @@ static BOOL PhotoHost(UIViewController *controller);
             case 2: [controller startCopyPrivate:YES loadedOnly:NO]; break;
             case 3: if (current.url) { UIPasteboard.generalPasteboard.string=current.url.absoluteString; [controller feedback:@"已复制链接"]; } break;
             case 4: [controller showPhotoInfo]; break;
+            case 5: [controller startSavePhoto]; break;
             default: break;
         }
     };
@@ -111,12 +117,14 @@ static BOOL PhotoHost(UIViewController *controller);
     } else if (sheet.presentingViewController) [sheet dismissViewControllerAnimated:YES completion:run]; else run();
 }
 - (void)openTools {
-    if (self.stopped || !PhotoHost(self.owner) || [self blocked]) return;
+    if (self.copying || self.stopped || !PhotoHost(self.owner) || [self blocked]) return;
     BHRDPhotoSnapshot *photo=BHRDCurrentFullscreenPhoto(self.owner.viewIfLoaded); if (!photo) return;
     [self cancel];
     UIAlertController *sheet=[UIAlertController alertControllerWithTitle:@"图片工具箱" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
     NSArray *titles=@[@"复制原图",@"复制当前显示（不联网）",@"临时复制（本机 10 分钟）",@"复制原图链接",@"图片信息"];
     __weak BHRDPhotoCopyController *weakSelf=self;
+    UIAlertAction *save=[UIAlertAction actionWithTitle:@"保存图片到照片" style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *item) { [weakSelf performTool:5 identity:photo.identity]; }];
+    save.enabled=photo.url!=nil || photo.image!=nil; [sheet addAction:save];
     for (NSUInteger i=0;i<titles.count;i++) {
         UIAlertAction *action=[UIAlertAction actionWithTitle:titles[i] style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *item) { [weakSelf performTool:(NSInteger)i identity:photo.identity]; }];
         action.enabled=!(i==1 && !photo.image) && !(i==3 && !photo.url); [sheet addAction:action];
@@ -127,6 +135,75 @@ static BOOL PhotoHost(UIViewController *controller);
     sheet.popoverPresentationController.sourceRect=anchor;
     self.toolsSheet=sheet; self.overlay.hidden=YES;
     [self.owner presentViewController:sheet animated:YES completion:nil];
+}
+- (BOOL)saveStillCurrent:(NSString *)identity generation:(NSUInteger)generation {
+    if (self.stopped || self.generation!=generation || !PhotoHost(self.owner) || [self blocked]) return NO;
+    return [BHRDCurrentFullscreenPhoto(self.owner.viewIfLoaded).identity isEqual:identity];
+}
+- (void)saveFailure:(NSError *)error {
+    [self feedback:@"保存失败"];
+    UIAlertController *alert=[UIAlertController alertControllerWithTitle:@"保存图片失败" message:error.localizedDescription preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:@"好" style:UIAlertActionStyleCancel handler:nil]];
+    if ([error.domain isEqual:BHRDPhotoSaveErrorDomain] && error.code==BHRDPhotoSaveDenied) {
+        [alert addAction:[UIAlertAction actionWithTitle:@"打开设置" style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *item) {
+            [UIApplication.sharedApplication openURL:[NSURL URLWithString:UIApplicationOpenSettingsURLString] options:@{} completionHandler:nil];
+        }]];
+    }
+    [self.owner presentViewController:alert animated:YES completion:nil];
+}
+- (void)saveSnapshot:(BHRDPhotoSnapshot *)snapshot data:(NSData *)data generation:(NSUInteger)generation {
+    __weak BHRDPhotoCopyController *weakSelf=self;
+    dispatch_async(self.encodingQueue,^{ @autoreleasepool {
+        if (!weakSelf || weakSelf.generation!=generation) return;
+        NSData *payload=BHRDPhotoLibraryPayload(data); BOOL fallback=payload==nil;
+        if (!payload && snapshot.image) {
+            UIImage *image=snapshot.image; CGFloat pixels=image.size.width*image.scale*image.size.height*image.scale;
+            if (image.size.width>0 && image.size.height>0 && isfinite(pixels) && pixels<=80000000) {
+                // Drawing UIImage applies imageOrientation; do not encode a bare
+                // CGImage which can save rotated/mirrored display images wrong.
+                UIGraphicsImageRendererFormat *format=UIGraphicsImageRendererFormat.defaultFormat; format.scale=image.scale; format.opaque=NO;
+                UIGraphicsImageRenderer *renderer=[[UIGraphicsImageRenderer alloc] initWithSize:image.size format:format];
+                NSData *png=[renderer PNGDataWithActions:^(__unused UIGraphicsImageRendererContext *context) { [image drawInRect:(CGRect){CGPointZero,image.size}]; }];
+                payload=BHRDPhotoLibraryPayload(png);
+            }
+        }
+        dispatch_async(dispatch_get_main_queue(),^{
+            BHRDPhotoCopyController *controller=weakSelf;
+            if (![controller saveStillCurrent:snapshot.identity generation:generation]) return;
+            BHRDAvatarLog(@"photo_save_prepare",@{@"bytes":@(payload.length),@"fallback":@(fallback),@"valid":@(payload!=nil)});
+            if (!payload) {
+                controller.copying=NO; controller.overlay.button.enabled=YES; controller.overlay.toolsButton.enabled=YES;
+                [controller saveFailure:[NSError errorWithDomain:BHRDPhotoSaveErrorDomain code:BHRDPhotoSaveInvalidData userInfo:@{NSLocalizedDescriptionKey:@"无法获取有效图片，图片可能过大，请重试"}]]; return;
+            }
+            controller.saveJob=[BHRDPhotoSaveJob saveData:payload hostInfo:NSBundle.mainBundle.infoDictionary stillCurrent:^BOOL {
+                return [weakSelf saveStillCurrent:snapshot.identity generation:generation];
+            } completion:^(BOOL success,NSError *error) {
+                BHRDPhotoCopyController *current=weakSelf;
+                if (![current saveStillCurrent:snapshot.identity generation:generation]) return;
+                current.saveJob=nil; current.copying=NO; current.overlay.button.enabled=YES; current.overlay.toolsButton.enabled=YES;
+                if (success) [current feedback:fallback ? @"已保存当前图到照片" : @"已保存到照片"];
+                else if (error.code!=BHRDPhotoSaveCancelled || ![error.domain isEqual:BHRDPhotoSaveErrorDomain]) [current saveFailure:error];
+            }];
+        });
+    }});
+}
+- (void)startSavePhoto {
+    if (self.copying || self.stopped || !PhotoHost(self.owner) || [self blocked]) return;
+    BHRDPhotoSnapshot *snapshot=BHRDCurrentFullscreenPhoto(self.owner.viewIfLoaded); if (!snapshot) return;
+    [self cancel]; self.photo=snapshot; NSUInteger generation=self.generation;
+    self.copying=YES; self.overlay.button.enabled=NO; self.overlay.toolsButton.enabled=NO; [self setCopySymbol:@"hourglass" status:@"正在保存到照片"];
+    BHRDAvatarLog(@"photo_save_start",@{@"hasURL":@(snapshot.url!=nil),@"hasImage":@(snapshot.image!=nil)});
+    if (!snapshot.url) { [self saveSnapshot:snapshot data:nil generation:generation]; return; }
+    __weak BHRDPhotoCopyController *weakSelf=self;
+    self.fetch=[BHRDPhotoFetch fetchURL:snapshot.url completion:^(NSData *data,NSError *error) {
+        BHRDPhotoCopyController *controller=weakSelf;
+        if (![controller saveStillCurrent:snapshot.identity generation:generation]) return;
+        controller.fetch=nil;
+        BHRDPhotoSnapshot *current=BHRDCurrentFullscreenPhoto(controller.owner.viewIfLoaded);
+        BHRDPhotoSnapshot *selected=[BHRDPhotoSnapshot new]; selected.identity=snapshot.identity; selected.url=snapshot.url; selected.image=current.image ?: snapshot.image;
+        BHRDAvatarLog(@"photo_save_fetch",@{@"bytes":@(data.length),@"errorDomain":error.domain ?: @"",@"errorCode":@(error.code)});
+        [controller saveSnapshot:selected data:error ? nil : data generation:generation];
+    }];
 }
 - (void)showPhotoInfo {
     if (self.stopped || !PhotoHost(self.owner) || [self blocked]) return;
@@ -152,7 +229,7 @@ static BOOL PhotoHost(UIViewController *controller);
             dispatch_async(dispatch_get_main_queue(),^{
                 BHRDPhotoCopyController *controller=weakSelf;
                 if (!controller || controller.stopped || controller.generation!=generation) return;
-                controller.copying=NO; controller.overlay.button.enabled=YES;
+                controller.copying=NO; controller.overlay.button.enabled=YES; controller.overlay.toolsButton.enabled=YES;
                 BHRDPhotoSnapshot *current=BHRDCurrentFullscreenPhoto(controller.owner.viewIfLoaded);
                 if (!BHRDPhotoCopyMayComplete(snapshot.identity,current.identity,generation,controller.generation,PhotoHost(controller.owner),[controller blocked])) { [controller refresh]; return; }
                 if (!payload || !type) { [controller feedback:@"图片过大或无效"]; return; }
@@ -167,7 +244,7 @@ static BOOL PhotoHost(UIViewController *controller);
     if (self.copying || self.stopped || !PhotoHost(self.owner) || [self blocked]) return;
     BHRDPhotoSnapshot *snapshot=BHRDCurrentFullscreenPhoto(self.owner.viewIfLoaded); if (!snapshot) return;
     [self cancel]; self.photo=snapshot; NSUInteger generation=self.generation;
-    self.copying=YES; self.overlay.button.enabled=NO; [self setCopySymbol:@"hourglass" status:@"正在复制"];
+    self.copying=YES; self.overlay.button.enabled=NO; self.overlay.toolsButton.enabled=NO; [self setCopySymbol:@"hourglass" status:@"正在复制"];
     if (loadedOnly || !snapshot.url) { [self writeSnapshot:snapshot data:nil privateCopy:privateCopy generation:generation fallback:YES]; return; }
     __weak BHRDPhotoCopyController *weakSelf=self;
     self.fetch=[BHRDPhotoFetch fetchURL:snapshot.url completion:^(NSData *data,NSError *error) {
@@ -176,14 +253,14 @@ static BOOL PhotoHost(UIViewController *controller);
         controller.fetch=nil;
         BHRDPhotoSnapshot *current=BHRDCurrentFullscreenPhoto(controller.owner.viewIfLoaded);
         if (!BHRDPhotoCopyMayComplete(snapshot.identity,current.identity,generation,controller.generation,PhotoHost(controller.owner),[controller blocked])) { [controller cancel]; [controller refresh]; return; }
-        if (error && !snapshot.image) { controller.copying=NO; controller.overlay.button.enabled=YES; [controller feedback:@"获取失败，重试"]; return; }
+        if (error && !snapshot.image) { controller.copying=NO; controller.overlay.button.enabled=YES; controller.overlay.toolsButton.enabled=YES; [controller feedback:@"获取失败，重试"]; return; }
         [controller writeSnapshot:snapshot data:error ? nil : data privateCopy:privateCopy generation:generation fallback:error!=nil];
     }];
 }
 - (void)stop { self.stopped=YES; [self.toolsSheet dismissViewControllerAnimated:NO completion:nil]; [self cancel]; [self.timer invalidate]; self.timer=nil; [self.overlay removeFromSuperview]; self.photo=nil; }
 - (void)dealloc {
-    NSTimer *timer=_timer; BHRDPhotoFetch *fetch=_fetch; UIView *overlay=_overlay;
-    void (^cleanup)(void)=^{ [timer invalidate]; [fetch cancel]; [overlay removeFromSuperview]; };
+    NSTimer *timer=_timer; BHRDPhotoFetch *fetch=_fetch; BHRDPhotoSaveJob *saveJob=_saveJob; UIView *overlay=_overlay;
+    void (^cleanup)(void)=^{ [timer invalidate]; [fetch cancel]; [saveJob cancel]; [overlay removeFromSuperview]; };
     if (NSThread.isMainThread) cleanup(); else dispatch_async(dispatch_get_main_queue(),cleanup);
 }
 @end

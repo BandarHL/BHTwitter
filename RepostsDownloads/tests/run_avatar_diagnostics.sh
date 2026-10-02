@@ -22,6 +22,12 @@ xcrun clang -fobjc-arc -Wall -Wextra -Werror -Wno-unused-parameter -I HostFixtur
   ../BHRDAvatarDiagnostics.m ../BHRDAdFilter.m \
   HostFixtures/ViewGraph.m AdDiagnostics244Tests.m -o "$BHRD_AVATAR_TEST_DIR/ad-test"
 "$BHRD_AVATAR_TEST_DIR/ad-test"
+xcrun clang -fobjc-arc -Wall -Wextra -Werror -I HostFixtures \
+  -DBHRD_AVATAR_DIAGNOSTICS=1 -DBHRD_AVATAR_DIAGNOSTICS_TEST=1 \
+  -framework Foundation -framework CoreGraphics -framework QuartzCore -framework ImageIO \
+  ../BHRDAvatarDiagnostics.m ../BHRDPhotoLibrarySave.m ../BHRDPhotoCopyData.m \
+  HostFixtures/ViewGraph.m HostFixtures/Photos.m PhotoSave246Tests.m -o "$BHRD_AVATAR_TEST_DIR/photo-save-test"
+"$BHRD_AVATAR_TEST_DIR/photo-save-test"
 /usr/bin/python3 - "$BHRD_AVATAR_TEST_DIR/avatar-diag.log" <<'PY'
 import json, pathlib, sys
 events = [json.loads(line) for line in pathlib.Path(sys.argv[1]).read_text().splitlines()]
@@ -35,6 +41,9 @@ assert any(e['event'] == 'ad_response_checked' and bool(e.get('changed')) for e 
 assert any(e['event'] == 'repost_detail_navigation' and e.get('result') == 'native_row_selection' for e in events)
 assert any(e['event'] == 'repost_detail_navigation' and e.get('result') == 'stale_or_unavailable_row' for e in events)
 assert any(e['event'] == 'repost_detail_navigation' and e.get('result') == 'native_selection_unavailable' for e in events)
+assert {'photo_save_authorization', 'photo_save_committed', 'photo_save_result'} <= names
+assert any(e['event'] == 'photo_save_result' and bool(e.get('success')) for e in events)
+assert any(e['event'] == 'photo_save_result' and not bool(e.get('success')) for e in events)
 print('PASS: diagnostic file contains every avatar lifecycle stage and discarded callbacks')
 print('PASS: rollback diagnostics observe clean and filtered responses without SSP runtime hooks')
 PY
