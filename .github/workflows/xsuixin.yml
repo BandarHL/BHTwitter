@@ -2,6 +2,8 @@ name: X Suixin Rootless
 on:
   workflow_dispatch:
   push:
+    tags:
+      - 'v*'
     paths:
       - 'RepostsDownloads/**'
       - 'JGProgressHUD/**'
@@ -20,12 +22,15 @@ permissions:
 jobs:
   rootless:
     runs-on: macos-15
+    permissions:
+      contents: write
     env:
       THEOS: ${{ github.workspace }}/theos
     steps:
       - uses: actions/checkout@v4
         with:
           path: source
+          fetch-depth: 0
       - name: Install tools
         run: brew install make dpkg ldid ffmpeg python
       - name: Add GNU Make
@@ -52,7 +57,7 @@ jobs:
           cd source/RepostsDownloads
           VERSION=$(awk '/^Version:/ {print $2}' control)
           PACKAGE="packages/com.caun.bhtwitter.repostsdownloads_${VERSION}_iphoneos-arm64.deb"
-          python3 scripts/verify_deb.py "$PACKAGE" --version "$VERSION"
+          python3 scripts/verify_deb.py "$PACKAGE" --version "$VERSION" --commit "$GITHUB_SHA"
           cp "$PACKAGE" "packages/XSuixin_${VERSION}_rootless.deb"
           cd packages
           shasum -a 256 "XSuixin_${VERSION}_rootless.deb" > "XSuixin_${VERSION}_rootless.deb.sha256"
@@ -63,3 +68,17 @@ jobs:
             source/RepostsDownloads/packages/XSuixin_*_rootless.deb
             source/RepostsDownloads/packages/XSuixin_*_rootless.deb.sha256
           if-no-files-found: error
+      - name: Publish immutable tagged build
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd source/RepostsDownloads
+          VERSION=$(awk '/^Version:/ {print $2}' control)
+          test "$GITHUB_REF_NAME" = "v$VERSION"
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release already published; keep its existing verified files."
+            exit 0
+          fi
+          printf 'Build %s from commit %s. Includes default local diagnostics. See repository release notes for validation and device acceptance status.\n' "$VERSION" "$GITHUB_SHA" > "$RUNNER_TEMP/xsuixin-notes.md"
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag --title "X 随心 $VERSION" --notes-file "$RUNNER_TEMP/xsuixin-notes.md" "packages/XSuixin_${VERSION}_rootless.deb" "packages/XSuixin_${VERSION}_rootless.deb.sha256"

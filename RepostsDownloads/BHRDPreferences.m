@@ -1,5 +1,6 @@
 #import "BHRDPreferences.h"
 #import <objc/runtime.h>
+#import "BHRDSafety.h"
 
 NSString * const BHRDHideAdsKey = @"bhrd_hide_ads";
 NSString * const BHRDHideRepostsKey = @"bhrd_hide_reposts";
@@ -21,21 +22,29 @@ NSString * const BHRDHideHomeAddKey = @"bhrd_hide_home_add";
 NSString * const BHRDFloatingDownloadKey = @"bhrd_floating_download";
 
 NSString * const BHRDShowShareImageKey = @"bhrd_show_share_image_button";
+NSString * const BHRDCopyLocalOnlyKey = @"bhrd_copy_local_only";
+NSString * const BHRDCopyExpiresKey = @"bhrd_copy_expires";
+NSString * const BHRDDownloadRetentionKey = @"bhrd_download_retention_days";
 
 BOOL BHRDReadPreference(NSUserDefaults *defaults, NSString *key) {
     id value = [defaults objectForKey:key];
     if ([value respondsToSelector:@selector(boolValue)]) return [value boolValue];
     // Preserve 1.0.0 defaults. Every new 1.1.0 hiding option starts disabled.
-    return [@[BHRDHideAdsKey, BHRDHideRepostsKey, BHRDDownloadKey, BHRDDMKey, BHRDHideHomeAddKey, BHRDFloatingDownloadKey, BHRDShowShareImageKey] containsObject:key];
+    return [@[BHRDHideAdsKey, BHRDHideRepostsKey, BHRDDownloadKey, BHRDDMKey, BHRDHideHomeAddKey, BHRDFloatingDownloadKey, BHRDShowShareImageKey, BHRDCopyLocalOnlyKey] containsObject:key];
 }
-BOOL BHRDPreference(NSString *key) { return BHRDReadPreference(NSUserDefaults.standardUserDefaults, key); }
+BOOL BHRDPreference(NSString *key) {
+    // Copy privacy policy remains readable independently of feature suspension.
+    if (![key isEqual:BHRDCopyLocalOnlyKey] && ![key isEqual:BHRDCopyExpiresKey] && !BHRDTweakEnabled()) return NO;
+    return BHRDReadPreference(NSUserDefaults.standardUserDefaults, key);
+}
 NSArray<NSArray<NSString *> *> *BHRDSettingsKeys(void) {
     return @[@[BHRDHideRepostsKey, BHRDHideAdsKey],
              @[BHRDDownloadKey, BHRDDirectSaveKey, BHRDDMKey, BHRDFloatingDownloadKey],
              @[BHRDHideReplyKey, BHRDHideRetweetKey, BHRDHideLikeKey, BHRDHideViewsKey, BHRDHideBookmarkKey, BHRDShowShareImageKey],
              @[BHRDHideHomeKey, BHRDHideSearchKey, BHRDHideGrokKey, BHRDHideNotificationsKey, BHRDHideMessagesKey, BHRDHideHomeAddKey],
              @[BHRDHideTopicsKey, BHRDHideWhoKey, BHRDHideSuggestedTopicsKey, BHRDHidePremiumKey, BHRDHideTrendVideosKey],
-             @[BHRDConfirmLikeKey, BHRDConfirmTweetKey, BHRDConfirmFollowKey]];
+             @[BHRDConfirmLikeKey, BHRDConfirmTweetKey, BHRDConfirmFollowKey],
+             @[BHRDCopyLocalOnlyKey, BHRDCopyExpiresKey]];
 }
 NSArray<NSArray<NSString *> *> *BHRDSettingsTitles(void) {
     return @[@[@"隐藏转推", @"屏蔽广告"],
@@ -43,7 +52,8 @@ NSArray<NSArray<NSString *> *> *BHRDSettingsTitles(void) {
              @[@"隐藏评论按钮", @"隐藏转发按钮", @"隐藏点赞按钮", @"隐藏浏览量", @"隐藏书签按钮", @"显示分享图片按钮"],
              @[@"隐藏主页", @"隐藏搜索", @"隐藏 Grok", @"隐藏通知", @"隐藏私信", @"首页仅保留推荐和关注"],
              @[@"隐藏话题推荐推文", @"隐藏推荐关注", @"隐藏推荐话题", @"隐藏 Premium 推广", @"隐藏趋势视频"],
-             @[@"点赞前确认", @"发推前确认", @"关注前确认"]];
+             @[@"点赞前确认", @"发推前确认", @"关注前确认"],
+             @[@"复制内容仅限本机", @"复制内容 10 分钟后过期"]];
 }
 NSSet<NSString *> *BHRDHiddenInlineActionKeys(void) {
     NSMutableSet *keys = [NSMutableSet set];

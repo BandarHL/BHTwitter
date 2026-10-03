@@ -1,3 +1,4 @@
+#import "BHRDSafety.h"
 // Related NeoFreeBird feature-switch paths, adapted to X Suixin preferences.
 #import "BHRDPreferences.h"
 #import <objc/runtime.h>
@@ -144,6 +145,7 @@ static NSNumber *RecommendationOverride(NSString *key) {
 %end
 %end
 %ctor {
+    if (!BHRDFeatureHooksEnabledAtLaunch()) return;
     if (class_getInstanceMethod(objc_getClass("TPSTwitterFeatureSwitches"), @selector(boolForKey:))) { %init(RecommendationGate0_0); }
     if (class_getInstanceMethod(objc_getClass("TPSTwitterFeatureSwitches"), @selector(integerForKey:))) { %init(RecommendationGate0_1); }
     if (class_getInstanceMethod(objc_getClass("TPSTwitterFeatureSwitches"), @selector(numberForKey:))) { %init(RecommendationGate0_2); }

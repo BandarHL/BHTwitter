@@ -49,3 +49,6 @@ FOUNDATION_EXPORT NSString * const BHRDHideTrendVideosKey;
 FOUNDATION_EXPORT NSString * const BHRDConfirmLikeKey;
 FOUNDATION_EXPORT NSString * const BHRDConfirmTweetKey;
 FOUNDATION_EXPORT NSString * const BHRDConfirmFollowKey;
+FOUNDATION_EXPORT NSString * const BHRDCopyLocalOnlyKey;
+FOUNDATION_EXPORT NSString * const BHRDCopyExpiresKey;
+FOUNDATION_EXPORT NSString * const BHRDDownloadRetentionKey;

@@ -1,3 +1,5 @@
+#import "BHRDSafety.h"
+#import "BHRDRuntimeStatus.h"
 #import "BHRDPreferences.h"
 #import "BHRDAdFilter.h"
 #import <objc/runtime.h>
@@ -21,7 +23,8 @@
 %end
 %end
 %ctor {
-    if (class_getInstanceMethod(objc_getClass("TFNTwitterStatus"), @selector(isCardHidden))) { %init(AdCards); }
-    if (class_getInstanceMethod(objc_getClass("TPSTwitterFeatureSwitches"), @selector(boolForKey:))) { %init(AdFeatures); }
-    if (class_getInstanceMethod(objc_getClass("TFNTwitterAccount"), @selector(isVideoDynamicAdEnabled))) { %init(VideoAds); }
+    if (!BHRDFeatureHooksEnabledAtLaunch()) return;
+    if (BHRDHookSignatureMatches(@"TFNTwitterStatus",@"isCardHidden",'B',2)) { %init(AdCards); BHRDRecordCapability(@"普通广告卡片",@"已安装",@"匹配 TFNTwitterStatus.isCardHidden"); }
+    if (BHRDHookSignatureMatches(@"TPSTwitterFeatureSwitches",@"boolForKey:",'B',3)) { %init(AdFeatures); BHRDRecordCapability(@"广告开关读取",@"已安装",@"匹配 TPSTwitterFeatureSwitches.boolForKey"); }
+    if (BHRDHookSignatureMatches(@"TFNTwitterAccount",@"isVideoDynamicAdEnabled",'B',2)) { %init(VideoAds); BHRDRecordCapability(@"旧视频广告开关",@"已安装",@"匹配 isVideoDynamicAdEnabled；不表示 SSP 全覆盖"); }
 }

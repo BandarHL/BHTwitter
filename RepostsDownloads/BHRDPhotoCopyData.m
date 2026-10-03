@@ -1,6 +1,8 @@
 #import "BHRDPhotoCopyData.h"
 #import <ImageIO/ImageIO.h>
+#import <math.h>
 static const NSUInteger PhotoLimit=32*1024*1024;
+const NSUInteger BHRDPhotoPixelLimit=32000000;
 NSURL *BHRDOriginalPhotoURL(id value) {
     NSURL *url=[value isKindOfClass:NSURL.class] ? value : ([value isKindOfClass:NSString.class] ? [NSURL URLWithString:value] : nil);
     if (![url.scheme.lowercaseString isEqual:@"https"] || ![url.host.lowercaseString isEqual:@"pbs.twimg.com"]) return nil;
@@ -35,8 +37,18 @@ NSString *BHRDPhotoPasteboardType(NSData *data) {
     NSString *type=(__bridge NSString *)CGImageSourceGetType(source);
     NSDictionary *properties=CFBridgingRelease(CGImageSourceCopyPropertiesAtIndex(source,0,NULL));
     double width=[properties[(__bridge NSString *)kCGImagePropertyPixelWidth] doubleValue],height=[properties[(__bridge NSString *)kCGImagePropertyPixelHeight] doubleValue];
-    BOOL valid=CGImageSourceGetStatus(source)==kCGImageStatusComplete && width>0 && height>0 && width*height<=80000000;
+    BOOL valid=CGImageSourceGetStatus(source)==kCGImageStatusComplete && isfinite(width) && isfinite(height) && width>0 && height>0 && width*height<=BHRDPhotoPixelLimit;
     NSString *result=valid ? [type copy] : nil; CFRelease(source); return result;
+}
+NSDictionary<NSString *, NSNumber *> *BHRDPhotoPixelDimensions(NSData *data) {
+    if (!BHRDPhotoPasteboardType(data)) return nil;
+    CGImageSourceRef source=CGImageSourceCreateWithData((__bridge CFDataRef)data,NULL);
+    if (!source) return nil;
+    NSDictionary *properties=CFBridgingRelease(CGImageSourceCopyPropertiesAtIndex(source,0,NULL)); CFRelease(source);
+    NSNumber *width=properties[(__bridge NSString *)kCGImagePropertyPixelWidth], *height=properties[(__bridge NSString *)kCGImagePropertyPixelHeight];
+    NSInteger orientation=[properties[(__bridge NSString *)kCGImagePropertyOrientation] integerValue];
+    if (orientation>=5 && orientation<=8) { NSNumber *swap=width; width=height; height=swap; }
+    return width && height ? @{@"width":width,@"height":height} : nil;
 }
 BOOL BHRDPhotoCopyMayComplete(NSString *requested, NSString *current, NSUInteger requestGeneration, NSUInteger generation, BOOL visible, BOOL blocked) {
     return visible && !blocked && requestGeneration==generation && requested.length && [requested isEqual:current];

@@ -8,11 +8,11 @@ xcrun clang -fobjc-arc -Wall -Wextra -Werror -framework Foundation \
 "$BHRD_TEST_BINARY"
 
 xcrun clang -fobjc-arc -Wall -Wextra -Werror -framework Foundation \
-  ../BHRDPreferences.m ../BHRDSettingsList.m CustomizationTests.m -o "$BHRD_TEST_BINARY"
+  ../BHRDPreferences.m ../BHRDSafety.m ../BHRDSettingsList.m CustomizationTests.m -o "$BHRD_TEST_BINARY"
 "$BHRD_TEST_BINARY"
 
 xcrun clang -fobjc-arc -Wall -Wextra -Werror -framework Foundation \
-  ../BHRDPreferences.m ../BHRDRepostModel.m RepostModelTests.m -o "$BHRD_TEST_BINARY"
+  ../BHRDPreferences.m ../BHRDSafety.m ../BHRDRepostModel.m RepostModelTests.m -o "$BHRD_TEST_BINARY"
 "$BHRD_TEST_BINARY"
 
 xcrun clang -fobjc-arc -Wall -Wextra -Werror -framework Foundation \
@@ -28,7 +28,7 @@ xcrun clang -fobjc-arc -Wall -Wextra -Werror -framework Foundation \
 "$BHRD_TEST_BINARY"
 
 xcrun clang -fobjc-arc -Wall -Wextra -Werror -framework Foundation -framework CoreGraphics \
-  ../BHRDLayoutGeometry.m ../BHRDFullscreenVisibility.m ../BHRDPreferences.m LayoutTests.m -o "$BHRD_TEST_BINARY"
+  ../BHRDLayoutGeometry.m ../BHRDFullscreenVisibility.m ../BHRDPreferences.m ../BHRDSafety.m LayoutTests.m -o "$BHRD_TEST_BINARY"
 "$BHRD_TEST_BINARY"
 
 xcrun clang -fobjc-arc -Wall -Wextra -Werror -framework Foundation \
@@ -36,7 +36,7 @@ xcrun clang -fobjc-arc -Wall -Wextra -Werror -framework Foundation \
 "$BHRD_TEST_BINARY"
 
 xcrun clang -fobjc-arc -Wall -Wextra -Werror -framework Foundation \
-  ../BHRDPreferences.m ShareButtonTests.m -o "$BHRD_TEST_BINARY"
+  ../BHRDPreferences.m ../BHRDSafety.m ShareButtonTests.m -o "$BHRD_TEST_BINARY"
 "$BHRD_TEST_BINARY"
 
 xcrun clang -fobjc-arc -Wall -Wextra -Werror -framework Foundation \

@@ -1,3 +1,4 @@
+#import "BHRDSafety.h"
 #import "BHRDManager.h"
 #import "BHRDConversationScope.h"
 #import "BHRDAdFilter.h"
@@ -123,6 +124,7 @@
 %end
 %end
 %ctor {
+    if (!BHRDFeatureHooksEnabledAtLaunch()) return;
     %init;
     Class cls = objc_getClass("TFNItemsDataViewController");
     if (class_getInstanceMethod(cls, @selector(setSections:restoreScrollPosition:))) { %init(BHRDModernSections); }

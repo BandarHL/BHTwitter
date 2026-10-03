@@ -1,3 +1,4 @@
+#import "BHRDSafety.h"
 // Opt-in diagnostic build only; never included in the release package.
 #import "BHRDRepostPresentation.h"
 #import "BHRDConversationScope.h"
@@ -127,4 +128,4 @@ static void DumpScreen(UIViewController *controller) {
 }
 %end
 %end
-%ctor { %init(XSuixinDiagnostics); %init(XSuixinShareDiagnostics); NSLog(@"[XSuixinDiag] loaded diagnostic build"); }
+%ctor { if (!BHRDFeatureHooksEnabledAtLaunch()) return; %init(XSuixinDiagnostics); %init(XSuixinShareDiagnostics); NSLog(@"[XSuixinDiag] loaded diagnostic build"); }

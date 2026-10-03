@@ -26,6 +26,11 @@ int main(void) { @autoreleasepool {
     Check(png && jpeg && gif,@"Image fixtures are encodable");
     Check([BHRDPhotoLibraryPayload(png) isEqual:png],@"PNG bytes preserved");
     Check([BHRDPhotoLibraryPayload(jpeg) isEqual:jpeg],@"JPEG including orientation metadata preserved");
+    Check([BHRDPhotoPixelDimensions(jpeg)[@"width"] integerValue]==3 && [BHRDPhotoPixelDimensions(jpeg)[@"height"] integerValue]==2,@"Saved original dimensions reflect EXIF orientation without pixel decode");
+    Check(!BHRDPhotoPixelDimensions([@"bad" dataUsingEncoding:NSUTF8StringEncoding]),@"Invalid data has no advertised dimensions");
+    NSString *jpegKey=BHRDPhotoSaveContentKey(jpeg), *pngKey=BHRDPhotoSaveContentKey(png);
+    Check(jpegKey.length==64 && [jpegKey isEqual:BHRDPhotoSaveContentKey([jpeg copy])] && ![jpegKey isEqual:pngKey],@"Duplicate identity hashes exact chosen bytes without querying Photos");
+    Check(!BHRDPhotoWasSavedInSession(jpegKey),@"An image not successfully saved in this process is not flagged duplicate");
     Check([BHRDPhotoLibraryPayload(gif) isEqual:gif],@"Animated GIF frames preserved as original data");
     NSData *tiff=Image(@"public.tiff",1,6), *converted=BHRDPhotoLibraryPayload(tiff);
     CGImageSourceRef source=CGImageSourceCreateWithData((__bridge CFDataRef)converted,NULL);
@@ -45,9 +50,11 @@ int main(void) { @autoreleasepool {
     void (^finish)(BOOL,NSError *)=PHPhotoLibrary.fixtureCompletion;
     PHPhotoLibrary.fixtureCompletion=nil; finish(YES,nil); finish(YES,nil); Pump();
     Check(success && callbacks==1 && job.finished,@"Duplicate completion cannot report or save twice");
+    Check(BHRDPhotoWasSavedInSession(jpegKey),@"Successful write records the content for duplicate confirmation");
     callbacks=0; Reset(PHAuthorizationStatusDenied);
     job=[BHRDPhotoSaveJob saveData:png hostInfo:info stillCurrent:^BOOL { return YES; } completion:completed]; Pump();
     Check(!success && result.code==BHRDPhotoSaveDenied && callbacks==1 && PHPhotoLibrary.fixtureCommits==0,@"Denied access never writes");
+    Check(!BHRDPhotoWasSavedInSession(pngKey),@"Permission failure never records a duplicate");
     callbacks=0; Reset(PHAuthorizationStatusAuthorized);
     job=[BHRDPhotoSaveJob saveData:png hostInfo:@{} stillCurrent:^BOOL { return YES; } completion:completed]; Pump();
     Check(result.code==BHRDPhotoSaveMissingUsage && PHPhotoLibrary.fixtureQueries==0 && PHPhotoLibrary.fixtureRequests==0,@"Missing usage string skips all permission APIs");
@@ -60,6 +67,7 @@ int main(void) { @autoreleasepool {
     current=NO; void (^permission)(PHAuthorizationStatus)=PHPhotoLibrary.fixturePermission; PHPhotoLibrary.fixturePermission=nil;
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,0),^{ permission(PHAuthorizationStatusAuthorized); }); Pump();
     Check(callbacks==1 && result.code==BHRDPhotoSaveCancelled && PHPhotoLibrary.fixtureCommits==0,@"Selection changed during permission prompt cannot save old photo");
+    Check(!BHRDPhotoWasSavedInSession(pngKey),@"Cancelled selection never records a duplicate");
     callbacks=0; current=YES; Reset(PHAuthorizationStatusNotDetermined);
     job=[BHRDPhotoSaveJob saveData:png hostInfo:info stillCurrent:^BOOL { return current; } completion:completed]; Pump();
     [job cancel]; permission=PHPhotoLibrary.fixturePermission; PHPhotoLibrary.fixturePermission=nil; permission(PHAuthorizationStatusAuthorized); Pump();
@@ -76,6 +84,7 @@ int main(void) { @autoreleasepool {
     Check(PHPhotoLibrary.fixtureCommits==1,@"Repeated authorization callback cannot submit duplicate asset");
     finish=PHPhotoLibrary.fixtureCompletion; PHPhotoLibrary.fixtureCompletion=nil; finish(YES,nil); Pump();
     Check(success && callbacks==1,@"Successful save finishes after Photos result");
+    Check(BHRDPhotoWasSavedInSession(pngKey),@"Only successful Photos completion marks pending payload as saved");
 #if BHRD_AVATAR_DIAGNOSTICS
     BHRDAvatarDiagnosticFlush();
 #endif

@@ -7,6 +7,7 @@ import plistlib
 import struct
 import subprocess
 import tempfile
+import re
 
 
 def check(condition, message):
@@ -14,7 +15,8 @@ def check(condition, message):
         raise SystemExit(message)
 
 
-def verify(package, version):
+def verify(package, version, commit=None):
+    check(re.fullmatch(r"\d+\.\d+\.\d+-[1-9]\d*",version),"Missing unique Debian build revision")
     for key, expected in [("Package", "com.caun.bhtwitter.repostsdownloads"), ("Version", version), ("Architecture", "iphoneos-arm64")]:
         value = subprocess.check_output(["dpkg-deb", "-f", str(package), key], text=True).strip()
         check(value == expected, f"Unexpected {key}: {value}")
@@ -91,12 +93,17 @@ def verify(package, version):
         check(b"avatar-diag.log" in data and b"BHRDDiagnosticsViewController" in data, "Missing default diagnostics and viewer/export UI")
         check(b"BHRDInstallAdRuntimeHooks" not in data and b"google_ad_request_blocked" not in data,
               "Unexpected SSP runtime implementation")
-        check(b"showSSPAdWhenNoPromotedMetadata" not in data and b"photo-save-1" in data,
-              "Missing photo saving revision or unexpected SSP override")
+        check(b"showSSPAdWhenNoPromotedMetadata" not in data,"Unexpected SSP override")
         check(b"openDetails" in data and b"showThis" not in data,
               "Missing detail navigation or obsolete inline expansion handler")
         check(b"BHRDPhotoSaveJob" in data and b"startSavePhoto" in data,
               "Missing full-screen photo saving service or tool action")
+        check(b"BHRDRecoveryAction" in data and b"BHRDRuntimeStatusViewController" in data,
+              "Missing recovery entry or runtime status page")
+        check(version.encode() in data,"Binary build version does not match package")
+        if commit:
+            check(re.fullmatch(r"[0-9a-f]{40}",commit),"Invalid source commit")
+            check(commit.encode() in data and (commit+"-dirty").encode() not in data,"Binary is not from the expected clean source commit")
         print(f"PASS: {version} rootless arm64, iOS 15.0, X-only injection; {directories} CodeDirectories / {pages} signed pages verified")
     digest = hashlib.sha256(package.read_bytes()).hexdigest()
     print(f"SHA256 {digest}  {package.name}")
@@ -106,6 +113,7 @@ def verify(package, version):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("package", type=pathlib.Path)
-    parser.add_argument("--version", default="2.4.6")
+    parser.add_argument("--version", default="2.4.7-1")
+    parser.add_argument("--commit")
     args = parser.parse_args()
-    verify(args.package.resolve(), args.version)
+    verify(args.package.resolve(), args.version,args.commit)

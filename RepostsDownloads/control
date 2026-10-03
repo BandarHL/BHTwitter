@@ -1,8 +1,8 @@
 Package: com.caun.bhtwitter.repostsdownloads
 Name: X 随心
-Version: 2.4.6
+Version: 2.4.7-1
 Architecture: iphoneos-arm64
-Description: 全屏图片工具箱支持保存图片到照片，保留隐藏转推详情导航和默认日志查看导出。
+Description: 运行状态和恢复入口、日志脱敏管理、原图保存反馈、图片隐私及重要下载保留，使用唯一构建修订号。
 Maintainer: caun1112
 Author: caun1112, Bandar Alruwaili
 Section: Tweaks

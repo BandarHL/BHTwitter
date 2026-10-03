@@ -7,6 +7,9 @@ typedef NS_ENUM(NSInteger, BHRDPhotoSaveError) {
 // Pass supported originals unchanged; convert other still images to an
 // orientation-correct PNG. Unsupported animations require a displayed fallback.
 NSData *BHRDPhotoLibraryPayload(NSData *data);
+// Session-only duplicate detection. Hash on a worker queue; this does not read Photos.
+NSString *BHRDPhotoSaveContentKey(NSData *data);
+BOOL BHRDPhotoWasSavedInSession(NSString *contentKey);
 @interface BHRDPhotoSaveJob : NSObject
 @property(nonatomic,readonly) BOOL committed;
 @property(nonatomic,readonly) BOOL finished;

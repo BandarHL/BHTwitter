@@ -4,6 +4,8 @@
 #import "BHRDAdFilter.h"
 #import "BHRDContentFilter.h"
 #import "BHRDAvatarDiagnostics.h"
+#import "BHRDSafety.h"
+#import "BHRDRuntimeStatus.h"
 #import <objc/runtime.h>
 #import <objc/message.h>
 @protocol BHRDTimelineItems <NSObject>
@@ -174,11 +176,13 @@ double BHRDRepostRowHeight(id controller, id model, double originalHeight) {
     NSMethodSignature *sig=[target respondsToSelector:select] ? [target methodSignatureForSelector:select] : nil;
     if (sig.numberOfArguments!=4 || sig.methodReturnType[0]!='v' ||
         [sig getArgumentTypeAtIndex:2][0]!='@' || [sig getArgumentTypeAtIndex:3][0]!='@') {
+        BHRDRecordCapability(@"帖子详情导航",@"不可用",@"当前行委托未提供签名匹配的原生选择方法");
         BHRDAvatarLog(@"repost_detail_navigation",@{@"row":self.identity ?: @"",@"result":@"native_selection_unavailable"}); return;
     }
     self.openingDetails=YES;
     [table selectRowAtIndexPath:path animated:NO scrollPosition:UITableViewScrollPositionNone];
     ((void(*)(id,SEL,id,id))objc_msgSend)(target,select,table,path);
+    BHRDRecordCapability(@"帖子详情导航",@"已调用",[@"原生选择目标：" stringByAppendingString:NSStringFromClass([target class])]);
     BHRDAvatarLog(@"repost_detail_navigation",@{@"row":self.identity ?: @"",@"result":@"native_row_selection",@"targetClass":NSStringFromClass([target class])});
     __weak BHRDRepostCellState *weakSelf=self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(0.6*NSEC_PER_SEC)),dispatch_get_main_queue(),^{ weakSelf.openingDetails=NO; });
@@ -418,6 +422,7 @@ static void ScheduleMetadataRefresh(BHRDRepostCellState *state) {
     }
 }
 void BHRDRepostNativeImageChanged(UIImageView *view) {
+    if (!BHRDTweakEnabled()) return;
     if (!NSThread.isMainThread) return;
     if (IsNativeAvatar(view)) {
         BHRDRepostInfo *owner=NativeAvatarOwner(view); UIImage *image=NativeAvatarImage(view);

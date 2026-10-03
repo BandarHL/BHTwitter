@@ -1,3 +1,4 @@
+#import "BHRDSafety.h"
 #import "BHRDPreferences.h"
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
@@ -35,6 +36,7 @@ static char SidebarStateKey;
 %end
 %end
 %ctor {
+    if (!BHRDFeatureHooksEnabledAtLaunch()) return;
     %init(RecommendationSidebar);
     if (class_getInstanceMethod(objc_getClass("T1ProfileSummaryView"), @selector(shouldShowGetVerifiedButton))) { %init(PremiumProfile); }
     if (class_getInstanceMethod(objc_getClass("THFHomeTimelineContainerViewController"), @selector(_t1_showPremiumUpsellIfNeeded))) { %init(PremiumHome); }

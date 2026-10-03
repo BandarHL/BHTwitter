@@ -8,7 +8,7 @@ cleanup() {
     rm -rf "$BHRD_PHOTO_TEST_DIR"
 }
 trap cleanup EXIT
-xcrun clang -fobjc-arc -Wall -Wextra -Werror -framework Foundation -framework ImageIO \
+xcrun clang -fobjc-arc -Wall -Wextra -Werror -framework Foundation -framework ImageIO -lz \
  ../BHRDPhotoCopyData.m PhotoCopyTests.m -o "$BHRD_PHOTO_TEST_DIR/tests"
 if [ -x /usr/bin/python3 ]; then
     /usr/bin/python3 photo_server.py "$BHRD_PHOTO_TEST_DIR/port" > "$BHRD_PHOTO_TEST_DIR/server.log" 2>&1 &

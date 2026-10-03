@@ -1,4 +1,5 @@
 #import "BHRDManager.h"
+#import "BHRDSafety.h"
 #import <Photos/Photos.h>
 #import "BHRDDownloadStore.h"
 #import "BHRDStreamJob.h"
@@ -60,7 +61,7 @@ void BHRDShowError(NSString *message) {
     sheet.popoverPresentationController.sourceRect = CGRectMake(CGRectGetMidX(top.view.bounds), CGRectGetMidY(top.view.bounds), 1, 1);
     sheet.completionWithItemsHandler = ^(UIActivityType type, BOOL completed, NSArray *items, NSError *error) {
         // Keep the file when the user cancels or the receiving activity fails.
-        if (completed && !error) BHRDDiscardDownload(url);
+        if (completed && !error) BHRDDiscardExportedDownload(url);
     };
     [top presentViewController:sheet animated:YES completion:nil];
 }
@@ -80,7 +81,7 @@ void BHRDShowError(NSString *message) {
             [PHAssetChangeRequest creationRequestForAssetFromVideoAtFileURL:url];
         } completionHandler:^(BOOL success, NSError *error) {
             if (success) {
-                BHRDDiscardDownload(url);
+                BHRDDiscardExportedDownload(url);
                 BHRDShowError(@"已保存到相册。");
             } else {
                 NSLog(@"[BHRD] 相册保存失败：%@", error);
@@ -110,8 +111,9 @@ void BHRDShowError(NSString *message) {
 @end
 
 __attribute__((constructor)) static void BHRDInstallDownloadMaintenance(void) {
+    if (!BHRDFeatureHooksEnabledAtLaunch()) return;
     dispatch_async(dispatch_get_main_queue(), ^{
-        BHRDCleanSavedDownloads();
-        [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidBecomeActiveNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(__unused NSNotification *note) { BHRDCleanSavedDownloads(); }];
+        if (BHRDTweakEnabled()) BHRDCleanSavedDownloads();
+        [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidBecomeActiveNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(__unused NSNotification *note) { if (BHRDTweakEnabled()) BHRDCleanSavedDownloads(); }];
     });
 }

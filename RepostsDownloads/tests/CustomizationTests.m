@@ -56,11 +56,11 @@ int main(void) {
         NSString *suite = [@"BHRDTests." stringByAppendingString:NSUUID.UUID.UUIDString];
         NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:suite];
         NSArray *keys = BHRDSettingsKeys(), *titles = BHRDSettingsTitles();
-        Check(keys.count == 6 && titles.count == 6, @"Six settings sections");
+        Check(keys.count == 7 && titles.count == 7, @"Settings include image copy privacy policy");
         for (NSUInteger section = 0; section < keys.count; section++) {
             Check([keys[section] count] == [titles[section] count], @"Every setting has a Chinese label");
             for (NSString *key in keys[section]) {
-                if (section >= 2 && ![key isEqualToString:BHRDHideHomeAddKey] && ![key isEqualToString:BHRDShowShareImageKey]) Check(!BHRDReadPreference(defaults, key), @"Existing optional hide settings remain off by default");
+                if (section >= 2 && ![key isEqualToString:BHRDHideHomeAddKey] && ![key isEqualToString:BHRDShowShareImageKey] && ![key isEqual:BHRDCopyLocalOnlyKey]) Check(!BHRDReadPreference(defaults, key), @"Existing optional hide settings remain off by default");
             }
         }
         Check(BHRDReadPreference(defaults, BHRDDownloadKey) && BHRDReadPreference(defaults, BHRDHideRepostsKey), @"Keep 1.0 defaults");

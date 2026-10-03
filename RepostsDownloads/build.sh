@@ -8,4 +8,6 @@ else
     BHRD_MAKE=make
 fi
 "$BHRD_MAKE" clean
+mkdir -p .theos/xsuixin-build
+python3 scripts/write_build_info.py .theos/xsuixin-build/BHRDGeneratedBuildInfo.h
 exec "$BHRD_MAKE" package THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1 "$@"

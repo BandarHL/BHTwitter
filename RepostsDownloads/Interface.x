@@ -1,3 +1,4 @@
+#import "BHRDSafety.h"
 #import "BHRDHomeHeaderView.h"
 #import "BHRDHomeHeader.h"
 #import "BHRDHomePaging.h"
@@ -9,6 +10,7 @@
     BHRDScheduleHomeHeaderUpdate(self);
 }
 %end
+
 %hook UILabel
 - (void)setText:(NSString *)text {
     %orig;
@@ -42,3 +44,5 @@
 - (void)setContentOffset:(CGPoint)offset animated:(BOOL)animated { %orig(BHRDHomePagingOffset(self, offset), animated); }
 - (void)setBounces:(BOOL)bounces { %orig(BHRDHomePagingLimitScroll(self) ? NO : bounces); }
 %end
+
+%ctor { if (BHRDFeatureHooksEnabledAtLaunch()) { %init; } }

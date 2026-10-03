@@ -1,3 +1,4 @@
+#import "BHRDSafety.h"
 #import "BHRDManager.h"
 #import "BHRDDownloadButton.h"
 #import "BHRDSettingsViewController.h"
@@ -281,6 +282,7 @@ static void BHRemoveExtraFullscreenDownloadButtons(UIView *actionsView) {
 %hook TTAStatusInlineShareButton
 - (void)layoutSubviews { %orig; BHRDRegisterFloatingSource((UIView *)self); }
 %end
+
 %hook T1StatusInlineShareButton
 - (void)layoutSubviews { %orig; BHRDRegisterFloatingSource((UIView *)self); }
 %end
@@ -431,3 +433,5 @@ static void BHRDUpdateTabVisibility(T1TabBarViewController *controller) {
     BHRDUpdateTabVisibility(self);
 }
 %end
+
+%ctor { if (BHRDFeatureHooksEnabledAtLaunch()) { %init; } }

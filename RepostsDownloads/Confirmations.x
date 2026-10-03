@@ -1,3 +1,4 @@
+#import "BHRDSafety.h"
 #import "BHRDManager.h"
 #import "BHRDConfirmationGate.h"
 #import <objc/runtime.h>
@@ -49,6 +50,7 @@ static void Confirm(NSString *key, NSString *message, void (^action)(void)) {
 %end
 %end
 %ctor {
+    if (!BHRDFeatureHooksEnabledAtLaunch()) return;
     if (class_getInstanceMethod(objc_getClass("T1TweetComposeViewController"), NSSelectorFromString(@"_t1_didTapSendButton:"))) { %init(Confirm0); }
     if (class_getInstanceMethod(objc_getClass("T1TweetComposeViewController"), NSSelectorFromString(@"_t1_handleTweet"))) { %init(Confirm1); }
     if (class_getInstanceMethod(objc_getClass("TUIFollowControl"), NSSelectorFromString(@"_followUser:event:"))) { %init(Confirm2); }

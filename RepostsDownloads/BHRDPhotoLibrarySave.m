@@ -3,7 +3,24 @@
 #import "BHRDAvatarDiagnostics.h"
 #import <ImageIO/ImageIO.h>
 #import <Photos/Photos.h>
+#import <CommonCrypto/CommonDigest.h>
 NSString * const BHRDPhotoSaveErrorDomain=@"com.caun.xsuixin.photo-save";
+static NSMutableSet<NSString *> *SavedKeys(void) {
+    static NSMutableSet *keys; static dispatch_once_t once;
+    dispatch_once(&once,^{ keys=[NSMutableSet set]; }); return keys;
+}
+NSString *BHRDPhotoSaveContentKey(NSData *data) {
+    if (!data.length || data.length>32*1024*1024) return nil;
+    unsigned char digest[CC_SHA256_DIGEST_LENGTH];
+    CC_SHA256(data.bytes,(CC_LONG)data.length,digest);
+    NSMutableString *key=[NSMutableString stringWithCapacity:CC_SHA256_DIGEST_LENGTH*2];
+    for (NSUInteger i=0;i<CC_SHA256_DIGEST_LENGTH;i++) [key appendFormat:@"%02x",digest[i]];
+    return key;
+}
+BOOL BHRDPhotoWasSavedInSession(NSString *key) {
+    if (!key.length) return NO;
+    NSMutableSet *keys=SavedKeys(); @synchronized(keys) { return [keys containsObject:key]; }
+}
 static NSDictionary *Formats(void) {
     return @{@"public.jpeg":@"jpg",@"public.png":@"png",@"com.compuserve.gif":@"gif",@"public.heic":@"heic",@"public.heif":@"heif"};
 }
@@ -35,6 +52,7 @@ static NSError *SaveError(BHRDPhotoSaveError code,NSString *message) {
 @property(nonatomic) BOOL committed;
 @property(nonatomic) BOOL finished;
 @property(nonatomic,strong) NSData *data;
+@property(nonatomic,copy) NSString *contentKey;
 @property(nonatomic,copy) NSDictionary *info;
 @property(nonatomic,copy) BOOL (^stillCurrent)(void);
 @property(nonatomic,copy) void (^completion)(BOOL,NSError *);
@@ -42,12 +60,16 @@ static NSError *SaveError(BHRDPhotoSaveError code,NSString *message) {
 @implementation BHRDPhotoSaveJob
 + (instancetype)saveData:(NSData *)data hostInfo:(NSDictionary *)info stillCurrent:(BOOL (^)(void))stillCurrent completion:(void (^)(BOOL,NSError *))completion {
     BHRDPhotoSaveJob *job=[self new]; job.data=[data copy]; job.info=[info copy]; job.stillCurrent=stillCurrent; job.completion=completion;
-    dispatch_async(dispatch_get_main_queue(),^{ [job start]; }); return job;
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED,0),^{
+        NSString *key=BHRDPhotoSaveContentKey(data);
+        dispatch_async(dispatch_get_main_queue(),^{ job.contentKey=key; [job start]; });
+    }); return job;
 }
 - (void)finish:(BOOL)success error:(NSError *)error {
     if (self.finished) return; self.finished=YES;
+    if (success && self.contentKey.length) { NSMutableSet *keys=SavedKeys(); @synchronized(keys) { [keys addObject:self.contentKey]; } }
     BHRDAvatarLog(@"photo_save_result",@{@"success":@(success),@"committed":@(self.committed),@"errorDomain":error.domain ?: @"",@"errorCode":@(error.code)});
-    void (^completion)(BOOL,NSError *)=self.completion; self.completion=nil; self.stillCurrent=nil; self.data=nil; self.info=nil;
+    void (^completion)(BOOL,NSError *)=self.completion; self.completion=nil; self.stillCurrent=nil; self.data=nil; self.info=nil; self.contentKey=nil;
     if (completion) completion(success,error);
 }
 - (BOOL)validateSelection {

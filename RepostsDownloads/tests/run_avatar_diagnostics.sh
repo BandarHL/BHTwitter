@@ -12,10 +12,10 @@ xcrun clang -fobjc-arc -Wall -Wextra -Werror -Wno-unused-parameter -I HostFixtur
 xcrun clang -fobjc-arc -Wall -Wextra -Werror -Wno-unused-parameter -I HostFixtures \
   -DBHRD_AVATAR_DIAGNOSTICS=1 -DBHRD_AVATAR_DIAGNOSTICS_TEST=1 \
   -framework Foundation -framework CoreGraphics -framework QuartzCore \
-  ../BHRDAvatarDiagnostics.m ../BHRDRepostModel.m ../BHRDRepostPresentation.m ../BHRDConversationScope.m \
-  ../BHRDAdFilter.m ../BHRDContentFilter.m ../BHRDPreferences.m \
+  ../BHRDAvatarDiagnostics.m ../BHRDRepostModel.m ../BHRDRepostPresentation.m ../BHRDRuntimeStatus.m ../BHRDConversationScope.m \
+  ../BHRDAdFilter.m ../BHRDContentFilter.m ../BHRDPreferences.m ../BHRDSafety.m \
   HostFixtures/ViewGraph.m RepostPresentation241Tests.m -o "$BHRD_AVATAR_TEST_DIR/views-test"
-"$BHRD_AVATAR_TEST_DIR/views-test"
+BHRD_AVATAR_TEST_DETAILED=1 "$BHRD_AVATAR_TEST_DIR/views-test"
 xcrun clang -fobjc-arc -Wall -Wextra -Werror -Wno-unused-parameter -I HostFixtures \
   -DBHRD_AVATAR_DIAGNOSTICS=1 -DBHRD_AVATAR_DIAGNOSTICS_TEST=1 \
   -framework Foundation -framework CoreGraphics -framework QuartzCore \

@@ -14,7 +14,10 @@ BHRD_OBJ_FILES := $(wildcard ../lib/*.a)
 BHRD_LIBRARIES := bz2 c++ iconv z
 BHRD_FILES += BHRDAvatarDiagnostics.m BHRDDiagnosticsViewController.m
 BHRD_FILES += BHRDPhotoLibrarySave.m
+BHRD_FILES += BHRDSafety.m Recovery.x
+BHRD_FILES += BHRDRuntimeStatus.m BHRDRuntimeStatusViewController.m
 BHRD_CFLAGS := -fobjc-arc -Wno-deprecated-declarations -Wno-nullability-completeness
+BHRD_CFLAGS += -I$(CURDIR)/.theos/xsuixin-build
 
 ifeq ($(BHRD_DIAGNOSTICS),1)
 BHRD_FILES += Diagnostics.x
