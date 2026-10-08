@@ -1,5 +1,6 @@
 #import "BHRDMediaResolver.h"
 #import <objc/message.h>
+#import <objc/runtime.h>
 #import <string.h>
 
 id BHRDMediaObject(id source, NSString *name) {
@@ -58,6 +59,7 @@ NSString *BHRDMediaStatusIdentity(id source) {
 @interface BHRDMediaRecord : NSObject
 @property(nonatomic, copy) NSString *identity;
 @property(nonatomic, copy) NSArray *media;
+@property(nonatomic, copy) NSArray *mediaStamps;
 @property(nonatomic) NSTimeInterval captured;
 @end
 @implementation BHRDMediaRecord @end
@@ -91,11 +93,28 @@ static BOOL MediaMatchesAsset(id media, NSString *assetKey) {
     }
     return matched;
 }
+static NSArray *MediaStamps(NSArray *media) {
+    NSMutableArray *stamps = [NSMutableArray array];
+    for (id entity in media) {
+        id variants = BHRDMediaObject(BHRDMediaObject(entity, @"videoInfo"), @"variants");
+        if (![variants isKindOfClass:NSArray.class] || ![variants count]) return nil;
+        NSMutableArray *urls = [NSMutableArray array];
+        for (id variant in variants) {
+            id value = BHRDMediaObject(variant, @"url");
+            NSString *url = [value isKindOfClass:NSURL.class] ? [value absoluteString] : ([value isKindOfClass:NSString.class] ? value : nil);
+            if (!url.length) return nil;
+            [urls addObject:url];
+        }
+        [stamps addObject:@{@"status":BHRDMediaStatusIdentity(entity) ?: @"", @"urls":urls}];
+    }
+    return [stamps copy];
+}
 static void Remember(id source, NSArray *media) {
     if (!source || !media.count) return;
     BHRDMediaRecord *record = [BHRDMediaRecord new];
     record.identity = BHRDMediaStatusIdentity(source);
     record.media = media;
+    record.mediaStamps = MediaStamps(media);
     record.captured = NSProcessInfo.processInfo.systemUptime;
     if (record.identity) [ByID() setObject:record forKey:record.identity];
     for (id entity in media) {
@@ -114,7 +133,11 @@ static NSArray *Cached(id source) {
     NSString *identity = BHRDMediaStatusIdentity(source);
     if (!identity) return nil; // Player/controller objects may be reused for another video.
     BHRDMediaRecord *record = [ByID() objectForKey:identity];
-    return Fresh(record) ? record.media : nil;
+    // Remembering a post ID is insufficient when its native media objects can
+    // be recycled in place. Verify the observed entity identities and variant
+    // URLs still equal the captured record before returning native qualities.
+    if (!Fresh(record) || ![record.identity isEqualToString:identity] || !record.mediaStamps) return nil;
+    return [record.mediaStamps isEqual:MediaStamps(record.media)] ? record.media : nil;
 }
 // Adapt a directly observed playing asset to the same interface as native variants.
 @interface BHRDAssetVariant : NSObject
@@ -407,4 +430,72 @@ NSDictionary *BHRDResolveLiveVideoSource(id source) {
         return LiveResult(source,@[candidate[@"media"]],key,@"resolved_current_media",@"native_variants",candidate[@"path"]);
     }
     return LiveResult(source,nil,nil,[assets[@"unsupported"] boolValue] ? @"unsupported_current_asset" : @"no_current_video_resource",@"resource_probe",nil);
+}
+
+@interface BHRDBoundVideoBinding : NSObject
+@property(nonatomic,copy) NSString *post;
+@property(nonatomic,copy) NSArray *resources;
+@property(nonatomic,copy) NSString *token;
+@end
+@implementation BHRDBoundVideoBinding @end
+static char BoundVideoBindingKey;
+static NSString *BoundToken(id source,NSString *post,NSArray *resources) {
+    if (!source || (!post.length && !resources.count)) return @"";
+    BHRDBoundVideoBinding *binding=objc_getAssociatedObject(source,&BoundVideoBindingKey);
+    BOOL changed=!binding || (binding.post.length && post.length && ![binding.post isEqual:post]) ||
+        (binding.resources.count && resources.count && ![binding.resources isEqual:resources]);
+    if (changed) { binding=[BHRDBoundVideoBinding new]; binding.token=[@"bound:" stringByAppendingString:NSUUID.UUID.UUIDString]; }
+    if (post.length) binding.post=post; if (resources.count) binding.resources=resources;
+    objc_setAssociatedObject(source,&BoundVideoBindingKey,binding,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    return binding.token;
+}
+NSDictionary *BHRDResolveBoundVideoSource(id source) {
+    NSString *post=BHRDMediaStatusIdentity(source) ?: @"";
+    NSMutableArray *media=[NSMutableArray array],*resources=[NSMutableArray array];
+    NSMutableDictionary *assetMedia=[NSMutableDictionary dictionary];
+    NSMutableArray *pending=source && source!=NSNull.null ? [NSMutableArray arrayWithObject:@[@0,source]] : [NSMutableArray array];
+    NSMutableSet *seen=[NSMutableSet set]; BOOL truncated=NO,conflicting=NO;
+    NSUInteger index=0;
+    for (;index<pending.count && seen.count<160;index++) {
+        NSArray *entry=pending[index]; id object=entry[1]; NSUInteger depth=[entry[0] unsignedIntegerValue];
+        NSValue *address=[NSValue valueWithNonretainedObject:object]; if ([seen containsObject:address]) continue; [seen addObject:address];
+        NSDictionary *native=NativeVideo(object,@"bound_inline_model");
+        if ([native[@"ambiguous"] boolValue]) { conflicting=YES; break; }
+        if (native) {
+            NSString *asset=native[@"assetIdentity"];
+            if (!assetMedia[asset]) { assetMedia[asset]=native[@"media"]; [resources addObject:asset]; [media addObject:native[@"media"]]; }
+            continue;
+        }
+        NSMutableArray *children=[NSMutableArray array];
+        if ([object isKindOfClass:NSArray.class]) {
+            if ([object count]>16) { truncated=YES; break; }
+            [children addObjectsFromArray:object];
+        } else for (NSString *key in @[@"currentMediaEntity",@"representedMediaEntity",@"mediaEntity",@"representedMediaEntities",@"inlineMediaInfos",@"viewModel",@"mediaViewModel",@"currentViewModel",@"representedStatus",@"status",@"tweet",@"extendedEntities",@"entities",@"media",@"currentMedia"])
+            { id child=BHRDMediaObject(object,key); if (child) [children addObject:child]; }
+        for (id child in children) {
+            if (!child || child==NSNull.null || [seen containsObject:[NSValue valueWithNonretainedObject:child]]) continue;
+            if (depth>=12) { truncated=YES; break; }
+            [pending addObject:@[@(depth+1),child]];
+        }
+        if (truncated) break;
+    }
+    for (;index<pending.count && !truncated && !conflicting;index++)
+        if (![seen containsObject:[NSValue valueWithNonretainedObject:pending[index][1]]]) truncated=YES;
+    if (!truncated && !conflicting && !media.count && post.length && ![post isEqual:@"0"]) {
+        // The working inline button already records complete native variants.
+        // Reuse only this exact currently bound post, with freshness and native
+        // entity stamps checked by Cached; never adopt a globally recent video.
+        for (id entity in Cached(source)) {
+            NSDictionary *native=NativeVideo(entity,@"bound_inline_cache");
+            if ([native[@"ambiguous"] boolValue]) { conflicting=YES; break; }
+            NSString *asset=native[@"assetIdentity"];
+            if (native && !assetMedia[asset]) { assetMedia[asset]=native[@"media"]; [resources addObject:asset]; [media addObject:native[@"media"]]; }
+        }
+    }
+    if (truncated || conflicting) { [media removeAllObjects]; [resources removeAllObjects]; [assetMedia removeAllObjects]; }
+    NSString *token=BoundToken(source,post,resources);
+    return @{@"media":media,@"identity":token,@"bindingToken":token,@"statusIdentity":post,@"postID":post,
+        @"assetIdentities":resources,@"assetMedia":assetMedia,@"assetIdentity":resources.count==1 ? resources.firstObject : @"",
+        @"reason":truncated ? @"resource_scan_budget_exceeded" : conflicting ? @"ambiguous_current_media" : media.count ? @"resolved_bound_media" : @"bound_media_unavailable",
+        @"stage":@"bound_inline_model",@"sourcePath":@"inline.viewModel",@"sourceClass":source ? NSStringFromClass([source class]) : @"nil"};
 }

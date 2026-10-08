@@ -77,6 +77,8 @@ static NSDictionary *StageDetails(void) {
         @"video_source_missing":@"当前可见区域没有找到有效的视频播放器或媒体模型；视频播放正常时请导出日志排查入口。",
         @"video_player_unresolved":@"已经找到当前可见播放器，但未取得其当前视频资源；请等待视频加载后重试并导出日志。",
         @"video_model_unresolved":@"已经找到当前视频模型，但模型尚未提供可下载媒体资料；请导出日志排查缺失字段。",
+        @"video_inline_mismatch":@"当前原生操作栏的媒体与播放来源不一致，已阻止借用其他帖子的下载参数。",
+        @"video_bound_unavailable":@"当前操作栏已绑定帖子，但下载参数尚未加载；悬浮入口仍保留，可再次点击。",
         @"video_sources_conflict":@"可见区域中出现了互相冲突的视频资源，已停止读取以避免下载其他视频。",
         @"video_current_item_unavailable":@"已经找到绑定的播放器项目，但当前项目的资源地址尚不可读取；不会使用旧帖子的资料替代当前视频。",
         @"video_asset_unsupported":@"已经找到当前资源，但资源来源或格式不在当前支持范围；请导出日志核对实际播放资源。",
@@ -122,6 +124,7 @@ static NSDictionary *VideoReasonStages(void) {
         @"pager_transition_unsettled":@"video_pager_unsettled",@"layer_scan_budget_exceeded":@"video_layer_scan_limited",
         @"source_scan_budget_exceeded":@"video_source_scan_limited",
         @"resource_scan_budget_exceeded":@"video_resource_scan_limited",@"fullscreen_scan_requires_main_thread":@"video_scan_thread_invalid",
+        @"inline_identity_mismatch":@"video_inline_mismatch",@"bound_media_unavailable":@"video_bound_unavailable",
         @"menu_presentation_failed":@"video_menu_failed"};
 }
 static NSDictionary *VideoCancellationStages(void) {
@@ -270,7 +273,7 @@ static NSMutableDictionary *EventEntry(NSString *event,NSDictionary *fields,NSNu
         @"result":@[@"native_row_selection",@"stale_or_unavailable_row",@"native_selection_unavailable",@"return_row_not_observable",@"detail_identity_mismatch",@"detail_identity_unavailable"]};
     for (NSString *key in enums) if ([enums[key] containsObject:fields[key] ?: NSNull.null]) entry[key]=fields[key];
     id reason=fields[@"reason"] ?: NSNull.null;
-    if ([VideoReasonStages().allKeys containsObject:reason] || [VideoCancellationStages().allKeys containsObject:reason] || [@[@"resolved_current_asset",@"resolved_current_media"] containsObject:reason]) entry[@"reason"]=reason;
+    if ([VideoReasonStages().allKeys containsObject:reason] || [VideoCancellationStages().allKeys containsObject:reason] || [@[@"resolved_current_asset",@"resolved_current_media",@"resolved_inline_model",@"resolved_bound_media"] containsObject:reason]) entry[@"reason"]=reason;
     return entry;
 }
 static void AddEvent(NSString *event,NSDictionary *fields) {

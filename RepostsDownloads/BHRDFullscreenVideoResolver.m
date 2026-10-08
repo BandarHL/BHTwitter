@@ -13,6 +13,19 @@
 @end
 @implementation BHRDFullscreenSelection @end
 static char SelectionKey,ItemSelectionKey;
+static char InlineBindingKey;
+@interface BHRDFullscreenInlineBinding : NSObject
+@property(nonatomic,weak) id model;
+@property(nonatomic,copy) NSString *status;
+@end
+@implementation BHRDFullscreenInlineBinding @end
+void BHRDRegisterFullscreenInlineModel(id view,id model) {
+    if (!view) return;
+    if (!model || model==NSNull.null) { objc_setAssociatedObject(view,&InlineBindingKey,nil,OBJC_ASSOCIATION_RETAIN_NONATOMIC); return; }
+    BHRDFullscreenInlineBinding *binding=[BHRDFullscreenInlineBinding new];
+    binding.model=model; binding.status=BHRDMediaStatusIdentity(model);
+    objc_setAssociatedObject(view,&InlineBindingKey,binding,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
 
 static id Read(id object,NSString *key) {
     @try { return BHRDMediaObject(object,key); }
@@ -26,6 +39,25 @@ static BOOL Chrome(UIView *view) {
     for (NSString *part in @[@"bhrd",@"backdrop",@"visualeffect",@"blur",@"inlineaction",@"author",@"username",@"replycomposer",@"quoted",@"quotetweet",@"playbutton"])
         if ([name containsString:part]) return YES;
     return NO;
+}
+static BOOL InlineActions(UIView *view) { return [NSStringFromClass(view.class).lowercaseString containsString:@"statusinlineactionsview"]; }
+static id InlineModel(UIView *view) {
+    id live=Read(view,@"viewModel") ?: Read(Read(view,@"delegate"),@"viewModel");
+    if (live) return live;
+    // A public getter returning nil means this reused view is no longer bound.
+    if ([view respondsToSelector:NSSelectorFromString(@"viewModel")]) return nil;
+    BHRDFullscreenInlineBinding *binding=objc_getAssociatedObject(view,&InlineBindingKey);
+    id model=binding.model;
+    NSString *status=BHRDMediaStatusIdentity(model);
+    return (!binding.status.length || [binding.status isEqual:status]) ? model : nil;
+}
+static NSString *CardStatus(UIView *view,UIView *root) {
+    for (UIView *parent=view.superview;parent && parent!=root;parent=parent.superview) {
+        NSString *name=NSStringFromClass(parent.class).lowercaseString;
+        if ([name containsString:@"immersivecard"] || [name containsString:@"slideshowstatus"])
+            return BHRDMediaStatusIdentity(Read(parent,@"viewModel")) ?: BHRDMediaStatusIdentity(Read(parent,@"media"));
+    }
+    return nil;
 }
 static BOOL VideoView(UIView *view) {
     NSString *name=NSStringFromClass(view.class).lowercaseString;
@@ -112,6 +144,47 @@ static NSDictionary *ResolveSources(NSArray *sources,NSUInteger playerCount,NSUI
     result[@"playerCount"]=@(playerCount); result[@"modelCount"]=@(modelCount); result[@"visibleSourceCount"]=@(playerCount+modelCount);
     return result;
 }
+static NSDictionary *ResolveInline(NSArray *inlines,NSArray *players,NSUInteger modelCount) {
+    NSDictionary *chosen=nil,*pending=nil; UIView *chosenView=nil,*pendingView=nil; NSString *post=nil; NSSet *resources=nil;
+    for (NSDictionary *candidate in inlines) {
+        NSDictionary *context=BHRDResolveBoundVideoSource(candidate[@"model"]);
+        if (![context[@"media"] count]) {
+            if ([context[@"reason"] isEqual:@"resource_scan_budget_exceeded"] || [context[@"reason"] hasPrefix:@"ambiguous_"])
+                return Result(context[@"reason"],players.count,modelCount);
+            if (inlines.count==1 && [context[@"statusIdentity"] length]) { pending=context; pendingView=candidate[@"view"]; }
+            continue;
+        }
+        NSString *identity=Text(context[@"statusIdentity"]),*card=Text(candidate[@"cardStatus"]);
+        if (card.length && identity.length && ![card isEqual:identity]) return Result(@"inline_identity_mismatch",players.count,modelCount);
+        NSSet *next=[NSSet setWithArray:context[@"assetIdentities"]];
+        if (chosen && ((post.length && identity.length && ![post isEqual:identity]) || ![resources isEqual:next]))
+            return Result(@"conflicting_visible_resources",players.count,modelCount);
+        if (!chosen) { chosen=context; chosenView=candidate[@"view"]; post=identity; resources=next; }
+    }
+    if (!chosen && !pending) return nil;
+    if (!chosen) { chosen=pending; chosenView=pendingView; post=Text(chosen[@"statusIdentity"]); resources=[NSSet set]; }
+    // A usable live URL proves which video within the bound post is current.
+    // An opaque player still permits the native, explicitly grouped post menu.
+    NSString *knownAsset=nil,*playerToken=nil;
+    for (NSDictionary *candidate in players) {
+        NSDictionary *live=BHRDResolveLiveVideoSource(candidate[@"source"]);
+        NSString *asset=Text(live[@"assetIdentity"]);
+        if ([chosen[@"media"] count] && [live[@"media"] count] && asset.length) {
+            if (![resources containsObject:asset] || (knownAsset && ![knownAsset isEqual:asset])) return Result(@"inline_identity_mismatch",players.count,modelCount);
+            knownAsset=asset;
+        }
+        NSString *token=Selection(candidate[@"source"],live);
+        if (!playerToken && [token hasPrefix:@"item:"]) playerToken=token;
+    }
+    NSMutableDictionary *result=[chosen mutableCopy];
+    if (knownAsset) { result[@"media"]=@[chosen[@"assetMedia"][knownAsset]]; result[@"assetIdentity"]=knownAsset; }
+    result[@"identity"]=playerToken.length ? playerToken : Selection(chosenView,chosen);
+    NSString *single=knownAsset ?: ([chosen[@"assetIdentities"] count]==1 ? [chosen[@"assetIdentities"] firstObject] : nil);
+    result[@"resourceIdentity"]=single.length ? [@"asset:" stringByAppendingString:single] : [NSString stringWithFormat:@"post:%@:%@",post ?: @"",[[chosen[@"assetIdentities"] sortedArrayUsingSelector:@selector(compare:)] componentsJoinedByString:@"|"]];
+    result[@"reason"]=[chosen[@"media"] count] ? @"resolved_inline_model" : @"bound_media_unavailable"; result[@"sourceClass"]=NSStringFromClass(chosenView.class); result[@"sourcePath"]=@"current_inline_actions.viewModel";
+    result[@"playerCount"]=@(players.count); result[@"modelCount"]=@(modelCount); result[@"visibleSourceCount"]=@(players.count+modelCount);
+    return result;
+}
 NSDictionary *BHRDCurrentFullscreenVideoContext(id controller) {
     if (!NSThread.isMainThread) return Result(@"fullscreen_scan_requires_main_thread",0,0);
     if (!BHRDIsFullscreenMediaController(controller)) return Result(@"unverified_fullscreen_host",0,0);
@@ -119,13 +192,14 @@ NSDictionary *BHRDCurrentFullscreenVideoContext(id controller) {
     if (![root isKindOfClass:UIView.class] || !root.window || root.hidden || root.alpha<=0.01 || !VisibleRect(root.bounds)) return Result(@"detached_or_hidden_host",0,0);
     CGPoint center=CGPointMake(CGRectGetMidX(root.bounds),CGRectGetMidY(root.bounds));
     NSMutableArray *pending=[NSMutableArray arrayWithObject:@{@"view":root,@"clip":Box(root.bounds),@"pageCurrent":@YES}];
-    NSMutableArray *players=[NSMutableArray array],*models=[NSMutableArray array];
+    NSMutableArray *players=[NSMutableArray array],*models=[NSMutableArray array],*inlines=[NSMutableArray array],*currentEntities=[NSMutableArray array];
     NSMutableSet *seenSources=[NSMutableSet set],*seenLayers=[NSMutableSet set];
     NSMutableArray *classes=[NSMutableArray array]; NSUInteger examined=0,budget=700;
     while (pending.count && budget--) {
         NSDictionary *entry=pending.lastObject; [pending removeLastObject]; UIView *view=entry[@"view"];
         examined++;
-        if (view.hidden || view.alpha<=0.01 || Chrome(view)) continue;
+        BOOL inlineView=InlineActions(view);
+        if (view.hidden || view.alpha<=0.01 || (Chrome(view) && !inlineView)) continue;
         CGRect clip=Unbox(entry[@"clip"]), rect=[view convertRect:view.bounds toView:root], visible=CGRectIntersection(rect,clip);
         BOOL pageCurrent=[entry[@"pageCurrent"] boolValue];
         if (VisibleRect(visible)) {
@@ -138,6 +212,13 @@ NSDictionary *BHRDCurrentFullscreenVideoContext(id controller) {
             if (pageCurrent && whole>0 && shown/whole<0.60) return Scanned(Result(@"pager_transition_unsettled",players.count,models.count),classes,examined,NO);
         }
         if (!pageCurrent) continue;
+        if (inlineView) {
+            if (VisibleRect(visible) && visible.size.width>=MIN(120,root.bounds.size.width*0.4) && visible.size.height>=20) {
+                id model=InlineModel(view);
+                if (model) [inlines addObject:@{@"view":view,@"model":model,@"cardStatus":CardStatus(view,root) ?: @""}];
+            }
+            continue; // Read the bound model, never its button images or delegates' unrelated view graph.
+        }
         if (VisibleRect(visible)) {
             NSMutableSet *childViewLayers=[NSMutableSet set];
             for (UIView *child in view.subviews) [childViewLayers addObject:[NSValue valueWithNonretainedObject:child.layer]];
@@ -168,6 +249,11 @@ NSDictionary *BHRDCurrentFullscreenVideoContext(id controller) {
                 for (NSString *key in @[@"currentPlayer",@"player",@"videoPlayer",@"avPlayer"])
                     AddSource(players,Read(view,key),@"player_view",seenSources);
                 if (VideoView(view)) AddSource(models,view,PlaybackSurface(view) ? @"visible_video_surface" : @"visible_card_model",seenSources);
+                NSString *name=NSStringFromClass(view.class).lowercaseString;
+                if ([name containsString:@"slideshowstatus"] || [name containsString:@"immersivecard"]) {
+                    id entity=Read(view,@"currentMediaEntity") ?: Read(view,@"media");
+                    if (entity) [currentEntities addObject:@{@"view":view,@"model":entity,@"cardStatus":@""}];
+                }
             }
         }
         CGRect childClip=view.clipsToBounds ? visible : clip;
@@ -175,11 +261,27 @@ NSDictionary *BHRDCurrentFullscreenVideoContext(id controller) {
         for (UIView *child in view.subviews) [pending addObject:@{@"view":child,@"clip":Box(childClip),@"pageCurrent":@(pageCurrent)}];
     }
     if (pending.count) return Scanned(Result(@"source_scan_budget_exceeded",players.count,models.count),classes,examined,YES);
-    if (!players.count && !models.count) return Scanned(Result(@"no_visible_video_source",0,0),classes,examined,NO);
+    NSDictionary *inlineContext=ResolveInline(inlines,players,models.count+inlines.count);
+    if (inlineContext && [inlineContext[@"media"] count]) return Scanned(inlineContext,classes,examined,NO);
+    if (inlineContext && ![inlineContext[@"reason"] isEqual:@"bound_media_unavailable"]) {
+        NSDictionary *playing=players.count ? ResolveSources(players,players.count,models.count,YES) : nil;
+        return Scanned([playing[@"media"] count] ? playing : inlineContext,classes,examined,NO);
+    }
+    NSDictionary *entityContext=ResolveInline(currentEntities,players,models.count+inlines.count);
+    if ([entityContext[@"media"] count]) {
+        NSMutableDictionary *current=[entityContext mutableCopy]; current[@"sourcePath"]=@"current_card.media";
+        return Scanned(current,classes,examined,NO);
+    }
+    if (entityContext && ![entityContext[@"reason"] isEqual:@"bound_media_unavailable"]) {
+        NSDictionary *playing=players.count ? ResolveSources(players,players.count,models.count,YES) : nil;
+        return Scanned([playing[@"media"] count] ? playing : entityContext,classes,examined,NO);
+    }
+    if (!players.count && !models.count) return Scanned(inlineContext ?: entityContext ?: Result(@"no_visible_video_source",0,0),classes,examined,NO);
     NSMutableArray *surfaces=[NSMutableArray array];
     for (NSDictionary *candidate in models) if ([candidate[@"kind"] isEqual:@"visible_video_surface"]) [surfaces addObject:candidate];
     // A card/post can retain old hydrated metadata while its actual playback
     // surface is switching or unreadable. That parent cannot rescue the surface.
     NSArray *current=players.count ? players : surfaces.count ? surfaces : models;
-    return Scanned(ResolveSources(current,players.count,models.count,players.count || surfaces.count),classes,examined,NO);
+    NSDictionary *resolved=ResolveSources(current,players.count,models.count,players.count || surfaces.count);
+    return Scanned([resolved[@"media"] count] ? resolved : inlineContext ?: entityContext ?: resolved,classes,examined,NO);
 }

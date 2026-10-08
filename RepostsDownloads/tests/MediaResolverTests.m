@@ -204,6 +204,22 @@ int main(void) {
         for (NSUInteger index = 0; index < 14; index++) deepSource = @{@"viewModel":deepSource};
         live = BHRDResolveLiveVideoSource(@{@"assetURL":@"https://video.twimg.com/ext_tw_video/depth-early/pu/pl/first.m3u8",@"viewModel":deepSource});
         Check([live[@"media"] count] == 0 && [live[@"reason"] isEqual:@"resource_scan_budget_exceeded"], @"Unverified descendants beyond the depth limit never authorize an earlier resource");
+        NSDictionary *bound=BHRDResolveBoundVideoSource(@{@"statusID":@"same-inline-post",@"representedMediaEntities":@[videoA,videoB]});
+        Check([bound[@"media"] count]==2 && [bound[@"assetIdentities"] count]==2,@"Bound native post keeps both grouped parameter lists instead of rejecting a multi-video post");
+        Check([BHRDMediaObject(BHRDMediaObject([bound[@"media"] firstObject],@"videoInfo"),@"variants") count]==[videoA.videoInfo.variants count],@"Bound model snapshots preserve every quality used by the native button");
+        NSMutableDictionary *boundModel=[@{@"statusID":@"same-inline-post",@"representedMediaEntities":@[videoA]} mutableCopy];
+        NSString *boundToken=BHRDResolveBoundVideoSource(boundModel)[@"identity"];
+        Check([boundToken isEqual:BHRDResolveBoundVideoSource(boundModel)[@"identity"]],@"The same native model remains a stable selection");
+        boundModel[@"representedMediaEntities"]=@[videoB];
+        Check(![boundToken isEqual:BHRDResolveBoundVideoSource(boundModel)[@"identity"]],@"In-place media rebinding invalidates the previous bound selection");
+        Check(![BHRDResolveBoundVideoSource(@{@"delegate":@{@"viewModel":inlineModel}})[@"media"] count],@"Bound source never walks an unrelated delegate graph");
+        Check(![BHRDResolveBoundVideoSource(nil)[@"media"] count],@"An absent inline binding does not pick a globally recent video");
+        Model *remembered=[Model new]; remembered.statusID=@"native-cached-current"; remembered.representedMediaEntities=@[Video(@"exact-cache-resource")]; BHRDRememberMedia(remembered);
+        bound=BHRDResolveBoundVideoSource(@{@"statusID":@"native-cached-current"});
+        Check([FirstURL(bound[@"media"]) containsString:@"exact-cache-resource"],@"A compact fullscreen model can reuse stamped native parameters for its exact bound post before details load");
+        Check(![BHRDResolveBoundVideoSource(@{@"statusID":@"different-current"})[@"media"] count],@"A different bound post never adopts those cached native parameters");
+        ((Media *)remembered.representedMediaEntities.firstObject).videoInfo=Video(@"recycled-cached-resource").videoInfo;
+        Check(![BHRDResolveBoundVideoSource(@{@"statusID":@"native-cached-current"})[@"media"] count],@"Recycled cached entities cannot provide another video's parameters under an old post key");
         NSLog(@"PASS: %lu shared media-resolution checks", (unsigned long)checks);
     }
     return 0;

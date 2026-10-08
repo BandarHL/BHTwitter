@@ -6,6 +6,7 @@
 #import "BHRDFullscreenPhotoCopy.h"
 #import "BHRDFullscreenContext.h"
 #import "BHRDFullscreenVideoResolver.h"
+#import "BHRDFullscreenVideoPresence.h"
 #import "BHRDHomeHeaderView.h"
 #import "BHRDInlineLayout.h"
 #import "BHRDInlineButtonStyle.h"
@@ -73,10 +74,16 @@ static void BHRDLogVideoResolution(NSString *phase,NSDictionary *context,NSStrin
         @"attempt":attempt ?: @"",@"acceptanceSession":session ?: @""});
 }
 void BHRDRefreshFullscreenController(UIViewController *controller) {
-    if (BHRDRefreshFullscreenPhotoCopy(controller)) return;
+    if (!BHRDTweakEnabled()) { BHRDRemoveFullscreenPhotoCopy(controller); BHRDRemoveFloatingDownloadControl(controller); return; }
     if (!BHRDIsFullscreenController(controller) && !objc_getAssociatedObject(controller, &BHRDFloatingSourceKey)) return;
     UIView *root = controller.viewIfLoaded;
     if (!root) return;
+    BOOL photoSelected=BHRDHasSelectedFullscreenPhoto(controller);
+    if (photoSelected) [BHRDFloatingVisibility(controller) observePhotoPresence];
+    BOOL videoPresent=!photoSelected && BHRDHasVisibleFullscreenVideo(controller);
+    if (videoPresent) BHRDRemoveFullscreenPhotoCopy(controller);
+    else if (BHRDRefreshFullscreenPhotoCopy(controller)) { [BHRDFloatingVisibility(controller) observePhotoPresence]; return; }
+    [BHRDFloatingVisibility(controller) observeVideoPresence:videoPresent];
     BHRDFullscreenActionRouter *router = objc_getAssociatedObject(controller, &BHRDFloatingRouterKey);
     if (!router) {
         router = [BHRDFullscreenActionRouter new];
@@ -92,6 +99,9 @@ void BHRDRefreshFullscreenController(UIViewController *controller) {
             NSString *identity=weakRouter.activationIdentity, *attempt=weakRouter.activationAttempt, *session=weakRouter.acceptanceSession;
             NSDictionary *context=BHRDCurrentFullscreenVideoContext(weakController);
             NSString *resource=context[@"resourceIdentity"];
+            NSString *expectedAsset=context[@"assetIdentity"];
+            NSString *expectedPost=context[@"statusIdentity"];
+            NSArray *expectedAssets=context[@"assetIdentities"] ?: (expectedAsset.length ? @[expectedAsset] : @[]);
             if (!view.window) { BHRDLogVideoResolution(@"unavailable",@{@"reason":@"detached_or_hidden_host"},attempt,session); return; }
             BHRDDownloadButton *handler = objc_getAssociatedObject(view, &BHFullscreenDownloadHandlerKey);
             if (!handler) {
@@ -101,8 +111,15 @@ void BHRDRefreshFullscreenController(UIViewController *controller) {
             __block BOOL cancelled=NO;
             BOOL (^stillCurrent)(void)=^BOOL {
                 NSDictionary *now=BHRDCurrentFullscreenVideoContext(weakController);
-                BOOL same=identity.length && [identity isEqual:now[@"identity"]] &&
-                    (!resource.length || [resource isEqual:now[@"resourceIdentity"]]);
+                BOOL active=[BHRDFloatingVisibility(weakController) shouldDisplayEnabled:[BHRDManager DownloadingVideos] attached:weakController.viewIfLoaded.window!=nil];
+                BOOL sameSelection=identity.length && [identity isEqual:now[@"identity"]];
+                NSString *nowAsset=now[@"assetIdentity"];
+                NSArray *nowAssets=now[@"assetIdentities"] ?: (nowAsset.length ? @[nowAsset] : @[]);
+                BOOL sameAsset=expectedAsset.length && [expectedAsset isEqual:nowAsset];
+                BOOL sameBoundResource=(nowAsset.length && [expectedAssets containsObject:nowAsset]) || (expectedAsset.length && [nowAssets containsObject:expectedAsset]);
+                NSString *nowPost=now[@"statusIdentity"];
+                BOOL postMatches=!expectedPost.length || !nowPost.length || [expectedPost isEqual:nowPost];
+                BOOL same=active && postMatches && (sameAsset || (sameSelection && (!resource.length || [resource isEqual:now[@"resourceIdentity"]] || sameBoundResource)));
                 if (!same && !cancelled) { cancelled=YES; BHRDLogVideoResolution(@"cancelled",@{@"reason":@"selection_changed"},attempt,session); }
                 return same;
             };
@@ -113,9 +130,8 @@ void BHRDRefreshFullscreenController(UIViewController *controller) {
         router.showUnavailable = ^{ BHRDShowError(@"未能确认当前视频的播放资源。请重新打开视频后重试；若仍失败，可在实际运行验收页导出读取诊断。"); };
         objc_setAssociatedObject(controller, &BHRDFloatingRouterKey, router, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
-    if (root.window && ![BHRDFloatingVisibility(controller) shouldDisplayEnabled:YES attached:YES]) [BHRDFloatingVisibility(controller) observeMedia:router.resolveMedia().count > 0];
-    // Keep a verified video session's control visible when playback chrome fades
-    // or media discovery is temporarily empty. Resolve fresh media only on tap.
+    // Video UI evidence controls visibility. Download URL/quality discovery is
+    // performed only on tap and can never remove the user's download entry.
     BOOL active = router.isEnabled();
     BHRDUpdateFloatingDownloadControl(controller, active, router);
 }
@@ -157,6 +173,8 @@ static void BHRDRegisterFloatingSource(UIView *shareButton) {
 }
 
 static void BHRemoveExtraFullscreenDownloadButtons(UIView *actionsView) {
+    id model=BHRDMediaObject(actionsView,@"viewModel") ?: BHRDMediaObject(BHRDMediaObject(actionsView,@"delegate"),@"viewModel");
+    BHRDRegisterFullscreenInlineModel(actionsView,model);
     if (BHViewIsInImmersiveFullScreen(actionsView)) BHRDRegisterFloatingSource(actionsView);
     if (![BHRDManager DownloadingVideos] || !BHRDPreference(BHRDFloatingDownloadKey) || !BHViewIsInImmersiveFullScreen(actionsView)) {
         return;

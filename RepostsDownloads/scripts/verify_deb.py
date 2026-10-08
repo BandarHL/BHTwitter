@@ -104,6 +104,8 @@ def verify(package, version, commit=None):
               "Missing device acceptance page, persisted records or performance observation")
         check(b"fullscreen_video_resolution" in data and b"selectionStillCurrent:presented:" in data,
               "Missing fullscreen video diagnostics or selection validation")
+        check(b"fullscreen_download_visibility" in data and b"observeVideoPresence:" in data and b"current_inline_actions.viewModel" in data,
+              "Missing independent fullscreen download entry visibility or native model bridge")
         check(version.encode() in data,"Binary build version does not match package")
         if commit:
             check(re.fullmatch(r"[0-9a-f]{40}",commit),"Invalid source commit")
@@ -117,7 +119,7 @@ def verify(package, version, commit=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("package", type=pathlib.Path)
-    parser.add_argument("--version", default="2.4.7-3")
+    parser.add_argument("--version", default="2.4.7-4")
     parser.add_argument("--commit")
     args = parser.parse_args()
     verify(args.package.resolve(), args.version,args.commit)

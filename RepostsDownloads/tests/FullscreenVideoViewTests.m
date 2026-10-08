@@ -3,6 +3,8 @@
 #import "../BHRDFullscreenVideoResolver.h"
 #import "../BHRDFullscreenContext.h"
 #import "../BHRDMediaResolver.h"
+#import "../BHRDFullscreenVideoPresence.h"
+#import "../BHRDFullscreenVisibility.h"
 @interface FixtureFullscreenHost : NSObject
 @property(nonatomic,strong) UIView *viewIfLoaded;
 @property(nonatomic,strong) id viewModel;
@@ -17,6 +19,15 @@
 @implementation NativeVideoSurface @end
 @interface T1ImmersiveCardView : NativeVideoSurface @end
 @implementation T1ImmersiveCardView @end
+@interface T1StatusInlineActionsView : UIView
+@property(nonatomic,strong) id viewModel;
+@property(nonatomic,strong) id delegate;
+@end
+@implementation T1StatusInlineActionsView @end
+@interface T1SlideshowStatusView : UIView
+@property(nonatomic,strong) id media;
+@end
+@implementation T1SlideshowStatusView @end
 @interface NativeQuotedStatusView : UIView @end
 @implementation NativeQuotedStatusView @end
 static NSUInteger Checks;
@@ -32,6 +43,41 @@ static T1ImmersiveFullScreenViewController *Host(void) {
 }
 static NSString *URL(NSDictionary *context) { return BHRDMediaObject([BHRDMediaObject(BHRDMediaObject([context[@"media"] firstObject],@"videoInfo"),@"variants") firstObject],@"url"); }
 int main(void) { @autoreleasepool {
+    T1ImmersiveFullScreenViewController *opaqueHost=Host();
+    NativeVideoSurface *opaque=[NativeVideoSurface new]; opaque.player=@{@"currentItem":@{}};
+    Attach(opaqueHost.viewIfLoaded,opaque,CGRectMake(0,180,390,330));
+    Check(BHRDHasVisibleFullscreenVideo(opaqueHost),@"A playing/loading surface is video evidence even when no downloadable URL exists");
+    BHRDFullscreenVisibility *visibility=[BHRDFullscreenVisibility new]; [visibility didAppear]; [visibility observeVideoPresence:BHRDHasVisibleFullscreenVideo(opaqueHost)];
+    Check([visibility shouldDisplayEnabled:YES attached:YES] && ![BHRDCurrentFullscreenVideoContext(opaqueHost)[@"media"] count],@"Resource discovery failure cannot remove the independent download entry");
+    opaque.hidden=YES; [visibility observeVideoPresence:BHRDHasVisibleFullscreenVideo(opaqueHost)];
+    Check([visibility shouldDisplayEnabled:YES attached:YES],@"Fading playback chrome or a temporarily missing surface retains the established entry"); opaque.hidden=NO;
+    [visibility observePhotoPresence]; Check(![visibility shouldDisplayEnabled:YES attached:YES],@"An explicitly displayed photo clears video-only visibility");
+    [visibility observeVideoPresence:YES]; [visibility didDisappear]; Check(![visibility shouldDisplayEnabled:YES attached:YES],@"Late player evidence cannot restore a departed entry");
+    T1StatusInlineActionsView *actions=[T1StatusInlineActionsView new];
+    actions.viewModel=@{@"statusID":@"inline-post",@"representedMediaEntities":@[NativeModel(@"video-one")[@"currentMediaEntity"],NativeModel(@"video-two")[@"currentMediaEntity"]]};
+    Attach(opaqueHost.viewIfLoaded,actions,CGRectMake(0,730,390,64));
+    NSDictionary *bridged=BHRDCurrentFullscreenVideoContext(opaqueHost);
+    Check([bridged[@"media"] count]==2 && [bridged[@"reason"] isEqual:@"resolved_inline_model"],@"Current native actions provide the same grouped video parameters despite an opaque player");
+    NSString *boundIdentity=bridged[@"identity"];
+    Check([BHRDCurrentFullscreenVideoContext(opaqueHost)[@"identity"] isEqual:boundIdentity],@"A native menu remains bound to the same current item and post");
+    actions.viewModel=NativeModel(@"new-post-video");
+    Check(![BHRDCurrentFullscreenVideoContext(opaqueHost)[@"resourceIdentity"] isEqual:bridged[@"resourceIdentity"]],@"Rebinding the current actions cannot retain another post's parameter list");
+    actions.hidden=YES; Check(![BHRDCurrentFullscreenVideoContext(opaqueHost)[@"media"] count],@"Hidden actions cannot rescue an opaque surface with stale native metadata"); actions.hidden=NO;
+    Frame(actions,CGRectMake(0,930,390,64)); Check(![BHRDCurrentFullscreenVideoContext(opaqueHost)[@"media"] count],@"Offscreen actions cannot supply the fullscreen parameters"); Frame(actions,CGRectMake(0,730,390,64));
+    actions.viewModel=nil; actions.delegate=@{@"viewModel":NativeModel(@"delegate-current")};
+    Check([URL(BHRDCurrentFullscreenVideoContext(opaqueHost)) containsString:@"delegate-current"],@"The native actions adapter's own view model works like the inline download button");
+    BHRDRegisterFullscreenInlineModel(actions,NativeModel(@"registered-old")); actions.delegate=nil;
+    Check(![BHRDCurrentFullscreenVideoContext(opaqueHost)[@"media"] count],@"A live getter cleared during reuse invalidates any captured previous model");
+    opaque.player=Player(@"real-live"); actions.viewModel=NativeModel(@"different-native");
+    Check([URL(BHRDCurrentFullscreenVideoContext(opaqueHost)) containsString:@"real-live"],@"A stale native parameter list cannot block the independently verified playing resource");
+    T1ImmersiveFullScreenViewController *entityHost=Host(); T1SlideshowStatusView *mediaPage=[T1SlideshowStatusView new];
+    mediaPage.media=NativeModel(@"direct-current-media")[@"currentMediaEntity"]; Attach(entityHost.viewIfLoaded,mediaPage,entityHost.viewIfLoaded.bounds);
+    NativeVideoSurface *opaqueChild=[NativeVideoSurface new]; opaqueChild.player=@{@"currentItem":@{}}; Attach(mediaPage,opaqueChild,CGRectMake(0,180,390,330));
+    Check([URL(BHRDCurrentFullscreenVideoContext(entityHost)) containsString:@"direct-current-media"],@"The currently displayed slideshow media works without post details or a public asset URL");
+    Check(BHRDHasVisibleFullscreenVideo(entityHost),@"The current native media marks a video before its download model is hydrated");
+    mediaPage.media=@{@"type":@"photo",@"mediaURL":@"https://pbs.twimg.com/media/current-photo.jpg"};
+    Check(!BHRDHasVisibleFullscreenVideo(entityHost),@"A current photo in a recycled slideshow excludes its retained old player subtree");
+    Check(BHRDHasSelectedFullscreenPhoto(entityHost),@"Explicit photo selection clears sticky video visibility even before the image has loaded");
     T1ImmersiveFullScreenViewController *host=Host(); UIView *root=host.viewIfLoaded;
     NativeVideoSurface *surface=[NativeVideoSurface new]; surface.player=Player(@"900001"); Attach(root,surface,CGRectMake(0,200,390,260));
     NSDictionary *context=BHRDCurrentFullscreenVideoContext(host);

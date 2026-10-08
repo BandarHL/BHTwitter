@@ -1,11 +1,14 @@
 #import "BHRDFullscreenDownloadControl.h"
 #import "BHRDLayoutGeometry.h"
+#import "BHRDAvatarDiagnostics.h"
+#import "BHRDRuntimeStatus.h"
 #import <objc/runtime.h>
 
 @interface BHRDFloatingOverlay : UIView
 @property(nonatomic, weak) UIViewController *owner;
 @property(nonatomic, strong) UIButton *button;
 @property(nonatomic, strong) BHRDFullscreenActionRouter *router;
+@property(nonatomic, copy) NSString *visibilityStamp;
 @end
 @implementation BHRDFloatingOverlay
 - (instancetype)initWithFrame:(CGRect)frame {
@@ -38,6 +41,14 @@
     UIEdgeInsets safe = self.window.safeAreaInsets;
     self.button.frame = BHRDFloatingDownloadFrame(self.bounds, safe.top, safe.left, safe.bottom, safe.right);
     self.button.hidden = !self.owner.viewIfLoaded.window || !self.router.isEnabled || !self.router.isEnabled() || [self modalIsVisible];
+    BOOL displayed=!self.button.hidden && self.window!=nil && self.button.frame.size.width>0 && self.button.frame.size.height>0;
+    NSString *stamp=[NSString stringWithFormat:@"%d:%@:%@",displayed,NSStringFromClass(self.owner.class),NSStringFromCGRect(self.button.frame)];
+    if (![self.visibilityStamp isEqual:stamp]) {
+        self.visibilityStamp=stamp;
+        BHRDAvatarLog(@"fullscreen_download_visibility",@{@"displayed":@(displayed),@"attached":@(self.window!=nil),@"ownerClass":self.owner ? NSStringFromClass(self.owner.class) : @"",
+            @"modal":@([self modalIsVisible]),@"frame":@[@(self.button.frame.origin.x),@(self.button.frame.origin.y),@(self.button.frame.size.width),@(self.button.frame.size.height)]});
+        BHRDRecordCapability(@"全屏右侧下载入口",displayed ? @"已显示" : @"当前暂隐",@"独立纯图标按钮；显示依据播放视图，点击才解析下载参数。");
+    }
 }
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
     // This overlay never consumes video gestures outside its single button.

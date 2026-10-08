@@ -120,7 +120,8 @@ int main(void) { @autoreleasepool {
         @"no_current_source":@"video_current_source_missing",@"no_current_video_resource":@"video_resource_missing",
         @"pager_transition_unsettled":@"video_pager_unsettled",@"layer_scan_budget_exceeded":@"video_layer_scan_limited",
         @"source_scan_budget_exceeded":@"video_source_scan_limited",@"resource_scan_budget_exceeded":@"video_resource_scan_limited",
-        @"fullscreen_scan_requires_main_thread":@"video_scan_thread_invalid",@"menu_presentation_failed":@"video_menu_failed"};
+        @"fullscreen_scan_requires_main_thread":@"video_scan_thread_invalid",@"inline_identity_mismatch":@"video_inline_mismatch",
+        @"bound_media_unavailable":@"video_bound_unavailable",@"menu_presentation_failed":@"video_menu_failed"};
     for (NSString *reason in failureStages) {
         NSString *failedAttempt=NSUUID.UUID.UUIDString;
         Event(@"fullscreen_video_resolution",@{@"phase":@"started",@"attempt":failedAttempt});
