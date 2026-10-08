@@ -8,6 +8,7 @@
 #import "BHRDHomeHeaderView.h"
 #import "BHRDPhotoLibrarySave.h"
 #import "BHRDAvatarDiagnostics.h"
+#import "BHRDAcceptance.h"
 #import "BHRDSafety.h"
 #import "BHRDRuntimeStatus.h"
 #import <AVFoundation/AVFoundation.h>
@@ -37,6 +38,7 @@ static NSData *DisplayedPhotoPayload(UIImage *image) {
 @property(nonatomic,strong) BHRDPhotoSnapshot *photo;
 @property(nonatomic,strong) BHRDPhotoFetch *fetch;
 @property(nonatomic,strong) BHRDPhotoSaveJob *saveJob;
+@property(nonatomic,copy) NSString *saveAcceptanceSession;
 @property(nonatomic,strong) NSTimer *timer;
 @property(atomic) NSUInteger generation;
 @property(nonatomic,strong) dispatch_queue_t encodingQueue;
@@ -57,7 +59,16 @@ static NSData *DisplayedPhotoPayload(UIImage *image) {
     [self.overlay.button setImage:[UIImage systemImageNamed:symbol] forState:UIControlStateNormal];
     self.overlay.button.accessibilityValue=status;
 }
-- (void)cancel { self.copying=NO; ++self.generation; [self.fetch cancel]; self.fetch=nil; [self.saveJob cancel]; self.saveJob=nil; self.overlay.button.enabled=YES; self.overlay.toolsButton.enabled=YES; self.overlay.feedbackLabel.hidden=YES; [self setCopySymbol:@"doc.on.doc" status:nil]; }
+- (void)cancel {
+    if (self.saveAcceptanceSession && !self.saveJob) [self recordSaveResult:[NSError errorWithDomain:BHRDPhotoSaveErrorDomain code:BHRDPhotoSaveCancelled userInfo:nil]];
+    self.saveAcceptanceSession=nil;
+    self.copying=NO; ++self.generation; [self.fetch cancel]; self.fetch=nil; [self.saveJob cancel]; self.saveJob=nil; self.overlay.button.enabled=YES; self.overlay.toolsButton.enabled=YES; self.overlay.feedbackLabel.hidden=YES; [self setCopySymbol:@"doc.on.doc" status:nil];
+}
+- (void)recordSaveResult:(NSError *)error {
+    if (!self.saveAcceptanceSession) return;
+    BHRDAvatarLog(@"photo_save_result",@{@"success":@NO,@"committed":@NO,@"acceptanceSession":self.saveAcceptanceSession,@"errorDomain":error.domain ?: @"",@"errorCode":@(error.code)});
+    self.saveAcceptanceSession=nil;
+}
 - (BOOL)refresh {
     if (self.stopped) return NO;
     if (!PhotoHost(self.owner)) { [self stop]; return NO; }
@@ -187,6 +198,7 @@ static NSData *DisplayedPhotoPayload(UIImage *image) {
 - (void)offerCurrentPhoto:(BHRDPhotoSnapshot *)snapshot generation:(NSUInteger)generation {
     [self finishPhotoOperation];
     if (!snapshot.image) {
+        [self recordSaveResult:[NSError errorWithDomain:BHRDPhotoSaveErrorDomain code:BHRDPhotoSaveInvalidData userInfo:nil]];
         [self saveFailure:[NSError errorWithDomain:BHRDPhotoSaveErrorDomain code:BHRDPhotoSaveInvalidData userInfo:@{NSLocalizedDescriptionKey:@"无法获取原图，当前显示图片也尚未加载，请重试"}]]; return;
     }
     UIAlertController *prompt=[UIAlertController alertControllerWithTitle:@"原图未能保存" message:@"原图获取失败、格式不支持或超过 3200 万像素限制。是否改为保存当前显示图片？当前图可能尺寸更小。" preferredStyle:UIAlertControllerStyleAlert];
@@ -195,14 +207,20 @@ static NSData *DisplayedPhotoPayload(UIImage *image) {
         BHRDPhotoCopyController *controller=weakSelf;
         [controller afterPrompt:controller.toolsSheet run:^{
             BHRDPhotoCopyController *current=weakSelf;
-            if ([current saveStillCurrent:snapshot.identity generation:generation]) [current startSavePhotoLoadedOnly:YES];
+            if ([current saveStillCurrent:snapshot.identity generation:generation]) {
+                // Continuing the same save must not create a synthetic cancel
+                // or a second acceptance attempt when only the source changes.
+                current.copying=YES; current.overlay.button.enabled=NO; current.overlay.toolsButton.enabled=NO;
+                [current setCopySymbol:@"hourglass" status:@"正在保存当前图片到照片"];
+                [current saveSnapshot:snapshot data:nil loadedOnly:YES generation:generation];
+            }
         }];
     }]];
     [prompt addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:^(__unused UIAlertAction *item) {
         BHRDPhotoCopyController *controller=weakSelf;
         [controller afterPrompt:controller.toolsSheet run:^{
             BHRDPhotoCopyController *current=weakSelf;
-            if ([current saveStillCurrent:snapshot.identity generation:generation]) [current setCopySymbol:@"doc.on.doc" status:nil];
+            if ([current saveStillCurrent:snapshot.identity generation:generation]) { [current recordSaveResult:[NSError errorWithDomain:BHRDPhotoSaveErrorDomain code:BHRDPhotoSaveCancelled userInfo:nil]]; [current setCopySymbol:@"doc.on.doc" status:nil]; }
         }];
     }]];
     self.toolsSheet=prompt; self.overlay.hidden=YES;
@@ -211,12 +229,12 @@ static NSData *DisplayedPhotoPayload(UIImage *image) {
 - (void)commitSavePayload:(NSData *)payload snapshot:(BHRDPhotoSnapshot *)snapshot dimensions:(NSDictionary *)dimensions loadedOnly:(BOOL)loadedOnly generation:(NSUInteger)generation {
     if (![self saveStillCurrent:snapshot.identity generation:generation]) return;
     __weak BHRDPhotoCopyController *weakSelf=self;
-    self.saveJob=[BHRDPhotoSaveJob saveData:payload hostInfo:NSBundle.mainBundle.infoDictionary stillCurrent:^BOOL {
+    self.saveJob=[BHRDPhotoSaveJob saveData:payload hostInfo:NSBundle.mainBundle.infoDictionary acceptanceSession:self.saveAcceptanceSession stillCurrent:^BOOL {
         return [weakSelf saveStillCurrent:snapshot.identity generation:generation];
     } completion:^(BOOL success,NSError *error) {
         BHRDPhotoCopyController *current=weakSelf;
         if (![current saveStillCurrent:snapshot.identity generation:generation]) return;
-        current.saveJob=nil; [current finishPhotoOperation];
+        current.saveJob=nil; current.saveAcceptanceSession=nil; [current finishPhotoOperation];
         if (success) [current feedback:[NSString stringWithFormat:@"已保存%@到照片\n%@ × %@ 像素",loadedOnly ? @"当前图" : @"原图",dimensions[@"width"],dimensions[@"height"]]];
         else if (error.code!=BHRDPhotoSaveCancelled || ![error.domain isEqual:BHRDPhotoSaveErrorDomain]) [current saveFailure:error];
     }];
@@ -232,7 +250,7 @@ static NSData *DisplayedPhotoPayload(UIImage *image) {
         BHRDPhotoCopyController *controller=weakSelf;
         [controller afterPrompt:controller.toolsSheet run:^{
             BHRDPhotoCopyController *current=weakSelf;
-            if ([current saveStillCurrent:snapshot.identity generation:generation]) { [current finishPhotoOperation]; [current setCopySymbol:@"doc.on.doc" status:nil]; }
+            if ([current saveStillCurrent:snapshot.identity generation:generation]) { [current recordSaveResult:[NSError errorWithDomain:BHRDPhotoSaveErrorDomain code:BHRDPhotoSaveCancelled userInfo:nil]]; [current finishPhotoOperation]; [current setCopySymbol:@"doc.on.doc" status:nil]; }
         }];
     }]];
     self.toolsSheet=prompt; self.overlay.hidden=YES;
@@ -248,10 +266,10 @@ static NSData *DisplayedPhotoPayload(UIImage *image) {
         dispatch_async(dispatch_get_main_queue(),^{
             BHRDPhotoCopyController *controller=weakSelf;
             if (![controller saveStillCurrent:snapshot.identity generation:generation]) return;
-            BHRDAvatarLog(@"photo_save_prepare",@{@"bytes":@(payload.length),@"source":loadedOnly ? @"displayed" : @"original",@"valid":@(payload!=nil),@"width":dimensions[@"width"] ?: @0,@"height":dimensions[@"height"] ?: @0});
+            BHRDAvatarLog(@"photo_save_prepare",@{@"bytes":@(payload.length),@"source":loadedOnly ? @"displayed" : @"original",@"acceptanceSession":controller.saveAcceptanceSession ?: @"",@"valid":@(payload!=nil),@"width":dimensions[@"width"] ?: @0,@"height":dimensions[@"height"] ?: @0});
             if (!payload) {
                 if (!loadedOnly) [controller offerCurrentPhoto:snapshot generation:generation];
-                else { [controller finishPhotoOperation]; [controller saveFailure:[NSError errorWithDomain:BHRDPhotoSaveErrorDomain code:BHRDPhotoSaveInvalidData userInfo:@{NSLocalizedDescriptionKey:@"当前图片无效或超过 3200 万像素限制，无法保存，请重试"}]]; }
+                else { [controller recordSaveResult:[NSError errorWithDomain:BHRDPhotoSaveErrorDomain code:BHRDPhotoSaveInvalidData userInfo:nil]]; [controller finishPhotoOperation]; [controller saveFailure:[NSError errorWithDomain:BHRDPhotoSaveErrorDomain code:BHRDPhotoSaveInvalidData userInfo:@{NSLocalizedDescriptionKey:@"当前图片无效或超过 3200 万像素限制，无法保存，请重试"}]]; }
                 return;
             }
             if (BHRDPhotoWasSavedInSession(contentKey)) [controller confirmSavePayload:payload snapshot:snapshot dimensions:dimensions loadedOnly:loadedOnly generation:generation];
@@ -263,8 +281,9 @@ static NSData *DisplayedPhotoPayload(UIImage *image) {
     if (self.copying || self.stopped || !PhotoHost(self.owner) || [self blocked]) return;
     BHRDPhotoSnapshot *snapshot=BHRDCurrentFullscreenPhoto(self.owner.viewIfLoaded); if (!snapshot) return;
     [self cancel]; self.photo=snapshot; NSUInteger generation=self.generation;
+    self.saveAcceptanceSession=BHRDAcceptanceCurrentSessionIdentifier();
     self.copying=YES; self.overlay.button.enabled=NO; self.overlay.toolsButton.enabled=NO; [self setCopySymbol:@"hourglass" status:@"正在保存到照片"];
-    BHRDAvatarLog(@"photo_save_start",@{@"hasURL":@(snapshot.url!=nil),@"hasImage":@(snapshot.image!=nil),@"source":loadedOnly ? @"displayed" : @"original"});
+    BHRDAvatarLog(@"photo_save_start",@{@"hasURL":@(snapshot.url!=nil),@"hasImage":@(snapshot.image!=nil),@"source":loadedOnly ? @"displayed" : @"original",@"acceptanceSession":self.saveAcceptanceSession ?: @""});
     if (loadedOnly || !snapshot.url) { [self saveSnapshot:snapshot data:nil loadedOnly:loadedOnly generation:generation]; return; }
     __weak BHRDPhotoCopyController *weakSelf=self;
     self.fetch=[BHRDPhotoFetch fetchURL:snapshot.url completion:^(NSData *data,NSError *error) {
@@ -273,7 +292,7 @@ static NSData *DisplayedPhotoPayload(UIImage *image) {
         controller.fetch=nil;
         BHRDPhotoSnapshot *current=BHRDCurrentFullscreenPhoto(controller.owner.viewIfLoaded);
         BHRDPhotoSnapshot *selected=[BHRDPhotoSnapshot new]; selected.identity=snapshot.identity; selected.url=snapshot.url; selected.image=current.image ?: snapshot.image;
-        BHRDAvatarLog(@"photo_save_fetch",@{@"bytes":@(data.length),@"errorDomain":error.domain ?: @"",@"errorCode":@(error.code)});
+        BHRDAvatarLog(@"photo_save_fetch",@{@"bytes":@(data.length),@"acceptanceSession":controller.saveAcceptanceSession ?: @"",@"errorDomain":error.domain ?: @"",@"errorCode":@(error.code)});
         [controller saveSnapshot:selected data:error ? nil : data loadedOnly:NO generation:generation];
     }];
 }

@@ -1,6 +1,7 @@
 #import "BHRDDiagnosticsViewController.h"
 #import "BHRDAvatarDiagnostics.h"
 #import "BHRDBuildInfo.h"
+#import "BHRDAcceptance.h"
 @interface BHRDDiagnosticsViewController ()
 @property(nonatomic,strong) UITextView *textView;
 @property(nonatomic,strong) UIBarButtonItem *exportButton;
@@ -49,18 +50,24 @@
 - (void)exportLogs {
     if (self.presentedViewController) return;
     self.exportButton.enabled=NO; __weak BHRDDiagnosticsViewController *weakSelf=self;
+    NSString *session=BHRDAcceptanceCurrentSessionIdentifier();
     BHRDAvatarExportLogs(^(NSArray<NSURL *> *files,NSError *error) {
         BHRDDiagnosticsViewController *controller=weakSelf; controller.exportButton.enabled=YES;
-        if (!controller.view.window || controller.presentedViewController) { BHRDAvatarRemoveExport(files); return; }
+        if (!controller.view.window || controller.presentedViewController) { BHRDAvatarLog(@"acceptance_export",@{@"phase":@"cancelled",@"acceptanceSession":session}); BHRDAvatarRemoveExport(files); return; }
         if (error) {
+            BHRDAvatarLog(@"acceptance_export",@{@"phase":@"failed",@"acceptanceSession":session,@"errorDomain":error.domain ?: @"",@"errorCode":@(error.code)});
             UIAlertController *alert=[UIAlertController alertControllerWithTitle:@"导出失败" message:error.localizedDescription preferredStyle:UIAlertControllerStyleAlert];
             [alert addAction:[UIAlertAction actionWithTitle:@"好" style:UIAlertActionStyleCancel handler:nil]];
             [controller presentViewController:alert animated:YES completion:nil]; return;
         }
+        BHRDAvatarLog(@"acceptance_export",@{@"phase":@"generated",@"acceptanceSession":session});
         UIActivityViewController *share=[[UIActivityViewController alloc] initWithActivityItems:files applicationActivities:nil];
         share.popoverPresentationController.barButtonItem=controller.exportButton;
-        share.completionWithItemsHandler=^(__unused UIActivityType type,__unused BOOL completed,__unused NSArray *items,__unused NSError *failure) { BHRDAvatarRemoveExport(files); };
-        [controller presentViewController:share animated:YES completion:nil];
+        share.completionWithItemsHandler=^(__unused UIActivityType type,BOOL completed,__unused NSArray *items,NSError *failure) {
+            BHRDAvatarLog(@"acceptance_export",@{@"phase":failure ? @"failed" : completed ? @"completed" : @"cancelled",@"acceptanceSession":session,@"errorDomain":failure.domain ?: @"",@"errorCode":@(failure.code)});
+            BHRDAvatarRemoveExport(files);
+        };
+        [controller presentViewController:share animated:YES completion:^{ BHRDAvatarLog(@"acceptance_export",@{@"phase":@"presented",@"acceptanceSession":session}); }];
     });
 }
 @end

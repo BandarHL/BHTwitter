@@ -6,6 +6,9 @@
 #import "BHRDAvatarDiagnostics.h"
 #import "BHRDSafety.h"
 #import "BHRDRuntimeStatus.h"
+#if BHRD_AVATAR_DIAGNOSTICS
+#import "BHRDAcceptance.h"
+#endif
 #import <objc/runtime.h>
 #import <objc/message.h>
 @protocol BHRDTimelineItems <NSObject>
@@ -18,6 +21,8 @@ static char BHRDCellStateKey, BHRDReloadKey, BHRDForceReloadKey;
 static void RetryAvatar(UITableViewCell *cell);
 static void RefreshNativeAvatar(UITableViewCell *cell);
 static void ResetDetailNavigation(UITableViewCell *cell);
+static void ObserveDetailAppearance(id controller);
+static void ObserveTimelineReturn(id controller, UITableView *table);
 static NSHashTable *Controllers(void) {
     static NSHashTable *controllers;
     static dispatch_once_t once;
@@ -81,6 +86,7 @@ void BHRDRefreshHiddenReposts(void) {
 }
 void BHRDRepostPreferencesChanged(void) { BHRDRefreshHiddenReposts(); }
 void BHRDRepostControllerDidAppear(id controller) {
+    ObserveDetailAppearance(controller);
     if (![Controllers() containsObject:controller] || BHRDIsConversationContext(controller)) return;
     UITableView *table=Table(controller);
     if (!table.window || ![controller respondsToSelector:@selector(itemAtIndexPath:)]) return;
@@ -90,6 +96,7 @@ void BHRDRepostControllerDidAppear(id controller) {
         id model=path ? [(id<BHRDTimelineItems>)controller itemAtIndexPath:path] : nil;
         if (model) { BHRDConfigureRepostCell(cell,model,controller); ResetDetailNavigation(cell); RetryAvatar(cell); }
     }
+    ObserveTimelineReturn(controller,table);
 }
 double BHRDRepostRowHeight(id controller, id model, double originalHeight) {
     NSInteger mode = Presentation(controller, model);
@@ -112,6 +119,133 @@ double BHRDRepostRowHeight(id controller, id model, double originalHeight) {
 @property(nonatomic, strong) UILabel *empty;
 @property(nonatomic, strong) UIStackView *grid;
 @end
+
+// These observations use the actual appeared controller and its focal post.
+// A selection callback, a random reply, or a quoted post never proves that the
+// requested detail appeared. Pending work keeps no host controller alive.
+@interface BHRDRepostNavigationAttempt : NSObject
+@property(nonatomic,weak) id controller;
+@property(nonatomic,weak) UIView *window;
+@property(nonatomic,copy) NSString *row;
+@property(nonatomic,copy) NSString *post;
+@property(nonatomic,copy) NSString *attempt;
+@property(nonatomic,copy) NSString *session;
+@property(nonatomic) NSTimeInterval started;
+@property(nonatomic) BOOL detailObserved;
+@property(nonatomic) BOOL detailConfirmed;
+@property(nonatomic,copy) NSString *lastDetailResult;
+@end
+@implementation BHRDRepostNavigationAttempt @end
+static NSMutableArray<BHRDRepostNavigationAttempt *> *NavigationAttempts(void) {
+    static NSMutableArray *attempts; static dispatch_once_t once;
+    dispatch_once(&once,^{ attempts=[NSMutableArray array]; }); return attempts;
+}
+static NSString *NavigationSession(void) {
+#if BHRD_AVATAR_DIAGNOSTICS
+    return BHRDAcceptanceCurrentSessionIdentifier() ?: @"";
+#else
+    return @"";
+#endif
+}
+static id NavigationRead(id object,NSString *key) {
+    @try {
+        if ([object isKindOfClass:NSDictionary.class]) return object[key];
+        SEL selector=NSSelectorFromString(key);
+        NSMethodSignature *signature=[object respondsToSelector:selector] ? [object methodSignatureForSelector:selector] : nil;
+        if (signature.numberOfArguments!=2 || signature.methodReturnType[0]!='@') return nil;
+        return ((id(*)(id,SEL))objc_msgSend)(object,selector);
+    } @catch (__unused NSException *exception) { return nil; }
+}
+static NSString *NavigationIdentifier(id object,NSString *key) {
+    id value=NavigationRead(object,key);
+    if ([value isKindOfClass:NSString.class]) {
+        NSString *text=[value stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+        return text.length && ![text isEqual:@"0"] && ![text hasPrefix:@"model:"] ? text : nil;
+    }
+    if ([value isKindOfClass:NSNumber.class] && [value longLongValue]>0) return [value stringValue];
+    @try {
+        SEL selector=NSSelectorFromString(key);
+        NSMethodSignature *signature=[object respondsToSelector:selector] ? [object methodSignatureForSelector:selector] : nil;
+        if (signature.numberOfArguments!=2) return nil;
+        unsigned long long identifier=0;
+        switch (signature.methodReturnType[0]) {
+            case 'Q': identifier=((unsigned long long(*)(id,SEL))objc_msgSend)(object,selector); break;
+            case 'q': { long long number=((long long(*)(id,SEL))objc_msgSend)(object,selector); if (number>0) identifier=(unsigned long long)number; break; }
+            default: break;
+        }
+        return identifier ? [NSString stringWithFormat:@"%llu",identifier] : nil;
+    } @catch (__unused NSException *exception) { return nil; }
+}
+static NSString *DetailPostIdentifier(id controller) {
+    NSMutableArray *pending=[NSMutableArray arrayWithObject:@[controller,@0]];
+    NSHashTable *seen=[NSHashTable hashTableWithOptions:NSPointerFunctionsObjectPointerPersonality];
+    // Do not walk navigation stacks, quoted posts, table rows, arrays, or
+    // presenting controllers; those can contain other, inactive posts.
+    for (NSUInteger index=0;index<pending.count && index<24;index++) {
+        NSArray *entry=pending[index]; id object=entry[0]; NSUInteger depth=[entry[1] unsignedIntegerValue];
+        if ([seen containsObject:object]) continue; [seen addObject:object];
+        for (NSString *key in @[@"focalStatusID",@"focalTweetID",@"statusID",@"tweetID",@"statusIDString",@"restID",@"rest_id",@"id_str"]) {
+            NSString *identifier=NavigationIdentifier(object,key); if (identifier.length) return identifier;
+        }
+        NSString *legacy=NavigationIdentifier(NavigationRead(object,@"legacy"),@"id_str"); if (legacy.length) return legacy;
+        if (depth>=4) continue;
+        for (NSString *key in @[@"focalStatus",@"focalTweet",@"focalStatusViewModel",@"conversationViewModel",@"viewModel",@"representedStatus",@"status",@"tweet",@"statusViewModel",@"parentViewController"]) {
+            id next=NavigationRead(object,key);
+            if (next && next!=NSNull.null && ![next isKindOfClass:NSArray.class] && pending.count<24) [pending addObject:@[next,@(depth+1)]];
+        }
+    }
+    return nil;
+}
+static void PruneNavigationAttempts(void) {
+    NSTimeInterval now=NSProcessInfo.processInfo.systemUptime;
+    NSIndexSet *expired=[NavigationAttempts() indexesOfObjectsPassingTest:^BOOL(BHRDRepostNavigationAttempt *attempt,NSUInteger index,BOOL *stop) {
+        return !attempt.controller || now-attempt.started>300;
+    }];
+    [NavigationAttempts() removeObjectsAtIndexes:expired];
+    while (NavigationAttempts().count>32) [NavigationAttempts() removeObjectAtIndex:0];
+}
+static NSDictionary *NavigationFields(BHRDRepostNavigationAttempt *attempt,NSString *result) {
+    return @{@"row":attempt.row ?: @"",@"post":attempt.post ?: @"",@"attempt":attempt.attempt ?: @"",@"acceptanceSession":attempt.session ?: @"",@"result":result ?: @""};
+}
+static void LogNavigation(NSString *event,NSDictionary *fields) {
+    BHRDAvatarLog(event,fields); (void)event; (void)fields;
+}
+static BHRDRepostNavigationAttempt *BeginNavigationObservation(id controller,UITableView *table,NSString *row,id model) {
+    PruneNavigationAttempts();
+    NSIndexSet *previous=[NavigationAttempts() indexesOfObjectsPassingTest:^BOOL(BHRDRepostNavigationAttempt *attempt,NSUInteger index,BOOL *stop) { return attempt.controller==controller; }];
+    [NavigationAttempts() removeObjectsAtIndexes:previous];
+    BHRDRepostNavigationAttempt *attempt=[BHRDRepostNavigationAttempt new];
+    attempt.controller=controller; attempt.window=table.window; attempt.row=row;
+    attempt.post=BHRDInfoForRepostModel(model).postIdentifier;
+    attempt.attempt=NSUUID.UUID.UUIDString; attempt.session=NavigationSession(); attempt.started=NSProcessInfo.processInfo.systemUptime;
+    [NavigationAttempts() addObject:attempt]; PruneNavigationAttempts();
+    __weak BHRDRepostNavigationAttempt *weakAttempt=attempt;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW,16*NSEC_PER_SEC),dispatch_get_main_queue(),^{
+        BHRDRepostNavigationAttempt *pending=weakAttempt;
+        if (pending && !pending.detailObserved && [NavigationAttempts() containsObject:pending])
+            LogNavigation(@"repost_detail_confirmation_timeout",NavigationFields(pending,@"detail_confirmation_timeout"));
+    });
+    return attempt;
+}
+static void ObserveDetailAppearance(id controller) {
+    PruneNavigationAttempts();
+    if (!BHRDIsConversationContext(controller)) return;
+    UIView *view=NavigationRead(controller,@"viewIfLoaded");
+    if (![view isKindOfClass:UIView.class] || !view.window || view.hidden || view.alpha<=0.01) return;
+    BHRDRepostNavigationAttempt *attempt=nil;
+    for (BHRDRepostNavigationAttempt *candidate in NavigationAttempts().reverseObjectEnumerator) {
+        if (candidate.window==view.window && !candidate.detailConfirmed && NSProcessInfo.processInfo.systemUptime-candidate.started<=15) { attempt=candidate; break; }
+    }
+    if (!attempt) return;
+    NSString *actual=DetailPostIdentifier(controller);
+    NSString *result=!attempt.post.length || !actual.length ? @"detail_identity_unavailable" : [attempt.post isEqual:actual] ? @"detail_identity_matched" : @"detail_identity_mismatch";
+    attempt.detailObserved=YES;
+    if ([attempt.lastDetailResult isEqual:result]) return;
+    attempt.lastDetailResult=result; attempt.detailConfirmed=[result isEqual:@"detail_identity_matched"];
+    NSMutableDictionary *fields=[NavigationFields(attempt,result) mutableCopy];
+    fields[@"confirmed"]=@(attempt.detailConfirmed); fields[@"controllerClass"]=NSStringFromClass([controller class]);
+    LogNavigation(@"repost_detail_visible",fields);
+}
 @implementation BHRDRepostOverlay
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
     // Every visible part of the card has one action. Child labels, thumbnails
@@ -168,7 +302,7 @@ double BHRDRepostRowHeight(id controller, id model, double originalHeight) {
     UITableView *table=Table(controller); NSIndexPath *path=[table indexPathForCell:cell];
     id model=path && [controller respondsToSelector:@selector(itemAtIndexPath:)] ? [(id<BHRDTimelineItems>)controller itemAtIndexPath:path] : nil;
     if (!table.window || table.hasUncommittedUpdates || ![BHRDRepostIdentity(model) isEqual:self.identity]) {
-        BHRDAvatarLog(@"repost_detail_navigation",@{@"row":self.identity ?: @"",@"result":@"stale_or_unavailable_row"}); return;
+        LogNavigation(@"repost_detail_navigation",@{@"row":self.identity ?: @"",@"attempt":NSUUID.UUID.UUIDString,@"acceptanceSession":NavigationSession(),@"result":@"stale_or_unavailable_row"}); return;
     }
     SEL select=NSSelectorFromString(@"tableView:didSelectRowAtIndexPath:");
     id target=table.delegate;
@@ -177,17 +311,47 @@ double BHRDRepostRowHeight(id controller, id model, double originalHeight) {
     if (sig.numberOfArguments!=4 || sig.methodReturnType[0]!='v' ||
         [sig getArgumentTypeAtIndex:2][0]!='@' || [sig getArgumentTypeAtIndex:3][0]!='@') {
         BHRDRecordCapability(@"帖子详情导航",@"不可用",@"当前行委托未提供签名匹配的原生选择方法");
-        BHRDAvatarLog(@"repost_detail_navigation",@{@"row":self.identity ?: @"",@"result":@"native_selection_unavailable"}); return;
+        LogNavigation(@"repost_detail_navigation",@{@"row":self.identity ?: @"",@"attempt":NSUUID.UUID.UUIDString,@"acceptanceSession":NavigationSession(),@"result":@"native_selection_unavailable"}); return;
     }
     self.openingDetails=YES;
     [table selectRowAtIndexPath:path animated:NO scrollPosition:UITableViewScrollPositionNone];
+    BHRDRepostNavigationAttempt *attempt=BeginNavigationObservation(controller,table,self.identity,model);
+    NSMutableDictionary *fields=[NavigationFields(attempt,@"native_row_selection") mutableCopy]; fields[@"targetClass"]=NSStringFromClass([target class]);
+    // Emit before dispatch because the host may synchronously show details.
+    LogNavigation(@"repost_detail_navigation",fields);
     ((void(*)(id,SEL,id,id))objc_msgSend)(target,select,table,path);
     BHRDRecordCapability(@"帖子详情导航",@"已调用",[@"原生选择目标：" stringByAppendingString:NSStringFromClass([target class])]);
-    BHRDAvatarLog(@"repost_detail_navigation",@{@"row":self.identity ?: @"",@"result":@"native_row_selection",@"targetClass":NSStringFromClass([target class])});
     __weak BHRDRepostCellState *weakSelf=self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(0.6*NSEC_PER_SEC)),dispatch_get_main_queue(),^{ weakSelf.openingDetails=NO; });
 }
 @end
+static void ObserveTimelineReturn(id controller,UITableView *table) {
+    PruneNavigationAttempts();
+    for (BHRDRepostNavigationAttempt *attempt in NavigationAttempts().copy) {
+        if (attempt.controller!=controller || !attempt.detailObserved) continue;
+        UITableViewCell *matched=nil;
+        for (UITableViewCell *cell in table.visibleCells) {
+            NSIndexPath *path=[table indexPathForCell:cell];
+            id model=path ? [(id<BHRDTimelineItems>)controller itemAtIndexPath:path] : nil;
+            if (![BHRDRepostIdentity(model) isEqual:attempt.row]) continue;
+            if (attempt.post.length && ![BHRDInfoForRepostModel(model).postIdentifier isEqual:attempt.post]) continue;
+            matched=cell; break;
+        }
+        NSMutableDictionary *fields=[NavigationFields(attempt,matched ? @"timeline_return_observed" : @"return_row_not_observable") mutableCopy];
+        fields[@"confirmed"]=@(attempt.detailConfirmed); fields[@"observable"]=@(matched!=nil);
+        BOOL hidden=NO;
+        if (matched) {
+            BHRDRepostCellState *state=objc_getAssociatedObject(matched,&BHRDCellStateKey);
+            hidden=state.controller==controller && [state.identity isEqual:attempt.row] &&
+                (state.mode==BHRDRepostModePreview || state.mode==BHRDRepostModeBar) &&
+                state.overlay.superview==matched && !state.overlay.hidden && state.overlay.alpha>0.01 &&
+                state.overlay.bounds.size.width>0 && state.overlay.bounds.size.height>0;
+            for (UIView *native in matched.subviews) if (native!=state.overlay && !native.hidden) hidden=NO;
+        }
+        fields[@"hiddenPreserved"]=@(hidden); LogNavigation(@"repost_detail_return",fields);
+        [NavigationAttempts() removeObjectIdenticalTo:attempt];
+    }
+}
 static void ResetDetailNavigation(UITableViewCell *cell) {
     BHRDRepostCellState *state=objc_getAssociatedObject(cell,&BHRDCellStateKey);
     state.openingDetails=NO;

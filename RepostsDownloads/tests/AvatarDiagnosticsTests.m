@@ -1,5 +1,6 @@
 #import "../BHRDAvatarDiagnostics.h"
 #import "../BHRDBuildInfo.h"
+#import "../BHRDAcceptance.h"
 #import <UIKit/UIKit.h>
 static NSUInteger checks;
 static void Check(BOOL value,NSString *message) { checks++; if (!value) { NSLog(@"FAIL: %@",message); exit(1); } }
@@ -57,11 +58,21 @@ int main(void) { @autoreleasepool {
     BHRDAvatarInspectModel(probe,@"expired-probe"); BHRDAvatarDiagnosticFlush();
     Check(BHRDAvatarDetailedCollectionRemaining()==0 && probe.getterReads==before,@"Expired collection stops reflection without requiring another UI action");
     BHRDAvatarSetDetailedCollection(NO); BHRDAvatarDiagnosticFlush();
+    BHRDAcceptanceBeginSession();
     BHRDAvatarDiagnosticTestSuspendWriter(YES);
-    for (NSUInteger i=0;i<200;i++) BHRDAvatarLog(@"overflow_probe",@{@"index":@(i)});
+    for (NSUInteger i=0;i<200;i++) {
+        if (i==199) BHRDAvatarLog(@"photo_save_result",@{@"success":@YES,@"committed":@YES});
+        else BHRDAvatarLog(@"overflow_probe",@{@"index":@(i)});
+    }
     BHRDAvatarDiagnosticTestSuspendWriter(NO); BHRDAvatarDiagnosticFlush();
     NSUInteger accepted=0; for (NSDictionary *row in Records(path)) if ([row[@"event"] isEqual:@"overflow_probe"]) accepted++;
     Check(accepted==128,@"Bounded writer accepts exactly its capacity while paused instead of unbounded memory growth");
+    NSDictionary *photoItem=nil;
+    for (NSDictionary *item in BHRDAcceptanceItems()) if ([item[@"id"] isEqual:@"photo_save"]) photoItem=item;
+    Check([photoItem[@"status"] isEqual:@"success"],@"Critical acceptance evidence survives the bounded file queue dropping its record");
+    BOOL loggedPhotoResult=NO;
+    for (NSDictionary *record in Records(path)) if ([record[@"event"] isEqual:@"photo_save_result"]) loggedPhotoResult=YES;
+    Check(!loggedPhotoResult,@"Acceptance success is independent of file writer capacity, not a hidden queue expansion");
     BHRDAvatarLog(@"oversized_probe",@{@"large":[@"x" stringByPaddingToLength:40000 withString:@"x" startingAtIndex:0]}); BHRDAvatarDiagnosticFlush();
     NSMutableData *large=[NSMutableData dataWithLength:2*1024*1024+1];
     [large writeToFile:path atomically:YES];

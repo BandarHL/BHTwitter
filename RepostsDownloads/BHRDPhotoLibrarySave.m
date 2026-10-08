@@ -1,6 +1,7 @@
 #import "BHRDPhotoLibrarySave.h"
 #import "BHRDPhotoCopyData.h"
 #import "BHRDAvatarDiagnostics.h"
+#import "BHRDAcceptance.h"
 #import <ImageIO/ImageIO.h>
 #import <Photos/Photos.h>
 #import <CommonCrypto/CommonDigest.h>
@@ -53,13 +54,23 @@ static NSError *SaveError(BHRDPhotoSaveError code,NSString *message) {
 @property(nonatomic) BOOL finished;
 @property(nonatomic,strong) NSData *data;
 @property(nonatomic,copy) NSString *contentKey;
+@property(nonatomic,copy) NSString *acceptanceSession;
 @property(nonatomic,copy) NSDictionary *info;
 @property(nonatomic,copy) BOOL (^stillCurrent)(void);
 @property(nonatomic,copy) void (^completion)(BOOL,NSError *);
 @end
 @implementation BHRDPhotoSaveJob
 + (instancetype)saveData:(NSData *)data hostInfo:(NSDictionary *)info stillCurrent:(BOOL (^)(void))stillCurrent completion:(void (^)(BOOL,NSError *))completion {
+#if BHRD_AVATAR_DIAGNOSTICS
+    NSString *session=BHRDAcceptanceCurrentSessionIdentifier();
+#else
+    NSString *session=@"disabled";
+#endif
+    return [self saveData:data hostInfo:info acceptanceSession:session stillCurrent:stillCurrent completion:completion];
+}
++ (instancetype)saveData:(NSData *)data hostInfo:(NSDictionary *)info acceptanceSession:(NSString *)session stillCurrent:(BOOL (^)(void))stillCurrent completion:(void (^)(BOOL,NSError *))completion {
     BHRDPhotoSaveJob *job=[self new]; job.data=[data copy]; job.info=[info copy]; job.stillCurrent=stillCurrent; job.completion=completion;
+    job.acceptanceSession=[session copy];
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED,0),^{
         NSString *key=BHRDPhotoSaveContentKey(data);
         dispatch_async(dispatch_get_main_queue(),^{ job.contentKey=key; [job start]; });
@@ -68,7 +79,7 @@ static NSError *SaveError(BHRDPhotoSaveError code,NSString *message) {
 - (void)finish:(BOOL)success error:(NSError *)error {
     if (self.finished) return; self.finished=YES;
     if (success && self.contentKey.length) { NSMutableSet *keys=SavedKeys(); @synchronized(keys) { [keys addObject:self.contentKey]; } }
-    BHRDAvatarLog(@"photo_save_result",@{@"success":@(success),@"committed":@(self.committed),@"errorDomain":error.domain ?: @"",@"errorCode":@(error.code)});
+    BHRDAvatarLog(@"photo_save_result",@{@"success":@(success),@"committed":@(self.committed),@"acceptanceSession":self.acceptanceSession ?: @"",@"errorDomain":error.domain ?: @"",@"errorCode":@(error.code)});
     void (^completion)(BOOL,NSError *)=self.completion; self.completion=nil; self.stillCurrent=nil; self.data=nil; self.info=nil; self.contentKey=nil;
     if (completion) completion(success,error);
 }
@@ -95,13 +106,13 @@ static NSError *SaveError(BHRDPhotoSaveError code,NSString *message) {
 - (void)authorize:(PHAuthorizationStatus)status {
     if (self.committed) return;
     if (![self validateSelection]) return;
-    BHRDAvatarLog(@"photo_save_authorization",@{@"status":@(status),@"access":@"add_only"});
+    BHRDAvatarLog(@"photo_save_authorization",@{@"status":@(status),@"access":@"add_only",@"acceptanceSession":self.acceptanceSession ?: @""});
     if (status!=PHAuthorizationStatusAuthorized && status!=PHAuthorizationStatusLimited) {
         [self finish:NO error:SaveError(BHRDPhotoSaveDenied,@"请在系统设置中允许 X 添加照片，然后重试")]; return;
     }
     self.committed=YES;
     NSData *data=self.data; NSString *type=BHRDPhotoPasteboardType(data);
-    BHRDAvatarLog(@"photo_save_committed",@{@"bytes":@(data.length),@"type":type ?: @""});
+    BHRDAvatarLog(@"photo_save_committed",@{@"bytes":@(data.length),@"type":type ?: @"",@"acceptanceSession":self.acceptanceSession ?: @""});
     // The selection was checked on main before this irreversible submission.
     // Keep the chosen bytes and Photos completion alive even if the viewer exits.
     [PHPhotoLibrary.sharedPhotoLibrary performChanges:^{

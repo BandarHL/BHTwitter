@@ -16,6 +16,7 @@ BHRD_FILES += BHRDAvatarDiagnostics.m BHRDDiagnosticsViewController.m
 BHRD_FILES += BHRDPhotoLibrarySave.m
 BHRD_FILES += BHRDSafety.m Recovery.x
 BHRD_FILES += BHRDRuntimeStatus.m BHRDRuntimeStatusViewController.m
+BHRD_FILES += BHRDAcceptance.m BHRDAcceptanceViewController.m BHRDPerformanceMonitor.m BHRDPerformanceStats.m
 BHRD_CFLAGS := -fobjc-arc -Wno-deprecated-declarations -Wno-nullability-completeness
 BHRD_CFLAGS += -I$(CURDIR)/.theos/xsuixin-build
 

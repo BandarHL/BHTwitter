@@ -16,5 +16,9 @@ BOOL BHRDPhotoWasSavedInSession(NSString *contentKey);
 + (instancetype)saveData:(NSData *)data hostInfo:(NSDictionary *)info
            stillCurrent:(BOOL (^)(void))stillCurrent
              completion:(void (^)(BOOL success, NSError *error))completion;
++ (instancetype)saveData:(NSData *)data hostInfo:(NSDictionary *)info
+      acceptanceSession:(NSString *)session
+           stillCurrent:(BOOL (^)(void))stillCurrent
+             completion:(void (^)(BOOL success, NSError *error))completion;
 - (void)cancel;
 @end

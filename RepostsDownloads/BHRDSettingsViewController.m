@@ -4,6 +4,7 @@
 #import "BHRDDownloadsViewController.h"
 #import "BHRDDiagnosticsViewController.h"
 #import "BHRDRuntimeStatusViewController.h"
+#import "BHRDAcceptanceViewController.h"
 #import "BHRDSafety.h"
 #import "BHRDBuildInfo.h"
 #import "BHRDRepostPresentation.h"
@@ -23,7 +24,7 @@
     else [self.navigationController popViewControllerAnimated:YES];
 }
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView { return BHRDSettingsKeys().count + 2; }
-- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { if (section==BHRDSettingsKeys().count+1) return 3; if (section == BHRDSettingsKeys().count) return 2; return section == 0 ? BHRDSettingsKeys()[0].count + 2 : BHRDSettingsKeys()[section].count; }
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { if (section==BHRDSettingsKeys().count+1) return 4; if (section == BHRDSettingsKeys().count) return 2; return section == 0 ? BHRDSettingsKeys()[0].count + 2 : BHRDSettingsKeys()[section].count; }
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
     if (section == BHRDSettingsKeys().count) return @"文件与诊断";
     if (section==BHRDSettingsKeys().count+1) return @"运行状态与恢复";
@@ -43,8 +44,8 @@
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     if (indexPath.section==BHRDSettingsKeys().count+1) {
         UITableViewCell *cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
-        cell.textLabel.text=@[@"运行状态（版本 / 功能可用性）",@"暂停全部功能",@"恢复默认设置"][indexPath.row];
-        if (indexPath.row==1) { UISwitch *toggle=[UISwitch new]; toggle.on=BHRDIsPaused(); [toggle addTarget:self action:@selector(bhrd_pauseChanged:) forControlEvents:UIControlEventValueChanged]; cell.accessoryView=toggle; cell.selectionStyle=UITableViewCellSelectionStyleNone; }
+        cell.textLabel.text=@[@"运行状态（版本 / 功能可用性）",@"实际运行验收（结果 / 失败阶段 / 导出）",@"暂停全部功能",@"恢复默认设置"][indexPath.row];
+        if (indexPath.row==2) { UISwitch *toggle=[UISwitch new]; toggle.on=BHRDIsPaused(); [toggle addTarget:self action:@selector(bhrd_pauseChanged:) forControlEvents:UIControlEventValueChanged]; cell.accessoryView=toggle; cell.selectionStyle=UITableViewCellSelectionStyleNone; }
         else cell.accessoryType=UITableViewCellAccessoryDisclosureIndicator;
         return cell;
     }
@@ -102,7 +103,8 @@
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
     if (indexPath.section==BHRDSettingsKeys().count+1) {
         if (indexPath.row==0) [self.navigationController pushViewController:[BHRDRuntimeStatusViewController new] animated:YES];
-        if (indexPath.row==2) [self bhrd_resetPreferences]; return;
+        if (indexPath.row==1) [self.navigationController pushViewController:[BHRDAcceptanceViewController new] animated:YES];
+        if (indexPath.row==3) [self bhrd_resetPreferences]; return;
     }
     if (indexPath.section == BHRDSettingsKeys().count) { [self.navigationController pushViewController:indexPath.row==0 ? [BHRDDownloadsViewController new] : [BHRDDiagnosticsViewController new] animated:YES]; return; }
     if (indexPath.section != 0 || indexPath.row == 0 || indexPath.row > 2 || ![BHRDManager HideReposts]) return;

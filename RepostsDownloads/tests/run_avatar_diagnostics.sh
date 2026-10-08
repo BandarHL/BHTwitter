@@ -3,29 +3,31 @@ set -eu
 cd "$(dirname "$0")"
 BHRD_AVATAR_TEST_DIR="$(mktemp -d -t xsuixin-avatar-diag)"
 export BHRD_AVATAR_TEST_DIR
+BHRD_ACCEPTANCE_TEST_DIR="$BHRD_AVATAR_TEST_DIR/acceptance"
+export BHRD_ACCEPTANCE_TEST_DIR
 trap 'rm -rf "$BHRD_AVATAR_TEST_DIR"' EXIT
 xcrun clang -fobjc-arc -Wall -Wextra -Werror -Wno-unused-parameter -I HostFixtures \
-  -DBHRD_AVATAR_DIAGNOSTICS=1 -DBHRD_AVATAR_DIAGNOSTICS_TEST=1 \
+  -DBHRD_AVATAR_DIAGNOSTICS=1 -DBHRD_AVATAR_DIAGNOSTICS_TEST=1 -DBHRD_ACCEPTANCE_TEST=1 \
   -framework Foundation -framework CoreGraphics -framework QuartzCore \
-  ../BHRDAvatarDiagnostics.m HostFixtures/ViewGraph.m AvatarDiagnosticsTests.m -o "$BHRD_AVATAR_TEST_DIR/logger-test"
+  ../BHRDAvatarDiagnostics.m ../BHRDAcceptance.m HostFixtures/ViewGraph.m AvatarDiagnosticsTests.m -o "$BHRD_AVATAR_TEST_DIR/logger-test"
 "$BHRD_AVATAR_TEST_DIR/logger-test"
 xcrun clang -fobjc-arc -Wall -Wextra -Werror -Wno-unused-parameter -I HostFixtures \
-  -DBHRD_AVATAR_DIAGNOSTICS=1 -DBHRD_AVATAR_DIAGNOSTICS_TEST=1 \
+  -DBHRD_AVATAR_DIAGNOSTICS=1 -DBHRD_AVATAR_DIAGNOSTICS_TEST=1 -DBHRD_ACCEPTANCE_TEST=1 \
   -framework Foundation -framework CoreGraphics -framework QuartzCore \
-  ../BHRDAvatarDiagnostics.m ../BHRDRepostModel.m ../BHRDRepostPresentation.m ../BHRDRuntimeStatus.m ../BHRDConversationScope.m \
+  ../BHRDAvatarDiagnostics.m ../BHRDAcceptance.m ../BHRDRepostModel.m ../BHRDRepostPresentation.m ../BHRDRuntimeStatus.m ../BHRDConversationScope.m \
   ../BHRDAdFilter.m ../BHRDContentFilter.m ../BHRDPreferences.m ../BHRDSafety.m \
   HostFixtures/ViewGraph.m RepostPresentation241Tests.m -o "$BHRD_AVATAR_TEST_DIR/views-test"
 BHRD_AVATAR_TEST_DETAILED=1 "$BHRD_AVATAR_TEST_DIR/views-test"
 xcrun clang -fobjc-arc -Wall -Wextra -Werror -Wno-unused-parameter -I HostFixtures \
-  -DBHRD_AVATAR_DIAGNOSTICS=1 -DBHRD_AVATAR_DIAGNOSTICS_TEST=1 \
+  -DBHRD_AVATAR_DIAGNOSTICS=1 -DBHRD_AVATAR_DIAGNOSTICS_TEST=1 -DBHRD_ACCEPTANCE_TEST=1 \
   -framework Foundation -framework CoreGraphics -framework QuartzCore \
-  ../BHRDAvatarDiagnostics.m ../BHRDAdFilter.m \
+  ../BHRDAvatarDiagnostics.m ../BHRDAcceptance.m ../BHRDAdFilter.m \
   HostFixtures/ViewGraph.m AdDiagnostics244Tests.m -o "$BHRD_AVATAR_TEST_DIR/ad-test"
 "$BHRD_AVATAR_TEST_DIR/ad-test"
 xcrun clang -fobjc-arc -Wall -Wextra -Werror -I HostFixtures \
-  -DBHRD_AVATAR_DIAGNOSTICS=1 -DBHRD_AVATAR_DIAGNOSTICS_TEST=1 \
+  -DBHRD_AVATAR_DIAGNOSTICS=1 -DBHRD_AVATAR_DIAGNOSTICS_TEST=1 -DBHRD_ACCEPTANCE_TEST=1 \
   -framework Foundation -framework CoreGraphics -framework QuartzCore -framework ImageIO \
-  ../BHRDAvatarDiagnostics.m ../BHRDPhotoLibrarySave.m ../BHRDPhotoCopyData.m \
+  ../BHRDAvatarDiagnostics.m ../BHRDAcceptance.m ../BHRDPhotoLibrarySave.m ../BHRDPhotoCopyData.m \
   HostFixtures/ViewGraph.m HostFixtures/Photos.m PhotoSave246Tests.m -o "$BHRD_AVATAR_TEST_DIR/photo-save-test"
 "$BHRD_AVATAR_TEST_DIR/photo-save-test"
 /usr/bin/python3 - "$BHRD_AVATAR_TEST_DIR/avatar-diag.log" <<'PY'

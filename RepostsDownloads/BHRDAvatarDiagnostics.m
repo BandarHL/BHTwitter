@@ -1,4 +1,5 @@
 #import "BHRDAvatarDiagnostics.h"
+#import "BHRDAcceptance.h"
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
 #import <objc/message.h>
@@ -102,6 +103,9 @@ static BOOL ReserveRecord(void) {
 }
 static void FinishRecord(void) { @synchronized(Queue()) { Pending--; } }
 void BHRDAvatarLog(NSString *event, NSDictionary *fields) {
+    // Keep critical acceptance observations even if the bounded file queue fills.
+    // The acceptance sink never calls this logger, so this cannot recurse.
+    BHRDAcceptanceObserveEvent(event,fields);
     if (!ReserveRecord()) return;
     // Snapshot fields before enqueuing so callers may safely reuse dictionaries.
     NSDictionary *snapshot=[fields copy]; NSString *name=[event copy];

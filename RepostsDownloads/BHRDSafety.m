@@ -1,4 +1,6 @@
 #import "BHRDSafety.h"
+#import "BHRDAvatarDiagnostics.h"
+#import "BHRDAcceptance.h"
 #import <stdatomic.h>
 static atomic_bool Paused;
 static BOOL LaunchEnabled;
@@ -20,14 +22,28 @@ static void Initialize(void) {
 BOOL BHRDIsPaused(void) { Initialize(); return atomic_load(&Paused); }
 BOOL BHRDFeatureHooksEnabledAtLaunch(void) { Initialize(); return LaunchEnabled; }
 BOOL BHRDTweakEnabled(void) { Initialize(); return LaunchEnabled && !atomic_load(&Paused); }
+static BOOL ReportChange(BOOL paused,BOOL success,NSError *error) {
+#if BHRD_AVATAR_DIAGNOSTICS
+    BHRDAvatarLog(@"safety_pause_changed",@{@"paused":@(paused),@"success":@(success),@"hooksEnabledAtLaunch":@(LaunchEnabled),
+        @"acceptanceSession":BHRDAcceptanceCurrentSessionIdentifier(),@"errorDomain":error.domain ?: @"",@"errorCode":@(error.code)});
+#else
+    (void)paused; (void)error;
+#endif
+    return success;
+}
 BOOL BHRDSetPaused(BOOL paused,NSError **error) {
     Initialize(); NSFileManager *fm=NSFileManager.defaultManager; NSString *path=BHRDSafetyFlagPath();
+    NSError *failure=nil;
     if (paused) {
-        if (![fm createDirectoryAtPath:path.stringByDeletingLastPathComponent withIntermediateDirectories:YES attributes:nil error:error]) return NO;
-        if (![fm createFileAtPath:path contents:[@"X Suixin paused\n" dataUsingEncoding:NSUTF8StringEncoding] attributes:@{NSFilePosixPermissions:@0600}]) {
-            if (error) *error=[NSError errorWithDomain:@"XSuixinSafety" code:1 userInfo:@{NSLocalizedDescriptionKey:@"无法保存暂停状态，请检查存储空间"}];
-            return NO;
+        if (![fm createDirectoryAtPath:path.stringByDeletingLastPathComponent withIntermediateDirectories:YES attributes:nil error:&failure]) {
+            if (error) *error=failure; return ReportChange(paused,NO,failure);
         }
-    } else if ([fm fileExistsAtPath:path] && ![fm removeItemAtPath:path error:error]) return NO;
-    atomic_store(&Paused,paused); return YES;
+        if (![fm createFileAtPath:path contents:[@"X Suixin paused\n" dataUsingEncoding:NSUTF8StringEncoding] attributes:@{NSFilePosixPermissions:@0600}]) {
+            failure=[NSError errorWithDomain:@"XSuixinSafety" code:1 userInfo:@{NSLocalizedDescriptionKey:@"无法保存暂停状态，请检查存储空间"}];
+            if (error) *error=failure; return ReportChange(paused,NO,failure);
+        }
+    } else if ([fm fileExistsAtPath:path] && ![fm removeItemAtPath:path error:&failure]) {
+        if (error) *error=failure; return ReportChange(paused,NO,failure);
+    }
+    atomic_store(&Paused,paused); return ReportChange(paused,YES,nil);
 }

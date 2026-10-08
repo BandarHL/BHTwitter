@@ -100,6 +100,8 @@ def verify(package, version, commit=None):
               "Missing full-screen photo saving service or tool action")
         check(b"BHRDRecoveryAction" in data and b"BHRDRuntimeStatusViewController" in data,
               "Missing recovery entry or runtime status page")
+        check(b"BHRDAcceptanceViewController" in data and b"acceptance.json" in data and b"BHRDPerformanceMonitor" in data,
+              "Missing device acceptance page, persisted records or performance observation")
         check(version.encode() in data,"Binary build version does not match package")
         if commit:
             check(re.fullmatch(r"[0-9a-f]{40}",commit),"Invalid source commit")
@@ -113,7 +115,7 @@ def verify(package, version, commit=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("package", type=pathlib.Path)
-    parser.add_argument("--version", default="2.4.7-1")
+    parser.add_argument("--version", default="2.4.7-2")
     parser.add_argument("--commit")
     args = parser.parse_args()
     verify(args.package.resolve(), args.version,args.commit)

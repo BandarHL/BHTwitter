@@ -1,6 +1,9 @@
 #import "BHRDSafety.h"
 #import "BHRDSettingsViewController.h"
 #import "BHRDDiagnosticsViewController.h"
+#import "BHRDAcceptanceViewController.h"
+#import "BHRDAcceptance.h"
+#import "BHRDAvatarDiagnostics.h"
 #import "BHRDRepostPresentation.h"
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
@@ -26,7 +29,12 @@ static void RecoveryDismiss(UIAlertController *sheet,UIWindow *window,void (^ope
 @implementation BHRDRecoveryAction
 - (void)open:(UILongPressGestureRecognizer *)gesture {
     if (gesture && gesture.state!=UIGestureRecognizerStateBegan) return;
-    UIViewController *top=RecoveryTop(self.window); if (!top || [top isKindOfClass:UIAlertController.class]) return;
+    NSString *session=BHRDAcceptanceCurrentSessionIdentifier(), *source=gesture ? @"three_finger" : @"paused_boot";
+    UIViewController *top=RecoveryTop(self.window);
+    if (!top || !top.view.window || [top isKindOfClass:UIAlertController.class]) {
+        if (gesture) BHRDAvatarLog(@"recovery_invoked",@{@"source":source,@"presented":@NO,@"acceptanceSession":session,@"errorDomain":@"XSuixinRecovery",@"errorCode":@1});
+        return;
+    }
     UIAlertController *sheet=[UIAlertController alertControllerWithTitle:@"X 随心恢复菜单" message:@"可暂停插件或打开设置。暂停后重启 X 会跳过功能注入；恢复后也请重启 X。" preferredStyle:UIAlertControllerStyleActionSheet];
     __weak BHRDRecoveryAction *weakSelf=self;
     __weak UIAlertController *weakSheet=sheet;
@@ -42,10 +50,16 @@ static void RecoveryDismiss(UIAlertController *sheet,UIWindow *window,void (^ope
     [sheet addAction:[UIAlertAction actionWithTitle:@"查看诊断日志" style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
         RecoveryDismiss(weakSheet,weakSelf.window,^(UIViewController *owner) { [owner presentViewController:[[UINavigationController alloc] initWithRootViewController:[BHRDDiagnosticsViewController new]] animated:YES completion:nil]; });
     }]];
+    [sheet addAction:[UIAlertAction actionWithTitle:@"实际运行验收" style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
+        RecoveryDismiss(weakSheet,weakSelf.window,^(UIViewController *owner) { [owner presentViewController:[[UINavigationController alloc] initWithRootViewController:[BHRDAcceptanceViewController new]] animated:YES completion:nil]; });
+    }]];
     [sheet addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
     sheet.popoverPresentationController.sourceView=top.view;
     sheet.popoverPresentationController.sourceRect=CGRectMake(CGRectGetMidX(top.view.bounds),CGRectGetMidY(top.view.bounds),1,1);
-    [top presentViewController:sheet animated:YES completion:nil];
+    [top presentViewController:sheet animated:YES completion:^{
+        BOOL shown=sheet.presentingViewController!=nil && sheet.view.window!=nil;
+        BHRDAvatarLog(@"recovery_invoked",@{@"source":source,@"presented":@(shown),@"acceptanceSession":session,@"errorDomain":shown ? @"" : @"XSuixinRecovery",@"errorCode":shown ? @0 : @2});
+    }];
 }
 @end
 static char RecoveryKey;
@@ -64,3 +78,7 @@ static char RecoveryKey;
     }
 }
 %end
+%ctor {
+    BHRDAcceptanceObserveLaunch(BHRDIsPaused(),BHRDFeatureHooksEnabledAtLaunch());
+    %init;
+}

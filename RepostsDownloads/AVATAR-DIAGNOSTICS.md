@@ -1,6 +1,8 @@
-# 2.4.7-1 基础日志与临时详细采集
+# 2.4.7-2 验收记录、基础日志与临时详细采集
 
-当前包和日志采用完整构建号（2.4.7-1）、数字修订及干净源码提交号，运行状态与诊断页面均可查看。一个 DEB 默认保留基础日志，不区分诊断版。
+当前包和日志采用完整构建号（2.4.7-2）、数字修订及干净源码提交号，运行状态与诊断页面均可查看。一个 DEB 默认保留基础日志，不区分诊断版。
+
+“运行状态与恢复 → 实际运行验收”可开始一轮、查看真实阶段并导出验收报告与性能采样。验收记录独立于文件日志队列：文件队列满时仍保留关键结果；无法写入验收记录时页面显示存储错误。记录按构建、提交和轮次隔离，跨重启保存，最多保留 120 条阶段与 20 次启动。新轮次替换旧记录；需要保留旧轮次请先导出。只记录固定阶段、数值和错误域/码，不保存账号、帖子 ID 或图片链接。
 
 ## 查看、管理和导出
 
@@ -16,10 +18,14 @@ X 随心 → 文件与诊断 → 诊断日志。管理菜单支持刷新、清�
 - photo_save_start/fetch/prepare/authorization/committed/result：保存来源、数据大小、权限与结果；不记录图像内容。原图失败现在先询问是否改存当前图。
 - ad_response_seen/ad_response_checked：原有推广标记及过滤结果。marker=false 不能单独确定广告来源，SSP路径仍未验证覆盖。
 - session_start：X/iOS与完整插件构建身份。
+- repost_detail_visible/return/confirmation_timeout：核对原帖详情与返回隐藏状态；未知身份、离屏行及超时保持待确认。
+- recovery_invoked/safety_pause_changed：实际恢复菜单展示、暂停标记保存；下一进程启动才确认暂停/恢复生效。
+- performance_started/sample/finished/memory_warning：用户主动启动的前台显示回调、内存及热状态采样，不自动证明性能通过。
+- acceptance_export：生成、展示、系统分享完成/取消/失败，分享完成不证明接收方已收到。
 - 详细模式额外包含头像模型和原生视图线索，默认不做重型采集。
 
 ## 恢复与版本出处
 
 运行状态显示已安装/实际调用/不可用的能力、完整构建和提交；未实测项目明确标注。整体暂停后重启跳过功能注入，三指长按1.5秒可打开后备恢复菜单。X无法启动时，Filza可在数据容器Library/Application Support/XSuixinSafety创建disabled文件；恢复后需重启。
 
-版本与发布规则见 BUILD-POLICY.md，设备待验项目见 DEVICE-ACCEPTANCE.md。核验器要求本机日志/导出、恢复、运行状态、照片保存和正确来源存在。旧build-avatar-diagnostics.sh仅为build.sh兼容入口。当前说明见RELEASE-2.4.7-1.md。
+版本与发布规则见 BUILD-POLICY.md，设备待验项目见 DEVICE-ACCEPTANCE.md。核验器要求本机日志/导出、恢复、运行状态、验收页与性能观察、照片保存和正确来源存在。旧build-avatar-diagnostics.sh仅为build.sh兼容入口。当前说明见RELEASE-2.4.7-2.md。
