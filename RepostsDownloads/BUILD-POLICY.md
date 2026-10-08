@@ -1,6 +1,6 @@
 # 唯一构建与发布规则
 
-当前包版本为 `2.4.7-5`：2.4.7 为功能版本，5 为该功能版本的安装包修订。下一包使用 2.4.7-6。代码或安装行为变化后修订递增；不要上传不同内容覆盖同一个已发布修订。
+当前包版本为 `2.4.7-6`：2.4.7 为功能版本，6 为该功能版本的安装包修订。下一包使用 2.4.7-7。代码或安装行为变化后修订递增；不要上传不同内容覆盖同一个已发布修订。
 
 准备下一次同功能版本构建：先获取发布标签，再运行 `python3 RepostsDownloads/scripts/next_build.py`，将 control 中修订递增并提交。脚本参考本地 control 与已获取的同版本标签，取最大修订加 1，不倒退。
 
@@ -9,7 +9,7 @@
 核验命令：
 
 ```sh
-python3 RepostsDownloads/scripts/verify_deb.py PACKAGE.deb --version 2.4.7-5 --commit FULL_40_CHARACTER_COMMIT
+python3 RepostsDownloads/scripts/verify_deb.py PACKAGE.deb --version 2.4.7-6 --commit FULL_40_CHARACTER_COMMIT
 ```
 
 核验包版本与二进制构建号一致、来自指定干净提交、功能及默认日志存在、rootless 路径、架构和全部签名页。每个 Release 使用 `v2.4.7-1` 等完整修订标签，与 source commit、DEB 及 SHA-256 配对。

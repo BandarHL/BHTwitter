@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Exercise the production argument builder against real multi-variant HLS."""
 import json
+import functools
+import http.server
 import pathlib
 import subprocess
 import tempfile
+import threading
 ROOT = pathlib.Path(__file__).resolve().parent
 
 def run(args):
@@ -24,7 +27,16 @@ with tempfile.TemporaryDirectory(prefix="xsuixin-stream-test-") as directory:
              "-preset", "ultrafast", "-c:a", "aac", "-hls_time", "1", "-hls_playlist_type", "vod", str(work / f"{label}.m3u8")])
     master = work / "master.m3u8"
     master.write_text("#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=120000,RESOLUTION=160x90\nlow.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=400000,RESOLUTION=320x180\nhigh.m3u8\n")
-    streams = json.loads(run(["ffprobe", "-v", "error", "-show_streams", "-of", "json", str(master)]))["streams"]
+    class SilentHandler(http.server.SimpleHTTPRequestHandler):
+        def log_message(self, *args): pass
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(SilentHandler, directory=str(work)))
+    thread = threading.Thread(target=server.serve_forever, daemon=True); thread.start()
+    try:
+        probe_args = json.loads(run([str(cli), "--probe", f"http://127.0.0.1:{server.server_port}/master.m3u8"]))
+        streams = json.loads(run(["ffprobe", *probe_args]))["streams"]
+        assert any(s["codec_type"] == "audio" for s in streams)
+    finally:
+        server.shutdown(); server.server_close(); thread.join()
     videos = [s for s in streams if s["codec_type"] == "video"]
     assert len(videos) == 2
     for stream in videos:
@@ -40,4 +52,4 @@ with tempfile.TemporaryDirectory(prefix="xsuixin-stream-test-") as directory:
             data = run(["ffmpeg", "-v", "error", "-i", str(source), "-map", f"0:{index}", "-f", "framemd5", "-"]).decode()
             return [line.rsplit(",", 1)[-1].strip() for line in data.splitlines() if not line.startswith("#")]
         assert frames(master, stream["index"]) == frames(output, video["index"])
-    print("PASS: 2 real HLS variants retain selected resolution, audio and decoded video frames")
+    print("PASS: production HTTP probe returns both real HLS qualities and audio; downloads retain selected resolution and decoded frames")

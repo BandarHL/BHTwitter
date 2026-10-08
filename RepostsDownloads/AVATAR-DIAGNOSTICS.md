@@ -1,6 +1,6 @@
-# 2.4.7-5 验收记录、基础日志与临时详细采集
+# 2.4.7-6 验收记录、基础日志与临时详细采集
 
-当前包和日志采用完整构建号（2.4.7-5）、数字修订及干净源码提交号，运行状态与诊断页面均可查看。一个 DEB 默认保留基础日志，不区分诊断版。
+当前包和日志采用完整构建号（2.4.7-6）、数字修订及干净源码提交号，运行状态与诊断页面均可查看。一个 DEB 默认保留基础日志，不区分诊断版。
 
 “运行状态与恢复 → 实际运行验收”可开始一轮、查看真实阶段并导出验收报告与性能采样。验收记录独立于文件日志队列：文件队列满时仍保留关键结果；无法写入验收记录时页面显示存储错误。记录按构建、提交和轮次隔离，跨重启保存，最多保留 120 条阶段与 20 次启动。新轮次替换旧记录；需要保留旧轮次请先导出。只记录固定阶段、数值和错误域/码，不保存账号、帖子 ID 或图片链接。
 
@@ -25,10 +25,12 @@ X 随心 → 文件与诊断 → 诊断日志。管理菜单支持刷新、清�
 - fullscreen_video_resolution：点击轮次、当前可见资源读取、菜单实际呈现、不可用或切换取消；发现计数和包装路径供定位，不记录图像内容。菜单呈现仅说明读取入口成功，不证明传输完成。验收报告仅保留固定原因和数值。
 - fullscreen_download_visibility：右侧独立入口的实际显示/暂隐、模态遮挡和布局尺寸；仅状态变化时记录，显示不再要求已解析下载 URL。路径 `current_inline_actions.viewModel` / `current_card.media` 表示已从当前原生参数源读取。
 - TAV 读取日志保留 `stage`、有限 `resourceProbePaths` 和 `candidateResults`，以及成功/失败候选计数；路径和对象类名不包含 URL、播放内容或账号。可以区分内部状态、当前播放项、播放器技术、原生 AV 项及清晰度端点的读取结果，避免只有最终 `source` 一项。
+- `current_card.status` 表示从当前 Swift 卡片帖子取得原生 MP4 参数。`stream_probe_start/bound/wait/callback/result` 记录 HLS 探测会话与耗时；`stream_download_start/bound/progress/callback/result` 记录传输和本地文件结果；`stream_job_cancel/timeout` 记录主动取消/看门狗。每个 job 绑定验收轮次，迟到回调不会覆盖新的任务。
+- 15 秒读超时与 45 秒探测等待分开；FFmpegKit `withTimeout` 仅用于消息返回等待。`diagnosticTail` 是固定错误类别集合，不是原始 stderr。系统网络代理的速度无法由插件自动保证。
 - 详细模式额外包含头像模型和原生视图线索，默认不做重型采集。
 
 ## 恢复与版本出处
 
 运行状态显示已安装/实际调用/不可用的能力、完整构建和提交；未实测项目明确标注。整体暂停后重启跳过功能注入，三指长按1.5秒可打开后备恢复菜单。X无法启动时，Filza可在数据容器Library/Application Support/XSuixinSafety创建disabled文件；恢复后需重启。
 
-版本与发布规则见 BUILD-POLICY.md，设备待验项目见 DEVICE-ACCEPTANCE.md。核验器要求本机日志/导出、恢复、运行状态、验收页与性能观察、照片保存、独立视频入口、TAV 资源读取与原生参数桥接和正确来源存在。旧build-avatar-diagnostics.sh仅为build.sh兼容入口。当前说明见RELEASE-2.4.7-5.md。
+版本与发布规则见 BUILD-POLICY.md，设备待验项目见 DEVICE-ACCEPTANCE.md。核验器要求本机日志/导出、恢复、运行状态、验收页与性能观察、照片保存、独立视频入口、TAV/Swift 原生参数与流媒体阶段和正确来源存在。旧build-avatar-diagnostics.sh仅为build.sh兼容入口。当前说明见RELEASE-2.4.7-6.md。

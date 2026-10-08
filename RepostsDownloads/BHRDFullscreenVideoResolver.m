@@ -55,7 +55,7 @@ static NSString *CardStatus(UIView *view,UIView *root) {
     for (UIView *parent=view.superview;parent && parent!=root;parent=parent.superview) {
         NSString *name=NSStringFromClass(parent.class).lowercaseString;
         if ([name containsString:@"immersivecard"] || [name containsString:@"slideshowstatus"])
-            return BHRDMediaStatusIdentity(Read(parent,@"viewModel")) ?: BHRDMediaStatusIdentity(Read(parent,@"media"));
+            return BHRDMediaStatusIdentity(Read(parent,@"viewModel")) ?: BHRDMediaStatusIdentity(Read(parent,@"media")) ?: BHRDMediaStatusIdentity(Read(parent,@"status"));
     }
     return nil;
 }
@@ -231,13 +231,14 @@ static NSDictionary *ResolveSources(NSArray *sources,NSUInteger playerCount,NSUI
     return ObservedResult(result,observations,usable.count);
 }
 static NSDictionary *ResolveInline(NSArray *inlines,NSArray *players,NSUInteger modelCount) {
-    NSDictionary *chosen=nil,*pending=nil; UIView *chosenView=nil,*pendingView=nil; NSString *post=nil; NSSet *resources=nil;
+    NSDictionary *chosen=nil,*pending=nil,*chosenCandidate=nil,*pendingCandidate=nil;
+    UIView *chosenView=nil,*pendingView=nil; NSString *post=nil; NSSet *resources=nil;
     for (NSDictionary *candidate in inlines) {
         NSDictionary *context=BHRDResolveBoundVideoSource(candidate[@"model"]);
         if (![context[@"media"] count]) {
             if ([context[@"reason"] isEqual:@"resource_scan_budget_exceeded"] || [context[@"reason"] hasPrefix:@"ambiguous_"])
                 return Result(context[@"reason"],players.count,modelCount);
-            if (inlines.count==1 && [context[@"statusIdentity"] length]) { pending=context; pendingView=candidate[@"view"]; }
+            if (inlines.count==1 && [context[@"statusIdentity"] length]) { pending=context; pendingView=candidate[@"view"]; pendingCandidate=candidate; }
             continue;
         }
         NSString *identity=Text(context[@"statusIdentity"]),*card=Text(candidate[@"cardStatus"]);
@@ -245,10 +246,10 @@ static NSDictionary *ResolveInline(NSArray *inlines,NSArray *players,NSUInteger 
         NSSet *next=[NSSet setWithArray:context[@"assetIdentities"]];
         if (chosen && ((post.length && identity.length && ![post isEqual:identity]) || ![resources isEqual:next]))
             return Result(@"conflicting_visible_resources",players.count,modelCount);
-        if (!chosen) { chosen=context; chosenView=candidate[@"view"]; post=identity; resources=next; }
+        if (!chosen) { chosen=context; chosenView=candidate[@"view"]; chosenCandidate=candidate; post=identity; resources=next; }
     }
     if (!chosen && !pending) return nil;
-    if (!chosen) { chosen=pending; chosenView=pendingView; post=Text(chosen[@"statusIdentity"]); resources=[NSSet set]; }
+    if (!chosen) { chosen=pending; chosenView=pendingView; chosenCandidate=pendingCandidate; post=Text(chosen[@"statusIdentity"]); resources=[NSSet set]; }
     // A usable live URL proves which video within the bound post is current.
     // An opaque player still permits the native, explicitly grouped post menu.
     NSString *knownAsset=nil; NSMutableArray *playerSelections=[NSMutableArray array];
@@ -265,13 +266,20 @@ static NSDictionary *ResolveInline(NSArray *inlines,NSArray *players,NSUInteger 
         NSString *token=Selection(candidate[@"source"],live);
         if ([token hasPrefix:@"item:"]) [playerSelections addObject:@{@"token":token}];
     }
+    // A Swift immersive card exposes the post through status, rather than a
+    // selected media entity. It can retain hydrated metadata across pager reuse,
+    // so only the exact currently playing asset may select its native qualities.
+    // Keep an opaque/new player pending instead of offering an older post menu.
+    if ([chosenCandidate[@"requiresPlaybackMatch"] boolValue] && !knownAsset && [chosen[@"media"] count])
+        return Result(@"current_card_playback_unconfirmed",players.count,modelCount);
     NSMutableDictionary *result=[chosen mutableCopy];
     if (knownAsset) { result[@"media"]=@[chosen[@"assetMedia"][knownAsset]]; result[@"assetIdentity"]=knownAsset; }
     NSString *playerToken=CombinedSelection(playerSelections);
     result[@"identity"]=playerToken.length ? playerToken : Selection(chosenView,chosen);
     NSString *single=knownAsset ?: ([chosen[@"assetIdentities"] count]==1 ? [chosen[@"assetIdentities"] firstObject] : nil);
     result[@"resourceIdentity"]=single.length ? [@"asset:" stringByAppendingString:single] : [NSString stringWithFormat:@"post:%@:%@",post ?: @"",[[chosen[@"assetIdentities"] sortedArrayUsingSelector:@selector(compare:)] componentsJoinedByString:@"|"]];
-    result[@"reason"]=[chosen[@"media"] count] ? @"resolved_inline_model" : @"bound_media_unavailable"; result[@"sourceClass"]=NSStringFromClass(chosenView.class); result[@"sourcePath"]=@"current_inline_actions.viewModel";
+    result[@"reason"]=[chosen[@"media"] count] ? @"resolved_inline_model" : @"bound_media_unavailable"; result[@"sourceClass"]=NSStringFromClass(chosenView.class);
+    result[@"sourcePath"]=chosenCandidate[@"sourcePath"] ?: @"current_inline_actions.viewModel";
     result[@"playerCount"]=@(players.count); result[@"modelCount"]=@(modelCount); result[@"visibleSourceCount"]=@(players.count+modelCount);
     for (NSString *key in @[@"resolvedPlayerCount",@"unresolvedPlayerCount",@"resolvedSourceCount",@"unresolvedSourceCount",@"candidateResults",@"resourceProbePaths",@"unresolvedReasons",@"excludedPlaybackBranches"])
         if (liveSelection[key]) result[key]=liveSelection[key];
@@ -343,8 +351,16 @@ NSDictionary *BHRDCurrentFullscreenVideoContext(id controller) {
                 if (VideoView(view)) AddSource(models,view,PlaybackSurface(view) ? @"visible_video_surface" : @"visible_card_model",view,visible,seenSources);
                 NSString *name=NSStringFromClass(view.class).lowercaseString;
                 if ([name containsString:@"slideshowstatus"] || [name containsString:@"immersivecard"]) {
-                    id entity=Read(view,@"currentMediaEntity") ?: Read(view,@"media");
-                    if (entity) [currentEntities addObject:@{@"view":view,@"model":entity,@"cardStatus":@""}];
+                    id entity=Read(view,@"currentMediaEntity"); NSString *sourcePath=@"current_card.currentMediaEntity";
+                    if (!entity) { entity=Read(view,@"media"); sourcePath=@"current_card.media"; }
+                    if (entity) [currentEntities addObject:@{@"view":view,@"model":entity,@"cardStatus":@"",@"sourcePath":sourcePath}];
+                    else {
+                        // X 12.24.1's Swift ImmersiveCardView has status and a
+                        // playerView, but neither currentMediaEntity nor media.
+                        id status=Read(view,@"status");
+                        if (status) [currentEntities addObject:@{@"view":view,@"model":status,
+                            @"cardStatus":BHRDMediaStatusIdentity(status) ?: @"",@"sourcePath":@"current_card.status",@"requiresPlaybackMatch":@YES}];
+                    }
                 }
             }
         }
@@ -360,10 +376,7 @@ NSDictionary *BHRDCurrentFullscreenVideoContext(id controller) {
         return Scanned([playing[@"media"] count] ? playing : inlineContext,classes,examined,NO);
     }
     NSDictionary *entityContext=ResolveInline(currentEntities,players,models.count+inlines.count);
-    if ([entityContext[@"media"] count]) {
-        NSMutableDictionary *current=[entityContext mutableCopy]; current[@"sourcePath"]=@"current_card.media";
-        return Scanned(current,classes,examined,NO);
-    }
+    if ([entityContext[@"media"] count]) return Scanned(entityContext,classes,examined,NO);
     if (entityContext && ![entityContext[@"reason"] isEqual:@"bound_media_unavailable"]) {
         NSDictionary *playing=players.count ? ResolveSources(players,players.count,models.count,YES) : nil;
         return Scanned([playing[@"media"] count] ? playing : entityContext,classes,examined,NO);

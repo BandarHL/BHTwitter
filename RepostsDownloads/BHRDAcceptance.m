@@ -28,6 +28,7 @@ static NSArray *Definitions(void) {
         @[@"recovery_gesture",@"三指长按恢复菜单"],@[@"pause_restart",@"暂停后重启"],
         @[@"resume_restart",@"恢复后重启"],@[@"repost_detail",@"隐藏转推详情与返回"],
         @[@"video_resolution",@"全屏视频读取与菜单"],
+        @[@"stream_transfer",@"流媒体探测与下载"],
         @[@"performance",@"连续使用与性能"],@[@"log_export",@"验收报告导出"]];
 }
 static NSNumber *Number(id value) {
@@ -81,6 +82,17 @@ static NSDictionary *StageDetails(void) {
         @"video_bound_unavailable":@"当前操作栏已绑定帖子，但下载参数尚未加载；悬浮入口仍保留，可再次点击。",
         @"video_current_item_mismatch":@"TAV 当前项与播放器状态或原生 AV 项不一致，已阻止借用旧视频地址；请导出本轮诊断。",
         @"video_player_selection_ambiguous":@"部分可见播放器已读取，但另一个真实播放项无法确认是同一视频；已停止猜测，候选详情在诊断日志中。",
+        @"stream_probe_queued":@"已提交流媒体探测，正在等待 FFprobe 会话启动。",
+        @"stream_probe_running":@"探测会话已启动，正在读取清单和视频流信息；45 秒内未完成会停止等待。",
+        @"stream_probe_ready":@"已读取有效的视频尺寸和清晰度，可继续选择；尚未完成文件下载。",
+        @"stream_probe_failed":@"探测未得到可选择的视频尺寸；请查看网络错误类别和会话状态。",
+        @"stream_probe_timeout":@"流媒体探测已超时停止，日志可区分会话等待与网络读取阶段。",
+        @"stream_download_running":@"正在接收并整理所选流媒体视频，进度和耗时已记录。",
+        @"stream_download_completed":@"所选流媒体已生成可用本地文件；相册或分享保存结果仍需核对。",
+        @"stream_download_failed":@"流媒体传输或文件整理失败；请导出诊断查看会话与网络错误类别。",
+        @"stream_download_timeout":@"流媒体下载长时间没有数据进度，已停止当前会话。",
+        @"stream_cancelled":@"本次流媒体操作已由你取消，没有把迟到回调当作成功。",
+        @"stream_busy":@"当前已有传输任务，本次流媒体请求未启动。",
         @"video_sources_conflict":@"可见区域中出现了互相冲突的视频资源，已停止读取以避免下载其他视频。",
         @"video_current_item_unavailable":@"已经找到绑定的播放器项目，但当前项目的资源地址尚不可读取；不会使用旧帖子的资料替代当前视频。",
         @"video_asset_unsupported":@"已经找到当前资源，但资源来源或格式不在当前支持范围；请导出日志核对实际播放资源。",
@@ -107,7 +119,7 @@ static NSDictionary *StageDetails(void) {
 static NSString *PersistedDomain(id value) {
     static NSSet *known; static dispatch_once_t once;
     dispatch_once(&once,^{ known=[NSSet setWithArray:@[@"NSCocoaErrorDomain",@"NSURLErrorDomain",@"PHPhotosErrorDomain",
-        @"com.caun.xsuixin.photo-save",@"XSuixinSafety",@"PhotosError",@"redacted"]]; });
+        @"com.caun.xsuixin.photo-save",@"XSuixinSafety",@"PhotosError",@"BHRDStream",@"BHRDBusy",@"redacted"]]; });
     return [value isKindOfClass:NSString.class] && [known containsObject:value] ? value : @"redacted";
 }
 static NSDictionary *CleanError(id value) {
@@ -185,11 +197,11 @@ static void Initialize(void) {
             if (!status || !stage || ![@[@"pending",@"running",@"success",@"failed",@"cancelled",@"unsupported"] containsObject:status] || !StageDetails()[stage]) continue;
             item[@"status"]=status; item[@"stage"]=stage; item[@"detail"]=StageDetails()[stage];
             for (NSString *key in @[@"attempts",@"successCount",@"failureCount",@"cancelledCount"]) item[key]=@((NSUInteger)MAX(0,MIN([Number(input[key]) doubleValue],1000000)));
-            for (NSString *key in @[@"updatedAt",@"lastSuccessAt",@"manualRecordedAt",@"observedSeconds",@"lastMemoryBytes",@"lastLagMs",@"memoryWarnings",@"frameIntervals",@"slowIntervalRatio",@"maxIntervalMs",@"currentFootprintMB",@"memoryMB",@"peakMemoryMB",@"playerCount",@"modelCount",@"visibleSourceCount"]) {
+            for (NSString *key in @[@"updatedAt",@"lastSuccessAt",@"manualRecordedAt",@"observedSeconds",@"lastMemoryBytes",@"lastLagMs",@"memoryWarnings",@"frameIntervals",@"slowIntervalRatio",@"maxIntervalMs",@"currentFootprintMB",@"memoryMB",@"peakMemoryMB",@"playerCount",@"modelCount",@"visibleSourceCount",@"elapsedMs",@"bytes",@"streamCount",@"videoStreamCount"]) {
                 NSNumber *number=Number(input[key]); if (number && number.doubleValue>=0) item[key]=number;
             }
-            for (NSString *key in @[@"manualConfirmed",@"detailConfirmed",@"running",@"warningObserved",@"resolutionResolved",@"resolutionTerminal"]) if (Number(input[key])) item[key]=@([Number(input[key]) boolValue]);
-            for (NSString *key in @[@"pendingAttempt",@"pendingBootID"]) if (UUID(input[key])) item[key]=input[key];
+            for (NSString *key in @[@"manualConfirmed",@"detailConfirmed",@"running",@"warningObserved",@"resolutionResolved",@"resolutionTerminal",@"streamTerminal"]) if (Number(input[key])) item[key]=@([Number(input[key]) boolValue]);
+            for (NSString *key in @[@"pendingAttempt",@"pendingBootID",@"pendingJob"]) if (UUID(input[key])) item[key]=input[key];
             NSString *outcome=[input[@"lastOutcome"] isKindOfClass:NSString.class] ? input[@"lastOutcome"] : @"none";
             if ([@[@"none",@"pending",@"running",@"success",@"failed",@"cancelled",@"unsupported",@"interrupted"] containsObject:outcome]) item[@"lastOutcome"]=outcome;
             if (CleanError(input[@"error"])) item[@"error"]=CleanError(input[@"error"]);
@@ -249,7 +261,9 @@ static NSString *MappedItem(NSString *event) {
         @"photo_save_authorization",@"photo_save_committed",@"photo_save_result",@"recovery_invoked",
         @"safety_pause_changed",@"acceptance_boot",@"resume_pending",@"repost_detail_navigation",
         @"repost_detail_visible",@"repost_detail_return",@"repost_detail_confirmation_timeout",@"performance_started",@"performance_sample",
-        @"performance_finished",@"performance_result",@"performance_memory_warning",@"acceptance_export",@"fullscreen_video_resolution"]]; });
+        @"performance_finished",@"performance_result",@"performance_memory_warning",@"acceptance_export",@"fullscreen_video_resolution",
+        @"stream_probe_start",@"stream_probe_bound",@"stream_probe_wait",@"stream_probe_callback",@"stream_probe_result",
+        @"stream_download_start",@"stream_download_bound",@"stream_download_progress",@"stream_download_callback",@"stream_download_result",@"stream_job_cancel",@"stream_job_timeout"]]; });
     if (![supported containsObject:event]) return nil;
     if ([event hasPrefix:@"photo_save_"]) return @"photo_save";
     if ([event hasPrefix:@"repost_detail_"]) return @"repost_detail";
@@ -258,6 +272,7 @@ static NSString *MappedItem(NSString *event) {
     if ([event isEqual:@"safety_pause_changed"] || [event isEqual:@"acceptance_boot"] || [event isEqual:@"resume_pending"]) return @"safety";
     if ([event isEqual:@"acceptance_export"]) return @"log_export";
     if ([event isEqual:@"fullscreen_video_resolution"]) return @"video_resolution";
+    if ([event hasPrefix:@"stream_"]) return @"stream_transfer";
     return nil;
 }
 static NSMutableDictionary *EventEntry(NSString *event,NSDictionary *fields,NSNumber *time) {
@@ -265,15 +280,18 @@ static NSMutableDictionary *EventEntry(NSString *event,NSDictionary *fields,NSNu
     for (NSString *key in @[@"bytes",@"width",@"height",@"status",@"success",@"committed",@"valid",
         @"paused",@"hooksEnabled",@"hooksEnabledAtLaunch",@"hiddenPreserved",@"durationSeconds",
         @"memoryBytes",@"lagMs",@"memoryWarnings",@"thresholdExceeded",@"visibleSeconds",@"frameIntervals",
-        @"slowIntervalRatio",@"maxIntervalMs",@"currentFootprintMB",@"memoryMB",@"peakMemoryMB",@"presented",@"confirmed",@"observable",@"playerCount",@"modelCount",@"visibleSourceCount"]) {
+        @"slowIntervalRatio",@"maxIntervalMs",@"currentFootprintMB",@"memoryMB",@"peakMemoryMB",@"presented",@"confirmed",@"observable",@"playerCount",@"modelCount",@"visibleSourceCount",
+        @"elapsedMs",@"engineDurationMs",@"engineStarted",@"readTimeoutMs",@"watchdogSeconds",@"streamCount",@"videoStreamCount",@"mediaTimeMs",@"returnCode",@"late"]) {
         if (Number(fields[key])) entry[key]=fields[key];
     }
     if (Number(fields[@"errorCode"])) entry[@"errorCode"]=fields[@"errorCode"];
     if ([fields[@"errorDomain"] isKindOfClass:NSString.class] && [fields[@"errorDomain"] length]) entry[@"errorDomain"]=PersistedDomain(fields[@"errorDomain"]);
     if (UUID(fields[@"attempt"])) entry[@"attempt"]=fields[@"attempt"];
-    NSDictionary *enums=@{@"phase":@[@"generated",@"presented",@"completed",@"cancelled",@"failed",@"started",@"resolved",@"unavailable",@"menu_presented"],
+    if (UUID(fields[@"job"])) entry[@"job"]=fields[@"job"];
+    NSDictionary *enums=@{@"phase":@[@"generated",@"presented",@"completed",@"cancelled",@"failed",@"started",@"resolved",@"unavailable",@"menu_presented",@"probe",@"download"],
+        @"engineState":@[@"not_bound",@"created",@"running",@"failed",@"completed"],
         @"source":@[@"original",@"displayed",@"three_finger",@"paused_boot"],
-        @"result":@[@"native_row_selection",@"stale_or_unavailable_row",@"native_selection_unavailable",@"return_row_not_observable",@"detail_identity_mismatch",@"detail_identity_unavailable"]};
+        @"result":@[@"native_row_selection",@"stale_or_unavailable_row",@"native_selection_unavailable",@"return_row_not_observable",@"detail_identity_mismatch",@"detail_identity_unavailable",@"success",@"failed",@"cancelled",@"timeout",@"busy"]};
     for (NSString *key in enums) if ([enums[key] containsObject:fields[key] ?: NSNull.null]) entry[key]=fields[key];
     id reason=fields[@"reason"] ?: NSNull.null;
     if ([VideoReasonStages().allKeys containsObject:reason] || [VideoCancellationStages().allKeys containsObject:reason] || [@[@"resolved_current_asset",@"resolved_current_media",@"resolved_inline_model",@"resolved_bound_media"] containsObject:reason]) entry[@"reason"]=reason;
@@ -293,7 +311,7 @@ static void HandleBoot(NSDictionary *fields) {
         @"paused":@(paused),@"hooksEnabled":@(hooks),@"build":Build()};
     NSMutableArray *launches=State[@"launches"]; [launches addObject:CurrentBoot];
     while (launches.count>20) [launches removeObjectAtIndex:0];
-    for (NSString *key in @[@"photo_save",@"repost_detail",@"video_resolution",@"performance",@"log_export"]) {
+    for (NSString *key in @[@"photo_save",@"repost_detail",@"video_resolution",@"stream_transfer",@"performance",@"log_export"]) {
         NSMutableDictionary *item=Item(key);
         if ([item[@"status"] isEqual:@"running"]) {
             BOOL priorSuccess=[item[@"successCount"] unsignedIntegerValue]>0;
@@ -318,6 +336,33 @@ static void HandleBoot(NSDictionary *fields) {
 }
 static void HandleObservation(NSString *event,NSDictionary *fields) {
     if ([event isEqual:@"acceptance_boot"]) { HandleBoot(fields); return; }
+    if ([event hasPrefix:@"stream_"]) {
+        NSMutableDictionary *item=Item(@"stream_transfer"); NSString *job=UUID(fields[@"job"]);
+        if (!job || [Number(fields[@"late"]) boolValue]) return;
+        BOOL probe=[fields[@"phase"] isEqual:@"probe"], download=[fields[@"phase"] isEqual:@"download"];
+        if (!probe && !download) return;
+        if ([event hasSuffix:@"_start"]) {
+            item[@"pendingJob"]=job; item[@"streamTerminal"]=@NO; Increment(item,@"attempts");
+            Update(@"stream_transfer",@"running",probe ? @"stream_probe_queued" : @"stream_download_running",StageDetails()[probe ? @"stream_probe_queued" : @"stream_download_running"],fields); return;
+        }
+        if (![item[@"pendingJob"] isEqual:job] || [item[@"streamTerminal"] boolValue]) return;
+        for (NSString *key in @[@"elapsedMs",@"bytes",@"streamCount",@"videoStreamCount"])
+            if (Number(fields[key])) item[key]=fields[key];
+        if ([event hasSuffix:@"_result"]) {
+            item[@"streamTerminal"]=@YES; NSString *result=fields[@"result"], *stage=nil,*status=nil;
+            if ([result isEqual:@"success"] && (![Number(fields[@"success"]) boolValue] || (probe ? [Number(fields[@"videoStreamCount"]) unsignedIntegerValue]==0 : [Number(fields[@"bytes"]) unsignedLongLongValue]==0))) result=@"failed";
+            if ([result isEqual:@"success"]) { status=probe ? @"pending" : @"success"; stage=probe ? @"stream_probe_ready" : @"stream_download_completed"; }
+            else if ([result isEqual:@"cancelled"]) { status=@"cancelled"; stage=@"stream_cancelled"; }
+            else if ([result isEqual:@"busy"]) { status=@"unsupported"; stage=@"stream_busy"; }
+            else { status=@"failed"; stage=[result isEqual:@"timeout"] ? (probe ? @"stream_probe_timeout" : @"stream_download_timeout") : (probe ? @"stream_probe_failed" : @"stream_download_failed"); }
+            Update(@"stream_transfer",status,stage,StageDetails()[stage],fields); return;
+        }
+        if ([event hasSuffix:@"_bound"] || [event hasSuffix:@"_wait"] || [event hasSuffix:@"_progress"]) {
+            NSString *stage=probe ? ([fields[@"engineState"] isEqual:@"created"] || [fields[@"engineState"] isEqual:@"not_bound"] ? @"stream_probe_queued" : @"stream_probe_running") : @"stream_download_running";
+            Update(@"stream_transfer",@"running",stage,StageDetails()[stage],fields);
+        }
+        return;
+    }
     if ([event isEqual:@"fullscreen_video_resolution"]) {
         NSMutableDictionary *item=Item(@"video_resolution"); NSString *attempt=UUID(fields[@"attempt"]);
         id phase=fields[@"phase"]; if (!attempt) return;

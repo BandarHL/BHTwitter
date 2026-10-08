@@ -260,7 +260,7 @@ BH_METRIC(shouldShowCount,            NO)
                             self.streamJob = nil;
                             if (selectionStillCurrent && !selectionStillCurrent()) return;
                             if (error) {
-                                if (error.code != NSURLErrorCancelled) BHRDShowError([error.domain isEqual:@"BHRDBusy"] ? @"已有下载任务进行中，请等待完成或点击进度提示取消。" : @"无法读取流媒体清晰度，可能是网络中断或等待超时，请重试。");
+                                if (error.code != NSURLErrorCancelled) BHRDShowError([error.domain isEqual:@"BHRDBusy"] ? @"已有下载任务进行中，请等待完成或点击进度提示取消。" : error.code==NSURLErrorTimedOut ? @"读取流媒体清晰度超时，已停止等待。可选择原生 MP4 清晰度，或在验收页导出流媒体阶段诊断。" : @"无法读取流媒体清晰度，诊断日志已记录探测与网络错误类别。可选择原生 MP4 清晰度或重试。");
                                 return;
                             }
                             UIAlertController *ffmpegSheet = [BHRDManager newFFmpegDownloadSheet:info downloadingURL:url selection:^(NSNumber *index) {

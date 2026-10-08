@@ -46,6 +46,10 @@
 @property(nonatomic,strong) id media;
 @end
 @implementation T1SlideshowStatusView @end
+@interface _TtC14T1TwitterSwift17ImmersiveCardView : UIView
+@property(nonatomic,strong) id status;
+@end
+@implementation _TtC14T1TwitterSwift17ImmersiveCardView @end
 @interface NativeQuotedStatusView : UIView @end
 @implementation NativeQuotedStatusView @end
 static NSUInteger Checks;
@@ -53,6 +57,12 @@ static void Check(BOOL condition,NSString *message) { Checks++; if (!condition) 
 static NSString *VideoURL(NSString *identifier) { return [NSString stringWithFormat:@"https://video.twimg.com/ext_tw_video/%@/pu/pl/current.m3u8",identifier]; }
 static NSDictionary *Player(NSString *identifier) { return @{@"currentItem":@{@"asset":@{@"URL":VideoURL(identifier)}}}; }
 static id NativeModel(NSString *identifier) { return @{@"statusID":identifier,@"currentMediaEntity":@{@"videoInfo":@{@"variants":@[@{@"url":VideoURL(identifier),@"contentType":@"application/x-mpegURL"}]}}}; }
+static id SwiftStatus(NSString *post,NSString *asset) {
+    return @{@"statusID":post,@"representedMediaEntities":@[@{@"videoInfo":@{@"variants":@[
+        @{@"url":VideoURL(asset),@"contentType":@"application/x-mpegURL"},
+        @{@"url":[NSString stringWithFormat:@"https://video.twimg.com/ext_tw_video/%@/vid/320x180/a.mp4",asset],@"contentType":@"video/mp4"},
+        @{@"url":[NSString stringWithFormat:@"https://video.twimg.com/ext_tw_video/%@/vid/720x1280/b.mp4",asset],@"contentType":@"video/mp4"}]} }]};
+}
 static id TAVItem(NSString *identifier) {
     return @{@"tech":@{@"foundationItem":@{@"avPlayerItem":@{@"asset":@{@"URL":VideoURL(identifier)}}}}};
 }
@@ -64,6 +74,22 @@ static T1ImmersiveFullScreenViewController *Host(void) {
 }
 static NSString *URL(NSDictionary *context) { return BHRDMediaObject([BHRDMediaObject(BHRDMediaObject([context[@"media"] firstObject],@"videoInfo"),@"variants") firstObject],@"url"); }
 int main(void) { @autoreleasepool {
+    T1ImmersiveFullScreenViewController *swiftHost=Host();
+    _TtC14T1TwitterSwift17ImmersiveCardView *swiftA=[_TtC14T1TwitterSwift17ImmersiveCardView new],*swiftB=[_TtC14T1TwitterSwift17ImmersiveCardView new];
+    Attach(swiftHost.viewIfLoaded,swiftA,swiftHost.viewIfLoaded.bounds); Attach(swiftHost.viewIfLoaded,swiftB,CGRectMake(0,844,390,844));
+    NativeVideoSurface *swiftPlayerA=[NativeVideoSurface new],*swiftPlayerB=[NativeVideoSurface new];
+    swiftPlayerA.player=Player(@"swift-first"); swiftPlayerB.player=Player(@"swift-second");
+    Attach(swiftA,swiftPlayerA,CGRectMake(0,140,390,480)); Attach(swiftB,swiftPlayerB,CGRectMake(0,140,390,480));
+    swiftA.status=SwiftStatus(@"swift-post-one",@"swift-first"); swiftB.status=SwiftStatus(@"swift-post-two",@"swift-second");
+    NSDictionary *swiftContext=BHRDCurrentFullscreenVideoContext(swiftHost);
+    Check([swiftContext[@"sourcePath"] isEqual:@"current_card.status"] && [BHRDMediaObject(BHRDMediaObject([swiftContext[@"media"] firstObject],@"videoInfo"),@"variants") count]==3,@"Swift immersive status supplies all native MP4 qualities instead of only the current HLS URL");
+    Frame(swiftA,CGRectMake(0,-844,390,844)); Frame(swiftB,swiftHost.viewIfLoaded.bounds); swiftContext=BHRDCurrentFullscreenVideoContext(swiftHost);
+    Check([swiftContext[@"sourcePath"] isEqual:@"current_card.status"] && [URL(swiftContext) containsString:@"swift-second"],@"Swiping to the second Swift card reads its own status without comment hydration or inline controls");
+    Check([BHRDMediaObject(BHRDMediaObject([swiftContext[@"media"] firstObject],@"videoInfo"),@"variants") count]==3,@"Later cards retain the same complete native quality list as the first card");
+    swiftB.status=SwiftStatus(@"swift-old",@"swift-first"); swiftContext=BHRDCurrentFullscreenVideoContext(swiftHost);
+    Check([URL(swiftContext) containsString:@"swift-second"] && ![swiftContext[@"sourcePath"] isEqual:@"current_card.status"],@"A recycled old Swift status cannot replace the newly playing video's URI");
+    swiftPlayerB.player=@{@"currentItem":@{}};
+    Check(![BHRDCurrentFullscreenVideoContext(swiftHost)[@"media"] count],@"A Swift post still needs its playing identity confirmed before old native qualities can be used");
     T1ImmersiveFullScreenViewController *opaqueHost=Host();
     NativeVideoSurface *opaque=[NativeVideoSurface new]; opaque.player=@{@"currentItem":@{}};
     Attach(opaqueHost.viewIfLoaded,opaque,CGRectMake(0,180,390,330));

@@ -1,4 +1,4 @@
-# X 随心 2.4.7-5（Rootless，内置验收与诊断日志）
+# X 随心 2.4.7-6（Rootless，内置验收与诊断日志）
 
 从 BHTwitter 工作区独立提取的插件，包含转推隐藏、视频和动图下载、推文底部元素及底部导航栏精简。
 
@@ -6,7 +6,7 @@
 
 以后仅生成一个 rootless 安装包，默认内置诊断日志。在“X 随心 → 文件与诊断 → 诊断日志”中查看、刷新和导出，无需安装另一种包。说明见 [诊断日志](AVATAR-DIAGNOSTICS.md)。
 
-安装 `packages/XSuixin_2.4.7-5_rootless.deb`，可从 2.4.4～2.4.7-4 升级。完成后彻底退出并重开 X，已有设置保留。完整包版本包含修订号，后续修订依次为 2.4.7-6、2.4.7-7；不同源码不重复使用已发布构建号。
+安装 `packages/XSuixin_2.4.7-6_rootless.deb`，可从 2.4.4～2.4.7-5 升级。完成后彻底退出并重开 X，已有设置保留。完整包版本包含修订号，后续修订依次为 2.4.7-7、2.4.7-8；不同源码不重复使用已发布构建号。
 
 - 面向 iOS 15.0 及以上的标准 rootless 越狱环境，使用 `/var/jb` 前缀。
 - 包架构为 `iphoneos-arm64`，动态库为 `arm64`。
@@ -15,7 +15,15 @@
 - 与完整版 BHTwitter、Hide Reposts 独立插件声明冲突；请先卸载旧插件，避免重复 hook。
 - 不是 roothide 包，也不是 TrollStore/侧载安装包，不需要 IPA。
 
-## 当前：2.4.7-5 TAV 播放资源兼容
+## 当前：2.4.7-6 连续竖屏清晰度与流媒体探测
+
+Swift `ImmersiveCardView` 的当前 `status` 已接入原生媒体解析，后续卡片也可读取 `representedMediaEntities / inlineMediaInfos → videoInfo.variants` 中的 MP4 清晰度。当前播放资源能核对时按相同资产选择参数，保留全部原生清晰度；旧状态、邻页及引用不会借用。原有当前媒体字段和 TAV 资源读取保留。
+
+HLS 后备探测使用参数数组，设置 15 秒网络读超时、45 秒总等待保护，并显示等待/读取耗时。默认探测预算保留，参数菜单只在取得有效视频尺寸后打开。开始、会话绑定、返回、结果、取消、超时与下载进度都有基础诊断；只记录固定错误类别，不保存任意 stderr、地址或账号。验收页增加“流媒体探测与下载”，清晰度读取成功与本地文件成功分开记录。
+
+源路径为 `current_card.status` 的原生 MP4 菜单不必经过 FFprobe。流媒体速度仍受设备代理/网络影响，详见 [2.4.7-6 发布记录](RELEASE-2.4.7-6.md)。
+
+## 2.4.7-5 TAV 播放资源兼容（保留）
 
 根据用户 X 12.24.1 / iOS 17.1.1 真机诊断，补齐 `TAVPlayer.internalState/mainThreadState → currentItem → tech → avPlayer` 与 `foundationItem → avPlayerItem` 的只读资源路径。`tech.qualityEndpoints` 的端点集合是仅含质量信息的 NSSet，不将其当作 URL；仅在当前项范围内，对已验证的 `TAVFoundationPlayerEndpointsManager` 读取对象 ivar `_manifestURL`。资源加载器使用自定义 scheme 时，不改写 URL，只有取得真实网络地址才交给下载器。
 

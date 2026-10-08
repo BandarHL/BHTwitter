@@ -108,6 +108,8 @@ def verify(package, version, commit=None):
               "Missing independent fullscreen download entry visibility or native model bridge")
         check(b"TAVFoundationPlayerEndpointsManager" in data and b"_manifestURL" in data and b"candidateResults" in data,
               "Missing TAV resource traversal, bounded manifest ivar access or candidate diagnostics")
+        check(b"current_card.status" in data and b"stream_probe_result" in data and b"stream_download_result" in data,
+              "Missing Swift status native variants or stream lifecycle diagnostics")
         check(version.encode() in data,"Binary build version does not match package")
         if commit:
             check(re.fullmatch(r"[0-9a-f]{40}",commit),"Invalid source commit")
@@ -121,7 +123,7 @@ def verify(package, version, commit=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("package", type=pathlib.Path)
-    parser.add_argument("--version", default="2.4.7-5")
+    parser.add_argument("--version", default="2.4.7-6")
     parser.add_argument("--commit")
     args = parser.parse_args()
     verify(args.package.resolve(), args.version,args.commit)
