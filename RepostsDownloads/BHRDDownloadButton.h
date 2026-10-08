@@ -38,6 +38,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)presentDownloadOptionsForMediaEntities:(NSArray *)mediaEntities
                                     sourceView:(UIView *)sourceView;
+- (void)presentDownloadOptionsForMediaEntities:(NSArray *)mediaEntities
+                                    sourceView:(UIView *)sourceView
+                         selectionStillCurrent:(nullable BOOL (^)(void))selectionStillCurrent
+                                     presented:(nullable void (^)(BOOL shown))presented;
 - (void)DownloadHandler:(UIButton *)sender;
 
 - (void)setTouchInsets:(UIEdgeInsets)touchInsets;

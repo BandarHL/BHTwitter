@@ -85,6 +85,59 @@ int main(void) { @autoreleasepool {
     Check([Item(@"repost_detail")[@"status"] isEqual:@"pending"],@"An observable return with no hidden-state result cannot become a fabricated failure");
     Event(@"repost_detail_return",@{@"hiddenPreserved":@YES,@"attempt":attempt,@"confirmed":@YES,@"observable":@YES});
     Check([Item(@"repost_detail")[@"status"] isEqual:@"success"],@"Observed detail plus hidden return confirms the navigation cycle");
+    Check([Item(@"video_resolution")[@"status"] isEqual:@"pending"],@"A video-read acceptance item starts unverified rather than inheriting download or Photos evidence");
+    NSString *videoAttempt=NSUUID.UUID.UUIDString;
+    Event(@"fullscreen_video_resolution",@{@"phase":@"menu_presented",@"attempt":videoAttempt});
+    Check([Item(@"video_resolution")[@"status"] isEqual:@"pending"],@"A menu callback without an established resolution attempt cannot claim success");
+    Event(@"fullscreen_video_resolution",@{@"phase":@"started",@"attempt":videoAttempt,@"acceptanceSession":sessionID});
+    Event(@"fullscreen_video_resolution",@{@"phase":@"started",@"attempt":videoAttempt});
+    Check([Item(@"video_resolution")[@"status"] isEqual:@"running"] && [Item(@"video_resolution")[@"attempts"] isEqual:@1],@"Starting video resolution is running evidence and repeated callbacks do not create extra attempts");
+    Event(@"fullscreen_video_resolution",@{@"phase":@"resolved",@"attempt":NSUUID.UUID.UUIDString});
+    Event(@"fullscreen_video_resolution",@{@"phase":@"unavailable",@"attempt":@"invalid-uuid",@"reason":@"no_visible_video_source"});
+    Check([Item(@"video_resolution")[@"stage"] isEqual:@"video_resolution_started"],@"Old or invalid video attempt identities cannot change the current read stage");
+    Event(@"fullscreen_video_resolution",@{@"phase":@"resolved",@"attempt":videoAttempt,@"reason":@"resolved_current_asset",@"playerCount":@2,@"modelCount":@3,@"visibleSourceCount":@5});
+    Check([Item(@"video_resolution")[@"status"] isEqual:@"running"] && [Item(@"video_resolution")[@"stage"] isEqual:@"video_media_resolved"] && [Item(@"video_resolution")[@"successCount"] isEqual:@0],@"Reading current video media is a separate stage and never proves that the quality menu appeared");
+    Check([Item(@"video_resolution")[@"playerCount"] isEqual:@2] && [Item(@"video_resolution")[@"visibleSourceCount"] isEqual:@5],@"Bounded numerical discovery counts explain where current-source scanning reached");
+    Event(@"fullscreen_video_resolution",@{@"phase":@"menu_presented",@"attempt":videoAttempt});
+    Event(@"fullscreen_video_resolution",@{@"phase":@"menu_presented",@"attempt":videoAttempt});
+    Event(@"fullscreen_video_resolution",@{@"phase":@"cancelled",@"attempt":videoAttempt,@"reason":@"viewer_inactive"});
+    Check([Item(@"video_resolution")[@"status"] isEqual:@"success"] && [Item(@"video_resolution")[@"successCount"] isEqual:@1] && [Item(@"video_resolution")[@"detail"] containsString:@"不表示视频传输完成"],@"Only actual menu presentation passes once, with a clear limit that transfer and Photos saving remain unproven");
+    NSString *secondVideoAttempt=NSUUID.UUID.UUIDString;
+    Event(@"fullscreen_video_resolution",@{@"phase":@"started",@"attempt":secondVideoAttempt});
+    Event(@"fullscreen_video_resolution",@{@"phase":@"menu_presented",@"attempt":videoAttempt});
+    Check([Item(@"video_resolution")[@"stage"] isEqual:@"video_resolution_started"] && [Item(@"video_resolution")[@"playerCount"] isEqual:@0],@"A reused fullscreen button resets current counts and rejects the previous video's late menu");
+    Event(@"fullscreen_video_resolution",@{@"phase":@"cancelled",@"attempt":secondVideoAttempt,@"reason":@"selection_changed"});
+    Check([Item(@"video_resolution")[@"status"] isEqual:@"success"] && [Item(@"video_resolution")[@"lastOutcome"] isEqual:@"cancelled"] && [Item(@"video_resolution")[@"successCount"] isEqual:@1] && [Item(@"video_resolution")[@"stage"] isEqual:@"video_selection_changed"],@"Changing the selected video is a specific cancellation and retains prior successful menu evidence");
+    NSString *inactiveVideoAttempt=NSUUID.UUID.UUIDString;
+    Event(@"fullscreen_video_resolution",@{@"phase":@"started",@"attempt":inactiveVideoAttempt});
+    Event(@"fullscreen_video_resolution",@{@"phase":@"cancelled",@"attempt":inactiveVideoAttempt,@"reason":@"viewer_inactive"});
+    Check([Item(@"video_resolution")[@"stage"] isEqual:@"video_viewer_inactive"] && [Item(@"video_resolution")[@"failureCount"] isEqual:@0],@"Leaving the viewer or disabling downloads has a specific cancellation stage rather than a media failure");
+    NSDictionary *failureStages=@{@"unverified_fullscreen_host":@"video_host_unverified",@"detached_or_hidden_host":@"video_host_detached",
+        @"no_visible_video_source":@"video_source_missing",@"visible_player_unresolved":@"video_player_unresolved",
+        @"current_model_unresolved":@"video_model_unresolved",@"conflicting_visible_resources":@"video_sources_conflict",
+        @"current_item_resource_unavailable":@"video_current_item_unavailable",@"unsupported_current_asset":@"video_asset_unsupported",
+        @"ambiguous_current_assets":@"video_assets_ambiguous",@"ambiguous_current_media":@"video_media_ambiguous",
+        @"no_current_source":@"video_current_source_missing",@"no_current_video_resource":@"video_resource_missing",
+        @"pager_transition_unsettled":@"video_pager_unsettled",@"layer_scan_budget_exceeded":@"video_layer_scan_limited",
+        @"source_scan_budget_exceeded":@"video_source_scan_limited",@"resource_scan_budget_exceeded":@"video_resource_scan_limited",
+        @"fullscreen_scan_requires_main_thread":@"video_scan_thread_invalid",@"menu_presentation_failed":@"video_menu_failed"};
+    for (NSString *reason in failureStages) {
+        NSString *failedAttempt=NSUUID.UUID.UUIDString;
+        Event(@"fullscreen_video_resolution",@{@"phase":@"started",@"attempt":failedAttempt});
+        Event(@"fullscreen_video_resolution",@{@"phase":@"unavailable",@"attempt":failedAttempt,@"reason":reason});
+        Check([Item(@"video_resolution")[@"status"] isEqual:@"failed"] && [Item(@"video_resolution")[@"stage"] isEqual:failureStages[reason]] && [Item(@"video_resolution")[@"detail"] length]>10,@"A final current-source failure has a fixed diagnostic stage and a readable Chinese explanation");
+    }
+    NSString *unknownVideoAttempt=NSUUID.UUID.UUIDString;
+    Event(@"fullscreen_video_resolution",@{@"phase":@"started",@"attempt":unknownVideoAttempt});
+    Event(@"fullscreen_video_resolution",@{@"phase":@"unavailable",@"attempt":unknownVideoAttempt,@"reason":@"private-user https://secret.invalid/account",@"sourcePath":@"private-user"});
+    Event(@"fullscreen_video_resolution",@{@"phase":@"resolved",@"attempt":unknownVideoAttempt});
+    Check([Item(@"video_resolution")[@"stage"] isEqual:@"video_source_unavailable"] && [Item(@"video_resolution")[@"status"] isEqual:@"failed"],@"Unknown failure text is replaced by a fixed explanation, and late callbacks cannot erase a terminal result");
+    NSString *restartVideoAttempt=NSUUID.UUID.UUIDString;
+    Event(@"fullscreen_video_resolution",@{@"phase":@"started",@"attempt":restartVideoAttempt});
+    Event(@"fullscreen_video_resolution",@{@"phase":@"resolved",@"attempt":restartVideoAttempt});
+    BHRDAcceptanceTestReload(); BHRDAcceptanceObserveLaunch(NO,YES); BHRDAcceptanceFlush();
+    Event(@"fullscreen_video_resolution",@{@"phase":@"menu_presented",@"attempt":restartVideoAttempt});
+    Check([Item(@"video_resolution")[@"lastOutcome"] isEqual:@"interrupted"] && !Item(@"video_resolution")[@"pendingAttempt"] && [Item(@"video_resolution")[@"successCount"] isEqual:@1] && [Item(@"video_resolution")[@"detail"] containsString:@"本次操作结果未确认"],@"A restarted process records unfinished menu resolution as unknown and cannot accept the preceding process's completion");
     Event(@"performance_started",@{});
     Event(@"performance_sample",@{@"visibleSeconds":@600,@"frameIntervals":@30000,@"slowIntervalRatio":@0.01,@"maxIntervalMs":@42,@"currentFootprintMB":@200,@"memoryWarnings":@0});
     Check([Item(@"performance")[@"status"] isEqual:@"running"] && [Item(@"performance")[@"observedSeconds"] isEqual:@600],@"Long sample duration never automatically proves a person's real usage experience");
@@ -112,6 +165,8 @@ int main(void) { @autoreleasepool {
     BHRDAcceptanceBeginSession();
     Event(@"photo_save_result",@{@"success":@YES,@"acceptanceSession":sessionID});
     Check([Item(@"photo_save")[@"status"] isEqual:@"pending"],@"Late callback from an older acceptance session never contaminates a new session");
+    Event(@"fullscreen_video_resolution",@{@"phase":@"started",@"attempt":NSUUID.UUID.UUIDString,@"acceptanceSession":sessionID});
+    Check([Item(@"video_resolution")[@"status"] isEqual:@"pending"] && [Item(@"video_resolution")[@"attempts"] isEqual:@0],@"An earlier acceptance session cannot start or complete video verification in the new session");
     Event(@"photo_save_start",@{}); Event(@"photo_save_committed",@{});
     BHRDAcceptanceTestReload(); BHRDAcceptanceObserveLaunch(NO,YES); BHRDAcceptanceFlush();
     Check([Item(@"photo_save")[@"status"] isEqual:@"pending"] && [Item(@"photo_save")[@"lastOutcome"] isEqual:@"interrupted"],@"Process restart during Photos submission records an unknown result rather than claiming failure, cancellation, or success");

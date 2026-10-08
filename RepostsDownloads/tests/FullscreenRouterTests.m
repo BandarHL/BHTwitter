@@ -62,6 +62,19 @@ int main(void) {
         [router activate]; enabled = NO;
         [NSRunLoop.mainRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.4]];
         Check(errors == 3 && downloads == 4, @"Leaving fullscreen during retry suppresses late menus and errors");
+        enabled=YES; __block NSString *selection=@"item-A"; __block NSArray *selectedMedia=@[];
+        __block NSMutableArray *phases=[NSMutableArray array];
+        router.resolveSelection=^NSDictionary * { return @{@"identity":selection,@"media":selectedMedia}; };
+        router.observeResolution=^(NSString *phase,__unused NSDictionary *context,NSString *attempt,__unused NSString *session) { [phases addObject:phase]; Check([[NSUUID alloc] initWithUUIDString:attempt]!=nil,@"Every observation has a click attempt identity"); };
+        [router activate]; selection=@"item-B"; selectedMedia=@[@"video-B"];
+        [NSRunLoop.mainRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.4]];
+        Check(downloads==4 && errors==3 && [phases isEqual:@[@"started",@"cancelled"]],@"Swiping during retry cancels the original click rather than opening another video's menu");
+        selection=@"item-C"; selectedMedia=@[]; [phases removeAllObjects]; [router activate]; selectedMedia=@[@"video-C"];
+        [NSRunLoop.mainRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.4]];
+        Check(downloads==5 && [receivedMedia isEqual:@[@"video-C"]] && [phases isEqual:@[@"started",@"resolved"]],@"Late data for the same selected player can open the menu");
+        NextEvent(); selection=@""; selectedMedia=@[]; [phases removeAllObjects]; [router activate]; selection=@"item-D"; selectedMedia=@[@"video-D"];
+        [NSRunLoop.mainRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.4]];
+        Check(downloads==5 && errors==4 && [phases isEqual:@[@"started",@"unavailable"]],@"An unknown initial selection never adopts a later different video");
         NSLog(@"PASS: %lu fullscreen routing checks", (unsigned long)checks);
     }
     return 0;

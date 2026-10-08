@@ -189,8 +189,12 @@ BH_METRIC(shouldShowCount,            NO)
 
 - (void)presentDownloadOptionsForMediaEntities:(NSArray *)mediaEntities
                                     sourceView:(UIView *)sourceView {
-    if (![BHRDManager DownloadingVideos]) return;
-    if (self.downloadManager || self.streamJob) { BHRDShowError(@"当前任务仍在进行，可点击底部进度提示取消后重试。"); return; }
+    [self presentDownloadOptionsForMediaEntities:mediaEntities sourceView:sourceView selectionStillCurrent:nil presented:nil];
+}
+- (void)presentDownloadOptionsForMediaEntities:(NSArray *)mediaEntities sourceView:(UIView *)sourceView
+                         selectionStillCurrent:(BOOL (^)(void))selectionStillCurrent presented:(void (^)(BOOL))presented {
+    if (![BHRDManager DownloadingVideos] || (selectionStillCurrent && !selectionStillCurrent())) { if (presented) presented(NO); return; }
+    if (self.downloadManager || self.streamJob) { if (presented) presented(NO); BHRDShowError(@"当前任务仍在进行，可点击底部进度提示取消后重试。"); return; }
     @try {
         NSString *menuTitle = [BHRDLocalized(@"DOWNLOAD_MENU_TITLE")
                                stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
@@ -239,6 +243,7 @@ BH_METRIC(shouldShowCount,            NO)
                 UIAlertAction *action;
                 if ([contentType isEqualToString:@"video/mp4"]) {
                     action = [UIAlertAction actionWithTitle:optionTitle style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *selectedAction) {
+                        if (selectionStillCurrent && !selectionStillCurrent()) { BHRDShowError(@"视频已切换，请重新打开当前视频的下载菜单。"); return; }
                         if (![BHRDManager DownloadingVideos] || self.downloadManager) return;
                         self.downloadManager = [[BHRDDownload alloc] init];
                         [self.downloadManager setDelegate:self];
@@ -248,15 +253,18 @@ BH_METRIC(shouldShowCount,            NO)
                     }];
                 } else {
                     action = [UIAlertAction actionWithTitle:optionTitle style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *selectedAction) {
+                        if (selectionStillCurrent && !selectionStillCurrent()) { BHRDShowError(@"视频已切换，请重新打开当前视频的下载菜单。"); return; }
                         if (![BHRDManager DownloadingVideos]) return;
                         if (self.downloadManager || self.streamJob) return;
                         self.streamJob = [BHRDStreamJob probeURL:url completion:^(MediaInformation *info, NSError *error) {
                             self.streamJob = nil;
+                            if (selectionStillCurrent && !selectionStillCurrent()) return;
                             if (error) {
                                 if (error.code != NSURLErrorCancelled) BHRDShowError([error.domain isEqual:@"BHRDBusy"] ? @"已有下载任务进行中，请等待完成或点击进度提示取消。" : @"无法读取流媒体清晰度，可能是网络中断或等待超时，请重试。");
                                 return;
                             }
                             UIAlertController *ffmpegSheet = [BHRDManager newFFmpegDownloadSheet:info downloadingURL:url selection:^(NSNumber *index) {
+                                if (selectionStillCurrent && !selectionStillCurrent()) { BHRDShowError(@"视频已切换，请重新打开当前视频的下载菜单。"); return; }
                                 if (self.downloadManager || self.streamJob || ![BHRDManager DownloadingVideos]) return;
                                 self.streamJob = [BHRDStreamJob downloadURL:url streamIndex:index completion:^{ self.streamJob = nil; }];
                             }];
@@ -282,8 +290,11 @@ BH_METRIC(shouldShowCount,            NO)
                                                 handler:nil]];
         sheet.popoverPresentationController.sourceView = sourceView;
         sheet.popoverPresentationController.sourceRect = sourceView.bounds;
-        [BHTopMostController() presentViewController:sheet animated:YES completion:nil];
+        UIViewController *owner=BHTopMostController();
+        if (!owner.view.window || owner.presentedViewController || [owner isKindOfClass:UIAlertController.class]) { if (presented) presented(NO); return; }
+        [owner presentViewController:sheet animated:YES completion:^{ if (presented) presented(sheet.presentingViewController!=nil && sheet.view.window!=nil); }];
     } @catch (NSException *ex) {
+        if (presented) presented(NO);
         NSLog(@"[BHTwitter] 加载视频下载选项失败：%@\n%@", ex, ex.callStackSymbols);
         UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"X 随心"
                                                                        message:@"无法加载下载选项，请打开视频或刷新推文后重试。"

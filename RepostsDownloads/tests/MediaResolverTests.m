@@ -44,6 +44,25 @@ static void Check(BOOL pass, NSString *name) { checks++; if (!pass) { NSLog(@"FA
 @implementation ScalarGetter
 - (NSUInteger)media { return 42; }
 @end
+@interface ThrowingGetter : NSObject
+- (id)currentItem;
+@end
+@implementation ThrowingGetter
+- (id)currentItem { [NSException raise:@"FixtureUnavailable" format:@"Native getter temporarily unavailable"]; return nil; }
+@end
+@interface ThrowingSignature : NSObject @end
+@implementation ThrowingSignature
+- (BOOL)respondsToSelector:(SEL)selector {
+    if (selector == NSSelectorFromString(@"currentItem") || selector == NSSelectorFromString(@"statusID")) return YES;
+    return [super respondsToSelector:selector];
+}
+- (NSMethodSignature *)methodSignatureForSelector:(SEL)selector {
+    if (selector == NSSelectorFromString(@"currentItem") || selector == NSSelectorFromString(@"statusID")) {
+        [NSException raise:@"FixtureSignatureUnavailable" format:@"Native signature temporarily unavailable"];
+    }
+    return [super methodSignatureForSelector:selector];
+}
+@end
 static Media *Video(NSString *assetID) {
     Media *media = [Media new]; media.videoInfo = [Info new];
     NSMutableArray *variants = [NSMutableArray array];
@@ -100,6 +119,91 @@ int main(void) {
         Model *anonymous = [Model new]; anonymous.representedMediaEntities = @[Video(@"anonymous")];
         (void)BHRDResolveMedia(anonymous); anonymous.representedMediaEntities = nil;
         Check(BHRDResolveMedia(anonymous).count == 0, @"Anonymous reused models cannot inherit an unverifiable old video");
+        Check([BHRDMediaStatusIdentity(@{@"viewModel":@{@"representedStatus":@{@"restID":@123456}}}) isEqual:@"123456"], @"Current wrapper status identity is available before details hydration");
+        Check([BHRDMediaStatusIdentity(@{@"tweet":@{@"statusID":@"tweet-wrapped"}}) isEqual:@"tweet-wrapped"], @"Tweet wrapper identity is read through bounded explicit getters");
+        NSDictionary *live = BHRDResolveLiveVideoSource(@{@"playerSessionProducer":@{@"sessionProducible":@{@"playerSession":@{@"player":@{@"currentItem":@{@"asset":@{@"URL":@"https://video.twimg.com/ext_tw_video/live-unhydrated/pu/pl/master.m3u8?tag=21"}}}}}}});
+        Check([live[@"media"] count] == 1 && [FirstURL(live[@"media"]) containsString:@"live-unhydrated"], @"Playing HLS session resolves without visiting comments or hydrated post metadata");
+        Check([live[@"stage"] isEqual:@"live_asset"] && [live[@"sourcePath"] containsString:@"currentItem.asset.URL"], @"Live resource result identifies the actual getter path");
+        Check([live[@"identity"] isEqual:@"asset:ext_tw_video/live-unhydrated"], @"Selection resource identity is tied to current asset, never a player object's address");
+        NSMutableDictionary *reusedItem = [@{@"asset":@{@"URL":@"https://video.twimg.com/ext_tw_video/live-new/pu/vid/720x1280/new.mp4"}} mutableCopy];
+        NSDictionary *reused = @{@"currentItem":reusedItem, @"viewModel":inlineModel};
+        live = BHRDResolveLiveVideoSource(reused);
+        Check([FirstURL(live[@"media"]) containsString:@"live-new"], @"Current playing asset wins over hydrated old post metadata on a reused player");
+        NSString *firstIdentity = live[@"identity"];
+        reusedItem[@"asset"] = @{@"URL":@"https://video.twimg.com/ext_tw_video/live-next/pu/pl/new.m3u8"};
+        live = BHRDResolveLiveVideoSource(reused);
+        Check(![firstIdentity isEqual:live[@"identity"]] && [FirstURL(live[@"media"]) containsString:@"live-next"], @"Swiping with the same player and item wrapper follows the new current resource");
+        live = BHRDResolveLiveVideoSource(@{@"currentMediaEntity":videoB, @"representedMediaEntities":@[videoA,videoB]});
+        Check([live[@"media"] count] == 1 && [FirstURL(live[@"media"]) containsString:@"asset-B"], @"Explicit current media takes precedence over other videos in the same post");
+        live = BHRDResolveLiveVideoSource(@{@"viewModel":@{@"representedStatus":@{@"statusID":@"native-before-details", @"extendedEntities":@{@"media":@[videoB]}}}});
+        Check([live[@"media"] count] == 1 && [live[@"statusIdentity"] isEqual:@"native-before-details"], @"Live native status wrappers resolve a single coherent video");
+        live = BHRDResolveLiveVideoSource(@{@"representedMediaEntities":@[videoA,videoB]});
+        Check([live[@"media"] count] == 0 && [live[@"reason"] isEqual:@"ambiguous_current_media"], @"Unselected multi-video native metadata cannot borrow the first video");
+        live = BHRDResolveLiveVideoSource(@{@"currentMediaEntity":@{@"videoInfo":@{@"variants":@[@{@"url":@"https://video.twimg.com/ext_tw_video/mixed-A/pu/pl/a.m3u8"},@{@"url":@"https://video.twimg.com/ext_tw_video/mixed-B/pu/pl/b.m3u8"}]}}});
+        Check([live[@"media"] count] == 0 && [live[@"reason"] isEqual:@"ambiguous_current_media"], @"One native entity with contradictory variant identities is rejected");
+        live = BHRDResolveLiveVideoSource(@{@"player":@{@"currentItem":@{@"asset":@{@"URL":@"https://video.twimg.com/ext_tw_video/first/pu/pl/a.m3u8"}}}, @"currentPlayer":@{@"currentItem":@{@"asset":@{@"URL":@"https://video.twimg.com/ext_tw_video/second/pu/pl/b.m3u8"}}}});
+        Check([live[@"media"] count] == 0 && [live[@"reason"] isEqual:@"ambiguous_current_assets"], @"Conflicting current playback resources fail closed");
+        live = BHRDResolveLiveVideoSource(@{@"statusID":@"tweet-A"});
+        Check([live[@"media"] count] == 0 && [live[@"statusIdentity"] isEqual:@"tweet-A"], @"Strict live resolver never substitutes a previously cached identified post when metadata is missing");
+        live = BHRDResolveLiveVideoSource(@{@"delegate":inlineModel});
+        Check([live[@"media"] count] == 0, @"Generic delegate graphs are excluded from current-video resolution");
+        live = BHRDResolveLiveVideoSource(@{@"playbackResource":@{@"resourceURL":@"https://video.twimg.com/amplify_video/live-resource/pl/main.m3u8"}});
+        Check([live[@"media"] count] == 1 && [live[@"sourcePath"] containsString:@"playbackResource.resourceURL"], @"Private playback resource URL wrappers support HLS");
+        live = BHRDResolveLiveVideoSource(@{@"assetURL":@"https://video.twimg.com/ext_tw_video/live-direct/pu/vid/1280x720/file.mp4"});
+        Check([live[@"media"] count] == 1 && [FirstURL(live[@"media"]) containsString:@"live-direct"], @"Current private assetURL supports direct MP4");
+        live = BHRDResolveLiveVideoSource(@{@"currentItem":@{@"asset":@{@"URL":@"https://foreign.example/video.mp4"}}});
+        Check([live[@"media"] count] == 0 && [live[@"reason"] isEqual:@"unsupported_current_asset"], @"Foreign assets are reported rather than downloaded as an X video");
+        live = BHRDResolveLiveVideoSource(@{@"currentItem":@{@"asset":@{@"URL":[NSURL fileURLWithPath:@"/tmp/native-player-cache.mp4"]}}});
+        Check([live[@"media"] count] == 0, @"Local playback caches cannot fabricate a remote download URL");
+        live = BHRDResolveLiveVideoSource(@{@"currentItem":@{@"asset":@{}}, @"viewModel":inlineModel});
+        Check([live[@"media"] count] == 0 && [live[@"reason"] isEqual:@"current_item_resource_unavailable"], @"An opaque current item never falls back to a recycled hydrated old tweet");
+        live = BHRDResolveLiveVideoSource(@{@"currentItem":NSNull.null, @"viewModel":inlineModel});
+        Check([live[@"media"] count] == 0, @"A not-yet-attached current playback item cannot download its old view model");
+        live = BHRDResolveLiveVideoSource(@{@"currentItem":@{@"asset":@{}}, @"assetURL":@"https://video.twimg.com/ext_tw_video/parent-old/pu/pl/old.m3u8"});
+        Check([live[@"media"] count] == 0, @"A parent playback URL cannot override an unreadable newly bound item");
+        live = BHRDResolveLiveVideoSource(@{@"currentItem":@{@"asset":@{@"URL":@"https://video.twimg.com/ext_tw_video/item-new/pu/pl/new.m3u8"}}, @"assetURL":@"https://video.twimg.com/ext_tw_video/parent-old/pu/pl/old.m3u8"});
+        Check([FirstURL(live[@"media"]) containsString:@"item-new"], @"Bound item URL takes precedence over a stale parent resource URL");
+        Check([BHRDResolveLiveVideoSource([ScalarGetter new])[@"media"] count] == 0, @"Strict wrapper probing never invokes a scalar getter as an object getter");
+        Check([BHRDResolveLiveVideoSource([ThrowingGetter new])[@"media"] count] == 0, @"Temporarily throwing native getter cannot crash video resolution");
+        Check([BHRDResolveLiveVideoSource([ThrowingSignature new])[@"media"] count] == 0 && !BHRDMediaStatusIdentity([ThrowingSignature new]), @"Native signature probing exceptions are isolated for resources and status identity");
+        NSMutableDictionary *cycle = [NSMutableDictionary dictionary]; id cycleReference = cycle; cycle[@"playerSession"] = cycleReference;
+        Check([BHRDResolveLiveVideoSource(cycle)[@"media"] count] == 0, @"Current session cycles terminate within the traversal budget");
+        [cycle removeAllObjects];
+        Media *mutating = Video(@"mutable-original");
+        Model *mutatingModel = [Model new]; mutatingModel.statusID = @"mutable-post"; mutatingModel.representedMediaEntities = @[mutating];
+        (void)BHRDResolveMedia(mutatingModel);
+        mutating.videoInfo = Video(@"mutable-recycled").videoInfo;
+        player.currentItem.asset.URL = [NSURL URLWithString:@"https://video.twimg.com/ext_tw_video/mutable-original/pu/pl/current.m3u8"];
+        live = BHRDResolveLiveVideoSource(player);
+        Check([FirstURL(live[@"media"]) containsString:@"mutable-original"] && ![FirstURL(live[@"media"]) containsString:@"mutable-recycled"], @"Asset quality cache rechecks recycled native entity identity before use");
+        live = BHRDResolveLiveVideoSource(@{@"currentMediaEntity":@{@"videoInfo":@{@"primaryUrl":@"https://video.twimg.com/ext_tw_video/primary-only/pu/pl/main.m3u8"}}});
+        Check([live[@"media"] count] == 1, @"A current native primaryUrl remains usable when variants are not hydrated");
+        Check([BHRDResolveLiveVideoSource(nil)[@"media"] count] == 0 && [BHRDResolveLiveVideoSource(NSNull.null)[@"media"] count] == 0, @"Strict nil and null inputs remain safely unresolved");
+        Check([NSJSONSerialization dataWithJSONObject:@{@"identity":live[@"identity"],@"reason":live[@"reason"],@"stage":live[@"stage"],@"sourcePath":live[@"sourcePath"]} options:0 error:nil].length > 0, @"Resolution diagnostics are JSON-safe without persisting full resource URLs");
+        NSMutableArray *wideLevel = [NSMutableArray array];
+        for (NSUInteger index = 0; index < 256; index++) [wideLevel addObject:[NSMutableDictionary new]];
+        while (wideLevel.count > 1) {
+            NSMutableArray *parents = [NSMutableArray array];
+            for (NSUInteger index = 0; index < wideLevel.count; index += 2)
+                [parents addObject:@{@"viewModel":wideLevel[index],@"mediaViewModel":wideLevel[index+1]}];
+            wideLevel = parents;
+        }
+        live = BHRDResolveLiveVideoSource(@{@"assetURL":@"https://video.twimg.com/ext_tw_video/early-candidate/pu/pl/current.m3u8",@"viewModel":wideLevel.firstObject});
+        Check([live[@"media"] count] == 0 && [live[@"reason"] isEqual:@"resource_scan_budget_exceeded"], @"A live resource discovered early is rejected when more than 160 nodes remain unverified");
+        NSMutableArray *nativeLevel = [NSMutableArray array];
+        for (NSUInteger index = 0; index < 256; index++) [nativeLevel addObject:[NSMutableDictionary new]];
+        while (nativeLevel.count > 1) {
+            NSMutableArray *parents = [NSMutableArray array];
+            for (NSUInteger index = 0; index < nativeLevel.count; index += 2)
+                [parents addObject:[NSMutableArray arrayWithObjects:nativeLevel[index],nativeLevel[index+1],nil]];
+            nativeLevel = parents;
+        }
+        live = BHRDResolveLiveVideoSource(@{@"representedMediaEntities":@[videoA,nativeLevel.firstObject]});
+        Check([live[@"media"] count] == 0 && [live[@"reason"] isEqual:@"resource_scan_budget_exceeded"], @"A native media candidate discovered early is rejected when native traversal exceeds 160 nodes");
+        id deepSource = @{@"assetURL":@"https://video.twimg.com/ext_tw_video/deep-conflict/pu/pl/later.m3u8"};
+        for (NSUInteger index = 0; index < 14; index++) deepSource = @{@"viewModel":deepSource};
+        live = BHRDResolveLiveVideoSource(@{@"assetURL":@"https://video.twimg.com/ext_tw_video/depth-early/pu/pl/first.m3u8",@"viewModel":deepSource});
+        Check([live[@"media"] count] == 0 && [live[@"reason"] isEqual:@"resource_scan_budget_exceeded"], @"Unverified descendants beyond the depth limit never authorize an earlier resource");
         NSLog(@"PASS: %lu shared media-resolution checks", (unsigned long)checks);
     }
     return 0;

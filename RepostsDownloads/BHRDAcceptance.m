@@ -27,6 +27,7 @@ static NSArray *Definitions(void) {
     return @[@[@"photo_permission",@"照片添加权限"],@[@"photo_save",@"照片保存结果"],
         @[@"recovery_gesture",@"三指长按恢复菜单"],@[@"pause_restart",@"暂停后重启"],
         @[@"resume_restart",@"恢复后重启"],@[@"repost_detail",@"隐藏转推详情与返回"],
+        @[@"video_resolution",@"全屏视频读取与菜单"],
         @[@"performance",@"连续使用与性能"],@[@"log_export",@"验收报告导出"]];
 }
 static NSNumber *Number(id value) {
@@ -68,6 +69,31 @@ static NSDictionary *StageDetails(void) {
         @"detail_identity_mismatch":@"详情页面的帖子身份与本次点击请求不一致，请导出日志。",@"confirmation_timeout":@"等待详情确认超过 15 秒，尚未取得可匹配证据，请核对实际页面并导出日志。",
         @"navigation_unconfirmed":@"已观察返回，但详情身份或返回身份未确认，请人工核对。",@"return_hidden_preserved":@"已确认对应详情并返回，转推仍保持隐藏缩略图。",
         @"return_expanded":@"返回后未保持隐藏状态，请导出日志。",@"runtime_warning":@"已观察到卡顿阈值或内存警告，请结合样本排查。",
+        @"video_resolution_started":@"已点击全屏视频按钮，正在读取当前可见视频的播放器和媒体资料。",
+        @"video_media_resolved":@"已读取到当前视频的可下载媒体，正在等待质量菜单实际呈现；尚未开始传输。",
+        @"video_menu_presented":@"当前视频的下载质量菜单已经实际呈现；此结果不表示视频传输完成或已保存到照片。",
+        @"video_host_unverified":@"没有确认当前页面是全屏媒体页面，已停止读取以避免选择错误视频。",
+        @"video_host_detached":@"全屏页面已经离屏、隐藏或没有有效显示区域，无法读取当前视频。",
+        @"video_source_missing":@"当前可见区域没有找到有效的视频播放器或媒体模型；视频播放正常时请导出日志排查入口。",
+        @"video_player_unresolved":@"已经找到当前可见播放器，但未取得其当前视频资源；请等待视频加载后重试并导出日志。",
+        @"video_model_unresolved":@"已经找到当前视频模型，但模型尚未提供可下载媒体资料；请导出日志排查缺失字段。",
+        @"video_sources_conflict":@"可见区域中出现了互相冲突的视频资源，已停止读取以避免下载其他视频。",
+        @"video_current_item_unavailable":@"已经找到绑定的播放器项目，但当前项目的资源地址尚不可读取；不会使用旧帖子的资料替代当前视频。",
+        @"video_asset_unsupported":@"已经找到当前资源，但资源来源或格式不在当前支持范围；请导出日志核对实际播放资源。",
+        @"video_assets_ambiguous":@"当前播放来源给出了多个不同的资源地址，无法确认正在播放哪一个，已停止读取。",
+        @"video_media_ambiguous":@"当前媒体模型给出了多个不同的视频，无法确定当前选中的视频，已停止读取。",
+        @"video_current_source_missing":@"读取时当前播放来源已经不存在，可能正在切换或回收，请停止滑动后重试。",
+        @"video_resource_missing":@"当前可见播放来源和媒体模型均没有提供可下载的视频资源；请导出日志排查模型字段。",
+        @"video_pager_unsettled":@"当前视频分页仍在滑动过渡，无法稳定确认当前页；请停止滑动后重新点击。",
+        @"video_layer_scan_limited":@"读取当前播放器图层时达到扫描数量限制，尚不能确定当前资源；请导出日志排查视图结构。",
+        @"video_source_scan_limited":@"读取可见视频视图时达到扫描数量限制，尚不能确定当前来源；请导出日志排查视图结构。",
+        @"video_resource_scan_limited":@"读取当前播放包装时达到节点或深度限制，尚不能排除资源冲突；请导出日志排查包装结构。",
+        @"video_scan_thread_invalid":@"视频视图读取未在主线程执行，已停止读取；请导出日志排查调用入口。",
+        @"video_source_unavailable":@"最终仍未读取到可下载的当前视频；请核对播放状态并导出日志定位读取阶段。",
+        @"video_menu_failed":@"当前视频资料已读取，但下载菜单没有成功呈现；请导出日志定位菜单显示阶段。",
+        @"video_context_cancelled":@"读取期间已切换视频、离开全屏或取消操作，本次没有继续打开下载菜单。",
+        @"video_selection_changed":@"读取期间当前视频已改变，本次请求已取消，以避免为其他视频打开下载菜单。",
+        @"video_viewer_inactive":@"读取期间已经离开全屏或关闭下载功能，本次请求已取消，没有继续打开菜单。",
         @"samples_observed":@"正在收集实际使用样本，仍需你确认实际体验。",@"sampling_finished":@"采样已结束，已有样本待你确认实际体验。",
         @"report_generated":@"已生成脱敏报告，等待系统分享结果。",@"share_presented":@"系统分享面板已打开，等待操作完成。",
         @"share_completed":@"系统分享活动已完成，接收端是否收到仍需人工确认。",@"share_cancelled":@"本次分享已取消，可重新导出。",
@@ -86,6 +112,21 @@ static NSDictionary *CleanError(id value) {
 }
 static NSString *MappedItem(NSString *event);
 static NSMutableDictionary *EventEntry(NSString *event,NSDictionary *fields,NSNumber *time);
+static NSDictionary *VideoReasonStages(void) {
+    return @{@"unverified_fullscreen_host":@"video_host_unverified",@"detached_or_hidden_host":@"video_host_detached",
+        @"no_visible_video_source":@"video_source_missing",@"visible_player_unresolved":@"video_player_unresolved",
+        @"current_model_unresolved":@"video_model_unresolved",@"conflicting_visible_resources":@"video_sources_conflict",
+        @"current_item_resource_unavailable":@"video_current_item_unavailable",@"unsupported_current_asset":@"video_asset_unsupported",
+        @"ambiguous_current_assets":@"video_assets_ambiguous",@"ambiguous_current_media":@"video_media_ambiguous",
+        @"no_current_source":@"video_current_source_missing",@"no_current_video_resource":@"video_resource_missing",
+        @"pager_transition_unsettled":@"video_pager_unsettled",@"layer_scan_budget_exceeded":@"video_layer_scan_limited",
+        @"source_scan_budget_exceeded":@"video_source_scan_limited",
+        @"resource_scan_budget_exceeded":@"video_resource_scan_limited",@"fullscreen_scan_requires_main_thread":@"video_scan_thread_invalid",
+        @"menu_presentation_failed":@"video_menu_failed"};
+}
+static NSDictionary *VideoCancellationStages(void) {
+    return @{@"selection_changed":@"video_selection_changed",@"viewer_inactive":@"video_viewer_inactive"};
+}
 static NSMutableDictionary *NewItem(NSString *key,NSString *title) {
     return [@{@"id":key,@"title":title,@"status":@"pending",@"stage":@"not_observed",
         @"detail":@"尚未观察到实际操作",@"attempts":@0,@"successCount":@0,@"failureCount":@0,
@@ -138,16 +179,17 @@ static void Initialize(void) {
             if (!status || !stage || ![@[@"pending",@"running",@"success",@"failed",@"cancelled",@"unsupported"] containsObject:status] || !StageDetails()[stage]) continue;
             item[@"status"]=status; item[@"stage"]=stage; item[@"detail"]=StageDetails()[stage];
             for (NSString *key in @[@"attempts",@"successCount",@"failureCount",@"cancelledCount"]) item[key]=@((NSUInteger)MAX(0,MIN([Number(input[key]) doubleValue],1000000)));
-            for (NSString *key in @[@"updatedAt",@"lastSuccessAt",@"manualRecordedAt",@"observedSeconds",@"lastMemoryBytes",@"lastLagMs",@"memoryWarnings",@"frameIntervals",@"slowIntervalRatio",@"maxIntervalMs",@"currentFootprintMB",@"memoryMB",@"peakMemoryMB"]) {
+            for (NSString *key in @[@"updatedAt",@"lastSuccessAt",@"manualRecordedAt",@"observedSeconds",@"lastMemoryBytes",@"lastLagMs",@"memoryWarnings",@"frameIntervals",@"slowIntervalRatio",@"maxIntervalMs",@"currentFootprintMB",@"memoryMB",@"peakMemoryMB",@"playerCount",@"modelCount",@"visibleSourceCount"]) {
                 NSNumber *number=Number(input[key]); if (number && number.doubleValue>=0) item[key]=number;
             }
-            for (NSString *key in @[@"manualConfirmed",@"detailConfirmed",@"running",@"warningObserved"]) if (Number(input[key])) item[key]=@([Number(input[key]) boolValue]);
+            for (NSString *key in @[@"manualConfirmed",@"detailConfirmed",@"running",@"warningObserved",@"resolutionResolved",@"resolutionTerminal"]) if (Number(input[key])) item[key]=@([Number(input[key]) boolValue]);
             for (NSString *key in @[@"pendingAttempt",@"pendingBootID"]) if (UUID(input[key])) item[key]=input[key];
             NSString *outcome=[input[@"lastOutcome"] isKindOfClass:NSString.class] ? input[@"lastOutcome"] : @"none";
             if ([@[@"none",@"pending",@"running",@"success",@"failed",@"cancelled",@"unsupported",@"interrupted"] containsObject:outcome]) item[@"lastOutcome"]=outcome;
             if (CleanError(input[@"error"])) item[@"error"]=CleanError(input[@"error"]);
             if ([item[@"status"] isEqual:@"success"] && ![item[@"successCount"] unsignedIntegerValue]) { item[@"status"]=@"pending"; item[@"stage"]=@"not_observed"; item[@"detail"]=StageDetails()[@"not_observed"]; item[@"manualConfirmed"]=@NO; }
             if ([item[@"lastOutcome"] isEqual:@"cancelled"] && [item[@"successCount"] unsignedIntegerValue]) item[@"detail"]=[@"此前已有成功证据；本次操作已取消。" stringByAppendingString:item[@"detail"]];
+            if ([item[@"lastOutcome"] isEqual:@"interrupted"] && [item[@"successCount"] unsignedIntegerValue]) item[@"detail"]=[@"此前已有成功证据；本次操作结果未确认。" stringByAppendingString:item[@"detail"]];
         }
         if ([saved[@"events"] isKindOfClass:NSArray.class]) for (id entry in saved[@"events"]) {
             if (![entry isKindOfClass:NSDictionary.class] || ![entry[@"event"] isKindOfClass:NSString.class]) continue;
@@ -201,7 +243,7 @@ static NSString *MappedItem(NSString *event) {
         @"photo_save_authorization",@"photo_save_committed",@"photo_save_result",@"recovery_invoked",
         @"safety_pause_changed",@"acceptance_boot",@"resume_pending",@"repost_detail_navigation",
         @"repost_detail_visible",@"repost_detail_return",@"repost_detail_confirmation_timeout",@"performance_started",@"performance_sample",
-        @"performance_finished",@"performance_result",@"performance_memory_warning",@"acceptance_export"]]; });
+        @"performance_finished",@"performance_result",@"performance_memory_warning",@"acceptance_export",@"fullscreen_video_resolution"]]; });
     if (![supported containsObject:event]) return nil;
     if ([event hasPrefix:@"photo_save_"]) return @"photo_save";
     if ([event hasPrefix:@"repost_detail_"]) return @"repost_detail";
@@ -209,6 +251,7 @@ static NSString *MappedItem(NSString *event) {
     if ([event hasPrefix:@"performance_"]) return @"performance";
     if ([event isEqual:@"safety_pause_changed"] || [event isEqual:@"acceptance_boot"] || [event isEqual:@"resume_pending"]) return @"safety";
     if ([event isEqual:@"acceptance_export"]) return @"log_export";
+    if ([event isEqual:@"fullscreen_video_resolution"]) return @"video_resolution";
     return nil;
 }
 static NSMutableDictionary *EventEntry(NSString *event,NSDictionary *fields,NSNumber *time) {
@@ -216,16 +259,18 @@ static NSMutableDictionary *EventEntry(NSString *event,NSDictionary *fields,NSNu
     for (NSString *key in @[@"bytes",@"width",@"height",@"status",@"success",@"committed",@"valid",
         @"paused",@"hooksEnabled",@"hooksEnabledAtLaunch",@"hiddenPreserved",@"durationSeconds",
         @"memoryBytes",@"lagMs",@"memoryWarnings",@"thresholdExceeded",@"visibleSeconds",@"frameIntervals",
-        @"slowIntervalRatio",@"maxIntervalMs",@"currentFootprintMB",@"memoryMB",@"peakMemoryMB",@"presented",@"confirmed",@"observable"]) {
+        @"slowIntervalRatio",@"maxIntervalMs",@"currentFootprintMB",@"memoryMB",@"peakMemoryMB",@"presented",@"confirmed",@"observable",@"playerCount",@"modelCount",@"visibleSourceCount"]) {
         if (Number(fields[key])) entry[key]=fields[key];
     }
     if (Number(fields[@"errorCode"])) entry[@"errorCode"]=fields[@"errorCode"];
     if ([fields[@"errorDomain"] isKindOfClass:NSString.class] && [fields[@"errorDomain"] length]) entry[@"errorDomain"]=PersistedDomain(fields[@"errorDomain"]);
     if (UUID(fields[@"attempt"])) entry[@"attempt"]=fields[@"attempt"];
-    NSDictionary *enums=@{@"phase":@[@"generated",@"presented",@"completed",@"cancelled",@"failed"],
+    NSDictionary *enums=@{@"phase":@[@"generated",@"presented",@"completed",@"cancelled",@"failed",@"started",@"resolved",@"unavailable",@"menu_presented"],
         @"source":@[@"original",@"displayed",@"three_finger",@"paused_boot"],
         @"result":@[@"native_row_selection",@"stale_or_unavailable_row",@"native_selection_unavailable",@"return_row_not_observable",@"detail_identity_mismatch",@"detail_identity_unavailable"]};
     for (NSString *key in enums) if ([enums[key] containsObject:fields[key] ?: NSNull.null]) entry[key]=fields[key];
+    id reason=fields[@"reason"] ?: NSNull.null;
+    if ([VideoReasonStages().allKeys containsObject:reason] || [VideoCancellationStages().allKeys containsObject:reason] || [@[@"resolved_current_asset",@"resolved_current_media"] containsObject:reason]) entry[@"reason"]=reason;
     return entry;
 }
 static void AddEvent(NSString *event,NSDictionary *fields) {
@@ -242,13 +287,16 @@ static void HandleBoot(NSDictionary *fields) {
         @"paused":@(paused),@"hooksEnabled":@(hooks),@"build":Build()};
     NSMutableArray *launches=State[@"launches"]; [launches addObject:CurrentBoot];
     while (launches.count>20) [launches removeObjectAtIndex:0];
-    for (NSString *key in @[@"photo_save",@"repost_detail",@"performance",@"log_export"]) {
+    for (NSString *key in @[@"photo_save",@"repost_detail",@"video_resolution",@"performance",@"log_export"]) {
         NSMutableDictionary *item=Item(key);
         if ([item[@"status"] isEqual:@"running"]) {
-            Update(key,[item[@"successCount"] unsignedIntegerValue] ? @"success" : @"pending",@"restart_result_unconfirmed",
+            BOOL priorSuccess=[item[@"successCount"] unsignedIntegerValue]>0;
+            Update(key,@"pending",@"restart_result_unconfirmed",
                 @"进程已重新启动，上一操作的最终结果未观察到；请实际核对或重新操作。",@{});
+            if (priorSuccess) { item[@"status"]=@"success"; item[@"detail"]=[@"此前已有成功证据；本次操作结果未确认。" stringByAppendingString:item[@"detail"]]; }
             item[@"lastOutcome"]=@"interrupted";
             if ([key isEqual:@"repost_detail"]) { [item removeObjectForKey:@"pendingAttempt"]; item[@"detailConfirmed"]=@NO; }
+            if ([key isEqual:@"video_resolution"]) { [item removeObjectForKey:@"pendingAttempt"]; item[@"resolutionResolved"]=@NO; item[@"resolutionTerminal"]=@YES; }
             if ([key isEqual:@"performance"]) item[@"running"]=@NO;
         }
     }
@@ -264,7 +312,37 @@ static void HandleBoot(NSDictionary *fields) {
 }
 static void HandleObservation(NSString *event,NSDictionary *fields) {
     if ([event isEqual:@"acceptance_boot"]) { HandleBoot(fields); return; }
-    if ([event isEqual:@"photo_save_start"]) {
+    if ([event isEqual:@"fullscreen_video_resolution"]) {
+        NSMutableDictionary *item=Item(@"video_resolution"); NSString *attempt=UUID(fields[@"attempt"]);
+        id phase=fields[@"phase"]; if (!attempt) return;
+        if ([phase isEqual:@"started"]) {
+            if ([item[@"pendingAttempt"] isEqual:attempt]) return;
+            item[@"pendingAttempt"]=attempt; item[@"resolutionResolved"]=@NO; item[@"resolutionTerminal"]=@NO; item[@"manualConfirmed"]=@NO;
+            for (NSString *key in @[@"playerCount",@"modelCount",@"visibleSourceCount"]) item[key]=@0;
+            Increment(item,@"attempts");
+            Update(@"video_resolution",@"running",@"video_resolution_started",StageDetails()[@"video_resolution_started"],fields);
+        } else if (![item[@"pendingAttempt"] isEqual:attempt] || [item[@"resolutionTerminal"] boolValue]) return;
+        for (NSString *key in @[@"playerCount",@"modelCount",@"visibleSourceCount"]) {
+            NSNumber *number=Number(fields[key]); if (number) item[key]=@((NSUInteger)MAX(0,MIN(number.doubleValue,1000000)));
+        }
+        if ([phase isEqual:@"resolved"]) {
+            item[@"resolutionResolved"]=@YES;
+            Update(@"video_resolution",@"running",@"video_media_resolved",StageDetails()[@"video_media_resolved"],fields);
+        } else if ([phase isEqual:@"unavailable"]) {
+            NSString *reason=[fields[@"reason"] isKindOfClass:NSString.class] ? fields[@"reason"] : @"";
+            NSString *stage=VideoReasonStages()[reason] ?: @"video_source_unavailable";
+            item[@"resolutionTerminal"]=@YES;
+            Update(@"video_resolution",@"failed",stage,StageDetails()[stage],fields);
+        } else if ([phase isEqual:@"menu_presented"] && [item[@"resolutionResolved"] boolValue]) {
+            item[@"resolutionTerminal"]=@YES;
+            Update(@"video_resolution",@"success",@"video_menu_presented",StageDetails()[@"video_menu_presented"],fields);
+        } else if ([phase isEqual:@"cancelled"]) {
+            NSString *reason=[fields[@"reason"] isKindOfClass:NSString.class] ? fields[@"reason"] : @"";
+            NSString *stage=VideoCancellationStages()[reason] ?: @"video_context_cancelled";
+            item[@"resolutionTerminal"]=@YES;
+            Update(@"video_resolution",@"cancelled",stage,StageDetails()[stage],fields);
+        }
+    } else if ([event isEqual:@"photo_save_start"]) {
         Increment(Item(@"photo_save"),@"attempts");
         Update(@"photo_save",@"running",@"source_selection",@"已开始保存，正在取得选中的图片。",fields);
     } else if ([event isEqual:@"photo_save_fetch"]) {

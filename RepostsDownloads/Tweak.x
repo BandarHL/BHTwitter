@@ -5,6 +5,7 @@
 #import "BHRDFullscreenDownloadControl.h"
 #import "BHRDFullscreenPhotoCopy.h"
 #import "BHRDFullscreenContext.h"
+#import "BHRDFullscreenVideoResolver.h"
 #import "BHRDHomeHeaderView.h"
 #import "BHRDInlineLayout.h"
 #import "BHRDInlineButtonStyle.h"
@@ -12,6 +13,7 @@
 #import "BHRDShareImageButton.h"
 #import "BHRDFullscreenVisibility.h"
 #import "BHRDMediaResolver.h"
+#import "BHRDAvatarDiagnostics.h"
 #import <AVFoundation/AVFoundation.h>
 #import <objc/message.h>
 #import <objc/runtime.h>
@@ -39,38 +41,11 @@ static BOOL BHViewIsInImmersiveFullScreen(UIView *view) {
     return false;
 }
 
-static NSArray *BHFullscreenVideoMediaEntitiesForShareButton(UIView *shareButton) {
-    if (![BHRDManager DownloadingVideos] || !BHViewIsInImmersiveFullScreen(shareButton)) {
-        return @[];
-    }
-
-    NSMutableArray *results = [NSMutableArray array];
-    NSMutableSet *seen = [NSMutableSet set];
-    UIResponder *responder = shareButton;
-    for (NSUInteger depth = 0; responder != nil && depth < 64; depth++) {
-        for (id media in [BHRDDownloadButton downloadableMediaEntitiesFromSource:responder]) {
-            NSValue *identity = [NSValue valueWithNonretainedObject:media];
-            if (![seen containsObject:identity]) {
-                [seen addObject:identity];
-                [results addObject:media];
-            }
-        }
-        if (results.count > 0) {
-            break;
-        }
-        responder = responder.nextResponder;
-    }
-    return [results copy];
-}
-
 static char BHFullscreenDownloadHandlerKey;
 static void BHRDRegisterFloatingSource(UIView *shareButton);
 
 @interface BHRDFullscreenMediaSource : NSObject
 @property(nonatomic, weak) UIView *view;
-@property(nonatomic, weak) UIView *card;
-@property(nonatomic, strong) id model;
-@property(nonatomic, copy) NSString *identity;
 @end
 @implementation BHRDFullscreenMediaSource @end
 static char BHRDFloatingSourceKey, BHRDFloatingRouterKey, BHRDFloatingVisibilityKey;
@@ -85,84 +60,17 @@ static BHRDFullscreenVisibility *BHRDFloatingVisibility(UIViewController *contro
 }
 static BOOL BHRDIsFullscreenController(UIViewController *controller) { return BHRDIsFullscreenMediaController(controller); }
 
-static id BHRDVideoModel(UIView *view) {
-    return BHRDMediaObject(view, @"viewModel") ?: BHRDMediaObject(BHRDMediaObject(view, @"delegate"), @"viewModel");
-}
-static BOOL BHRDOnCurrentCard(UIView *view, UIView *root) {
-    if (!view || !view.window || ![view isDescendantOfView:root]) return NO;
-    CGRect rect = [view convertRect:view.bounds toView:root];
-    if (rect.size.height > root.bounds.size.height * 0.6 && rect.size.width > root.bounds.size.width * 0.6 && !CGRectContainsPoint(rect, CGPointMake(CGRectGetMidX(root.bounds), CGRectGetMidY(root.bounds)))) return NO;
-    return CGRectIntersectsRect(rect, root.bounds);
-}
 static NSArray *BHRDResolveFullscreenMedia(UIViewController *controller) {
-    UIView *root = controller.viewIfLoaded;
-    if (!root.window) return @[];
-    BHRDFullscreenMediaSource *source = objc_getAssociatedObject(controller, &BHRDFloatingSourceKey);
-    // First resolve the actual live player. Its asset ID can recover the full
-    // native quality list collected earlier by the inline button.
-    UIView *card = BHRDOnCurrentCard(source.card, root) ? source.card : root;
-    NSMutableArray<UIView *> *pending = [NSMutableArray arrayWithObject:card];
-    NSMutableArray *modelSources = [NSMutableArray array];
-    NSMutableArray<NSDictionary *> *players = [NSMutableArray array];
-    NSMutableSet *seenLayers = [NSMutableSet set];
-    NSUInteger budget = 700;
-    while (pending.count && budget--) {
-        UIView *view = pending.lastObject; [pending removeLastObject];
-        if (view != root && !BHRDOnCurrentCard(view, root)) continue;
-        // Do not inspect the adjacent off-screen page in a recycled video pager.
-        CGRect rect = [view convertRect:view.bounds toView:root];
-        if (rect.size.height > root.bounds.size.height * 0.6 && !CGRectContainsPoint(rect, CGPointMake(CGRectGetMidX(root.bounds), CGRectGetMidY(root.bounds)))) continue;
-        NSMutableArray<CALayer *> *layers = [NSMutableArray arrayWithObject:view.layer];
-        NSUInteger layerBudget = 24;
-        while (layers.count && layerBudget--) {
-            CALayer *layer = layers.lastObject; [layers removeLastObject];
-            NSValue *layerID = [NSValue valueWithNonretainedObject:layer];
-            if ([seenLayers containsObject:layerID]) continue;
-            [seenLayers addObject:layerID];
-            if ([layer isKindOfClass:AVPlayerLayer.class]) {
-                AVPlayer *player = ((AVPlayerLayer *)layer).player;
-                CGRect visible = CGRectIntersection([layer convertRect:layer.bounds toLayer:root.layer], root.bounds);
-                if (player && !CGRectIsNull(visible) && !CGRectIsEmpty(visible)) [players addObject:@{@"player": player, @"area": @(visible.size.width * visible.size.height)}];
-            }
-            [layers addObjectsFromArray:layer.sublayers ?: @[]];
-        }
-        NSString *name = NSStringFromClass(view.class);
-        if ([name containsString:@"StatusInlineActionsView"] || [name containsString:@"SlideshowStatusView"] || [name containsString:@"ImmersiveCardView"]) {
-            id model = BHRDVideoModel(view);
-            if (model) [modelSources addObject:model];
-        }
-        [pending addObjectsFromArray:view.subviews];
-    }
-    [players sortUsingComparator:^NSComparisonResult(NSDictionary *a, NSDictionary *b) { return [b[@"area"] compare:a[@"area"]]; }];
-    for (NSDictionary *candidate in players) {
-        NSArray *media = BHRDResolveMedia(candidate[@"player"]);
-        if (media.count) return media;
-    }
-    for (id model in modelSources) {
-        NSArray *media = BHRDResolveMedia(model);
-        if (media.count) return media;
-    }
-    if (BHRDOnCurrentCard(source.view, root) && (!source.card || BHRDOnCurrentCard(source.card, root))) {
-        id currentModel = BHRDVideoModel(source.view);
-        if (currentModel) {
-            // A reused control whose model changed invalidates the retained model.
-            source.model = currentModel;
-            source.identity = BHRDMediaStatusIdentity(currentModel);
-        }
-        NSArray *media = BHFullscreenVideoMediaEntitiesForShareButton(source.view);
-        if (media.count) return media;
-    }
-    // Retain the same model used by inline download while its specific video card
-    // stays on screen. Never use a global 'most recently seen video' fallback.
-    if (source.card != root && BHRDOnCurrentCard(source.card, root) && source.model) {
-        NSString *currentIdentity = BHRDMediaStatusIdentity(source.model);
-        if ((source.identity == nil && currentIdentity == nil) || [source.identity isEqual:currentIdentity]) {
-            NSArray *media = BHRDResolveMedia(source.model);
-            if (media.count) return media;
-        }
-    }
-    NSArray *media = BHRDResolveMedia(controller);
-    return media.count ? media : BHRDResolveMedia(root);
+    return BHRDCurrentFullscreenVideoContext(controller)[@"media"];
+}
+static void BHRDLogVideoResolution(NSString *phase,NSDictionary *context,NSString *attempt,NSString *session) {
+    BHRDAvatarLog(@"fullscreen_video_resolution",@{@"phase":phase,@"reason":context[@"reason"] ?: @"",
+        @"sourceClass":context[@"sourceClass"] ?: @"",@"sourcePath":context[@"sourcePath"] ?: @"",
+        @"playerCount":context[@"playerCount"] ?: @0,@"modelCount":context[@"modelCount"] ?: @0,
+        @"visibleSourceCount":context[@"visibleSourceCount"] ?: @0,
+        @"observedViewClasses":context[@"observedViewClasses"] ?: @[],@"examinedViewCount":context[@"examinedViewCount"] ?: @0,
+        @"scanTruncated":context[@"scanTruncated"] ?: @NO,
+        @"attempt":attempt ?: @"",@"acceptanceSession":session ?: @""});
 }
 void BHRDRefreshFullscreenController(UIViewController *controller) {
     if (BHRDRefreshFullscreenPhotoCopy(controller)) return;
@@ -175,19 +83,34 @@ void BHRDRefreshFullscreenController(UIViewController *controller) {
         __weak UIViewController *weakController = controller;
         router.isEnabled = ^BOOL { return [BHRDFloatingVisibility(weakController) shouldDisplayEnabled:([BHRDManager DownloadingVideos] && BHRDPreference(BHRDFloatingDownloadKey)) attached:weakController.viewIfLoaded.window != nil]; };
         router.resolveMedia = ^NSArray * { return BHRDResolveFullscreenMedia(weakController); };
+        router.resolveSelection=^NSDictionary * { return BHRDCurrentFullscreenVideoContext(weakController); };
+        router.observeResolution=^(NSString *phase,NSDictionary *context,NSString *attempt,NSString *session) { BHRDLogVideoResolution(phase,context,attempt,session); };
         router.retryOnUnavailable = YES;
-
+        __weak BHRDFullscreenActionRouter *weakRouter=router;
         router.showDownloads = ^(NSArray *media) {
             UIView *view = weakController.viewIfLoaded;
-            if (!view) return;
+            NSString *identity=weakRouter.activationIdentity, *attempt=weakRouter.activationAttempt, *session=weakRouter.acceptanceSession;
+            NSDictionary *context=BHRDCurrentFullscreenVideoContext(weakController);
+            NSString *resource=context[@"resourceIdentity"];
+            if (!view.window) { BHRDLogVideoResolution(@"unavailable",@{@"reason":@"detached_or_hidden_host"},attempt,session); return; }
             BHRDDownloadButton *handler = objc_getAssociatedObject(view, &BHFullscreenDownloadHandlerKey);
             if (!handler) {
                 handler = [BHRDDownloadButton new];
                 objc_setAssociatedObject(view, &BHFullscreenDownloadHandlerKey, handler, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
             }
-            [handler presentDownloadOptionsForMediaEntities:media sourceView:view];
+            __block BOOL cancelled=NO;
+            BOOL (^stillCurrent)(void)=^BOOL {
+                NSDictionary *now=BHRDCurrentFullscreenVideoContext(weakController);
+                BOOL same=identity.length && [identity isEqual:now[@"identity"]] &&
+                    (!resource.length || [resource isEqual:now[@"resourceIdentity"]]);
+                if (!same && !cancelled) { cancelled=YES; BHRDLogVideoResolution(@"cancelled",@{@"reason":@"selection_changed"},attempt,session); }
+                return same;
+            };
+            [handler presentDownloadOptionsForMediaEntities:media sourceView:view selectionStillCurrent:stillCurrent presented:^(BOOL shown) {
+                if (!cancelled) BHRDLogVideoResolution(shown ? @"menu_presented" : @"unavailable",shown ? context : @{@"reason":@"menu_presentation_failed"},attempt,session);
+            }];
         };
-        router.showUnavailable = ^{ BHRDShowError(@"暂时无法读取当前视频，请等待加载完成或切换回来后重试。"); };
+        router.showUnavailable = ^{ BHRDShowError(@"未能确认当前视频的播放资源。请重新打开视频后重试；若仍失败，可在实际运行验收页导出读取诊断。"); };
         objc_setAssociatedObject(controller, &BHRDFloatingRouterKey, router, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
     if (root.window && ![BHRDFloatingVisibility(controller) shouldDisplayEnabled:YES attached:YES]) [BHRDFloatingVisibility(controller) observeMedia:router.resolveMedia().count > 0];
@@ -230,21 +153,6 @@ static void BHRDRegisterFloatingSource(UIView *shareButton) {
         objc_setAssociatedObject(owner, &BHRDFloatingSourceKey, source, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
     source.view = shareButton;
-    id model = BHRDVideoModel(shareButton);
-    UIView *card = nil;
-    for (UIView *parent = shareButton.superview; parent && parent != owner.view; parent = parent.superview) {
-        NSString *name = NSStringFromClass(parent.class);
-        if ([name containsString:@"ImmersiveCardView"] || [name hasSuffix:@"T1SlideshowStatusView"]) card = parent;
-        if (!model) model = BHRDVideoModel(parent);
-    }
-    BOOL sameCard = source.card == card;
-    source.card = card;
-    if (model) {
-        if (source.model != model || ![source.identity isEqual:BHRDMediaStatusIdentity(model)]) BHRDRememberMedia(model);
-        source.model = model; source.identity = BHRDMediaStatusIdentity(model);
-    } else if (!card || !sameCard) {
-        source.model = nil; source.identity = nil;
-    }
     BHRDRefreshFullscreenController(owner);
 }
 

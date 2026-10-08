@@ -2,6 +2,8 @@ name: X Suixin Rootless
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
     paths:
