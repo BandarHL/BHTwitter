@@ -8,6 +8,12 @@ void BHRDRememberMedia(id source);
 // identity takes precedence over older hydrated post metadata; ambiguous
 // current resources fail closed. Result keys include media, identity,
 // statusIdentity, assetIdentity, reason, stage, sourcePath and sourceClass.
+// Current TAV technological-item / Foundation-player wrappers and their native
+// quality endpoints are supported. endpointCount records directly observed URL
+// choices; custom-scheme asset URLs are never rewritten into guessed URLs.
+// The verified TAVFoundationPlayerEndpointsManager has an ivar-only manifest;
+// only its object-typed _manifestURL is read inside a current item binding.
+// resourceAccess distinguishes that limited object_ivar read from getters.
 NSDictionary *BHRDResolveLiveVideoSource(id source);
 // The caller must prove this is the currently attached inline-actions model or
 // its own delegate/model. This path mirrors the working post download button:

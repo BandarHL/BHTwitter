@@ -143,6 +143,7 @@ static NSArray *Cached(id source) {
 @interface BHRDAssetVariant : NSObject
 @property(nonatomic, copy) NSString *url;
 @property(nonatomic, copy) NSString *contentType;
+@property(nonatomic, copy) NSNumber *bitrate;
 @end
 @implementation BHRDAssetVariant @end
 @interface BHRDAssetInfo : NSObject
@@ -254,13 +255,18 @@ static NSDictionary *LiveResult(id source, NSArray *media, NSString *assetIdenti
 static NSArray<NSString *> *PlaybackKeys(void) {
     // These describe one currently bound playback session. Never inspect a
     // delegate, data source, pager items, prefetched players or neighboring posts.
-    return @[@"currentPlayer", @"player", @"currentItem", @"playerItem", @"asset", @"currentAsset", @"videoAsset",
+    return @[@"currentPlayer", @"player", @"videoPlayer", @"avPlayer", @"currentItem", @"playerItem", @"avPlayerItem", @"asset", @"currentAsset", @"videoAsset",
+        // X 12.24 uses TAVPlayer rather than AVPlayer at the view boundary.
+        // Its currently bound technological item owns the AVPlayer/quality
+        // endpoints. Following these object getters does not inspect neighboring
+        // pager items, retained delegates or globally remembered players.
+        @"internalState", @"mainThreadState", @"tech", @"config", @"foundationItem", @"qualityEndpoints", @"availableEndpoints", @"resourceLoader",
         @"currentPlayerSession", @"playerSession", @"playerSessionProducer", @"sessionProducible", @"playbackSession",
         @"playbackItem", @"playbackResource", @"mediaResource", @"resource", @"playerView", @"playerViewModel",
         @"currentViewModel", @"viewModel", @"mediaViewModel", @"currentMediaEntity", @"representedMediaEntity", @"mediaEntity", @"currentMedia"];
 }
 static NSArray<NSString *> *ResourceURLKeys(void) {
-    return @[@"URL", @"url", @"assetURL", @"playbackURL", @"videoURL", @"resourceURL", @"contentURL", @"streamURL"];
+    return @[@"URL", @"url", @"assetURL", @"playbackURL", @"videoURL", @"resourceURL", @"contentURL", @"streamURL", @"manifestURL", @"manifestUrl", @"endpointURL"];
 }
 static BOOL DeclaresObjectGetter(id object, NSString *key) {
     @try {
@@ -271,11 +277,29 @@ static BOOL DeclaresObjectGetter(id object, NSString *key) {
         return signature.numberOfArguments == 2 && signature.methodReturnType[0] == '@';
     } @catch (__unused NSException *exception) { return NO; }
 }
+static id EndpointManagerManifest(id object) {
+    // On X 12.24.1 this manager's real manifest is an object ivar, not a
+    // property/method. Its NSSet of quality endpoints contains resolutions,
+    // not resource URLs. Limit reflection to this verified manager and one
+    // object-typed ivar; never synthesize URLs from quality names or caches.
+    Class manager = NSClassFromString(@"TAVFoundationPlayerEndpointsManager");
+    if (!manager || ![object isKindOfClass:manager]) return nil;
+    @try {
+        Ivar ivar = class_getInstanceVariable(object_getClass(object), "_manifestURL");
+        const char *encoding = ivar ? ivar_getTypeEncoding(ivar) : NULL;
+        if (!encoding) return nil;
+        encoding += strspn(encoding,"rnNoORV");
+        if (encoding[0] != '@') return nil;
+        id value = object_getIvar(object,ivar);
+        return [value isKindOfClass:NSURL.class] || [value isKindOfClass:NSString.class] ? value : nil;
+    } @catch (__unused NSException *exception) { return nil; }
+}
 static NSDictionary *CurrentAssets(id source) {
     NSMutableArray *pending = [NSMutableArray arrayWithObject:@{@"object":source, @"path":@"source", @"depth":@0, @"binding":@0}];
     NSMutableSet *visited = [NSMutableSet set];
     NSMutableDictionary *assets = [NSMutableDictionary dictionary];
-    BOOL unsupported = NO, playbackBound = NO, itemDeclared = NO, truncated = NO;
+    NSMutableArray *probePaths = [NSMutableArray array], *excludedBranches = [NSMutableArray array];
+    BOOL unsupported = NO, playbackBound = NO, itemDeclared = NO, truncated = NO, itemMismatch = NO;
     NSUInteger index = 0;
     for (; index < pending.count && visited.count < 160; index++) {
         NSDictionary *node = pending[index]; id object = node[@"object"];
@@ -283,27 +307,94 @@ static NSDictionary *CurrentAssets(id source) {
         NSString *address = [NSString stringWithFormat:@"%p:%lu",(__bridge void *)object,(unsigned long)binding];
         if ([visited containsObject:address]) continue;
         [visited addObject:address];
+        if (probePaths.count < 24) [probePaths addObject:[node[@"path"] stringByAppendingFormat:@" (%@)",NSStringFromClass([object class])]];
+        // Two advertised state snapshots must refer to the same current
+        // technological item. Unioning them could return a retained old video.
+        id internalState = BHRDMediaObject(object,@"internalState"), mainThreadState = BHRDMediaObject(object,@"mainThreadState");
+        if (DeclaresObjectGetter(object,@"internalState") || DeclaresObjectGetter(object,@"mainThreadState")) {
+            // TAV's state has not attached yet. A retained parent endpoint is
+            // still not evidence of the item about to be displayed.
+            playbackBound = YES; itemDeclared = YES;
+        }
+        if (internalState && mainThreadState && DeclaresObjectGetter(internalState,@"currentItem") && DeclaresObjectGetter(mainThreadState,@"currentItem") &&
+            BHRDMediaObject(internalState,@"currentItem") != BHRDMediaObject(mainThreadState,@"currentItem")) {
+            itemMismatch = YES; break;
+        }
         NSMutableArray *values = [NSMutableArray array];
         if ([object isKindOfClass:NSURL.class] || [object isKindOfClass:NSString.class]) [values addObject:@{@"value":object, @"key":@"URL"}];
         else for (NSString *key in ResourceURLKeys()) {
             id value = BHRDMediaObject(object, key);
             if ([value isKindOfClass:NSURL.class] || [value isKindOfClass:NSString.class]) [values addObject:@{@"value":value, @"key":key}];
         }
+        id manifest = binding >= 2 ? EndpointManagerManifest(object) : nil;
+        if (manifest) {
+            [values addObject:@{@"value":manifest, @"key":@"_manifestURL", @"access":@"object_ivar"}];
+            if (probePaths.count < 24) [probePaths addObject:[node[@"path"] stringByAppendingString:@"._manifestURL (object_ivar)"]];
+        }
         for (NSDictionary *entry in values) {
             NSURL *url = VideoResourceURL(entry[@"value"]);
             if (!url) { unsupported = YES; continue; }
+            id contentType = BHRDMediaObject(object,@"contentType") ?: BHRDMediaObject(object,@"mimeType");
+            if ([contentType isKindOfClass:NSString.class] && [contentType length] &&
+                ![@[@"video/mp4", @"application/x-mpegurl", @"application/vnd.apple.mpegurl"] containsObject:[contentType lowercaseString]]) {
+                unsupported = YES; continue;
+            }
             NSString *key = ResourceIdentity(@[url]);
-            // Prefer the direct current asset's exact ID, not a cached status ID.
-            if (!assets[key] || [assets[key][@"binding"] unsignedIntegerValue] < binding)
-                assets[key] = @{@"url":url, @"path":[node[@"path"] stringByAppendingFormat:@".%@",entry[@"key"]], @"binding":@(binding)};
+            // Multiple currently observed qualities of one asset are one video,
+            // not competing current items. Preserve their exact native URLs.
+            NSMutableDictionary *resource = assets[key];
+            if (!resource || [resource[@"binding"] unsignedIntegerValue] < binding) {
+                resource = [@{@"urls":[NSMutableArray array], @"variants":[NSMutableArray array],
+                    @"path":[node[@"path"] stringByAppendingFormat:@".%@",entry[@"key"]], @"binding":@(binding),
+                    @"resourceAccess":entry[@"access"] ?: @"object_getter"} mutableCopy];
+                assets[key] = resource;
+            }
+            if ([resource[@"binding"] unsignedIntegerValue] == binding && ![resource[@"urls"] containsObject:url]) {
+                BHRDAssetVariant *variant = [BHRDAssetVariant new]; variant.url = url.absoluteString;
+                variant.contentType = [url.pathExtension.lowercaseString isEqualToString:@"mp4"] ? @"video/mp4" : @"application/x-mpegURL";
+                id bitrate = BHRDMediaObject(object,@"bitrate");
+                if ([bitrate isKindOfClass:NSNumber.class] && [bitrate doubleValue] > 0) variant.bitrate = bitrate;
+                [resource[@"urls"] addObject:url]; [resource[@"variants"] addObject:variant];
+            }
         }
         NSUInteger depth = [node[@"depth"] unsignedIntegerValue];
-        if ([object isKindOfClass:NSArray.class]) continue;
+        BOOL collection = [node[@"collection"] boolValue];
+        if ([object isKindOfClass:NSArray.class] || (collection && [object isKindOfClass:NSDictionary.class])) {
+            if (!collection) continue;
+            NSArray *children = [object isKindOfClass:NSArray.class] ? object : [object allValues];
+            if (children.count > 16) { truncated = YES; continue; }
+            NSUInteger childIndex = 0;
+            for (id child in children) {
+                if (child && child != NSNull.null) {
+                    if (depth >= 12) { truncated = YES; continue; }
+                    [pending addObject:@{@"object":child, @"path":[node[@"path"] stringByAppendingFormat:@"[%lu]",(unsigned long)childIndex],
+                        @"depth":@(depth+1), @"binding":@(binding)}];
+                }
+                childIndex++;
+            }
+            continue;
+        }
         for (NSString *key in PlaybackKeys()) {
-            BOOL isItem = [@[@"currentItem", @"playerItem", @"playbackItem"] containsObject:key];
+            BOOL isItem = [@[@"currentItem", @"playerItem", @"avPlayerItem", @"playbackItem"] containsObject:key];
             if (isItem && DeclaresObjectGetter(object,key)) { playbackBound = YES; itemDeclared = YES; }
             id child = BHRDMediaObject(object, key);
-            if (!child || [child isKindOfClass:NSArray.class]) continue;
+            BOOL isCollection = [key isEqualToString:@"availableEndpoints"];
+            if (!child && isItem && DeclaresObjectGetter(object,key) && probePaths.count < 24)
+                [probePaths addObject:[node[@"path"] stringByAppendingFormat:@".%@ (nil)",key]];
+            if (!child || ([child isKindOfClass:NSArray.class] && !isCollection)) continue;
+            if ([key isEqualToString:@"avPlayer"]) {
+                id foundation = BHRDMediaObject(object,@"foundationItem");
+                if (foundation && DeclaresObjectGetter(foundation,@"avPlayerItem")) {
+                    id boundItem = BHRDMediaObject(foundation,@"avPlayerItem");
+                    if (!boundItem || BHRDMediaObject(child,@"currentItem") != boundItem) {
+                        // Foundation item belongs to the new logical item; the
+                        // shared AVPlayer may still display its previous item.
+                        // Only Foundation item's endpoints can rescue it.
+                        if (excludedBranches.count < 8) [excludedBranches addObject:[node[@"path"] stringByAppendingFormat:@".%@ (foundation_item_mismatch)",key]];
+                        continue;
+                    }
+                }
+            }
             BOOL isAsset = [@[@"asset", @"currentAsset", @"videoAsset"] containsObject:key];
             if (isAsset) playbackBound = YES;
             NSUInteger childBinding = isItem ? 2 : (isAsset ? MAX(binding,1) : binding);
@@ -312,7 +403,7 @@ static NSDictionary *CurrentAssets(id source) {
                 if (![visited containsObject:childAddress]) truncated = YES;
                 continue;
             }
-            [pending addObject:@{@"object":child, @"path":[node[@"path"] stringByAppendingFormat:@".%@",key], @"depth":@(depth+1), @"binding":@(childBinding)}];
+            [pending addObject:@{@"object":child, @"path":[node[@"path"] stringByAppendingFormat:@".%@",key], @"depth":@(depth+1), @"binding":@(childBinding), @"collection":@(isCollection)}];
         }
     }
     for (; index < pending.count; index++) {
@@ -325,7 +416,14 @@ static NSDictionary *CurrentAssets(id source) {
     NSUInteger requiredBinding = itemDeclared ? 2 : (playbackBound ? 1 : 0);
     for (NSString *key in [assets.allKeys copy])
         if ([assets[key][@"binding"] unsignedIntegerValue] < requiredBinding) [assets removeObjectForKey:key];
-    return @{@"assets":assets, @"unsupported":@(unsupported), @"playbackBound":@(playbackBound), @"truncated":@(truncated)};
+    return @{@"assets":assets, @"unsupported":@(unsupported), @"playbackBound":@(playbackBound), @"truncated":@(truncated),
+        @"itemMismatch":@(itemMismatch), @"resourceProbePaths":probePaths, @"excludedPlaybackBranches":excludedBranches};
+}
+static NSDictionary *WithPlaybackProbes(NSDictionary *result, NSDictionary *probe) {
+    NSMutableDictionary *annotated = [result mutableCopy];
+    annotated[@"resourceProbePaths"] = probe[@"resourceProbePaths"] ?: @[];
+    annotated[@"excludedPlaybackBranches"] = probe[@"excludedPlaybackBranches"] ?: @[];
+    return annotated;
 }
 static NSDictionary *NativeVideo(id object, NSString *path) {
     id info = BHRDMediaObject(object, @"videoInfo");
@@ -406,30 +504,40 @@ static NSDictionary *CurrentNativeMedia(id source, BOOL allowPostMedia) {
 NSDictionary *BHRDResolveLiveVideoSource(id source) {
     if (!source || source == NSNull.null) return LiveResult(nil,nil,nil,@"no_current_source",@"source_probe",nil);
     NSDictionary *assets = CurrentAssets(source); NSDictionary *resources = assets[@"assets"];
-    if ([assets[@"truncated"] boolValue]) return LiveResult(source,nil,nil,@"resource_scan_budget_exceeded",@"resource_probe",nil);
-    if (resources.count > 1) return LiveResult(source,nil,nil,@"ambiguous_current_assets",@"identity_validation",nil);
+    if ([assets[@"itemMismatch"] boolValue]) return WithPlaybackProbes(LiveResult(source,nil,nil,@"current_item_mismatch",@"identity_validation",nil),assets);
+    if ([assets[@"truncated"] boolValue]) return WithPlaybackProbes(LiveResult(source,nil,nil,@"resource_scan_budget_exceeded",@"resource_probe",nil),assets);
+    if (resources.count > 1) return WithPlaybackProbes(LiveResult(source,nil,nil,@"ambiguous_current_assets",@"identity_validation",nil),assets);
     if (resources.count == 1) {
         NSString *key = resources.allKeys.firstObject; NSDictionary *resource = resources[key];
         // Adapt the currently observed URL; exact asset-key qualities may be
         // recovered, but an old status cache can never override the playing URL.
-        id media = AssetMedia(@{@"URL":resource[@"url"]});
-        return LiveResult(source,media ? @[media] : nil,key,@"resolved_current_asset",@"live_asset",resource[@"path"]);
+        id media = nil;
+        NSArray *variants = resource[@"variants"];
+        if (variants.count == 1) media = AssetMedia(@{@"URL":[resource[@"urls"] firstObject]});
+        if (!media) {
+            BHRDAssetMedia *observed = [BHRDAssetMedia new]; observed.videoInfo = [BHRDAssetInfo new]; observed.videoInfo.variants = variants;
+            media = observed;
+        }
+        NSMutableDictionary *result = [LiveResult(source,media ? @[media] : nil,key,@"resolved_current_asset",@"live_asset",resource[@"path"]) mutableCopy];
+        result[@"endpointCount"] = @(variants.count);
+        result[@"resourceAccess"] = resource[@"resourceAccess"] ?: @"object_getter";
+        return WithPlaybackProbes(result,assets);
     }
     if ([assets[@"playbackBound"] boolValue]) {
         // A recycled player can retain the old tweet model while its new item is
         // buffering or opaque. Only its current resource can authorize fallback.
-        return LiveResult(source,nil,nil,[assets[@"unsupported"] boolValue] ? @"unsupported_current_asset" : @"current_item_resource_unavailable",@"playback_resource_probe",nil);
+        return WithPlaybackProbes(LiveResult(source,nil,nil,[assets[@"unsupported"] boolValue] ? @"unsupported_current_asset" : @"current_item_resource_unavailable",@"playback_resource_probe",nil),assets);
     }
     NSDictionary *native = CurrentNativeMedia(source,NO);
     if (![native[@"candidates"] count] && ![native[@"ambiguous"] boolValue] && ![native[@"truncated"] boolValue]) native = CurrentNativeMedia(source,YES);
-    if ([native[@"truncated"] boolValue]) return LiveResult(source,nil,nil,@"resource_scan_budget_exceeded",@"resource_probe",nil);
+    if ([native[@"truncated"] boolValue]) return WithPlaybackProbes(LiveResult(source,nil,nil,@"resource_scan_budget_exceeded",@"resource_probe",nil),assets);
     NSDictionary *candidates = native[@"candidates"];
-    if (candidates.count > 1 || [native[@"ambiguous"] boolValue]) return LiveResult(source,nil,nil,@"ambiguous_current_media",@"identity_validation",nil);
+    if (candidates.count > 1 || [native[@"ambiguous"] boolValue]) return WithPlaybackProbes(LiveResult(source,nil,nil,@"ambiguous_current_media",@"identity_validation",nil),assets);
     if (candidates.count == 1) {
         NSString *key = candidates.allKeys.firstObject; NSDictionary *candidate = candidates[key];
-        return LiveResult(source,@[candidate[@"media"]],key,@"resolved_current_media",@"native_variants",candidate[@"path"]);
+        return WithPlaybackProbes(LiveResult(source,@[candidate[@"media"]],key,@"resolved_current_media",@"native_variants",candidate[@"path"]),assets);
     }
-    return LiveResult(source,nil,nil,[assets[@"unsupported"] boolValue] ? @"unsupported_current_asset" : @"no_current_video_resource",@"resource_probe",nil);
+    return WithPlaybackProbes(LiveResult(source,nil,nil,[assets[@"unsupported"] boolValue] ? @"unsupported_current_asset" : @"no_current_video_resource",@"resource_probe",nil),assets);
 }
 
 @interface BHRDBoundVideoBinding : NSObject

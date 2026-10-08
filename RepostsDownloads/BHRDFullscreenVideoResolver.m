@@ -85,17 +85,30 @@ static NSDictionary *Scanned(NSDictionary *result,NSArray *classes,NSUInteger co
     NSMutableDictionary *observed=[result mutableCopy]; observed[@"observedViewClasses"]=[classes copy];
     observed[@"examinedViewCount"]=@(count); observed[@"scanTruncated"]=@(truncated); return observed;
 }
-static void AddSource(NSMutableArray *sources,id source,NSString *kind,NSMutableSet *seen) {
+static void AddSource(NSMutableArray *sources,id source,NSString *kind,UIView *owner,CGRect visible,NSMutableSet *seen) {
     if (!source || source==NSNull.null || [source isKindOfClass:NSArray.class]) return;
     NSValue *pointer=[NSValue valueWithNonretainedObject:source]; if ([seen containsObject:pointer]) return;
-    [seen addObject:pointer]; [sources addObject:@{@"source":source,@"kind":kind}];
+    [seen addObject:pointer]; [sources addObject:@{@"source":source,@"kind":kind,@"owner":owner,@"visible":Box(visible)}];
 }
 static NSString *Text(id value) { return [value isKindOfClass:NSString.class] ? value : @""; }
-static NSString *Selection(id source,NSDictionary *context) {
-    id item=Read(source,@"currentItem");
+static id AtPath(id source,NSArray<NSString *> *path) {
+    id current=source;
+    for (NSString *key in path) { current=Read(current,key); if (!current || current==NSNull.null) return nil; }
+    return [current isKindOfClass:NSArray.class] ? nil : current;
+}
+static id CurrentItem(id source) {
+    // X 12.24 uses a reused TAVPlayer with a distinct internal item. The outer
+    // player is not a selection identity; switching its internal item must
+    // invalidate an old download menu even before the new URL becomes readable.
+    id item=AtPath(source,@[@"internalState",@"currentItem"]) ?: AtPath(source,@[@"mainThreadState",@"currentItem"]) ?: Read(source,@"currentItem");
     if (!item) for (NSString *key in @[@"currentPlayer",@"player",@"videoPlayer",@"avPlayer"]) {
-        item=Read(Read(source,key),@"currentItem"); if (item) break;
+        id player=Read(source,key);
+        item=AtPath(player,@[@"internalState",@"currentItem"]) ?: AtPath(player,@[@"mainThreadState",@"currentItem"]) ?: Read(player,@"currentItem"); if (item) break;
     }
+    return item && item!=NSNull.null && ![item isKindOfClass:NSArray.class] ? item : nil;
+}
+static NSString *Selection(id source,NSDictionary *context) {
+    id item=CurrentItem(source);
     if (item && item!=NSNull.null && ![item isKindOfClass:NSArray.class]) {
         NSString *token=objc_getAssociatedObject(item,&ItemSelectionKey);
         if (!token) { token=[@"item:" stringByAppendingString:NSUUID.UUID.UUIDString]; objc_setAssociatedObject(item,&ItemSelectionKey,token,OBJC_ASSOCIATION_COPY_NONATOMIC); }
@@ -111,38 +124,111 @@ static NSString *Selection(id source,NSDictionary *context) {
     if (status.length) old.status=status; if (asset.length) old.asset=asset;
     objc_setAssociatedObject(source,&SelectionKey,old,OBJC_ASSOCIATION_RETAIN_NONATOMIC); return old.token;
 }
+static NSString *CombinedSelection(NSArray *observations) {
+    NSMutableSet *tokens=[NSMutableSet set];
+    for (NSDictionary *entry in observations) if ([entry[@"token"] length]) [tokens addObject:entry[@"token"]];
+    NSArray *sorted=[tokens.allObjects sortedArrayUsingSelector:@selector(compare:)];
+    if (sorted.count<=1) return sorted.firstObject ?: @"";
+    return [@"items:" stringByAppendingString:[sorted componentsJoinedByString:@"|"]];
+}
+static BOOL SameSurface(NSDictionary *left,NSDictionary *right) {
+    if (left[@"owner"]!=right[@"owner"]) return NO;
+    CGRect first=Unbox(left[@"visible"]),second=Unbox(right[@"visible"]),shared=CGRectIntersection(first,second);
+    CGFloat smaller=MIN(first.size.width*first.size.height,second.size.width*second.size.height);
+    return VisibleRect(shared) && smaller>0 && shared.size.width*shared.size.height/smaller>=0.90;
+}
+static NSDictionary *ObservedResult(NSDictionary *result,NSArray *observations,NSUInteger resolvedCount) {
+    NSMutableDictionary *value=[result mutableCopy]; value[@"resolvedSourceCount"]=@(resolvedCount);
+    value[@"unresolvedSourceCount"]=@(observations.count-resolvedCount);
+    NSUInteger resolvedPlayers=0,unresolvedPlayers=0;
+    NSMutableSet *reasons=[NSMutableSet set],*paths=[NSMutableSet set],*excluded=[NSMutableSet set]; NSMutableArray *candidates=[NSMutableArray array];
+    for (NSDictionary *entry in observations) {
+        NSDictionary *context=entry[@"context"]; BOOL resolved=[context[@"media"] count]>0;
+        if ([Text(entry[@"kind"]) hasPrefix:@"player_"]) { if (resolved) resolvedPlayers++; else unresolvedPlayers++; }
+        if (!resolved) [reasons addObject:context[@"reason"] ?: @"visible_source_unresolved"];
+        if ([context[@"sourcePath"] length]) [paths addObject:context[@"sourcePath"]];
+        for (id path in context[@"resourceProbePaths"]) if ([path isKindOfClass:NSString.class] && paths.count<64) [paths addObject:path];
+        for (id path in context[@"excludedPlaybackBranches"]) if ([path isKindOfClass:NSString.class] && excluded.count<8) [excluded addObject:path];
+        [candidates addObject:@{@"kind":entry[@"kind"] ?: @"",@"sourceClass":context[@"sourceClass"] ?: @"",@"reason":context[@"reason"] ?: @"",
+            @"stage":context[@"stage"] ?: @"",@"sourcePath":context[@"sourcePath"] ?: @"",@"currentItemPresent":@(entry[@"item"]!=nil),@"resolved":@(resolved),
+            @"resourceAccess":Text(context[@"resourceAccess"]),@"endpointCount":[context[@"endpointCount"] isKindOfClass:NSNumber.class] ? context[@"endpointCount"] : @0}];
+    }
+    value[@"resolvedPlayerCount"]=@(resolvedPlayers); value[@"unresolvedPlayerCount"]=@(unresolvedPlayers);
+    value[@"candidateResults"]=candidates; value[@"resourceProbePaths"]=[paths.allObjects sortedArrayUsingSelector:@selector(compare:)];
+    value[@"excludedPlaybackBranches"]=[excluded.allObjects sortedArrayUsingSelector:@selector(compare:)];
+    value[@"unresolvedReasons"]=[reasons.allObjects sortedArrayUsingSelector:@selector(compare:)]; return value;
+}
+static BOOL HardResourceFailure(NSString *reason) {
+    return [reason isEqual:@"resource_scan_budget_exceeded"] || [reason hasPrefix:@"ambiguous_"] || [reason isEqual:@"current_item_mismatch"];
+}
 static NSDictionary *ResolveSources(NSArray *sources,NSUInteger playerCount,NSUInteger modelCount,BOOL strictPlayback) {
-    NSDictionary *resolved=nil,*unresolved=nil; NSString *resource=nil,*selection=nil,*unresolvedSelection=nil;
+    NSMutableArray *observations=[NSMutableArray array],*usable=[NSMutableArray array],*missing=[NSMutableArray array];
     for (NSDictionary *candidate in sources) {
         NSDictionary *current=BHRDResolveLiveVideoSource(candidate[@"source"]);
         NSArray *media=current[@"media"]; NSString *next=current[@"identity"];
         NSString *token=Selection(candidate[@"source"],current);
+        NSMutableDictionary *entry=[candidate mutableCopy]; entry[@"context"]=current; entry[@"token"]=token;
+        id item=CurrentItem(candidate[@"source"]); if (item) entry[@"item"]=item;
+        [observations addObject:entry];
         if (![media isKindOfClass:NSArray.class] || !media.count || ![next isKindOfClass:NSString.class] || !next.length) {
-            // An unresolved visible player can be a just-switched item. Reading
-            // an older hydrated status instead would download the previous video.
-            BOOL incomplete=[current[@"reason"] isEqual:@"resource_scan_budget_exceeded"];
-            BOOL ambiguous=[current[@"reason"] hasPrefix:@"ambiguous_"];
-            if (strictPlayback || incomplete || ambiguous) {
-                NSMutableDictionary *failed=[Result(current[@"reason"] ?: @"visible_player_unresolved",playerCount,modelCount) mutableCopy];
-                failed[@"sourceClass"]=current[@"sourceClass"] ?: NSStringFromClass([candidate[@"source"] class]);
-                failed[@"sourcePath"]=current[@"sourcePath"] ?: @""; failed[@"stage"]=current[@"stage"] ?: @"visible_source_probe";
-                failed[@"identity"]=token; return failed;
-            }
-            if (sources.count==1 && token.length) { unresolved=current; unresolvedSelection=token; }
-            continue;
+            [missing addObject:entry];
+        } else {
+            [usable addObject:entry];
         }
-        if (resource && ![resource isEqual:next]) return Result(@"conflicting_visible_resources",playerCount,modelCount);
-        resource=next; if (!resolved) { resolved=current; selection=token; }
     }
-    if (!resolved) {
-        NSMutableDictionary *failed=[Result(unresolved[@"reason"] ?: (playerCount ? @"visible_player_unresolved" : @"current_model_unresolved"),playerCount,modelCount) mutableCopy];
-        if (unresolved) { failed[@"identity"]=unresolvedSelection; failed[@"sourceClass"]=unresolved[@"sourceClass"] ?: @""; failed[@"sourcePath"]=unresolved[@"sourcePath"] ?: @""; failed[@"stage"]=unresolved[@"stage"] ?: @"visible_source_probe"; }
-        return failed;
+    // Complete the probe before deciding: an unreadable outer wrapper must not
+    // hide another usable current player merely because it was scanned first.
+    NSString *selection=CombinedSelection(observations),*resource=nil;
+    for (NSDictionary *entry in usable) {
+        NSString *next=entry[@"context"][@"identity"];
+        if (resource && ![resource isEqual:next]) return ObservedResult(Result(@"conflicting_visible_resources",playerCount,modelCount),observations,usable.count);
+        resource=next;
     }
-    NSMutableDictionary *result=[resolved mutableCopy];
-    result[@"resourceIdentity"]=resource ?: @""; result[@"identity"]=selection ?: @"";
+    // Pick deterministic diagnostic metadata, including when every candidate
+    // failed, instead of letting UIKit subview order choose the error shown.
+    [missing sortUsingComparator:^NSComparisonResult(NSDictionary *left,NSDictionary *right) {
+        NSString *a=[NSString stringWithFormat:@"%@:%@",left[@"context"][@"reason"],left[@"context"][@"sourceClass"]];
+        NSString *b=[NSString stringWithFormat:@"%@:%@",right[@"context"][@"reason"],right[@"context"][@"sourceClass"]]; return [a compare:b];
+    }];
+    NSDictionary *fatal=nil;
+    for (NSDictionary *entry in missing) {
+        NSString *reason=entry[@"context"][@"reason"];
+        if (HardResourceFailure(reason)) { fatal=entry; break; }
+    }
+    for (NSDictionary *entry in missing) {
+        if (fatal || !strictPlayback || !usable.count) break;
+        BOOL provedDuplicate=NO;
+        for (NSDictionary *ready in usable) {
+            if (entry[@"item"] && entry[@"item"]==ready[@"item"]) { provedDuplicate=YES; break; }
+            // Geometric overlap alone cannot connect two independent players.
+            // Only an outer wrapper in this same visible surface may be skipped
+            // when it has no non-null current item of its own. A wrapper's nil
+            // getter is ordinary before it binds, not proof of another video.
+            if (!entry[@"item"] && SameSurface(entry,ready)) { provedDuplicate=YES; break; }
+        }
+        if (!provedDuplicate) { fatal=entry; break; }
+    }
+    if (!usable.count || fatal) {
+        NSDictionary *failure=(fatal ?: missing.firstObject)[@"context"];
+        NSString *reason=failure[@"reason"] ?: (playerCount ? @"visible_player_unresolved" : @"current_model_unresolved");
+        if (fatal && usable.count && !HardResourceFailure(reason)) reason=@"ambiguous_visible_player_selection";
+        NSMutableDictionary *failed=[Result(reason,playerCount,modelCount) mutableCopy];
+        failed[@"identity"]=selection; failed[@"sourceClass"]=failure[@"sourceClass"] ?: @"";
+        failed[@"sourcePath"]=failure[@"sourcePath"] ?: @""; failed[@"stage"]=failure[@"stage"] ?: @"visible_source_probe";
+        return ObservedResult(failed,observations,usable.count);
+    }
+    // Prefer the richer current resource when two wrappers expose the same
+    // asset. The binding token still includes every observed real item.
+    [usable sortUsingComparator:^NSComparisonResult(NSDictionary *left,NSDictionary *right) {
+        NSUInteger a=[BHRDMediaObject(BHRDMediaObject([left[@"context"][@"media"] firstObject],@"videoInfo"),@"variants") count];
+        NSUInteger b=[BHRDMediaObject(BHRDMediaObject([right[@"context"][@"media"] firstObject],@"videoInfo"),@"variants") count];
+        if (a!=b) return a>b ? NSOrderedAscending : NSOrderedDescending;
+        return [Text(left[@"context"][@"sourcePath"]) compare:Text(right[@"context"][@"sourcePath"])];
+    }];
+    NSMutableDictionary *result=[usable.firstObject[@"context"] mutableCopy];
+    result[@"resourceIdentity"]=resource ?: @""; result[@"identity"]=selection;
     result[@"playerCount"]=@(playerCount); result[@"modelCount"]=@(modelCount); result[@"visibleSourceCount"]=@(playerCount+modelCount);
-    return result;
+    return ObservedResult(result,observations,usable.count);
 }
 static NSDictionary *ResolveInline(NSArray *inlines,NSArray *players,NSUInteger modelCount) {
     NSDictionary *chosen=nil,*pending=nil; UIView *chosenView=nil,*pendingView=nil; NSString *post=nil; NSSet *resources=nil;
@@ -165,7 +251,10 @@ static NSDictionary *ResolveInline(NSArray *inlines,NSArray *players,NSUInteger 
     if (!chosen) { chosen=pending; chosenView=pendingView; post=Text(chosen[@"statusIdentity"]); resources=[NSSet set]; }
     // A usable live URL proves which video within the bound post is current.
     // An opaque player still permits the native, explicitly grouped post menu.
-    NSString *knownAsset=nil,*playerToken=nil;
+    NSString *knownAsset=nil; NSMutableArray *playerSelections=[NSMutableArray array];
+    NSDictionary *liveSelection=players.count ? ResolveSources(players,players.count,modelCount,YES) : nil;
+    NSString *liveReason=liveSelection[@"reason"];
+    if (HardResourceFailure(liveReason) || [liveReason isEqual:@"conflicting_visible_resources"]) return liveSelection;
     for (NSDictionary *candidate in players) {
         NSDictionary *live=BHRDResolveLiveVideoSource(candidate[@"source"]);
         NSString *asset=Text(live[@"assetIdentity"]);
@@ -174,15 +263,18 @@ static NSDictionary *ResolveInline(NSArray *inlines,NSArray *players,NSUInteger 
             knownAsset=asset;
         }
         NSString *token=Selection(candidate[@"source"],live);
-        if (!playerToken && [token hasPrefix:@"item:"]) playerToken=token;
+        if ([token hasPrefix:@"item:"]) [playerSelections addObject:@{@"token":token}];
     }
     NSMutableDictionary *result=[chosen mutableCopy];
     if (knownAsset) { result[@"media"]=@[chosen[@"assetMedia"][knownAsset]]; result[@"assetIdentity"]=knownAsset; }
+    NSString *playerToken=CombinedSelection(playerSelections);
     result[@"identity"]=playerToken.length ? playerToken : Selection(chosenView,chosen);
     NSString *single=knownAsset ?: ([chosen[@"assetIdentities"] count]==1 ? [chosen[@"assetIdentities"] firstObject] : nil);
     result[@"resourceIdentity"]=single.length ? [@"asset:" stringByAppendingString:single] : [NSString stringWithFormat:@"post:%@:%@",post ?: @"",[[chosen[@"assetIdentities"] sortedArrayUsingSelector:@selector(compare:)] componentsJoinedByString:@"|"]];
     result[@"reason"]=[chosen[@"media"] count] ? @"resolved_inline_model" : @"bound_media_unavailable"; result[@"sourceClass"]=NSStringFromClass(chosenView.class); result[@"sourcePath"]=@"current_inline_actions.viewModel";
     result[@"playerCount"]=@(players.count); result[@"modelCount"]=@(modelCount); result[@"visibleSourceCount"]=@(players.count+modelCount);
+    for (NSString *key in @[@"resolvedPlayerCount",@"unresolvedPlayerCount",@"resolvedSourceCount",@"unresolvedSourceCount",@"candidateResults",@"resourceProbePaths",@"unresolvedReasons",@"excludedPlaybackBranches"])
+        if (liveSelection[key]) result[key]=liveSelection[key];
     return result;
 }
 NSDictionary *BHRDCurrentFullscreenVideoContext(id controller) {
@@ -231,7 +323,7 @@ NSDictionary *BHRDCurrentFullscreenVideoContext(id controller) {
                 CGRect layerClip=Unbox(node[@"clip"]), layerRect=[layer convertRect:layer.bounds toLayer:root.layer], shown=CGRectIntersection(layerRect,layerClip);
                 if ([layer isKindOfClass:AVPlayerLayer.class] && VisibleRect(shown) && shown.size.width>=90 && shown.size.height>=60) {
                     AVPlayer *player=((AVPlayerLayer *)layer).player;
-                    if (player) AddSource(players,player,@"player_layer",seenSources);
+                    if (player) AddSource(players,player,@"player_layer",view,shown,seenSources);
                 }
                 CGRect nextClip=layer.masksToBounds ? shown : layerClip;
                 if (!VisibleRect(nextClip)) continue;
@@ -247,8 +339,8 @@ NSDictionary *BHRDCurrentFullscreenVideoContext(id controller) {
                 // Probe current player properties even when playback uses a
                 // private wrapper or surface instead of an AVPlayerLayer.
                 for (NSString *key in @[@"currentPlayer",@"player",@"videoPlayer",@"avPlayer"])
-                    AddSource(players,Read(view,key),@"player_view",seenSources);
-                if (VideoView(view)) AddSource(models,view,PlaybackSurface(view) ? @"visible_video_surface" : @"visible_card_model",seenSources);
+                    AddSource(players,Read(view,key),@"player_view",view,visible,seenSources);
+                if (VideoView(view)) AddSource(models,view,PlaybackSurface(view) ? @"visible_video_surface" : @"visible_card_model",view,visible,seenSources);
                 NSString *name=NSStringFromClass(view.class).lowercaseString;
                 if ([name containsString:@"slideshowstatus"] || [name containsString:@"immersivecard"]) {
                     id entity=Read(view,@"currentMediaEntity") ?: Read(view,@"media");
@@ -283,5 +375,5 @@ NSDictionary *BHRDCurrentFullscreenVideoContext(id controller) {
     // surface is switching or unreadable. That parent cannot rescue the surface.
     NSArray *current=players.count ? players : surfaces.count ? surfaces : models;
     NSDictionary *resolved=ResolveSources(current,players.count,models.count,players.count || surfaces.count);
-    return Scanned([resolved[@"media"] count] ? resolved : inlineContext ?: entityContext ?: resolved,classes,examined,NO);
+    return Scanned(players.count ? resolved : [resolved[@"media"] count] ? resolved : inlineContext ?: entityContext ?: resolved,classes,examined,NO);
 }

@@ -14,9 +14,27 @@
 @implementation T1ImmersiveFullScreenViewController @end
 @interface NativeVideoSurface : UIView
 @property(nonatomic,strong) id player;
+@property(nonatomic,strong) id currentPlayer;
 @property(nonatomic,strong) id viewModel;
 @end
 @implementation NativeVideoSurface @end
+@interface TAVPlayer : NSObject
+@property(nonatomic,strong) id internalState;
+@property(nonatomic,strong) id mainThreadState;
+@end
+@implementation TAVPlayer @end
+@interface TAVFoundationPlayerEndpointsManager : NSObject {
+    NSURL *_manifestURL;
+}
+@property(nonatomic,strong) NSSet *availableEndpoints;
+- (instancetype)initWithManifest:(NSURL *)manifest;
+@end
+@implementation TAVFoundationPlayerEndpointsManager
+- (instancetype)initWithManifest:(NSURL *)manifest {
+    if ((self=[super init])) { _manifestURL=manifest; _availableEndpoints=[NSSet setWithObjects:@{@"resolution":@"720x1280"},@{@"resolution":@"1080x1920"},nil]; }
+    return self;
+}
+@end
 @interface T1ImmersiveCardView : NativeVideoSurface @end
 @implementation T1ImmersiveCardView @end
 @interface T1StatusInlineActionsView : UIView
@@ -35,6 +53,9 @@ static void Check(BOOL condition,NSString *message) { Checks++; if (!condition) 
 static NSString *VideoURL(NSString *identifier) { return [NSString stringWithFormat:@"https://video.twimg.com/ext_tw_video/%@/pu/pl/current.m3u8",identifier]; }
 static NSDictionary *Player(NSString *identifier) { return @{@"currentItem":@{@"asset":@{@"URL":VideoURL(identifier)}}}; }
 static id NativeModel(NSString *identifier) { return @{@"statusID":identifier,@"currentMediaEntity":@{@"videoInfo":@{@"variants":@[@{@"url":VideoURL(identifier),@"contentType":@"application/x-mpegURL"}]}}}; }
+static id TAVItem(NSString *identifier) {
+    return @{@"tech":@{@"foundationItem":@{@"avPlayerItem":@{@"asset":@{@"URL":VideoURL(identifier)}}}}};
+}
 static void Frame(UIView *view,CGRect rect) { view.frame=rect; view.bounds=CGRectMake(0,0,rect.size.width,rect.size.height); view.layer.frame=rect; view.layer.bounds=view.bounds; }
 static void Attach(UIView *parent,UIView *child,CGRect rect) { Frame(child,rect); child.window=parent.window; [parent addSubview:child]; [parent.layer addSublayer:child.layer]; }
 static T1ImmersiveFullScreenViewController *Host(void) {
@@ -124,6 +145,63 @@ int main(void) { @autoreleasepool {
     NativeVideoSurface *one=[NativeVideoSurface new],*two=[NativeVideoSurface new]; one.player=Player(@"930001"); two.player=Player(@"930002"); Attach(root,one,CGRectMake(0,100,390,400)); Attach(root,two,CGRectMake(0,300,390,200));
     context=BHRDCurrentFullscreenVideoContext(host); Check([context[@"media"] count]==0 && [context[@"reason"] isEqual:@"conflicting_visible_resources"],@"Two visible different players are rejected instead of choosing the largest");
     two.player=Player(@"930001"); Check([URL(BHRDCurrentFullscreenVideoContext(host)) containsString:@"930001"],@"Duplicate native surfaces for one resource do not create a different-video conflict");
+
+    host=Host(); root=host.viewIfLoaded; surface=[NativeVideoSurface new]; Attach(root,surface,CGRectMake(0,180,390,330));
+    TAVPlayer *tav=[TAVPlayer new]; tav.internalState=@{@"currentItem":TAVItem(@"tav-current")}; surface.player=tav;
+    context=BHRDCurrentFullscreenVideoContext(host); first=context[@"identity"];
+    Check([URL(context) containsString:@"tav-current"] && [first hasPrefix:@"item:"],@"A TAV internal current item exposes a download before loading comments");
+    Check([context[@"sourcePath"] containsString:@"internalState.currentItem.tech.foundationItem.avPlayerItem.asset.URL"],@"TAV diagnostics preserve the observed current resource chain without exporting its URL");
+    Check([BHRDCurrentFullscreenVideoContext(host)[@"identity"] isEqual:first],@"Repeated TAV reads preserve the logical current item token");
+    tav.internalState=@{@"currentItem":TAVItem(@"tav-current")}; context=BHRDCurrentFullscreenVideoContext(host);
+    Check([URL(context) containsString:@"tav-current"] && ![context[@"identity"] isEqual:first],@"Replacing a TAV logical item invalidates its menu even when the asset URL is identical");
+    NSMutableDictionary *loadingTAVItem=[NSMutableDictionary dictionary]; tav.internalState=@{@"currentItem":loadingTAVItem};
+    context=BHRDCurrentFullscreenVideoContext(host); first=context[@"identity"];
+    Check(![context[@"media"] count] && [first hasPrefix:@"item:"],@"An unreadable new TAV item has a stable retry token and cannot reuse a prior item");
+    loadingTAVItem[@"tech"]=TAVItem(@"tav-loaded")[@"tech"]; context=BHRDCurrentFullscreenVideoContext(host);
+    Check([URL(context) containsString:@"tav-loaded"] && [context[@"identity"] isEqual:first],@"The same TAV logical item may hydrate its resource while its download attempt waits");
+    tav.mainThreadState=@{@"currentItem":TAVItem(@"tav-main-current")}; context=BHRDCurrentFullscreenVideoContext(host);
+    Check(![context[@"media"] count] && [context[@"reason"] isEqual:@"current_item_mismatch"],@"Contradictory internal and main-thread TAV items reject playback rather than downloading a retained resource");
+    tav.internalState=nil; context=BHRDCurrentFullscreenVideoContext(host);
+    Check([URL(context) containsString:@"tav-main-current"],@"A published main-thread TAV item supplies the current resource when no conflicting internal item exists");
+    tav.mainThreadState=nil;
+    TAVFoundationPlayerEndpointsManager *endpointManager=[[TAVFoundationPlayerEndpointsManager alloc] initWithManifest:[NSURL URLWithString:VideoURL(@"tav-real-manifest")]];
+    tav.internalState=@{@"currentItem":@{@"tech":@{@"foundationItem":@{@"avPlayerItem":@{@"asset":@{@"URL":@"tav-resource://current/item"}}},@"qualityEndpoints":endpointManager}}};
+    context=BHRDCurrentFullscreenVideoContext(host);
+    Check([URL(context) containsString:@"tav-real-manifest"] && [context[@"resourceAccess"] isEqual:@"object_ivar"],@"A fullscreen TAV custom asset URL is resolved using the current item's verified manifest ivar");
+    Check([context[@"sourcePath"] hasSuffix:@"tech.qualityEndpoints._manifestURL"] && [context[@"resourceProbePaths"] count]>1,@"The next exported probe identifies the item-owned manifest access and inspected object chain");
+    Check([BHRDMediaObject(BHRDMediaObject([context[@"media"] firstObject],@"videoInfo"),@"variants") count]==1,@"Resolution-only NSSet endpoints cannot fabricate fullscreen quality download URLs");
+
+    // Both enumeration orders must inspect the readable candidate. A nil-item
+    // outer wrapper on the same surface is different from an opaque selected
+    // item, which may be replacing the visible AV player's previous video.
+    TAVPlayer *unboundTAV=[TAVPlayer new]; id readableAV=Player(@"order-current");
+    surface.player=unboundTAV; surface.currentPlayer=readableAV;
+    NSDictionary *wrapperFirst=BHRDCurrentFullscreenVideoContext(host); first=wrapperFirst[@"identity"];
+    Check([URL(wrapperFirst) containsString:@"order-current"] && [wrapperFirst[@"resolvedPlayerCount"] isEqual:@1] && [wrapperFirst[@"unresolvedPlayerCount"] isEqual:@1],@"An unreadable nil-item TAV wrapper does not poison a readable player on the same current surface");
+    surface.player=readableAV; surface.currentPlayer=unboundTAV; context=BHRDCurrentFullscreenVideoContext(host);
+    Check([URL(context) containsString:@"order-current"] && [context[@"identity"] isEqual:first],@"Swapping candidate enumeration order retains the same current download selection");
+    Check([context[@"candidateResults"] count]==2 && [context[@"unresolvedReasons"] count]==1,@"Diagnostics record every resolved and unreadable candidate instead of returning at the first failure");
+    BOOL safeFields=YES; NSSet *diagnosticKeys=[NSSet setWithArray:@[@"kind",@"sourceClass",@"reason",@"stage",@"sourcePath",@"currentItemPresent",@"resolved",@"resourceAccess",@"endpointCount"]];
+    for (NSDictionary *candidate in context[@"candidateResults"]) if (![[NSSet setWithArray:candidate.allKeys] isEqual:diagnosticKeys]) safeFields=NO;
+    Check(safeFields,@"Candidate diagnostics contain only fixed classes and stages, with no URL, account, or post identity");
+    unboundTAV.internalState=@{@"currentItem":[NSMutableDictionary dictionary]}; context=BHRDCurrentFullscreenVideoContext(host);
+    Check(![context[@"media"] count] && [context[@"reason"] isEqual:@"ambiguous_visible_player_selection"],@"An opaque new TAV item cannot borrow a readable older AV player even on the same surface");
+    first=context[@"identity"]; surface.player=unboundTAV; surface.currentPlayer=readableAV; context=BHRDCurrentFullscreenVideoContext(host);
+    Check(![context[@"media"] count] && [context[@"identity"] isEqual:first],@"A genuine opaque-item conflict remains unsafe in both candidate orders");
+    unboundTAV.internalState=@{@"currentItem":[NSMutableDictionary dictionary]};
+    Check(![BHRDCurrentFullscreenVideoContext(host)[@"identity"] isEqual:first],@"Replacing the unreadable TAV item cancels a pending attempt despite the retained readable AV item");
+    unboundTAV.internalState=nil; surface.currentPlayer=nil; surface.player=readableAV;
+    NativeVideoSurface *independent=[NativeVideoSurface new]; independent.player=unboundTAV; Attach(root,independent,surface.frame);
+    context=BHRDCurrentFullscreenVideoContext(host);
+    Check(![context[@"media"] count] && [context[@"reason"] isEqual:@"ambiguous_visible_player_selection"],@"Matching viewport geometry alone does not merge independent opaque and known video surfaces");
+    independent.hidden=YES;
+    Check([URL(BHRDCurrentFullscreenVideoContext(host)) containsString:@"order-current"],@"Hiding the unrelated opaque surface permits the still visible current player");
+
+    surface.player=@{@"currentItem":@{}}; surface.currentPlayer=unboundTAV; context=BHRDCurrentFullscreenVideoContext(host);
+    NSString *unavailableReason=context[@"reason"],*unavailableToken=context[@"identity"];
+    Check(![context[@"media"] count] && [context[@"resolvedPlayerCount"] isEqual:@0] && [context[@"unresolvedPlayerCount"] isEqual:@2],@"When all current players are unreadable the result exposes their failure counts");
+    id emptyAV=surface.player; surface.player=unboundTAV; surface.currentPlayer=emptyAV; context=BHRDCurrentFullscreenVideoContext(host);
+    Check([context[@"reason"] isEqual:unavailableReason] && [context[@"identity"] isEqual:unavailableToken],@"All-unreadable diagnostics and retry identity are independent of candidate enumeration order");
 
     host=Host(); root=host.viewIfLoaded; T1ImmersiveCardView *native=[T1ImmersiveCardView new]; native.viewModel=NativeModel(@"940001"); Attach(root,native,root.bounds);
     Check([URL(BHRDCurrentFullscreenVideoContext(host)) containsString:@"940001"],@"A visible bound current-media model works when no AVPlayerLayer is exposed");

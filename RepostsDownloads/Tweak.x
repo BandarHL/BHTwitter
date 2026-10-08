@@ -67,6 +67,13 @@ static NSArray *BHRDResolveFullscreenMedia(UIViewController *controller) {
 static void BHRDLogVideoResolution(NSString *phase,NSDictionary *context,NSString *attempt,NSString *session) {
     BHRDAvatarLog(@"fullscreen_video_resolution",@{@"phase":phase,@"reason":context[@"reason"] ?: @"",
         @"sourceClass":context[@"sourceClass"] ?: @"",@"sourcePath":context[@"sourcePath"] ?: @"",
+        @"stage":context[@"stage"] ?: @"",@"resourceProbePaths":context[@"resourceProbePaths"] ?: @[],
+        @"resourceAccess":context[@"resourceAccess"] ?: @"",@"endpointCount":context[@"endpointCount"] ?: @0,
+        @"excludedPlaybackBranches":context[@"excludedPlaybackBranches"] ?: @[],
+        @"resolvedPlayerCount":context[@"resolvedPlayerCount"] ?: @0,@"unresolvedPlayerCount":context[@"unresolvedPlayerCount"] ?: @0,
+        @"resolvedSourceCount":context[@"resolvedSourceCount"] ?: @0,@"unresolvedSourceCount":context[@"unresolvedSourceCount"] ?: @0,
+        @"unresolvedReasons":context[@"unresolvedReasons"] ?: @[],
+        @"candidateResults":context[@"candidateResults"] ?: @[],
         @"playerCount":context[@"playerCount"] ?: @0,@"modelCount":context[@"modelCount"] ?: @0,
         @"visibleSourceCount":context[@"visibleSourceCount"] ?: @0,
         @"observedViewClasses":context[@"observedViewClasses"] ?: @[],@"examinedViewCount":context[@"examinedViewCount"] ?: @0,

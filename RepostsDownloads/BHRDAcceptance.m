@@ -79,6 +79,8 @@ static NSDictionary *StageDetails(void) {
         @"video_model_unresolved":@"已经找到当前视频模型，但模型尚未提供可下载媒体资料；请导出日志排查缺失字段。",
         @"video_inline_mismatch":@"当前原生操作栏的媒体与播放来源不一致，已阻止借用其他帖子的下载参数。",
         @"video_bound_unavailable":@"当前操作栏已绑定帖子，但下载参数尚未加载；悬浮入口仍保留，可再次点击。",
+        @"video_current_item_mismatch":@"TAV 当前项与播放器状态或原生 AV 项不一致，已阻止借用旧视频地址；请导出本轮诊断。",
+        @"video_player_selection_ambiguous":@"部分可见播放器已读取，但另一个真实播放项无法确认是同一视频；已停止猜测，候选详情在诊断日志中。",
         @"video_sources_conflict":@"可见区域中出现了互相冲突的视频资源，已停止读取以避免下载其他视频。",
         @"video_current_item_unavailable":@"已经找到绑定的播放器项目，但当前项目的资源地址尚不可读取；不会使用旧帖子的资料替代当前视频。",
         @"video_asset_unsupported":@"已经找到当前资源，但资源来源或格式不在当前支持范围；请导出日志核对实际播放资源。",
@@ -125,6 +127,7 @@ static NSDictionary *VideoReasonStages(void) {
         @"source_scan_budget_exceeded":@"video_source_scan_limited",
         @"resource_scan_budget_exceeded":@"video_resource_scan_limited",@"fullscreen_scan_requires_main_thread":@"video_scan_thread_invalid",
         @"inline_identity_mismatch":@"video_inline_mismatch",@"bound_media_unavailable":@"video_bound_unavailable",
+        @"current_item_mismatch":@"video_current_item_mismatch",@"ambiguous_visible_player_selection":@"video_player_selection_ambiguous",
         @"menu_presentation_failed":@"video_menu_failed"};
 }
 static NSDictionary *VideoCancellationStages(void) {

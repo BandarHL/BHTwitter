@@ -38,6 +38,66 @@ static void Check(BOOL pass, NSString *name) { checks++; if (!pass) { NSLog(@"FA
 @property(nonatomic, strong) Item *currentItem;
 @end
 @implementation Player @end
+// The view-bound player in X 12.24.1 is not an AVPlayer and has no currentItem.
+// These typed object getters model the runtime metadata exported from device.
+@interface TAVQualityEndpoints : NSObject
+@property(nonatomic, copy) NSURL *manifestURL;
+@property(nonatomic, copy) NSArray *availableEndpoints;
+@end
+@implementation TAVQualityEndpoints @end
+@interface TAVFoundationItem : NSObject
+@property(nonatomic, strong) Item *avPlayerItem;
+@property(nonatomic, strong) TAVQualityEndpoints *qualityEndpoints;
+@property(nonatomic, strong) id resourceLoader;
+@end
+@implementation TAVFoundationItem @end
+@interface TAVFoundationPlayerTechnology : NSObject
+@property(nonatomic, strong) Player *avPlayer;
+@property(nonatomic, strong) TAVFoundationItem *foundationItem;
+@end
+@implementation TAVFoundationPlayerTechnology @end
+@interface TAVTechnologicalPlayerInternalItem : NSObject
+@property(nonatomic, strong) TAVFoundationPlayerTechnology *tech;
+@end
+@implementation TAVTechnologicalPlayerInternalItem @end
+@interface TAVTechnologicalPlayerInternalState : NSObject
+@property(nonatomic, strong) TAVTechnologicalPlayerInternalItem *currentItem;
+@end
+@implementation TAVTechnologicalPlayerInternalState @end
+@interface TAVPlayer : NSObject
+@property(nonatomic, strong) TAVTechnologicalPlayerInternalState *internalState;
+@property(nonatomic, strong) TAVQualityEndpoints *qualityEndpoints;
+@end
+@implementation TAVPlayer @end
+@interface TAVVideoQualityEndpoint : NSObject
+@property(nonatomic, copy) NSString *qualityType;
+@property(nonatomic, copy) NSDictionary *resolution;
+@end
+@implementation TAVVideoQualityEndpoint @end
+@interface TAVFoundationPlayerEndpointsManager : NSObject {
+    NSURL *_manifestURL;
+    NSURL *_cacheURL;
+}
+@property(nonatomic, copy) NSSet *availableEndpoints;
+- (instancetype)initWithManifest:(NSURL *)manifest cache:(NSURL *)cache;
+@end
+@implementation TAVFoundationPlayerEndpointsManager
+- (instancetype)initWithManifest:(NSURL *)manifest cache:(NSURL *)cache {
+    if ((self = [super init])) { _manifestURL = [manifest copy]; _cacheURL = [cache copy]; }
+    return self;
+}
+@end
+@interface UnverifiedEndpointsManager : NSObject {
+    NSURL *_manifestURL;
+}
+- (instancetype)initWithManifest:(NSURL *)manifest;
+@end
+@implementation UnverifiedEndpointsManager
+- (instancetype)initWithManifest:(NSURL *)manifest {
+    if ((self = [super init])) _manifestURL = [manifest copy];
+    return self;
+}
+@end
 @interface ScalarGetter : NSObject
 - (NSUInteger)media;
 @end
@@ -220,6 +280,91 @@ int main(void) {
         Check(![BHRDResolveBoundVideoSource(@{@"statusID":@"different-current"})[@"media"] count],@"A different bound post never adopts those cached native parameters");
         ((Media *)remembered.representedMediaEntities.firstObject).videoInfo=Video(@"recycled-cached-resource").videoInfo;
         Check(![BHRDResolveBoundVideoSource(@{@"statusID":@"native-cached-current"})[@"media"] count],@"Recycled cached entities cannot provide another video's parameters under an old post key");
+        TAVPlayer *tav = [TAVPlayer new]; tav.internalState = [TAVTechnologicalPlayerInternalState new];
+        tav.internalState.currentItem = [TAVTechnologicalPlayerInternalItem new];
+        TAVFoundationPlayerTechnology *tech = [TAVFoundationPlayerTechnology new]; tav.internalState.currentItem.tech = tech;
+        tech.avPlayer = [Player new]; tech.avPlayer.currentItem = [Item new]; tech.avPlayer.currentItem.asset = [Asset new];
+        tech.avPlayer.currentItem.asset.URL = [NSURL URLWithString:@"https://video.twimg.com/ext_tw_video/tav-before-comments/pu/pl/master.m3u8"];
+        live = BHRDResolveLiveVideoSource(tav);
+        Check(![tav respondsToSelector:@selector(currentItem)] && [live[@"media"] count] == 1 && [FirstURL(live[@"media"]) containsString:@"tav-before-comments"], @"TAVPlayer resolves its technological current item without an AVPlayer currentItem getter or comment hydration");
+        Check([live[@"sourcePath"] isEqual:@"source.internalState.currentItem.tech.avPlayer.currentItem.asset.URL"], @"Successful TAV resolution reports the exact native getter chain");
+        tech.foundationItem = [TAVFoundationItem new]; tech.foundationItem.avPlayerItem = tech.avPlayer.currentItem;
+        tech.avPlayer = nil;
+        live = BHRDResolveLiveVideoSource(tav);
+        Check([live[@"media"] count] == 1 && [live[@"sourcePath"] containsString:@"foundationItem.avPlayerItem.asset.URL"], @"Foundation item exposes the current AVPlayerItem even before the technology AVPlayer is attached");
+        tech.foundationItem.avPlayerItem.asset.URL = [NSURL URLWithString:@"tavfoundation://tav-before-comments/master"];
+        TAVQualityEndpoints *qualities = [TAVQualityEndpoints new]; tech.foundationItem.qualityEndpoints = qualities;
+        qualities.manifestURL = [NSURL URLWithString:@"https://video.twimg.com/ext_tw_video/tav-before-comments/pu/pl/master.m3u8?token=current"];
+        qualities.availableEndpoints = @[@{@"url":@"https://video.twimg.com/ext_tw_video/tav-before-comments/pu/vid/480x270/low.mp4", @"mimeType":@"video/mp4", @"bitrate":@256000},
+            @{@"URL":@"https://video.twimg.com/ext_tw_video/tav-before-comments/pu/vid/1280x720/high.mp4", @"contentType":@"video/mp4", @"bitrate":@2000000}];
+        live = BHRDResolveLiveVideoSource(tav);
+        NSArray *tavVariants = BHRDMediaObject(BHRDMediaObject([live[@"media"] firstObject],@"videoInfo"),@"variants");
+        Check([live[@"media"] count] == 1 && tavVariants.count == 3 && [live[@"endpointCount"] unsignedIntegerValue] == 3, @"A custom-scheme playing asset uses real item-owned manifest and every available native quality endpoint");
+        Check([BHRDMediaObject(tavVariants[1],@"bitrate") isEqual:@256000], @"Observed endpoint bitrate survives normalization when natively object encoded");
+        Check([live[@"sourcePath"] containsString:@"qualityEndpoints.manifestURL"] && [FirstURL(live[@"media"]) containsString:@"token=current"], @"Native manifest query is preserved rather than guessing or rewriting an asset URL");
+        NSString *tavOldIdentity = live[@"identity"];
+        tav.qualityEndpoints = qualities;
+        tav.internalState.currentItem = [TAVTechnologicalPlayerInternalItem new];
+        live = BHRDResolveLiveVideoSource(tav);
+        Check(![live[@"media"] count] && [live[@"reason"] isEqual:@"current_item_resource_unavailable"], @"After swiping an unreadable new TAV item cannot borrow a retained parent quality endpoint");
+        tav.internalState.currentItem = nil;
+        Check(![BHRDResolveLiveVideoSource(tav)[@"media"] count], @"A declared nil TAV current item excludes old parent endpoints during transition");
+        tav.internalState.currentItem = [TAVTechnologicalPlayerInternalItem new]; tav.internalState.currentItem.tech = [TAVFoundationPlayerTechnology new];
+        tav.internalState.currentItem.tech.foundationItem = [TAVFoundationItem new];
+        tav.internalState.currentItem.tech.foundationItem.qualityEndpoints = [TAVQualityEndpoints new];
+        tav.internalState.currentItem.tech.foundationItem.qualityEndpoints.availableEndpoints = @[@{@"url":@"https://video.twimg.com/ext_tw_video/tav-new-item/pu/vid/720x1280/new.mp4"}];
+        live = BHRDResolveLiveVideoSource(tav);
+        Check([live[@"media"] count] == 1 && ![live[@"identity"] isEqual:tavOldIdentity] && [FirstURL(live[@"media"]) containsString:@"tav-new-item"], @"A newly bound TAV item resolves its own native endpoint without an asset URL and invalidates the old media identity");
+        live = BHRDResolveLiveVideoSource(@{@"mainThreadState":@{@"currentItem":@{@"tech":@{@"foundationItem":@{@"resourceLoader":@{@"manifestURL":@"https://video.twimg.com/amplify_video/tav-loader/pl/master.m3u8"}}}}}});
+        Check([live[@"media"] count] == 1 && [live[@"sourcePath"] containsString:@"mainThreadState.currentItem.tech.foundationItem.resourceLoader.manifestURL"], @"The main-thread state and currently bound native resource loader are supported");
+        live = BHRDResolveLiveVideoSource(@{@"internalState":@{@"currentItem":@{@"tech":@{@"config":@{@"qualityEndpoints":@{@"availableEndpoints":@{@"low":@{@"URL":@"https://video.twimg.com/ext_tw_video/tav-map/pu/vid/320x568/low.mp4"},@"high":@{@"URL":@"https://video.twimg.com/ext_tw_video/tav-map/pu/vid/720x1280/high.mp4"}}}}}}}});
+        Check([live[@"media"] count] == 1 && [live[@"endpointCount"] unsignedIntegerValue] == 2, @"An explicit availableEndpoints mapping retains all qualities of the current technological item's config");
+        live = BHRDResolveLiveVideoSource(@{@"internalState":@{@"currentItem":@{@"tech":@{@"foundationItem":@{@"avPlayerItem":@{@"asset":@{@"URL":@"tavfoundation://opaque/current"}}, @"qualityEndpoints":@{@"manifestURL":@"https://foreign.example/not-x.m3u8"}}}}}});
+        Check(![live[@"media"] count] && [live[@"reason"] isEqual:@"unsupported_current_asset"], @"Neither custom asset schemes nor non-X manifests are transformed into fabricated download URLs");
+        live = BHRDResolveLiveVideoSource(@{@"currentItem":@{@"qualityEndpoints":@{@"availableEndpoints":@[@{@"url":@"https://video.twimg.com/ext_tw_video/tav-mime/pu/vid/720x1280/wrong.mp4",@"mimeType":@"image/jpeg"}]}}});
+        Check(![live[@"media"] count], @"An endpoint declaring a non-video MIME type is not normalized as a video");
+        live = BHRDResolveLiveVideoSource(@{@"internalState":@{@"currentItem":@{@"qualityEndpoints":@{@"availableEndpoints":@[@{@"url":@"https://video.twimg.com/ext_tw_video/tav-conflict-A/pu/pl/a.m3u8"},@{@"url":@"https://video.twimg.com/ext_tw_video/tav-conflict-B/pu/pl/b.m3u8"}]}}}});
+        Check(![live[@"media"] count] && [live[@"reason"] isEqual:@"ambiguous_current_assets"], @"Contradictory endpoints within the current TAV item remain a real identity conflict");
+        tech = tav.internalState.currentItem.tech;
+        tech.avPlayer = [Player new]; tech.avPlayer.currentItem = [Item new]; tech.avPlayer.currentItem.asset = [Asset new];
+        tech.avPlayer.currentItem.asset.URL = [NSURL URLWithString:@"https://video.twimg.com/ext_tw_video/retained-shared-player/pu/pl/old.m3u8"];
+        tech.foundationItem.avPlayerItem = [Item new]; tech.foundationItem.avPlayerItem.asset = [Asset new];
+        tech.foundationItem.avPlayerItem.asset.URL = [NSURL URLWithString:@"tavfoundation://currently-bound-new-item"];
+        live = BHRDResolveLiveVideoSource(tav);
+        Check([FirstURL(live[@"media"]) containsString:@"tav-new-item"] && ![FirstURL(live[@"media"]) containsString:@"retained-shared-player"], @"A new technological item's Foundation endpoints override the shared AVPlayer's different retained old item");
+        Check([live[@"excludedPlaybackBranches"] count] == 1 && [live[@"resourceProbePaths"] count] > 0, @"Reports record the excluded mismatched AVPlayer and safe getter paths without resource values");
+        tech.foundationItem.qualityEndpoints = nil;
+        live = BHRDResolveLiveVideoSource(tav);
+        Check(![live[@"media"] count] && [live[@"reason"] isEqual:@"unsupported_current_asset"], @"An opaque new Foundation item cannot fall back to the shared AVPlayer's old resource if new endpoints are absent");
+        tech.foundationItem.avPlayerItem.asset.URL = [NSURL URLWithString:@"https://video.twimg.com/ext_tw_video/foundation-current/pu/pl/new.m3u8"];
+        live = BHRDResolveLiveVideoSource(tav);
+        Check([FirstURL(live[@"media"]) containsString:@"foundation-current"], @"When Foundation item and shared player disagree only the bound Foundation resource is read");
+        tech.avPlayer.currentItem = tech.foundationItem.avPlayerItem;
+        live = BHRDResolveLiveVideoSource(tav);
+        Check([live[@"media"] count] == 1 && ![live[@"excludedPlaybackBranches"] count], @"An exactly matching Foundation and AVPlayer item safely keeps both compatible getter paths");
+        live = BHRDResolveLiveVideoSource(@{@"internalState":@{@"currentItem":@{@"asset":@{@"URL":@"https://video.twimg.com/ext_tw_video/state-current/pu/pl/a.m3u8"}}}, @"mainThreadState":@{@"currentItem":@{@"asset":@{@"URL":@"https://video.twimg.com/ext_tw_video/state-old/pu/pl/b.m3u8"}}}});
+        Check(![live[@"media"] count] && [live[@"reason"] isEqual:@"current_item_mismatch"], @"Different current items advertised by internal and main-thread states never get unioned as one playing video");
+        tav.internalState = nil;
+        Check(![BHRDResolveLiveVideoSource(tav)[@"media"] count], @"An unattached TAV state cannot borrow its retained parent quality endpoints");
+        TAVFoundationPlayerEndpointsManager *manager = [[TAVFoundationPlayerEndpointsManager alloc] initWithManifest:[NSURL URLWithString:@"https://video.twimg.com/ext_tw_video/ivar-manifest/pu/pl/master.m3u8?tag=23"] cache:[NSURL fileURLWithPath:@"/tmp/tav-cache"]];
+        TAVVideoQualityEndpoint *quality = [TAVVideoQualityEndpoint new]; quality.qualityType = @"high"; quality.resolution = @{@"width":@1080,@"height":@1920};
+        manager.availableEndpoints = [NSSet setWithObject:quality];
+        Check(![manager respondsToSelector:NSSelectorFromString(@"manifestURL")], @"Device-shaped endpoint manager has no manifest property getter");
+        NSDictionary *ivarBound = @{@"internalState":@{@"currentItem":@{@"tech":@{@"qualityEndpoints":manager, @"foundationItem":@{@"avPlayerItem":@{@"asset":@{@"URL":@"tavfoundation://manifest-managed/item"}}}}}}};
+        live = BHRDResolveLiveVideoSource(ivarBound);
+        Check([live[@"media"] count] == 1 && [FirstURL(live[@"media"]) containsString:@"ivar-manifest"], @"Current TAV technology reads its verified manager's object ivar manifest when AVAsset uses a custom scheme");
+        Check([live[@"sourcePath"] isEqual:@"source.internalState.currentItem.tech.qualityEndpoints._manifestURL"] && [live[@"resourceAccess"] isEqual:@"object_ivar"], @"Read diagnostics distinguish the precise allowed manager ivar from ordinary object getters");
+        Check([live[@"endpointCount"] unsignedIntegerValue] == 1, @"Resolution-only NSSet quality endpoints do not fabricate MP4 URLs or extra menu qualities");
+        Check(![BHRDResolveLiveVideoSource(manager)[@"media"] count], @"An unbound manager manifest cannot authorize download outside a currently bound item");
+        manager = [[TAVFoundationPlayerEndpointsManager alloc] initWithManifest:nil cache:[NSURL URLWithString:@"https://video.twimg.com/ext_tw_video/cache-not-manifest/pu/pl/cache.m3u8"]];
+        manager.availableEndpoints = [NSSet setWithObject:quality];
+        live = BHRDResolveLiveVideoSource(@{@"currentItem":@{@"tech":@{@"qualityEndpoints":manager}}});
+        Check(![live[@"media"] count], @"A resolution-only endpoint set and cache URL cannot substitute for a missing manifest");
+        manager = [[TAVFoundationPlayerEndpointsManager alloc] initWithManifest:[NSURL fileURLWithPath:@"/tmp/manifest.m3u8"] cache:nil];
+        live = BHRDResolveLiveVideoSource(@{@"currentItem":@{@"tech":@{@"qualityEndpoints":manager}}});
+        Check(![live[@"media"] count] && [live[@"reason"] isEqual:@"unsupported_current_asset"], @"A file-scheme manifest ivar is rejected rather than handed to a remote downloader");
+        UnverifiedEndpointsManager *unverified = [[UnverifiedEndpointsManager alloc] initWithManifest:[NSURL URLWithString:@"https://video.twimg.com/ext_tw_video/unverified/pu/pl/master.m3u8"]];
+        Check(![BHRDResolveLiveVideoSource(@{@"currentItem":@{@"tech":@{@"qualityEndpoints":unverified}}})[@"media"] count], @"An identically named manifest ivar on an unverified private class is never inspected");
         NSLog(@"PASS: %lu shared media-resolution checks", (unsigned long)checks);
     }
     return 0;
