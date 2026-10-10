@@ -53,7 +53,12 @@ static NSDictionary *CurrentSessionPerformance(void) {
     [super viewDidLoad]; self.title=@"实际运行验收";
     if (self.navigationController.viewControllers.firstObject==self)
         self.navigationItem.leftBarButtonItem=[[UIBarButtonItem alloc] initWithTitle:@"完成" style:UIBarButtonItemStylePlain target:self action:@selector(closePage)];
-    self.tableView.rowHeight=UITableViewAutomaticDimension; self.tableView.estimatedRowHeight=100;
+    self.tableView.rowHeight=UITableViewAutomaticDimension;
+    // This small table refreshes live results. Estimated heights made its scroll
+    // position jump every two seconds as UIKit replaced estimates with real rows.
+    self.tableView.estimatedRowHeight=0;
+    self.tableView.estimatedSectionHeaderHeight=0;
+    self.tableView.estimatedSectionFooterHeight=0;
     self.navigationItem.rightBarButtonItem=[[UIBarButtonItem alloc] initWithTitle:@"刷新" style:UIBarButtonItemStylePlain target:self action:@selector(reloadStatus)];
     [self reloadStatus];
 }
@@ -65,7 +70,18 @@ static NSDictionary *CurrentSessionPerformance(void) {
 - (void)viewDidDisappear:(BOOL)animated { [super viewDidDisappear:animated]; [self.refreshTimer invalidate]; self.refreshTimer=nil; }
 - (void)dealloc { [_refreshTimer invalidate]; }
 - (void)closePage { [self dismissViewControllerAnimated:YES completion:nil]; }
-- (void)reloadStatus { self.snapshot=BHRDAcceptanceSnapshot(); self.performance=CurrentSessionPerformance(); [self.tableView reloadData]; }
+- (void)reloadStatus {
+    if (self.tableView.dragging || self.tableView.decelerating) return;
+    NSDictionary *snapshot=BHRDAcceptanceSnapshot(), *performance=CurrentSessionPerformance();
+    if ([self.snapshot isEqual:snapshot] && [self.performance isEqual:performance]) return;
+    CGPoint offset=self.tableView.contentOffset;
+    self.snapshot=snapshot; self.performance=performance;
+    [self.tableView reloadData]; [self.tableView layoutIfNeeded];
+    CGFloat minimum=-self.tableView.adjustedContentInset.top;
+    CGFloat maximum=MAX(minimum,self.tableView.contentSize.height-self.tableView.bounds.size.height+self.tableView.adjustedContentInset.bottom);
+    offset.y=MAX(minimum,MIN(maximum,offset.y));
+    [self.tableView setContentOffset:offset animated:NO];
+}
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)table { return 4; }
 - (NSInteger)tableView:(UITableView *)table numberOfRowsInSection:(NSInteger)section {
     return section==0 ? 3 : section==1 ? [self.snapshot[@"items"] count] : section==2 ? 2 : 1;

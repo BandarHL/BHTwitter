@@ -4,6 +4,7 @@
 #import <objc/runtime.h>
 #import <objc/message.h>
 #import "BHRDBuildInfo.h"
+#import "BHRDLocalJSON.h"
 
 static const NSUInteger LogLimit=2*1024*1024, PendingLimit=128;
 static const NSTimeInterval RetentionInterval=7*24*60*60;
@@ -63,7 +64,7 @@ static void PruneLogs(void) {
         NSMutableArray *kept=[NSMutableArray array]; BOOL changed=NO;
         for (NSString *line in [text componentsSeparatedByString:@"\n"]) {
             if (!line.length) continue;
-            id value=[NSJSONSerialization JSONObjectWithData:[line dataUsingEncoding:NSUTF8StringEncoding] options:0 error:NULL];
+            id value=BHRDReadLocalJSON([line dataUsingEncoding:NSUTF8StringEncoding],0,NULL);
             NSNumber *time=[value isKindOfClass:NSDictionary.class] ? value[@"time"] : nil;
             if ([time isKindOfClass:NSNumber.class] && time.doubleValue<cutoff) changed=YES;
             else [kept addObject:line];
@@ -174,7 +175,7 @@ void BHRDAvatarExportLogs(void (^completion)(NSArray<NSURL *> *,NSError *)) {
                 NSString *text=[NSString stringWithContentsOfFile:source encoding:NSUTF8StringEncoding error:&error]; if (!text) break;
                 NSMutableData *redacted=[NSMutableData data];
                 for (NSString *line in [text componentsSeparatedByString:@"\n"]) {
-                    id value=[NSJSONSerialization JSONObjectWithData:[line dataUsingEncoding:NSUTF8StringEncoding] options:0 error:NULL];
+                    id value=BHRDReadLocalJSON([line dataUsingEncoding:NSUTF8StringEncoding],0,NULL);
                     if (![value isKindOfClass:NSDictionary.class]) continue;
                     NSData *json=[NSJSONSerialization dataWithJSONObject:RedactedValue(value) options:0 error:NULL];
                     if (json) { [redacted appendData:json]; [redacted appendData:[@"\n" dataUsingEncoding:NSUTF8StringEncoding]]; }

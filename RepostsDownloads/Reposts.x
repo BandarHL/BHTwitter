@@ -6,11 +6,13 @@
 #import "BHRDRepostFilter.h"
 #import "BHRDRepostPresentation.h"
 #import "BHRDSharePost.h"
+#import "BHRDLocalJSON.h"
 #import <objc/runtime.h>
 
 %hook NSJSONSerialization
 + (id)JSONObjectWithData:(NSData *)data options:(NSJSONReadingOptions)options error:(NSError **)error {
     id object = %orig;
+    if (BHRDReadingLocalJSON()) return object;
     // A vertical video pager may not use TFNItemsDataViewController at all.
     // Remove promoted URT slots before its models and page indices are built.
     object=BHRDFilterAdResponse(object,data,BHRDPreference(BHRDHideAdsKey),NULL);

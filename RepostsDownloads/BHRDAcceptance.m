@@ -1,4 +1,5 @@
 #import "BHRDAcceptance.h"
+#import "BHRDLocalJSON.h"
 #import "BHRDBuildInfo.h"
 #import <math.h>
 
@@ -159,7 +160,7 @@ static NSMutableDictionary *NewState(NSString *mode) {
 }
 static id Clone(id object) {
     NSData *data=[NSJSONSerialization dataWithJSONObject:object options:0 error:NULL];
-    return data ? [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:NULL] : nil;
+    return data ? BHRDReadLocalJSON(data,NSJSONReadingMutableContainers,NULL) : nil;
 }
 static void Save(void) {
     NSString *base=BasePath(); if (!base.length) return;
@@ -181,7 +182,7 @@ static void Initialize(void) {
     NSString *path=[BasePath() stringByAppendingPathComponent:@"acceptance.json"];
     unsigned long long size=[[NSFileManager.defaultManager attributesOfItemAtPath:path error:NULL][NSFileSize] unsignedLongLongValue];
     NSData *data=size && size<256*1024 ? [NSData dataWithContentsOfFile:path] : nil;
-    NSDictionary *saved=data.length && data.length<256*1024 ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
+    NSDictionary *saved=data.length && data.length<256*1024 ? BHRDReadLocalJSON(data,0,NULL) : nil;
     // The file is private, but decode only our known shape before trusting it.
     if ([saved isKindOfClass:NSDictionary.class] && [saved[@"schema"] isEqual:@1] &&
         [saved[@"mode"] isEqual:@"session"] && UUID(saved[@"sessionID"]) && Number(saved[@"startedAt"]) &&

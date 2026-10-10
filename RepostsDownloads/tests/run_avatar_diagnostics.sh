@@ -24,6 +24,12 @@ xcrun clang -fobjc-arc -Wall -Wextra -Werror -Wno-unused-parameter -I HostFixtur
   ../BHRDAvatarDiagnostics.m ../BHRDAcceptance.m ../BHRDAdFilter.m \
   HostFixtures/ViewGraph.m AdDiagnostics244Tests.m -o "$BHRD_AVATAR_TEST_DIR/ad-test"
 "$BHRD_AVATAR_TEST_DIR/ad-test"
+xcrun clang -fobjc-arc -Wall -Wextra -Werror -Wno-unused-parameter -I HostFixtures \
+  -DBHRD_AVATAR_DIAGNOSTICS=1 -DBHRD_AVATAR_DIAGNOSTICS_TEST=1 -DBHRD_ACCEPTANCE_TEST=1 \
+  -framework Foundation -framework CoreGraphics -framework QuartzCore \
+  ../BHRDAvatarDiagnostics.m ../BHRDAcceptance.m ../BHRDAdFilter.m \
+  HostFixtures/ViewGraph.m LocalJSONIntegrationTests.m -o "$BHRD_AVATAR_TEST_DIR/local-json-test"
+"$BHRD_AVATAR_TEST_DIR/local-json-test"
 xcrun clang -fobjc-arc -Wall -Wextra -Werror -I HostFixtures \
   -DBHRD_AVATAR_DIAGNOSTICS=1 -DBHRD_AVATAR_DIAGNOSTICS_TEST=1 -DBHRD_ACCEPTANCE_TEST=1 \
   -framework Foundation -framework CoreGraphics -framework QuartzCore -framework ImageIO \
