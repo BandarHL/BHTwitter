@@ -46,6 +46,8 @@ static NSDictionary *CurrentSessionPerformance(void) {
 @property(nonatomic,copy) NSDictionary *performance;
 @property(nonatomic,strong) NSTimer *refreshTimer;
 @property(nonatomic) BOOL exporting;
+@property(nonatomic) BOOL displayedExporting;
+- (BOOL)configureCell:(UITableViewCell *)cell atIndexPath:(NSIndexPath *)path;
 @end
 @implementation BHRDAcceptanceViewController
 - (instancetype)init { return [super initWithStyle:UITableViewStyleInsetGrouped]; }
@@ -54,11 +56,7 @@ static NSDictionary *CurrentSessionPerformance(void) {
     if (self.navigationController.viewControllers.firstObject==self)
         self.navigationItem.leftBarButtonItem=[[UIBarButtonItem alloc] initWithTitle:@"完成" style:UIBarButtonItemStylePlain target:self action:@selector(closePage)];
     self.tableView.rowHeight=UITableViewAutomaticDimension;
-    // This small table refreshes live results. Estimated heights made its scroll
-    // position jump every two seconds as UIKit replaced estimates with real rows.
-    self.tableView.estimatedRowHeight=0;
-    self.tableView.estimatedSectionHeaderHeight=0;
-    self.tableView.estimatedSectionFooterHeight=0;
+    self.tableView.estimatedRowHeight=100;
     self.navigationItem.rightBarButtonItem=[[UIBarButtonItem alloc] initWithTitle:@"刷新" style:UIBarButtonItemStylePlain target:self action:@selector(reloadStatus)];
     [self reloadStatus];
 }
@@ -73,15 +71,42 @@ static NSDictionary *CurrentSessionPerformance(void) {
 - (void)reloadStatus {
     if (self.tableView.dragging || self.tableView.decelerating) return;
     NSDictionary *snapshot=BHRDAcceptanceSnapshot(), *performance=CurrentSessionPerformance();
-    if ([self.snapshot isEqual:snapshot] && [self.performance isEqual:performance]) return;
-    CGPoint offset=self.tableView.contentOffset;
+    if ([self.snapshot isEqual:snapshot] && [self.performance isEqual:performance] && self.displayedExporting==self.exporting) return;
+    UITableView *table=self.tableView;
+    // Keep the visible cells alive for accessibility and automation. Reloading
+    // the entire table every two seconds also throws away its measured heights.
+    BOOL needsReload=!self.snapshot || [self.snapshot[@"items"] count]!=[snapshot[@"items"] count];
+    NSIndexPath *anchor=[[table.indexPathsForVisibleRows sortedArrayUsingSelector:@selector(compare:)] firstObject];
+    __block CGPoint offset=table.contentOffset;
+    CGFloat anchorOffset=anchor ? offset.y-CGRectGetMinY([table rectForRowAtIndexPath:anchor]) : 0;
     self.snapshot=snapshot; self.performance=performance;
-    [self.tableView reloadData]; [self.tableView layoutIfNeeded];
-    CGFloat minimum=-self.tableView.adjustedContentInset.top;
-    CGFloat maximum=MAX(minimum,self.tableView.contentSize.height-self.tableView.bounds.size.height+self.tableView.adjustedContentInset.bottom);
-    offset.y=MAX(minimum,MIN(maximum,offset.y));
-    [self.tableView setContentOffset:offset animated:NO];
+    self.displayedExporting=self.exporting;
+    [UIView performWithoutAnimation:^{
+        if (needsReload) [table reloadData];
+        else {
+            BOOL contentChanged=NO;
+            for (UITableViewCell *cell in table.visibleCells) {
+                NSIndexPath *path=[table indexPathForCell:cell];
+                if (path) contentChanged=[self configureCell:cell atIndexPath:path] || contentChanged;
+            }
+            for (NSInteger section=0;section<[self numberOfSectionsInTableView:table];section++) {
+                UITableViewHeaderFooterView *header=[table headerViewForSection:section], *footer=[table footerViewForSection:section];
+                NSString *headerTitle=[self tableView:table titleForHeaderInSection:section], *footerTitle=[self tableView:table titleForFooterInSection:section];
+                if (header && ![header.textLabel.text isEqual:headerTitle]) { header.textLabel.text=headerTitle; contentChanged=YES; }
+                if (footer && ![footer.textLabel.text isEqual:footerTitle]) { footer.textLabel.text=footerTitle; contentChanged=YES; }
+            }
+            if (contentChanged) { [table beginUpdates]; [table endUpdates]; }
+        }
+        [table layoutIfNeeded];
+        if (anchor && !needsReload) offset.y=CGRectGetMinY([table rectForRowAtIndexPath:anchor])+anchorOffset;
+        CGFloat minimum=-table.adjustedContentInset.top;
+        CGFloat maximum=MAX(minimum,table.contentSize.height-table.bounds.size.height+table.adjustedContentInset.bottom);
+        offset.y=MAX(minimum,MIN(maximum,offset.y));
+        [table setContentOffset:offset animated:NO];
+    }];
 }
+- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate { if (!decelerate) [self reloadStatus]; }
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView { [self reloadStatus]; }
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)table { return 4; }
 - (NSInteger)tableView:(UITableView *)table numberOfRowsInSection:(NSInteger)section {
     return section==0 ? 3 : section==1 ? [self.snapshot[@"items"] count] : section==2 ? 2 : 1;
@@ -102,26 +127,40 @@ static NSDictionary *CurrentSessionPerformance(void) {
     return @"导出包含本轮阶段、构建身份、性能采样及脱敏日志，不自动上传。发现异常后把附件和复现步骤发回，再用下一构建复验。";
 }
 - (UITableViewCell *)tableView:(UITableView *)table cellForRowAtIndexPath:(NSIndexPath *)path {
-    UITableViewCell *cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
-    cell.textLabel.numberOfLines=0; cell.detailTextLabel.numberOfLines=0; cell.accessoryType=UITableViewCellAccessoryDisclosureIndicator;
+    UITableViewCell *cell=[table dequeueReusableCellWithIdentifier:@"AcceptanceCell"];
+    if (!cell) cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:@"AcceptanceCell"];
+    [self configureCell:cell atIndexPath:path];
+    return cell;
+}
+- (BOOL)configureCell:(UITableViewCell *)cell atIndexPath:(NSIndexPath *)path {
+    NSString *title, *detail;
+    BOOL enabled=!(path.section==0 && self.exporting);
+    BOOL metric=path.section==2 && path.row==0;
     if (path.section==0) {
-        cell.textLabel.text=@[@"开始一次新验收",@"验收方式与限制",@"导出报告与日志"][path.row];
-        cell.detailTextLabel.text=@[@"清零当前结果并开始新的轮次；此前已导出的文件保留。",@"先开始验收 → 实际操作 → 回看结果 → 异常时导出。",self.exporting ? @"正在生成脱敏附件…" : @"验收 JSON、性能 JSON 与脱敏诊断日志，可保存到文件。"][path.row];
-        if (self.exporting) { cell.userInteractionEnabled=NO; cell.textLabel.enabled=NO; }
+        title=@[@"开始一次新验收",@"验收方式与限制",@"导出报告与日志"][path.row];
+        detail=@[@"清零当前结果并开始新的轮次；此前已导出的文件保留。",@"先开始验收 → 实际操作 → 回看结果 → 异常时导出。",self.exporting ? @"正在生成脱敏附件…" : @"验收 JSON、性能 JSON 与脱敏诊断日志，可保存到文件。"][path.row];
     } else if (path.section==1) {
         NSDictionary *item=self.snapshot[@"items"][path.row]; NSDictionary *error=item[@"error"];
-        cell.textLabel.text=[NSString stringWithFormat:@"%@ · %@",item[@"title"],StatusTitle(item)];
-        cell.detailTextLabel.text=[NSString stringWithFormat:@"%@\n阶段 %@ · 成功 %@ / 失败 %@ / 取消 %@%@",item[@"detail"],item[@"stage"],item[@"successCount"],item[@"failureCount"],item[@"cancelledCount"],error ? [NSString stringWithFormat:@"\n错误 %@ (%@)",error[@"domain"],error[@"code"]] : @""];
+        title=[NSString stringWithFormat:@"%@ · %@",item[@"title"],StatusTitle(item)];
+        detail=[NSString stringWithFormat:@"%@\n阶段 %@ · 成功 %@ / 失败 %@ / 取消 %@%@",item[@"detail"],item[@"stage"],item[@"successCount"],item[@"failureCount"],item[@"cancelledCount"],error ? [NSString stringWithFormat:@"\n错误 %@ (%@)",error[@"domain"],error[@"code"]] : @""];
     } else if (path.section==2 && path.row==0) {
         NSDictionary *p=self.performance; BOOL started=p[@"sessionID"]!=nil;
-        cell.textLabel.text=started ? ([p[@"running"] boolValue] ? ([p[@"active"] boolValue] ? @"正在观察前台使用" : @"观察已暂停（非前台）") : @"最近一次性能观察") : @"尚未开始性能观察";
-        cell.detailTextLabel.text=started ? [NSString stringWithFormat:@"前台 %@ · %@ 次回调间隔\n超过 50ms %@ · 最大 %@\n进程内存 %@ · 采样峰值 %@\n内存警告 %@ · 热状态 %@\n%@",Metric(p,@"visibleSeconds",1,@" 秒"),p[@"frameIntervals"] ?: @0,Metric(p,@"slowIntervalRatio",100,@"%"),Metric(p,@"maxIntervalMs",1,@"ms"),Metric(p,@"memoryMB",1,@"MB"),Metric(p,@"peakMemoryMB",1,@"MB"),p[@"memoryWarnings"] ?: @0,p[@"thermalState"] ?: @"未知",[p[@"status"] isEqual:@"observed"] ? @"已有观察样本，请人工确认实际体验。" : @"样本不足，继续观察；不算通过。"] : @"只测显示回调间隔、进程内存与热状态，不测真实视频帧率或耗电。";
-        cell.selectionStyle=UITableViewCellSelectionStyleNone; cell.accessoryType=UITableViewCellAccessoryNone;
+        title=started ? ([p[@"running"] boolValue] ? ([p[@"active"] boolValue] ? @"正在观察前台使用" : @"观察已暂停（非前台）") : @"最近一次性能观察") : @"尚未开始性能观察";
+        detail=started ? [NSString stringWithFormat:@"前台 %@ · %@ 次回调间隔\n超过 50ms %@ · 最大 %@\n进程内存 %@ · 采样峰值 %@\n内存警告 %@ · 热状态 %@\n%@",Metric(p,@"visibleSeconds",1,@" 秒"),p[@"frameIntervals"] ?: @0,Metric(p,@"slowIntervalRatio",100,@"%"),Metric(p,@"maxIntervalMs",1,@"ms"),Metric(p,@"memoryMB",1,@"MB"),Metric(p,@"peakMemoryMB",1,@"MB"),p[@"memoryWarnings"] ?: @0,p[@"thermalState"] ?: @"未知",[p[@"status"] isEqual:@"observed"] ? @"已有观察样本，请人工确认实际体验。" : @"样本不足，继续观察；不算通过。"] : @"只测显示回调间隔、进程内存与热状态，不测真实视频帧率或耗电。";
     } else if (path.section==2) {
-        cell.textLabel.text=[self.performance[@"running"] boolValue] ? @"停止性能观察" : @"开始性能观察（最长 20 分钟）";
-        cell.detailTextLabel.text=@"开始后返回 X 连续浏览，再回到此页核对。";
-    } else { cell.textLabel.text=@"查看诊断日志"; cell.detailTextLabel.text=@"可临时详细采集 10 分钟，辅助定位无法自动确认的阶段。"; }
-    return cell;
+        title=[self.performance[@"running"] boolValue] ? @"停止性能观察" : @"开始性能观察（最长 20 分钟）";
+        detail=@"开始后返回 X 连续浏览，再回到此页核对。";
+    } else { title=@"查看诊断日志"; detail=@"可临时详细采集 10 分钟，辅助定位无法自动确认的阶段。"; }
+    BOOL changed=![cell.textLabel.text isEqual:title] || ![cell.detailTextLabel.text isEqual:detail] || cell.userInteractionEnabled!=enabled;
+    // Leave unchanged labels untouched so a focused accessibility element does
+    // not receive a new value on a timer tick for an unrelated observation.
+    if (![cell.textLabel.text isEqual:title]) cell.textLabel.text=title;
+    if (![cell.detailTextLabel.text isEqual:detail]) cell.detailTextLabel.text=detail;
+    cell.textLabel.numberOfLines=0; cell.detailTextLabel.numberOfLines=0;
+    cell.selectionStyle=metric ? UITableViewCellSelectionStyleNone : UITableViewCellSelectionStyleDefault;
+    cell.accessoryType=metric ? UITableViewCellAccessoryNone : UITableViewCellAccessoryDisclosureIndicator;
+    cell.userInteractionEnabled=enabled; cell.textLabel.enabled=enabled;
+    return changed;
 }
 - (void)showNotice:(NSString *)title message:(NSString *)message {
     if (!self.view.window || self.presentedViewController) return;
@@ -153,7 +192,7 @@ static NSDictionary *CurrentSessionPerformance(void) {
 }
 - (void)exportReport {
     if (self.exporting || self.presentedViewController) return;
-    self.exporting=YES; [self.tableView reloadData];
+    self.exporting=YES; [self reloadStatus];
     NSString *session=BHRDAcceptanceCurrentSessionIdentifier(); NSDictionary *performance=CurrentSessionPerformance();
     __weak BHRDAcceptanceViewController *weakSelf=self;
     BHRDAvatarExportLogs(^(NSArray<NSURL *> *logs,NSError *logError) {
