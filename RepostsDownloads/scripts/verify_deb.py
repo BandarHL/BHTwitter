@@ -123,7 +123,7 @@ def verify(package, version, commit=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("package", type=pathlib.Path)
-    parser.add_argument("--version", default="2.4.7-6")
+    parser.add_argument("--version", default="2.4.7-7")
     parser.add_argument("--commit")
     args = parser.parse_args()
     verify(args.package.resolve(), args.version,args.commit)

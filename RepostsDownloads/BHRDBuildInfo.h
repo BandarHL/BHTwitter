@@ -3,10 +3,10 @@
 #import "BHRDGeneratedBuildInfo.h"
 #endif
 #ifndef BHRD_BUILD_VERSION
-#define BHRD_BUILD_VERSION @"2.4.7-6"
+#define BHRD_BUILD_VERSION @"2.4.7-7"
 #endif
 #ifndef BHRD_BUILD_REVISION
-#define BHRD_BUILD_REVISION @"6"
+#define BHRD_BUILD_REVISION @"7"
 #endif
 #ifndef BHRD_BUILD_COMMIT
 #define BHRD_BUILD_COMMIT @"development"
