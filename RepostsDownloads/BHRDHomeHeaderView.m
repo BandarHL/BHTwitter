@@ -28,11 +28,12 @@ static void Apply(UIWindow *window) {
         CGRect rect = [view convertRect:view.bounds toView:window];
         // Ignore the content feed, dialogs below the header, and off-screen tabs.
         if (CGRectGetMinY(rect) > topLimit || CGRectGetMaxY(rect) < 0) continue;
-        if ([view isKindOfClass:UILabel.class]) {
-            NSString *text = [(UILabel *)view text];
-            if (BHRDHomeHeaderRole(text) != BHRDHomeTabNone && CGRectGetMidY(rect) > window.safeAreaInsets.top && CGRectGetMidY(rect) < topLimit) {
-                [labels addObject:@{@"text": text, @"y": @(CGRectGetMidY(rect)), @"view": view}];
-            }
+        NSString *text = BHRDHomeHeaderViewText(view);
+        BHRDHomeTabRole role = BHRDHomeHeaderRole(text);
+        // Newer hosts expose the image-only Add button through accessibility,
+        // while the two primary tabs still supply their visible UILabels.
+        if (([view isKindOfClass:UILabel.class] || role == BHRDHomeTabAdd) && role != BHRDHomeTabNone && CGRectGetMidY(rect) > window.safeAreaInsets.top && CGRectGetMidY(rect) < topLimit) {
+            [labels addObject:@{@"text": text, @"y": @(CGRectGetMidY(rect)), @"view": view}];
         }
         [pending addObjectsFromArray:view.subviews];
     }

@@ -26,6 +26,7 @@ xcrun clang -fobjc-arc -Wall -Wextra -Werror -framework Foundation \
 xcrun clang -fobjc-arc -Wall -Wextra -Werror -framework Foundation \
   ../BHRDHomeHeader.m HomeHeaderTests.m -o "$BHRD_TEST_BINARY"
 "$BHRD_TEST_BINARY"
+sh run_home_views.sh
 
 xcrun clang -fobjc-arc -Wall -Wextra -Werror -framework Foundation -framework CoreGraphics \
   ../BHRDLayoutGeometry.m ../BHRDFullscreenVisibility.m ../BHRDPreferences.m ../BHRDSafety.m LayoutTests.m -o "$BHRD_TEST_BINARY"

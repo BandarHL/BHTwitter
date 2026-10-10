@@ -1,4 +1,5 @@
 #import <UIKit/UIKit.h>
+NSString *BHRDHomeHeaderViewText(UIView *view);
 void BHRDUpdateHomePaging(UIWindow *window, NSArray<NSDictionary *> *labels);
 BOOL BHRDHomePagingLimitScroll(UIScrollView *scroll);
 CGSize BHRDHomePagingContentSize(UIScrollView *scroll, CGSize proposed);
