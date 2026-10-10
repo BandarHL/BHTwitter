@@ -208,3 +208,6 @@
 
 "UPLOAD_CUSTOM_VOICE_OPTION_TITLE" = "Wyślij niestandardowy głos";
 "UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE" = "Wyślij własne wideo po nagraniu głosu w poście.";
+
+"HIDE_REPOSTS_OPTION_TITLE" = "Ukryj retweety";
+"HIDE_REPOSTS_OPTION_DETAIL_TITLE" = "Usuń wszystkie retweety z osi czasu";

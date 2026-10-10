@@ -182,3 +182,6 @@
 
 "PEOPLE_WHO_CONTRIBUTED_SECTION_HEADER_TITLE" = "Люди, которые внесли свой вклад";
 
+
+"HIDE_REPOSTS_OPTION_TITLE" = "Скрыть ретвиты";
+"HIDE_REPOSTS_OPTION_DETAIL_TITLE" = "Удалить все ретвиты из ленты";

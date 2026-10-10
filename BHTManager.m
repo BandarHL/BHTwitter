@@ -169,6 +169,9 @@
 + (BOOL)HideTopics {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_topics"];
 }
++ (BOOL)HideReposts {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_reposts"];
+}
 + (BOOL)DisableVODCaptions {
     return [[NSUserDefaults standardUserDefaults] boolForKey:@"dis_VODCaptions"];
 }

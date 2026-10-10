@@ -31,6 +31,7 @@
 + (BOOL)FollowConfirm;
 + (BOOL)HidePromoted;
 + (BOOL)HideTopics;
++ (BOOL)HideReposts;
 + (BOOL)DisableVODCaptions;
 + (BOOL)Padlock;
 + (BOOL)changeFont;

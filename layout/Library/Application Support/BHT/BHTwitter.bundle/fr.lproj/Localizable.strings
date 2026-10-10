@@ -192,3 +192,6 @@
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_1" = "Définir une image comme arrière-plan";
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_2" = "Définir une couleur comme arrière-plan";
 "CUSTOM_DIRECT_BACKGROUND_ALERT_OPTION_3" = "Réinitialiser par défaut";
+
+"HIDE_REPOSTS_OPTION_TITLE" = "Masquer les retweets";
+"HIDE_REPOSTS_OPTION_DETAIL_TITLE" = "Supprimer tous les retweets du fil";

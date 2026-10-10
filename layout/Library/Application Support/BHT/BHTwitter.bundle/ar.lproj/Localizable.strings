@@ -208,3 +208,6 @@
 
 "UPLOAD_CUSTOM_VOICE_OPTION_TITLE" = "رفع صوت مخصص";
 "UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE" = "رفع فيديو مخصص بعد تسجيل المقطع الصوتي بالتغريدة";
+
+"HIDE_REPOSTS_OPTION_TITLE" = "إخفاء إعادة التغريدات";
+"HIDE_REPOSTS_OPTION_DETAIL_TITLE" = "إزالة جميع إعادة التغريدات من الجدول الزمني";

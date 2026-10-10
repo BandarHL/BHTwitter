@@ -378,6 +378,7 @@ static NSString *_lastCopiedURL;
 @interface T1URTTimelineStatusItemViewModel : NSObject
 @property(nonatomic, readonly) NSString *text;
 @property(nonatomic, readonly) _Bool isPromoted;
+@property(nonatomic, readonly) _Bool isRetweet;
 @property(nonatomic, retain) id <TFNTwitterStatusBanner> banner;
 @end
 

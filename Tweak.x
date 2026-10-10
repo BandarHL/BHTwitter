@@ -4,6 +4,7 @@
 #import "BHTBundle/BHTBundle.h"
 #import "MobileCoreServices/MobileCoreServices.h"
 #import "MobileCoreServices/UTCoreTypes.h"
+#import <string.h>
 
 static UIFont * _Nullable TAEStandardFontGroupReplacement(UIFont *self, SEL _cmd, CGFloat arg1, CGFloat arg2) {
     BH_BaseImp orig  = originalFontsIMP[NSStringFromSelector(_cmd)].pointerValue;
@@ -40,6 +41,198 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
         }
     }
 }
+
+static BOOL BHIsRepostItem(id item) {
+    if (item == nil) {
+        return false;
+    }
+
+    Class statusItemClass = objc_getClass("T1URTTimelineStatusItemViewModel");
+    return statusItemClass != nil && [item isKindOfClass:statusItemClass] && ((T1URTTimelineStatusItemViewModel *)item).isRetweet;
+}
+
+static BOOL BHShouldHideRepostItem(id item) {
+    return [BHTManager HideReposts] && BHIsRepostItem(item);
+}
+
+static BOOL BHDataContainsUTF8String(NSData *data, const char *string) {
+    if (![data isKindOfClass:NSData.class] || string == NULL) {
+        return false;
+    }
+
+    NSData *needle = [NSData dataWithBytes:string length:strlen(string)];
+    return [data rangeOfData:needle options:0 range:NSMakeRange(0, data.length)].location != NSNotFound;
+}
+
+static BOOL BHShouldFilterRepostJSONData(NSData *data) {
+    if (![BHTManager HideReposts] || ![data isKindOfClass:NSData.class] || data.length == 0) {
+        return false;
+    }
+
+    return BHDataContainsUTF8String(data, "\"retweeted_status_result\"") && BHDataContainsUTF8String(data, "\"entryId\"");
+}
+
+static void BHSetChanged(BOOL *changed) {
+    if (changed != NULL) {
+        *changed = true;
+    }
+}
+
+static NSDictionary *BHDictionaryValue(NSDictionary *dictionary, NSString *key) {
+    id value = [dictionary objectForKey:key];
+    return [value isKindOfClass:NSDictionary.class] ? value : nil;
+}
+
+static NSArray *BHArrayValue(NSDictionary *dictionary, NSString *key) {
+    id value = [dictionary objectForKey:key];
+    return [value isKindOfClass:NSArray.class] ? value : nil;
+}
+
+static BOOL BHTweetResultContainsRepost(NSDictionary *result) {
+    if (![result isKindOfClass:NSDictionary.class]) {
+        return false;
+    }
+
+    NSDictionary *legacy = BHDictionaryValue(result, @"legacy");
+    if ([legacy objectForKey:@"retweeted_status_result"] != nil) {
+        return true;
+    }
+
+    NSDictionary *tweet = BHDictionaryValue(result, @"tweet");
+    NSDictionary *tweetLegacy = BHDictionaryValue(tweet, @"legacy");
+    return [tweetLegacy objectForKey:@"retweeted_status_result"] != nil;
+}
+
+static BOOL BHItemContentContainsRepost(NSDictionary *itemContent) {
+    NSDictionary *tweetResults = BHDictionaryValue(itemContent, @"tweet_results");
+    return BHTweetResultContainsRepost(BHDictionaryValue(tweetResults, @"result"));
+}
+
+static BOOL BHTimelineEntryContainsRepost(NSDictionary *entry) {
+    if (![entry isKindOfClass:NSDictionary.class]) {
+        return false;
+    }
+
+    if ([entry objectForKey:@"entryId"] == nil && [entry objectForKey:@"entry_id"] == nil) {
+        return false;
+    }
+
+    NSDictionary *content = BHDictionaryValue(entry, @"content");
+    if (BHItemContentContainsRepost(BHDictionaryValue(content, @"itemContent"))) {
+        return true;
+    }
+
+    NSArray *items = BHArrayValue(content, @"items");
+    NSUInteger itemLimit = MIN(items.count, 4);
+    for (NSUInteger index = 0; index < itemLimit; index++) {
+        id moduleItemObject = items[index];
+        if (![moduleItemObject isKindOfClass:NSDictionary.class]) {
+            continue;
+        }
+
+        NSDictionary *item = BHDictionaryValue(moduleItemObject, @"item");
+        if (BHItemContentContainsRepost(BHDictionaryValue(item, @"itemContent"))) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static id BHJSONObjectByFilteringRepostEntries(id object, BOOL *changed) {
+    if ([object isKindOfClass:NSArray.class]) {
+        NSArray *array = object;
+        BOOL arrayChanged = false;
+        NSMutableArray *filteredArray = [NSMutableArray arrayWithCapacity:array.count];
+
+        for (id item in array) {
+            BOOL isTimelineEntry = [item isKindOfClass:NSDictionary.class] && ([(NSDictionary *)item objectForKey:@"entryId"] != nil || [(NSDictionary *)item objectForKey:@"entry_id"] != nil);
+            if (isTimelineEntry && BHTimelineEntryContainsRepost(item)) {
+                arrayChanged = true;
+                BHSetChanged(changed);
+                continue;
+            }
+
+            if (isTimelineEntry) {
+                [filteredArray addObject:item];
+                continue;
+            }
+
+            BOOL itemChanged = false;
+            id filteredItem = BHJSONObjectByFilteringRepostEntries(item, &itemChanged);
+            if (itemChanged) {
+                arrayChanged = true;
+                BHSetChanged(changed);
+            }
+            [filteredArray addObject:filteredItem ?: item];
+        }
+
+        return arrayChanged ? filteredArray : object;
+    }
+
+    if ([object isKindOfClass:NSDictionary.class]) {
+        NSDictionary *dictionary = object;
+        BOOL dictionaryChanged = false;
+        NSMutableDictionary *filteredDictionary = [NSMutableDictionary dictionaryWithCapacity:dictionary.count];
+
+        for (id key in dictionary) {
+            id value = [dictionary objectForKey:key];
+            BOOL valueChanged = false;
+            id filteredValue = BHJSONObjectByFilteringRepostEntries(value, &valueChanged);
+            if (valueChanged) {
+                dictionaryChanged = true;
+                BHSetChanged(changed);
+            }
+            [filteredDictionary setObject:filteredValue ?: value forKey:key];
+        }
+
+        return dictionaryChanged ? filteredDictionary : object;
+    }
+
+    return object;
+}
+
+static NSArray *BHSectionsByFilteringReposts(NSArray *sections) {
+    if (![BHTManager HideReposts] || ![sections isKindOfClass:NSArray.class]) {
+        return sections;
+    }
+
+    BOOL changed = false;
+    NSMutableArray *filteredSections = [NSMutableArray arrayWithCapacity:sections.count];
+    for (id section in sections) {
+        if (![section isKindOfClass:NSArray.class]) {
+            [filteredSections addObject:section];
+            continue;
+        }
+
+        BOOL sectionChanged = false;
+        NSMutableArray *filteredItems = [NSMutableArray arrayWithCapacity:[section count]];
+        for (id item in section) {
+            if (BHIsRepostItem(item)) {
+                changed = true;
+                sectionChanged = true;
+                continue;
+            }
+            [filteredItems addObject:item];
+        }
+
+        [filteredSections addObject:sectionChanged ? filteredItems : section];
+    }
+
+    return changed ? filteredSections : sections;
+}
+
+%hook NSJSONSerialization
++ (id)JSONObjectWithData:(NSData *)data options:(NSJSONReadingOptions)opt error:(NSError **)error {
+    id object = %orig;
+    if (object != nil && BHShouldFilterRepostJSONData(data)) {
+        BOOL changed = false;
+        id filteredObject = BHJSONObjectByFilteringRepostEntries(object, &changed);
+        return changed ? filteredObject : object;
+    }
+    return object;
+}
+%end
 
 // MARK: Clean cache and Padlock
 %hook T1AppDelegate
@@ -247,6 +440,10 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 // MARK: hide ADs
 // credit goes to haoict https://github.com/haoict/twitter-no-ads
 %hook TFNItemsDataViewController
+- (void)updateSections:(id)arg1 withRowAnimation:(long long)arg2 {
+    %orig(BHSectionsByFilteringReposts(arg1), arg2);
+}
+
 - (id)tableViewCellForItem:(id)arg1 atIndexPath:(id)arg2 {
     UITableViewCell *_orig = %orig;
     id tweet = [self itemAtIndexPath:arg2];
@@ -255,7 +452,12 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     if ([BHTManager HidePromoted] && [tweet respondsToSelector:@selector(isPromoted)] && [tweet performSelector:@selector(isPromoted)]) {
         [_orig setHidden:YES];
     }
-    
+
+    if ([BHTManager HideReposts] && [tweet isKindOfClass:%c(T1URTTimelineStatusItemViewModel)]) {
+        if (((T1URTTimelineStatusItemViewModel *)tweet).isRetweet) {
+            [_orig setHidden:YES];
+        }
+    }
     
     if ([self.adDisplayLocation isEqualToString:@"PROFILE_TWEETS"]) {
         if ([BHTManager hideWhoToFollow]) {
@@ -315,17 +517,23 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             }
         }
     }
-    
+
     return _orig;
 }
 - (double)tableView:(id)arg1 heightForRowAtIndexPath:(id)arg2 {
     id tweet = [self itemAtIndexPath:arg2];
     NSString *class_name = NSStringFromClass([tweet classForCoder]);
-    
+
     if ([BHTManager HidePromoted] && [tweet respondsToSelector:@selector(isPromoted)] && [tweet performSelector:@selector(isPromoted)]) {
         return 0;
     }
-    
+
+    if ([BHTManager HideReposts] && [tweet isKindOfClass:%c(T1URTTimelineStatusItemViewModel)]) {
+        if (((T1URTTimelineStatusItemViewModel *)tweet).isRetweet) {
+            return 0;
+        }
+    }
+
     if ([self.adDisplayLocation isEqualToString:@"PROFILE_TWEETS"]) {
         if ([BHTManager hideWhoToFollow]) {
             if ([class_name isEqualToString:@"T1URTTimelineUserItemViewModel"] || [class_name isEqualToString:@"T1TwitterSwift.URTTimelineCarouselViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"]) {
@@ -385,7 +593,7 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
             }
         }
     }
-    
+
     return %orig;
 }
 - (double)tableView:(id)arg1 heightForHeaderInSection:(long long)arg2 {
@@ -399,12 +607,31 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
 }
 %end
 
+%hook TFNItemsDataViewControllerBackingStore
+- (void)insertItem:(id)item atIndexPath:(NSIndexPath *)indexPath {
+    if (BHShouldHideRepostItem(item)) {
+        return;
+    }
+
+    %orig;
+}
+
+- (void)_tfn_insertItem:(id)item atIndexPath:(NSIndexPath *)indexPath {
+    if (BHShouldHideRepostItem(item)) {
+        return;
+    }
+
+    %orig;
+}
+%end
+
 %hook TFNTwitterStatus
 - (_Bool)isCardHidden {
     return ([BHTManager HidePromoted] && [self isPromoted]) ? true : %orig;
 }
 %end
 
+// MARK: Hide Reposts
 // MARK: DM download
 %hook T1DirectMessageEntryMediaCell
 %property (nonatomic, strong) JGProgressHUD *hud;
@@ -1320,4 +1547,3 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     }];
     %init;
 }
-
