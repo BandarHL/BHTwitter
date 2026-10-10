@@ -65,6 +65,7 @@ typedef NSInteger UITableViewCellSelectionStyle;
 @end
 @interface UIImage : NSObject
 @property(nonatomic,readonly) CGImageRef CGImage;
+@property(nonatomic,readonly) CGFloat scale;
 @property(nonatomic,strong) id fixtureBackingImage;
 @property(nonatomic) CGSize size;
 @property(nonatomic,copy) NSData *fixtureData;

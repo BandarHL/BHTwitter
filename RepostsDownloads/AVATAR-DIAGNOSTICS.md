@@ -16,6 +16,8 @@ X 随心 → 文件与诊断 → 诊断日志。管理菜单支持刷新、清�
 
 ## 基础事件
 
+2.4.7-7 的详细采集额外提供 `fullscreen_photo_resolution`：当前选中图片视图、有限单对象绑定路径、已尝试 getter 的存在性/类型与固定拒绝原因，以及位图来源和像素。每视图最多 3 次、每全屏容器最多 48 次，单条不超过 24 KB；不记录地址、账号或帖子身份，不检查邻图或媒体数组内容。原图地址不可用时，可开启详细采集并按 1 → 2 → 4 → 1 切图，再导出日志，帮助定位宿主兼容路径。
+
 - repost_detail_navigation：原生行选择调用、失效行或缺少有效选择处理器；不代表真实页面已完成验收。
 - photo_save_start/fetch/prepare/authorization/committed/result：保存来源、数据大小、权限与结果；不记录图像内容。原图失败现在先询问是否改存当前图。
 - ad_response_seen/ad_response_checked：原有推广标记及过滤结果。marker=false 不能单独确定广告来源，SSP路径仍未验证覆盖。

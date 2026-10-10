@@ -2,10 +2,38 @@
 #import <AVFoundation/AVFoundation.h>
 #import "../BHRDFullscreenPhotoResolver.h"
 #import "../BHRDFullscreenContext.h"
+#import "../BHRDAvatarDiagnostics.h"
+#if BHRD_AVATAR_DIAGNOSTICS
+static NSTimeInterval detailedRemaining;
+static NSMutableArray *diagnosticRecords;
+NSTimeInterval BHRDAvatarDetailedCollectionRemaining(void) { return detailedRemaining; }
+void BHRDAvatarLog(NSString *event, NSDictionary *fields) {
+    if (![event isEqual:@"fullscreen_photo_resolution"]) return;
+    // Capture immutable JSON as the production writer does, so accidentally
+    // leaking model objects or URL values is detectable in these checks.
+    NSData *data=[NSJSONSerialization dataWithJSONObject:fields options:0 error:NULL];
+    [diagnosticRecords addObject:data ?: [NSData data]];
+}
+#endif
 @interface PhotoImageView : UIImageView
 @property(nonatomic,strong) NSURL *imageURL;
 @end
 @implementation PhotoImageView @end
+#if BHRD_AVATAR_DIAGNOSTICS
+@interface DiagnosticPhotoView : PhotoImageView
+@property(nonatomic,strong) NSDictionary *imageViewModel;
+@end
+@implementation DiagnosticPhotoView @end
+static NSUInteger forbiddenReads;
+@interface ForbiddenPhotoBinding : NSObject @end
+@implementation ForbiddenPhotoBinding
+- (NSURL *)imageURL { forbiddenReads++; return [NSURL URLWithString:@"https://pbs.twimg.com/media/private-array-value.jpg"]; }
+@end
+@interface DiagnosticNeighborView : DiagnosticPhotoView @end
+@implementation DiagnosticNeighborView
+- (NSDictionary *)imageViewModel { forbiddenReads++; return [super imageViewModel]; }
+@end
+#endif
 @interface NativeAsyncImageNode : NSObject
 @property(nonatomic,strong) UIImage *image;
 @property(nonatomic,strong) NSURL *imageURL;
@@ -108,5 +136,45 @@ int main(void) { @autoreleasepool {
     Check(!BHRDIsFullscreenMediaController([PhotoFixtureController new]),@"Source registration does not affect another instance of the same class");
     source.window=nil; Check(!BHRDIsFullscreenMediaController(unknown),@"Detached source does not leave generic controllers permanently marked");
     source.window=mediaRoot; source.superview=nil; Check(!BHRDIsFullscreenMediaController(unknown),@"Source reparenting invalidates the old host");
+#if BHRD_AVATAR_DIAGNOSTICS
+    diagnosticRecords=[NSMutableArray array];
+    UIView *diagnosticRoot=[UIView new]; diagnosticRoot.frame=root.frame; diagnosticRoot.bounds=root.bounds; diagnosticRoot.window=diagnosticRoot;
+    DiagnosticPhotoView *diagnosticPhoto=[DiagnosticPhotoView new]; diagnosticPhoto.frame=diagnosticRoot.frame; diagnosticPhoto.bounds=diagnosticRoot.bounds;
+    UIImage *diagnosticImage=[UIImage new]; diagnosticImage.size=CGSizeMake(2048,1365); diagnosticPhoto.image=diagnosticImage;
+    diagnosticPhoto.imageViewModel=@{@"mediaURL":@"http://pbs.twimg.com/media/private-model-value.jpg",@"imageRequest":@[[ForbiddenPhotoBinding new]]};
+    [diagnosticRoot addSubview:diagnosticPhoto];
+    DiagnosticNeighborView *diagnosticNeighbor=[DiagnosticNeighborView new]; diagnosticNeighbor.frame=CGRectMake(390,0,390,844); diagnosticNeighbor.bounds=diagnosticRoot.bounds;
+    diagnosticNeighbor.image=[UIImage new]; diagnosticNeighbor.imageURL=[NSURL URLWithString:@"https://pbs.twimg.com/media/private-neighbor-value.jpg"];
+    [diagnosticRoot addSubview:diagnosticNeighbor];
+    for (NSUInteger i=0;i<20;i++) Check(BHRDCurrentFullscreenPhoto(diagnosticRoot).image==diagnosticImage,@"Detailed collection cannot alter current-image selection");
+    Check(diagnosticRecords.count==0,@"Fullscreen photo diagnostics are absent while detailed collection is off");
+    detailedRemaining=600;
+    BHRDCurrentFullscreenPhoto(diagnosticRoot);
+    Check(diagnosticRecords.count==1,@"Enabling detailed collection records the selected photo once");
+    NSDictionary *record=[NSJSONSerialization JSONObjectWithData:diagnosticRecords.lastObject options:0 error:NULL];
+    Check([record[@"width"] integerValue]==2048 && [record[@"height"] integerValue]==1365 && [record[@"bitmapSource"] isEqual:@"view.image"],@"Selected bitmap source and loaded pixels enter diagnostics");
+    NSString *text=[[NSString alloc] initWithData:diagnosticRecords.lastObject encoding:NSUTF8StringEncoding];
+    Check([text containsString:@"unsupported_scheme"] && [text containsString:@"array_ignored"],@"Safe source probes explain URL rejection and ignored media arrays");
+    Check(![text containsString:@"private-"] && ![text containsString:@"://"] && ![text containsString:@"ForbiddenPhotoBinding"] && ![text containsString:@"DiagnosticNeighborView"],@"Diagnostic JSON contains no URL values, array contents or neighboring photo chain");
+    Check(forbiddenReads==0,@"Diagnostics never read offscreen views or media-array objects");
+    for (NSUInteger i=0;i<80;i++) BHRDCurrentFullscreenPhoto(diagnosticRoot);
+    Check(diagnosticRecords.count==1,@"Polling the unchanged selected photo does not flood diagnostics");
+    for (NSUInteger i=0;i<4;i++) { diagnosticPhoto.image=[UIImage new]; BHRDCurrentFullscreenPhoto(diagnosticRoot); }
+    Check(diagnosticRecords.count==3,@"A reused view is sampled at most three times per collection window");
+    diagnosticPhoto.hidden=YES; diagnosticNeighbor.frame=diagnosticRoot.frame;
+    BHRDCurrentFullscreenPhoto(diagnosticRoot);
+    Check(diagnosticRecords.count==4,@"Switching to another selected view captures its own source trace");
+    text=[[NSString alloc] initWithData:diagnosticRecords.lastObject encoding:NSUTF8StringEncoding];
+    Check([text containsString:@"accepted"] && ![text containsString:@"private-"] && ![text containsString:@"://"],@"Accepted original addresses are represented only by their status");
+    detailedRemaining=0; BHRDCurrentFullscreenPhoto(diagnosticRoot); detailedRemaining=600; BHRDCurrentFullscreenPhoto(diagnosticRoot);
+    Check(diagnosticRecords.count==5,@"A new detailed-collection window starts a fresh bounded sample");
+    diagnosticRecords=[NSMutableArray array];
+    UIView *boundedRoot=[UIView new]; boundedRoot.frame=root.frame; boundedRoot.bounds=root.bounds; boundedRoot.window=boundedRoot;
+    PhotoImageView *previous=nil;
+    for (NSUInteger i=0;i<55;i++) { previous.hidden=YES; previous=Photo(boundedRoot,0,@"bounded-photo"); BHRDCurrentFullscreenPhoto(boundedRoot); }
+    Check(diagnosticRecords.count==48,@"A fullscreen owner has a fixed total diagnostic sample budget");
+    for (NSData *data in diagnosticRecords) Check(data.length<=24000,@"Each detailed source trace stays below the logger's record limit");
+    detailedRemaining=0;
+#endif
     NSLog(@"PASS: %lu production fullscreen photo-selection checks",(unsigned long)checks);
 } return 0; }

@@ -85,7 +85,7 @@ static NSData *DisplayedPhotoPayload(UIImage *image) {
         self.overlay=[BHRDPhotoCopyOverlay new]; self.overlay.backgroundColor=UIColor.clearColor;
         UIButton *button=[UIButton buttonWithType:UIButtonTypeSystem]; self.overlay.button=button;
         [button setImage:[UIImage systemImageNamed:@"doc.on.doc"] forState:UIControlStateNormal];
-        [button setTitle:nil forState:UIControlStateNormal]; button.accessibilityLabel=@"复制当前全屏图片"; button.accessibilityHint=@"点按复制原图，长按或点右侧更多打开图片工具箱";
+        [button setTitle:nil forState:UIControlStateNormal]; button.accessibilityLabel=@"复制当前全屏图片"; button.accessibilityHint=@"点按优先复制原图；无法获取原图时复制当前显示图片。长按或点右侧更多打开图片工具箱";
         button.tintColor=UIColor.whiteColor; button.backgroundColor=[UIColor colorWithWhite:0 alpha:0.72]; button.layer.cornerRadius=22;
         [button addGestureRecognizer:[[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(longPressTools:)]];
         [button addTarget:self action:@selector(copyPhoto) forControlEvents:UIControlEventTouchUpInside];
@@ -153,7 +153,7 @@ static NSData *DisplayedPhotoPayload(UIImage *image) {
     BHRDPhotoSnapshot *photo=BHRDCurrentFullscreenPhoto(self.owner.viewIfLoaded); if (!photo) return;
     [self cancel];
     UIAlertController *sheet=[UIAlertController alertControllerWithTitle:@"图片工具箱" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
-    NSArray *titles=@[@"复制原图",@"复制当前显示（不联网）",@"临时复制（本机 10 分钟）",@"复制原图链接",@"图片信息"];
+    NSArray *titles=@[@"复制图片（优先原图）",@"复制当前显示（不联网）",@"临时复制（本机 10 分钟）",@"复制原图链接",@"图片信息"];
     __weak BHRDPhotoCopyController *weakSelf=self;
     UIAlertAction *save=[UIAlertAction actionWithTitle:@"保存原图到照片" style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *item) { [weakSelf performTool:5 identity:photo.identity]; }];
     save.enabled=photo.url!=nil; [sheet addAction:save];

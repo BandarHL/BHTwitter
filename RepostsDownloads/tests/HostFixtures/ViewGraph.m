@@ -57,6 +57,7 @@
 @implementation UIImage
 - (instancetype)init { if ((self=[super init])) _size=CGSizeMake(40,40); return self; }
 - (CGImageRef)CGImage { return (__bridge CGImageRef)self.fixtureBackingImage; }
+- (CGFloat)scale { return 1; }
 + (instancetype)imageWithCGImage:(CGImageRef)image { UIImage *value=[self new]; value.fixtureBackingImage=(__bridge id)image; return value; }
 + (instancetype)imageWithData:(NSData *)data { UIImage *image=[self new]; image.fixtureData=data; return image; }
 + (instancetype)systemImageNamed:(NSString *)name { return [self imageWithData:[name dataUsingEncoding:NSUTF8StringEncoding]]; }
