@@ -5,6 +5,7 @@ for suite in run.sh run_safety.sh run_acceptance.sh run_performance.sh run_share
     sh "$suite"
 done
 /usr/bin/python3 BuildIdentityTests.py
+/usr/bin/python3 run_inline_download_hooks.py
 if [ -x /usr/bin/python3 ]; then
     /usr/bin/python3 run_streams.py
 else

@@ -179,36 +179,12 @@ static void BHRDRegisterFloatingSource(UIView *shareButton) {
     BHRDRefreshFullscreenController(owner);
 }
 
-static void BHRemoveExtraFullscreenDownloadButtons(UIView *actionsView) {
+// The floating control is an additional entry. Keep each tweet's own inline
+// download button and register its model without changing the host's buttons.
+static void BHRDRegisterInlineMediaSource(UIView *actionsView) {
     id model=BHRDMediaObject(actionsView,@"viewModel") ?: BHRDMediaObject(BHRDMediaObject(actionsView,@"delegate"),@"viewModel");
     BHRDRegisterFullscreenInlineModel(actionsView,model);
     if (BHViewIsInImmersiveFullScreen(actionsView)) BHRDRegisterFloatingSource(actionsView);
-    if (![BHRDManager DownloadingVideos] || !BHRDPreference(BHRDFloatingDownloadKey) || !BHViewIsInImmersiveFullScreen(actionsView)) {
-        return;
-    }
-
-    id inlineActionButtons = BHObjectValueForSelector(actionsView, @selector(inlineActionButtons));
-    if ([inlineActionButtons isKindOfClass:NSMutableArray.class]) {
-        NSMutableArray *buttons = inlineActionButtons;
-        NSIndexSet *downloadButtonIndexes = [buttons indexesOfObjectsPassingTest:^BOOL(id button, NSUInteger index, BOOL *stop) {
-            return [button isKindOfClass:BHRDDownloadButton.class];
-        }];
-        for (UIView *button in [buttons objectsAtIndexes:downloadButtonIndexes]) {
-            [button removeFromSuperview];
-        }
-        [buttons removeObjectsAtIndexes:downloadButtonIndexes];
-    }
-
-    NSMutableArray<UIView *> *pendingViews = [actionsView.subviews mutableCopy];
-    while (pendingViews.count > 0) {
-        UIView *view = pendingViews.lastObject;
-        [pendingViews removeLastObject];
-        if ([view isKindOfClass:BHRDDownloadButton.class]) {
-            [view removeFromSuperview];
-            continue;
-        }
-        [pendingViews addObjectsFromArray:view.subviews];
-    }
 }
 
 // Observe layout only to find the current video's model. Sharing is untouched.
@@ -234,10 +210,9 @@ static void BHRemoveExtraFullscreenDownloadButtons(UIView *actionsView) {
 }
 
 - (void)layoutSubviews {
-    BHRemoveExtraFullscreenDownloadButtons((UIView *)self);
     %orig;
-    BHRemoveExtraFullscreenDownloadButtons((UIView *)self);
-    if (!BHViewIsInImmersiveFullScreen((UIView *)self)) BHRDLayoutInlineActions((UIView *)self);
+    BHRDRegisterInlineMediaSource((UIView *)self);
+    BHRDLayoutInlineActions((UIView *)self);
     BHRDMatchAddedButtonsToNative((UIView *)self);
 }
 %end
@@ -257,10 +232,9 @@ static void BHRemoveExtraFullscreenDownloadButtons(UIView *actionsView) {
 
 
 - (void)layoutSubviews {
-    BHRemoveExtraFullscreenDownloadButtons((UIView *)self);
     %orig;
-    BHRemoveExtraFullscreenDownloadButtons((UIView *)self);
-    if (!BHViewIsInImmersiveFullScreen((UIView *)self)) BHRDLayoutInlineActions((UIView *)self);
+    BHRDRegisterInlineMediaSource((UIView *)self);
+    BHRDLayoutInlineActions((UIView *)self);
     BHRDMatchAddedButtonsToNative((UIView *)self);
 }
 %end
