@@ -1,9 +1,11 @@
 #import "SAMKeychain/AuthViewController.h"
 #import "Colours/Colours.h"
 #import "BHTManager.h"
+#import "BHDownloadInlineButton.h"
 #import "BHTBundle/BHTBundle.h"
 #import "MobileCoreServices/MobileCoreServices.h"
 #import "MobileCoreServices/UTCoreTypes.h"
+#import <objc/message.h>
 #import <string.h>
 
 static UIFont * _Nullable TAEStandardFontGroupReplacement(UIFont *self, SEL _cmd, CGFloat arg1, CGFloat arg2) {
@@ -42,13 +44,235 @@ static void batchSwizzlingOnClass(Class cls, NSArray<NSString*>*origSelectors, I
     }
 }
 
-static BOOL BHIsRepostItem(id item) {
-    if (item == nil) {
+static BOOL BHBoolValueForSelector(id object, SEL selector) {
+    if (object == nil || ![object respondsToSelector:selector]) {
         return false;
     }
 
-    Class statusItemClass = objc_getClass("T1URTTimelineStatusItemViewModel");
-    return statusItemClass != nil && [item isKindOfClass:statusItemClass] && ((T1URTTimelineStatusItemViewModel *)item).isRetweet;
+    BOOL (*implementation)(id, SEL) = (BOOL (*)(id, SEL))[object methodForSelector:selector];
+    return implementation != NULL && implementation(object, selector);
+}
+
+static id BHObjectValueForSelector(id object, SEL selector) {
+    if (object == nil || ![object respondsToSelector:selector]) {
+        return nil;
+    }
+    return ((id (*)(id, SEL))objc_msgSend)(object, selector);
+}
+
+static BOOL BHViewIsInImmersiveFullScreen(UIView *view) {
+    UIResponder *responder = view;
+    for (NSUInteger depth = 0; responder != nil && depth < 64; depth++) {
+        NSString *className = NSStringFromClass(responder.class);
+        if ([responder isKindOfClass:UIViewController.class]) {
+            if ([className containsString:@"ImmersiveFullScreenViewController"] ||
+                [className containsString:@"ImmersiveViewController"]) {
+                return true;
+            }
+        }
+        if ([className containsString:@"ImmersiveCardView"] ||
+            [className containsString:@"ImmersiveCardOverlayView"] ||
+            [className hasSuffix:@"T1SlideshowStatusView"]) {
+            return true;
+        }
+        responder = responder.nextResponder;
+    }
+    return false;
+}
+
+static NSArray *BHFullscreenVideoMediaEntitiesForShareButton(UIView *shareButton) {
+    if (![BHTManager DownloadingVideos] ||
+        !BHViewIsInImmersiveFullScreen(shareButton)) {
+        return @[];
+    }
+
+    NSMutableArray *results = [NSMutableArray array];
+    NSMutableSet *seen = [NSMutableSet set];
+    UIResponder *responder = shareButton;
+    for (NSUInteger depth = 0; responder != nil && depth < 64; depth++) {
+        for (id media in [BHDownloadInlineButton downloadableMediaEntitiesFromSource:responder]) {
+            NSValue *identity = [NSValue valueWithNonretainedObject:media];
+            if (![seen containsObject:identity]) {
+                [seen addObject:identity];
+                [results addObject:media];
+            }
+        }
+        if (results.count > 0) {
+            break;
+        }
+        responder = responder.nextResponder;
+    }
+    return [results copy];
+}
+
+static UIView *BHShareButtonImageTarget(UIView *shareButton) {
+    id internalButton = BHObjectValueForSelector(shareButton, @selector(button));
+    if ([internalButton isKindOfClass:UIButton.class]) {
+        return internalButton;
+    }
+    if ([shareButton isKindOfClass:UIButton.class]) {
+        return shareButton;
+    }
+
+    NSMutableArray<UIView *> *pending = [shareButton.subviews mutableCopy];
+    while (pending.count > 0) {
+        UIView *view = pending.firstObject;
+        [pending removeObjectAtIndex:0];
+        if ([view isKindOfClass:UIButton.class]) {
+            return view;
+        }
+        [pending addObjectsFromArray:view.subviews];
+    }
+
+    pending = [shareButton.subviews mutableCopy];
+    while (pending.count > 0) {
+        UIView *view = pending.firstObject;
+        [pending removeObjectAtIndex:0];
+        if ([view isKindOfClass:UIImageView.class]) {
+            return view;
+        }
+        [pending addObjectsFromArray:view.subviews];
+    }
+    return nil;
+}
+
+static char BHFullscreenShareOriginalImageKey;
+static char BHFullscreenShareOriginalAccessibilityLabelKey;
+static char BHFullscreenShareImageTargetKey;
+static char BHFullscreenDownloadHandlerKey;
+
+static void BHUpdateFullscreenShareButtonAppearance(UIView *shareButton,
+                                                     BOOL showsDownload) {
+    UIView *imageTarget = objc_getAssociatedObject(
+        shareButton, &BHFullscreenShareImageTargetKey);
+    if (imageTarget != nil && imageTarget != shareButton &&
+        ![imageTarget isDescendantOfView:shareButton]) {
+        imageTarget = nil;
+    }
+    if (imageTarget == nil) {
+        imageTarget = BHShareButtonImageTarget(shareButton);
+        if (imageTarget != nil) {
+            objc_setAssociatedObject(shareButton,
+                                     &BHFullscreenShareImageTargetKey,
+                                     imageTarget,
+                                     OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
+    }
+
+    id savedImage = objc_getAssociatedObject(
+        imageTarget, &BHFullscreenShareOriginalImageKey);
+    if (showsDownload) {
+        if (savedImage == nil && imageTarget != nil) {
+            UIImage *originalImage = nil;
+            if ([imageTarget isKindOfClass:UIButton.class]) {
+                originalImage = [(UIButton *)imageTarget imageForState:UIControlStateNormal];
+            } else if ([imageTarget isKindOfClass:UIImageView.class]) {
+                originalImage = [(UIImageView *)imageTarget image];
+            }
+            objc_setAssociatedObject(imageTarget,
+                                     &BHFullscreenShareOriginalImageKey,
+                                     originalImage ?: NSNull.null,
+                                     OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
+
+        UIImage *downloadImage = [[UIImage systemImageNamed:@"square.and.arrow.down"]
+            imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+        if ([imageTarget isKindOfClass:UIButton.class]) {
+            [(UIButton *)imageTarget setImage:downloadImage forState:UIControlStateNormal];
+        } else if ([imageTarget isKindOfClass:UIImageView.class]) {
+            [(UIImageView *)imageTarget setImage:downloadImage];
+        }
+
+        if (objc_getAssociatedObject(
+                shareButton, &BHFullscreenShareOriginalAccessibilityLabelKey) == nil) {
+            objc_setAssociatedObject(
+                shareButton,
+                &BHFullscreenShareOriginalAccessibilityLabelKey,
+                shareButton.accessibilityLabel ?: NSNull.null,
+                OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
+        shareButton.accessibilityLabel = @"Download video";
+        return;
+    }
+
+    if (savedImage != nil) {
+        UIImage *originalImage = savedImage == NSNull.null ? nil : savedImage;
+        if ([imageTarget isKindOfClass:UIButton.class]) {
+            [(UIButton *)imageTarget setImage:originalImage forState:UIControlStateNormal];
+        } else if ([imageTarget isKindOfClass:UIImageView.class]) {
+            [(UIImageView *)imageTarget setImage:originalImage];
+        }
+        objc_setAssociatedObject(imageTarget,
+                                 &BHFullscreenShareOriginalImageKey,
+                                 nil,
+                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+
+    id originalLabel = objc_getAssociatedObject(
+        shareButton, &BHFullscreenShareOriginalAccessibilityLabelKey);
+    if (originalLabel != nil) {
+        shareButton.accessibilityLabel = originalLabel == NSNull.null ? nil : originalLabel;
+        objc_setAssociatedObject(
+            shareButton,
+            &BHFullscreenShareOriginalAccessibilityLabelKey,
+            nil,
+            OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+}
+
+static BOOL BHHandleFullscreenShareButtonTap(UIView *shareButton) {
+    NSArray *mediaEntities =
+        BHFullscreenVideoMediaEntitiesForShareButton(shareButton);
+    if (mediaEntities.count == 0) {
+        return false;
+    }
+
+    BHDownloadInlineButton *handler = objc_getAssociatedObject(
+        shareButton, &BHFullscreenDownloadHandlerKey);
+    if (handler == nil) {
+        handler = [BHDownloadInlineButton new];
+        objc_setAssociatedObject(shareButton,
+                                 &BHFullscreenDownloadHandlerKey,
+                                 handler,
+                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    [handler presentDownloadOptionsForMediaEntities:mediaEntities
+                                         sourceView:shareButton];
+    return true;
+}
+
+static void BHRemoveExtraFullscreenDownloadButtons(UIView *actionsView) {
+    if (!BHViewIsInImmersiveFullScreen(actionsView)) {
+        return;
+    }
+
+    id inlineActionButtons = BHObjectValueForSelector(actionsView, @selector(inlineActionButtons));
+    if ([inlineActionButtons isKindOfClass:NSMutableArray.class]) {
+        NSMutableArray *buttons = inlineActionButtons;
+        NSIndexSet *downloadButtonIndexes = [buttons indexesOfObjectsPassingTest:^BOOL(id button, NSUInteger index, BOOL *stop) {
+            return [button isKindOfClass:BHDownloadInlineButton.class];
+        }];
+        for (UIView *button in [buttons objectsAtIndexes:downloadButtonIndexes]) {
+            [button removeFromSuperview];
+        }
+        [buttons removeObjectsAtIndexes:downloadButtonIndexes];
+    }
+
+    NSMutableArray<UIView *> *pendingViews = [actionsView.subviews mutableCopy];
+    while (pendingViews.count > 0) {
+        UIView *view = pendingViews.lastObject;
+        [pendingViews removeLastObject];
+        if ([view isKindOfClass:BHDownloadInlineButton.class]) {
+            [view removeFromSuperview];
+            continue;
+        }
+        [pendingViews addObjectsFromArray:view.subviews];
+    }
+}
+
+static BOOL BHIsRepostItem(id item) {
+    return BHBoolValueForSelector(item, NSSelectorFromString(@"isRetweet")) ||
+           BHBoolValueForSelector(item, NSSelectorFromString(@"isRepost"));
 }
 
 static BOOL BHShouldHideRepostItem(id item) {
@@ -69,7 +293,10 @@ static BOOL BHShouldFilterRepostJSONData(NSData *data) {
         return false;
     }
 
-    return BHDataContainsUTF8String(data, "\"retweeted_status_result\"") && BHDataContainsUTF8String(data, "\"entryId\"");
+    BOOL containsEntry = BHDataContainsUTF8String(data, "\"entryId\"") ||
+                         BHDataContainsUTF8String(data, "\"entry_id\"");
+    BOOL containsRepost = BHDataContainsUTF8String(data, "\"retweeted_status");
+    return containsEntry && containsRepost;
 }
 
 static void BHSetChanged(BOOL *changed) {
@@ -88,19 +315,29 @@ static NSArray *BHArrayValue(NSDictionary *dictionary, NSString *key) {
     return [value isKindOfClass:NSArray.class] ? value : nil;
 }
 
+static BOOL BHDictionaryContainsRepost(NSDictionary *dictionary) {
+    if (![dictionary isKindOfClass:NSDictionary.class]) {
+        return false;
+    }
+
+    return [dictionary objectForKey:@"retweeted_status_result"] != nil ||
+           [dictionary objectForKey:@"retweeted_status"] != nil ||
+           [dictionary objectForKey:@"retweeted_status_id"] != nil ||
+           [dictionary objectForKey:@"retweeted_status_id_str"] != nil;
+}
+
 static BOOL BHTweetResultContainsRepost(NSDictionary *result) {
     if (![result isKindOfClass:NSDictionary.class]) {
         return false;
     }
 
-    NSDictionary *legacy = BHDictionaryValue(result, @"legacy");
-    if ([legacy objectForKey:@"retweeted_status_result"] != nil) {
+    if (BHDictionaryContainsRepost(result) || BHDictionaryContainsRepost(BHDictionaryValue(result, @"legacy"))) {
         return true;
     }
 
+    // TweetWithVisibilityResults 等包装模型会把实际推文放在 tweet 中。
     NSDictionary *tweet = BHDictionaryValue(result, @"tweet");
-    NSDictionary *tweetLegacy = BHDictionaryValue(tweet, @"legacy");
-    return [tweetLegacy objectForKey:@"retweeted_status_result"] != nil;
+    return tweet != result && BHTweetResultContainsRepost(tweet);
 }
 
 static BOOL BHItemContentContainsRepost(NSDictionary *itemContent) {
@@ -108,118 +345,160 @@ static BOOL BHItemContentContainsRepost(NSDictionary *itemContent) {
     return BHTweetResultContainsRepost(BHDictionaryValue(tweetResults, @"result"));
 }
 
-static BOOL BHTimelineEntryContainsRepost(NSDictionary *entry) {
-    if (![entry isKindOfClass:NSDictionary.class]) {
+static BOOL BHModuleItemContainsRepost(NSDictionary *moduleItem) {
+    if (![moduleItem isKindOfClass:NSDictionary.class]) {
         return false;
     }
 
-    if ([entry objectForKey:@"entryId"] == nil && [entry objectForKey:@"entry_id"] == nil) {
-        return false;
+    if (BHItemContentContainsRepost(BHDictionaryValue(moduleItem, @"itemContent"))) {
+        return true;
+    }
+
+    NSDictionary *item = BHDictionaryValue(moduleItem, @"item");
+    return BHItemContentContainsRepost(BHDictionaryValue(item, @"itemContent"));
+}
+
+static NSString *BHModuleItemsKey(NSDictionary *content) {
+    for (NSString *key in @[@"items", @"moduleItems", @"module_items"]) {
+        if (BHArrayValue(content, key) != nil) {
+            return key;
+        }
+    }
+    return nil;
+}
+
+static NSDictionary *BHTimelineEntryByFilteringReposts(NSDictionary *entry,
+                                                        BOOL *removed,
+                                                        BOOL *changed) {
+    if (removed != NULL) {
+        *removed = false;
     }
 
     NSDictionary *content = BHDictionaryValue(entry, @"content");
     if (BHItemContentContainsRepost(BHDictionaryValue(content, @"itemContent"))) {
-        return true;
+        if (removed != NULL) {
+            *removed = true;
+        }
+        BHSetChanged(changed);
+        return nil;
     }
 
-    NSArray *items = BHArrayValue(content, @"items");
-    NSUInteger itemLimit = MIN(items.count, 4);
-    for (NSUInteger index = 0; index < itemLimit; index++) {
-        id moduleItemObject = items[index];
-        if (![moduleItemObject isKindOfClass:NSDictionary.class]) {
+    NSString *moduleItemsKey = BHModuleItemsKey(content);
+    if (moduleItemsKey == nil) {
+        return entry;
+    }
+    NSArray *moduleItems = BHArrayValue(content, moduleItemsKey);
+    if (moduleItems == nil) {
+        return entry;
+    }
+
+    NSMutableArray *filteredItems = [NSMutableArray arrayWithCapacity:moduleItems.count];
+    BOOL moduleChanged = false;
+    for (id moduleItem in moduleItems) {
+        if ([moduleItem isKindOfClass:NSDictionary.class] &&
+            BHModuleItemContainsRepost(moduleItem)) {
+            moduleChanged = true;
             continue;
         }
-
-        NSDictionary *item = BHDictionaryValue(moduleItemObject, @"item");
-        if (BHItemContentContainsRepost(BHDictionaryValue(item, @"itemContent"))) {
-            return true;
-        }
+        [filteredItems addObject:moduleItem];
     }
 
-    return false;
+    if (!moduleChanged) {
+        return entry;
+    }
+
+    BHSetChanged(changed);
+    if (filteredItems.count == 0) {
+        if (removed != NULL) {
+            *removed = true;
+        }
+        return nil;
+    }
+
+    NSMutableDictionary *filteredContent = [content mutableCopy];
+    [filteredContent setObject:filteredItems forKey:moduleItemsKey];
+    NSMutableDictionary *filteredEntry = [entry mutableCopy];
+    [filteredEntry setObject:filteredContent forKey:@"content"];
+    return filteredEntry;
+}
+
+static char BHTimelineCellHiddenByTweakKey;
+
+static void BHRestoreTimelineCellHiddenByTweak(UITableViewCell *cell) {
+    if (cell != nil && [objc_getAssociatedObject(cell, &BHTimelineCellHiddenByTweakKey) boolValue]) {
+        cell.hidden = false;
+        objc_setAssociatedObject(cell, &BHTimelineCellHiddenByTweakKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+}
+
+static void BHHideTimelineCellByTweak(UITableViewCell *cell) {
+    if (cell != nil && !cell.hidden) {
+        cell.hidden = true;
+        objc_setAssociatedObject(cell, &BHTimelineCellHiddenByTweakKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
 }
 
 static id BHJSONObjectByFilteringRepostEntries(id object, BOOL *changed) {
     if ([object isKindOfClass:NSArray.class]) {
         NSArray *array = object;
-        BOOL arrayChanged = false;
-        NSMutableArray *filteredArray = [NSMutableArray arrayWithCapacity:array.count];
+        NSMutableArray *filteredArray = nil;
 
-        for (id item in array) {
-            BOOL isTimelineEntry = [item isKindOfClass:NSDictionary.class] && ([(NSDictionary *)item objectForKey:@"entryId"] != nil || [(NSDictionary *)item objectForKey:@"entry_id"] != nil);
-            if (isTimelineEntry && BHTimelineEntryContainsRepost(item)) {
-                arrayChanged = true;
-                BHSetChanged(changed);
-                continue;
-            }
-
-            if (isTimelineEntry) {
-                [filteredArray addObject:item];
-                continue;
-            }
-
+        for (NSUInteger index = 0; index < array.count; index++) {
+            id item = array[index];
+            id filteredItem = item;
             BOOL itemChanged = false;
-            id filteredItem = BHJSONObjectByFilteringRepostEntries(item, &itemChanged);
-            if (itemChanged) {
-                arrayChanged = true;
-                BHSetChanged(changed);
+            BOOL includeItem = true;
+            BOOL isTimelineEntry = [item isKindOfClass:NSDictionary.class] && ([(NSDictionary *)item objectForKey:@"entryId"] != nil || [(NSDictionary *)item objectForKey:@"entry_id"] != nil);
+            if (isTimelineEntry) {
+                BOOL entryRemoved = false;
+                filteredItem = BHTimelineEntryByFilteringReposts(
+                    item, &entryRemoved, &itemChanged) ?: item;
+                includeItem = !entryRemoved;
+            } else {
+                filteredItem = BHJSONObjectByFilteringRepostEntries(
+                    item, &itemChanged) ?: item;
             }
-            [filteredArray addObject:filteredItem ?: item];
+
+            if (itemChanged) {
+                BHSetChanged(changed);
+                if (filteredArray == nil) {
+                    filteredArray = [NSMutableArray arrayWithCapacity:array.count];
+                    if (index > 0) {
+                        [filteredArray addObjectsFromArray:
+                            [array subarrayWithRange:NSMakeRange(0, index)]];
+                    }
+                }
+            }
+
+            if (filteredArray != nil && includeItem) {
+                [filteredArray addObject:filteredItem];
+            }
         }
 
-        return arrayChanged ? filteredArray : object;
+        return filteredArray ?: object;
     }
 
     if ([object isKindOfClass:NSDictionary.class]) {
         NSDictionary *dictionary = object;
-        BOOL dictionaryChanged = false;
-        NSMutableDictionary *filteredDictionary = [NSMutableDictionary dictionaryWithCapacity:dictionary.count];
+        NSMutableDictionary *filteredDictionary = nil;
 
         for (id key in dictionary) {
             id value = [dictionary objectForKey:key];
             BOOL valueChanged = false;
             id filteredValue = BHJSONObjectByFilteringRepostEntries(value, &valueChanged);
             if (valueChanged) {
-                dictionaryChanged = true;
                 BHSetChanged(changed);
+                if (filteredDictionary == nil) {
+                    filteredDictionary = [dictionary mutableCopy];
+                }
+                [filteredDictionary setObject:filteredValue ?: value forKey:key];
             }
-            [filteredDictionary setObject:filteredValue ?: value forKey:key];
         }
 
-        return dictionaryChanged ? filteredDictionary : object;
+        return filteredDictionary ?: object;
     }
 
     return object;
-}
-
-static NSArray *BHSectionsByFilteringReposts(NSArray *sections) {
-    if (![BHTManager HideReposts] || ![sections isKindOfClass:NSArray.class]) {
-        return sections;
-    }
-
-    BOOL changed = false;
-    NSMutableArray *filteredSections = [NSMutableArray arrayWithCapacity:sections.count];
-    for (id section in sections) {
-        if (![section isKindOfClass:NSArray.class]) {
-            [filteredSections addObject:section];
-            continue;
-        }
-
-        BOOL sectionChanged = false;
-        NSMutableArray *filteredItems = [NSMutableArray arrayWithCapacity:[section count]];
-        for (id item in section) {
-            if (BHIsRepostItem(item)) {
-                changed = true;
-                sectionChanged = true;
-                continue;
-            }
-            [filteredItems addObject:item];
-        }
-
-        [filteredSections addObject:sectionChanged ? filteredItems : section];
-    }
-
-    return changed ? filteredSections : sections;
 }
 
 %hook NSJSONSerialization
@@ -441,57 +720,56 @@ static NSArray *BHSectionsByFilteringReposts(NSArray *sections) {
 // credit goes to haoict https://github.com/haoict/twitter-no-ads
 %hook TFNItemsDataViewController
 - (void)updateSections:(id)arg1 withRowAnimation:(long long)arg2 {
-    %orig(BHSectionsByFilteringReposts(arg1), arg2);
+    %orig;
 }
 
 - (id)tableViewCellForItem:(id)arg1 atIndexPath:(id)arg2 {
     UITableViewCell *_orig = %orig;
+    BOOL shouldHideCell = false;
     id tweet = [self itemAtIndexPath:arg2];
     NSString *class_name = NSStringFromClass([tweet classForCoder]);
     
-    if ([BHTManager HidePromoted] && [tweet respondsToSelector:@selector(isPromoted)] && [tweet performSelector:@selector(isPromoted)]) {
-        [_orig setHidden:YES];
+    if ([BHTManager HidePromoted] && BHBoolValueForSelector(tweet, NSSelectorFromString(@"isPromoted"))) {
+        shouldHideCell = true;
     }
 
-    if ([BHTManager HideReposts] && [tweet isKindOfClass:%c(T1URTTimelineStatusItemViewModel)]) {
-        if (((T1URTTimelineStatusItemViewModel *)tweet).isRetweet) {
-            [_orig setHidden:YES];
-        }
+    if (BHShouldHideRepostItem(tweet)) {
+        shouldHideCell = true;
     }
     
     if ([self.adDisplayLocation isEqualToString:@"PROFILE_TWEETS"]) {
         if ([BHTManager hideWhoToFollow]) {
             if ([class_name isEqualToString:@"T1URTTimelineUserItemViewModel"] || [class_name isEqualToString:@"T1TwitterSwift.URTTimelineCarouselViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"]) {
-                [_orig setHidden:true];
+                shouldHideCell = true;
             }
         }
         
         if ([BHTManager hideTopicsToFollow]) {
             if ([class_name isEqualToString:@"T1TwitterSwift.URTTimelineTopicCollectionViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"] || [class_name isEqualToString:@"TwitterURT.URTTimelineCarouselViewModel"]) {
-                [_orig setHidden:true];
+                shouldHideCell = true;
             }
         }
     }
     
     if ([self.adDisplayLocation isEqualToString:@"OTHER"]) {
         if ([BHTManager HidePromoted] && ([class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"] || [class_name isEqualToString:@"T1URTTimelineMessageItemViewModel"])) {
-            [_orig setHidden:true];
+            shouldHideCell = true;
         }
         
         if ([BHTManager HidePromoted] && [class_name isEqualToString:@"TwitterURT.URTTimelineEventSummaryViewModel"]) {
             _TtC10TwitterURT32URTTimelineEventSummaryViewModel *trendModel = tweet;
             if ([[trendModel.scribeItem allKeys] containsObject:@"promoted_id"]) {
-                [_orig setHidden:true];
+                shouldHideCell = true;
             }
         }
         if ([BHTManager HidePromoted] && [class_name isEqualToString:@"TwitterURT.URTTimelineTrendViewModel"]) {
             _TtC10TwitterURT25URTTimelineTrendViewModel *trendModel = tweet;
             if ([[trendModel.scribeItem allKeys] containsObject:@"promoted_id"]) {
-                [_orig setHidden:true];
+                shouldHideCell = true;
             }
         }
         if ([BHTManager hideTrendVideos] && ([class_name isEqualToString:@"TwitterURT.URTModuleHeaderViewModel"] || [class_name isEqualToString:@"TwitterURT.URTModuleFooterViewModel"] || [class_name isEqualToString:@"T1TwitterSwift.URTTimelineCarouselViewModel"])) {
-            [_orig setHidden:true];
+            shouldHideCell = true;
         }
     }
     
@@ -500,38 +778,41 @@ static NSArray *BHSectionsByFilteringReposts(NSArray *sections) {
             T1URTTimelineStatusItemViewModel *fullTweet = tweet;
             if ([BHTManager HideTopics]) {
                 if ((fullTweet.banner != nil) && [fullTweet.banner isKindOfClass:%c(TFNTwitterURTTimelineStatusTopicBanner)]) {
-                    [_orig setHidden:true];
+                    shouldHideCell = true;
                 }
             }
         }
         
         if ([BHTManager HideTopics]) {
             if ([tweet isKindOfClass:%c(_TtC10TwitterURT26URTTimelinePromptViewModel)]) {
-                [_orig setHidden:true];
+                shouldHideCell = true;
             }
         }
 
         if ([BHTManager hidePremiumOffer]) {
             if ([class_name isEqualToString:@"T1URTTimelineMessageItemViewModel"]) {
-                [_orig setHidden:true];
+                shouldHideCell = true;
             }
         }
     }
 
+    if (shouldHideCell) {
+        BHHideTimelineCellByTweak(_orig);
+    } else {
+        BHRestoreTimelineCellHiddenByTweak(_orig);
+    }
     return _orig;
 }
 - (double)tableView:(id)arg1 heightForRowAtIndexPath:(id)arg2 {
     id tweet = [self itemAtIndexPath:arg2];
     NSString *class_name = NSStringFromClass([tweet classForCoder]);
 
-    if ([BHTManager HidePromoted] && [tweet respondsToSelector:@selector(isPromoted)] && [tweet performSelector:@selector(isPromoted)]) {
+    if ([BHTManager HidePromoted] && BHBoolValueForSelector(tweet, NSSelectorFromString(@"isPromoted"))) {
         return 0;
     }
 
-    if ([BHTManager HideReposts] && [tweet isKindOfClass:%c(T1URTTimelineStatusItemViewModel)]) {
-        if (((T1URTTimelineStatusItemViewModel *)tweet).isRetweet) {
-            return 0;
-        }
+    if (BHShouldHideRepostItem(tweet)) {
+        return 0;
     }
 
     if ([self.adDisplayLocation isEqualToString:@"PROFILE_TWEETS"]) {
@@ -607,24 +888,6 @@ static NSArray *BHSectionsByFilteringReposts(NSArray *sections) {
 }
 %end
 
-%hook TFNItemsDataViewControllerBackingStore
-- (void)insertItem:(id)item atIndexPath:(NSIndexPath *)indexPath {
-    if (BHShouldHideRepostItem(item)) {
-        return;
-    }
-
-    %orig;
-}
-
-- (void)_tfn_insertItem:(id)item atIndexPath:(NSIndexPath *)indexPath {
-    if (BHShouldHideRepostItem(item)) {
-        return;
-    }
-
-    %orig;
-}
-%end
-
 %hook TFNTwitterStatus
 - (_Bool)isCardHidden {
     return ([BHTManager HidePromoted] && [self isPromoted]) ? true : %orig;
@@ -690,8 +953,10 @@ static NSArray *BHSectionsByFilteringReposts(NSArray *sections) {
                     dispatch_async(dispatch_get_main_queue(), ^(void) {
                         [self.hud dismiss];
 
-                        TFNMenuSheetViewController *alert2 = [BHTManager newFFmpegDownloadSheet:mediaInfo downloadingURL:[NSURL URLWithString:i.url] progressView:self.hud];
-                        [alert2 tfnPresentedCustomPresentFromViewController:topMostController() animated:YES completion:nil];
+                        UIAlertController *alert2 = [BHTManager newFFmpegDownloadSheet:mediaInfo downloadingURL:[NSURL URLWithString:i.url] progressView:self.hud];
+                        alert2.popoverPresentationController.sourceView = self;
+                        alert2.popoverPresentationController.sourceRect = self.bounds;
+                        [topMostController() presentViewController:alert2 animated:YES completion:nil];
                     });
                 });
                 
@@ -861,6 +1126,19 @@ static NSArray *BHSectionsByFilteringReposts(NSArray *sections) {
 // MARK: Save tweet as an image
 // Twitter 9.31 and higher
 %hook TTAStatusInlineShareButton
+- (void)layoutSubviews {
+    %orig;
+    BOOL showsDownload = BHFullscreenVideoMediaEntitiesForShareButton((UIView *)self).count > 0;
+    BHUpdateFullscreenShareButtonAppearance((UIView *)self, showsDownload);
+}
+
+- (void)didTap {
+    if (BHHandleFullscreenShareButtonTap((UIView *)self)) {
+        return;
+    }
+    return %orig;
+}
+
 - (void)didLongPressActionButton:(UILongPressGestureRecognizer *)gestureRecognizer {
     if ([BHTManager tweetToImage]) {
         if (gestureRecognizer.state == UIGestureRecognizerStateBegan) {
@@ -893,6 +1171,19 @@ static NSArray *BHSectionsByFilteringReposts(NSArray *sections) {
 
 // Twitter 9.30 and lower
 %hook T1StatusInlineShareButton
+- (void)layoutSubviews {
+    %orig;
+    BOOL showsDownload = BHFullscreenVideoMediaEntitiesForShareButton((UIView *)self).count > 0;
+    BHUpdateFullscreenShareButtonAppearance((UIView *)self, showsDownload);
+}
+
+- (void)didTap {
+    if (BHHandleFullscreenShareButtonTap((UIView *)self)) {
+        return;
+    }
+    return %orig;
+}
+
 - (void)didLongPressActionButton:(UILongPressGestureRecognizer *)gestureRecognizer {
     if ([BHTManager tweetToImage]) {
         if (gestureRecognizer.state == UIGestureRecognizerStateBegan) {
@@ -946,6 +1237,12 @@ static NSArray *BHSectionsByFilteringReposts(NSArray *sections) {
     
     return [newOrig copy];
 }
+
+- (void)layoutSubviews {
+    BHRemoveExtraFullscreenDownloadButtons((UIView *)self);
+    %orig;
+    BHRemoveExtraFullscreenDownloadButtons((UIView *)self);
+}
 %end
 
 // Twitter 9.30 and lower
@@ -959,6 +1256,13 @@ static NSArray *BHSectionsByFilteringReposts(NSArray *sections) {
     }
     
     return [newOrig copy];
+}
+
+
+- (void)layoutSubviews {
+    BHRemoveExtraFullscreenDownloadButtons((UIView *)self);
+    %orig;
+    BHRemoveExtraFullscreenDownloadButtons((UIView *)self);
 }
 %end
 

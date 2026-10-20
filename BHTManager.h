@@ -19,7 +19,7 @@
 + (void)showSaveVC:(NSURL *)url;
 + (void)save:(NSURL *)url;
 + (MediaInformation *)getM3U8Information:(NSURL *)mediaURL;
-+ (TFNMenuSheetViewController *)newFFmpegDownloadSheet:(MediaInformation *)mediaInformation downloadingURL:(NSURL *)downloadingURL progressView:(JGProgressHUD *)hud;
++ (UIAlertController *)newFFmpegDownloadSheet:(MediaInformation *)mediaInformation downloadingURL:(NSURL *)downloadingURL progressView:(JGProgressHUD *)hud;
 
 + (BOOL)DownloadingVideos;
 + (BOOL)DirectSave;
@@ -59,4 +59,3 @@
 + (BOOL)mediaUpload4k;
 + (BOOL)customVoice;
 @end
-
