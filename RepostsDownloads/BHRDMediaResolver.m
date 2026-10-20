@@ -1,7 +1,9 @@
 #import "BHRDMediaResolver.h"
+#import "BHRDAvatarDiagnostics.h"
 #import <objc/message.h>
 #import <objc/runtime.h>
 #import <string.h>
+#import <math.h>
 
 id BHRDMediaObject(id source, NSString *name) {
     if (!source || source == NSNull.null) return nil;
@@ -214,6 +216,66 @@ void BHRDRememberMedia(id source) { (void)BHRDResolveMedia(source); }
 
 #pragma mark - Current visible playback source
 
+#if BHRD_AVATAR_DIAGNOSTICS
+@interface BHRDVideoProbeSample : NSObject
+@property(nonatomic,weak) id item;
+@property(nonatomic) NSTimeInterval collectionEnd, lastTime;
+@property(nonatomic) NSUInteger count;
+@property(nonatomic,copy) NSDictionary *trace;
+@end
+@implementation BHRDVideoProbeSample @end
+static char VideoProbeKey;
+static BHRDVideoProbeSample *DetailedSample(id source, BOOL *capture) {
+    *capture=NO;
+    if (!source || !NSThread.isMainThread) return nil;
+    NSTimeInterval remaining=BHRDAvatarDetailedCollectionRemaining();
+    if (remaining<=0) { objc_setAssociatedObject(source,&VideoProbeKey,nil,OBJC_ASSOCIATION_RETAIN_NONATOMIC); return nil; }
+    NSTimeInterval now=NSProcessInfo.processInfo.systemUptime,end=now+remaining;
+    static NSTimeInterval budgetEnd; static NSUInteger captures;
+    if (fabs(budgetEnd-end)>1) { budgetEnd=end; captures=0; }
+    id item=BHRDMediaObject(BHRDMediaObject(source,@"internalState"),@"currentItem") ?: BHRDMediaObject(BHRDMediaObject(source,@"mainThreadState"),@"currentItem") ?: BHRDMediaObject(source,@"currentItem") ?: source;
+    BHRDVideoProbeSample *sample=objc_getAssociatedObject(source,&VideoProbeKey);
+    if (!sample || fabs(sample.collectionEnd-end)>1 || sample.item!=item) {
+        sample=[BHRDVideoProbeSample new]; sample.item=item; sample.collectionEnd=end;
+        objc_setAssociatedObject(source,&VideoProbeKey,sample,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    // Extra getter inspection is opt-in, capped per real current item, and
+    // globally capped within one collection window. Repeated probes reuse it.
+    if (sample.count<3 && captures<64 && (!sample.count || now-sample.lastTime>=(sample.count==1 ? 1 : 3))) {
+        sample.count++; sample.lastTime=now; captures++; *capture=YES;
+    }
+    return sample;
+}
+static NSDictionary *URLDecision(id value, NSString *contentType) {
+    NSURL *url=[value isKindOfClass:NSURL.class] ? value : ([value isKindOfClass:NSString.class] ? [NSURL URLWithString:value] : nil);
+    NSString *scheme=url.scheme.lowercaseString,*host=url.host.lowercaseString,*ext=url.pathExtension.lowercaseString;
+    NSString *schemeKind=[scheme isEqual:@"https"] ? @"https" : [scheme isEqual:@"http"] ? @"http" : scheme.length ? @"other" : @"absent";
+    NSString *hostKind=[host isEqual:@"video.twimg.com"] ? @"x_video" : [host isEqual:@"pbs.twimg.com"] ? @"x_photo" : host.length ? @"other" : @"absent";
+    NSString *extension=[ext isEqual:@"mp4"] ? @"mp4" : [ext isEqual:@"m3u8"] ? @"hls" : ext.length ? @"other" : @"absent";
+    NSString *type=[contentType isKindOfClass:NSString.class] ? contentType.lowercaseString : nil;
+    BOOL supportedType=!type.length || [@[@"video/mp4",@"application/x-mpegurl",@"application/vnd.apple.mpegurl"] containsObject:type];
+    NSString *reason=!value ? @"absent" : !url ? @"invalid_or_non_url" : ![scheme isEqual:@"https"] ? @"unsupported_scheme" : ![host isEqual:@"video.twimg.com"] ? @"unsupported_host" : ![@[@"mp4",@"m3u8"] containsObject:ext] ? @"unsupported_extension" : !supportedType ? @"unsupported_content_type" : @"accepted";
+    return @{@"reason":reason,@"schemeCategory":schemeKind,@"hostCategory":hostKind,@"extensionCategory":extension,@"contentTypeCategory":!type.length ? @"absent" : supportedType ? @"supported_video" : @"other"};
+}
+static NSArray *GetterShape(id object) {
+    NSMutableArray *shape=[NSMutableArray array]; NSMutableSet *seen=[NSMutableSet set];
+    for (Class cls=object_getClass(object); cls && cls!=NSObject.class && shape.count<48; cls=class_getSuperclass(cls)) {
+        unsigned count=0; Method *methods=class_copyMethodList(cls,&count);
+        for (unsigned i=0;i<count && shape.count<48;i++) {
+            NSString *name=NSStringFromSelector(method_getName(methods[i]));
+            if ([name containsString:@":"] || name.length>128 || method_getNumberOfArguments(methods[i])!=2 || [seen containsObject:name]) continue;
+            [seen addObject:name]; char *type=method_copyReturnType(methods[i]);
+            const char *plain=type ? type+strspn(type,"rnNoORV") : "";
+            NSString *kind=plain[0]=='@' ? @"object" : plain[0]=='{' ? @"struct" : strchr("cCsSiIlLqQfdB",plain[0]) && plain[0] ? @"scalar" : @"other";
+            [shape addObject:@{@"getter":name,@"returnKind":kind}]; free(type);
+        }
+        free(methods);
+    }
+    return shape;
+}
+#endif
+static NSDictionary *NativeVideo(id object, NSString *path, NSMutableArray *trace);
+
 static NSURL *VideoResourceURL(id value) {
     NSURL *url = [value isKindOfClass:NSURL.class] ? value : ([value isKindOfClass:NSString.class] ? [NSURL URLWithString:value] : nil);
     if (![url.scheme.lowercaseString isEqualToString:@"https"] || ![url.host.lowercaseString isEqualToString:@"video.twimg.com"]) return nil;
@@ -295,6 +357,10 @@ static id EndpointManagerManifest(id object) {
     } @catch (__unused NSException *exception) { return nil; }
 }
 static NSDictionary *CurrentAssets(id source) {
+#if BHRD_AVATAR_DIAGNOSTICS
+    BOOL capture=NO; BHRDVideoProbeSample *sample=DetailedSample(source,&capture);
+    NSMutableArray *urlProbes=capture ? [NSMutableArray array] : nil,*nativeProbes=capture ? [NSMutableArray array] : nil,*itemShapes=capture ? [NSMutableArray array] : nil;
+#endif
     NSMutableArray *pending = [NSMutableArray arrayWithObject:@{@"object":source, @"path":@"source", @"depth":@0, @"binding":@0}];
     NSMutableSet *visited = [NSMutableSet set];
     NSMutableDictionary *assets = [NSMutableDictionary dictionary];
@@ -308,6 +374,14 @@ static NSDictionary *CurrentAssets(id source) {
         if ([visited containsObject:address]) continue;
         [visited addObject:address];
         if (probePaths.count < 24) [probePaths addObject:[node[@"path"] stringByAppendingFormat:@" (%@)",NSStringFromClass([object class])]];
+#if BHRD_AVATAR_DIAGNOSTICS
+        if (capture && binding>=2) {
+            if (nativeProbes.count<16) (void)NativeVideo(object,node[@"path"],nativeProbes);
+            NSString *name=NSStringFromClass([object class]);
+            if (itemShapes.count<4 && [@[@"TAVPlaylistItem",@"TAVFoundationItem"] containsObject:name])
+                [itemShapes addObject:@{@"path":node[@"path"],@"class":name,@"getters":GetterShape(object)}];
+        }
+#endif
         // Two advertised state snapshots must refer to the same current
         // technological item. Unioning them could return a retained old video.
         id internalState = BHRDMediaObject(object,@"internalState"), mainThreadState = BHRDMediaObject(object,@"mainThreadState");
@@ -333,8 +407,15 @@ static NSDictionary *CurrentAssets(id source) {
         }
         for (NSDictionary *entry in values) {
             NSURL *url = VideoResourceURL(entry[@"value"]);
+            id contentType = url ? (BHRDMediaObject(object,@"contentType") ?: BHRDMediaObject(object,@"mimeType")) : nil;
+#if BHRD_AVATAR_DIAGNOSTICS
+            if (capture && binding>=2 && urlProbes.count<24) {
+                NSMutableDictionary *decision=[URLDecision(entry[@"value"],contentType) mutableCopy];
+                decision[@"path"]=[node[@"path"] stringByAppendingFormat:@".%@",entry[@"key"]];
+                decision[@"access"]=entry[@"access"] ?: @"object_getter"; [urlProbes addObject:decision];
+            }
+#endif
             if (!url) { unsupported = YES; continue; }
-            id contentType = BHRDMediaObject(object,@"contentType") ?: BHRDMediaObject(object,@"mimeType");
             if ([contentType isKindOfClass:NSString.class] && [contentType length] &&
                 ![@[@"video/mp4", @"application/x-mpegurl", @"application/vnd.apple.mpegurl"] containsObject:[contentType lowercaseString]]) {
                 unsupported = YES; continue;
@@ -416,29 +497,53 @@ static NSDictionary *CurrentAssets(id source) {
     NSUInteger requiredBinding = itemDeclared ? 2 : (playbackBound ? 1 : 0);
     for (NSString *key in [assets.allKeys copy])
         if ([assets[key][@"binding"] unsignedIntegerValue] < requiredBinding) [assets removeObjectForKey:key];
-    return @{@"assets":assets, @"unsupported":@(unsupported), @"playbackBound":@(playbackBound), @"truncated":@(truncated),
-        @"itemMismatch":@(itemMismatch), @"resourceProbePaths":probePaths, @"excludedPlaybackBranches":excludedBranches};
+    NSMutableDictionary *result=[@{@"assets":assets, @"unsupported":@(unsupported), @"playbackBound":@(playbackBound), @"truncated":@(truncated),
+        @"itemMismatch":@(itemMismatch), @"resourceProbePaths":probePaths, @"excludedPlaybackBranches":excludedBranches} mutableCopy];
+#if BHRD_AVATAR_DIAGNOSTICS
+    if (capture) sample.trace=@{@"urlProbes":urlProbes,@"nativeVariantProbes":nativeProbes,@"currentItemShapes":itemShapes,@"sample":@(sample.count)};
+    if (sample.trace) result[@"detailedResourceProbe"]=sample.trace;
+#endif
+    return result;
 }
 static NSDictionary *WithPlaybackProbes(NSDictionary *result, NSDictionary *probe) {
     NSMutableDictionary *annotated = [result mutableCopy];
     annotated[@"resourceProbePaths"] = probe[@"resourceProbePaths"] ?: @[];
     annotated[@"excludedPlaybackBranches"] = probe[@"excludedPlaybackBranches"] ?: @[];
+    if (probe[@"detailedResourceProbe"]) annotated[@"detailedResourceProbe"]=probe[@"detailedResourceProbe"];
     return annotated;
 }
-static NSDictionary *NativeVideo(id object, NSString *path) {
+static NSDictionary *NativeVideo(id object, NSString *path, NSMutableArray *trace) {
     id info = BHRDMediaObject(object, @"videoInfo");
     id values = BHRDMediaObject(info, @"variants");
     NSMutableArray *variants = [NSMutableArray array];
     NSMutableArray *urls = [NSMutableArray array];
     NSString *resourcePath = [path stringByAppendingString:@".videoInfo.variants"];
+#if BHRD_AVATAR_DIAGNOSTICS
+    BOOL diagnostic=trace && trace.count<16;
+    NSMutableDictionary *rejections=diagnostic ? [NSMutableDictionary dictionary] : nil;
+    NSDictionary *primaryDecision=nil;
+#else
+    (void)trace;
+#endif
     if ([values isKindOfClass:NSArray.class]) {
         for (id value in values) {
-            NSURL *url = VideoResourceURL(BHRDMediaObject(value, @"url") ?: BHRDMediaObject(value, @"URL"));
-            if (!url) continue;
+            id address=BHRDMediaObject(value, @"url") ?: BHRDMediaObject(value, @"URL");
+            NSURL *url = VideoResourceURL(address);
+            if (!url) {
+#if BHRD_AVATAR_DIAGNOSTICS
+                if (diagnostic) { NSString *reason=URLDecision(address,nil)[@"reason"]; rejections[reason]=@([rejections[reason] unsignedIntegerValue]+1); }
+#endif
+                continue;
+            }
             NSString *contentType = BHRDMediaObject(value, @"contentType");
             if (![contentType isKindOfClass:NSString.class]) contentType = nil;
             NSString *type = contentType.lowercaseString;
-            if (type.length && ![@[@"video/mp4", @"application/x-mpegurl", @"application/vnd.apple.mpegurl"] containsObject:type]) continue;
+            if (type.length && ![@[@"video/mp4", @"application/x-mpegurl", @"application/vnd.apple.mpegurl"] containsObject:type]) {
+#if BHRD_AVATAR_DIAGNOSTICS
+                if (diagnostic) rejections[@"unsupported_content_type"]=@([rejections[@"unsupported_content_type"] unsignedIntegerValue]+1);
+#endif
+                continue;
+            }
             BHRDAssetVariant *variant = [BHRDAssetVariant new];
             variant.url = url.absoluteString;
             variant.contentType = [url.pathExtension.lowercaseString isEqualToString:@"mp4"] ? @"video/mp4" : @"application/x-mpegURL";
@@ -446,7 +551,11 @@ static NSDictionary *NativeVideo(id object, NSString *path) {
         }
     }
     if (!variants.count) {
-        NSURL *url = VideoResourceURL(BHRDMediaObject(info, @"primaryUrl") ?: BHRDMediaObject(info, @"primaryURL"));
+        id address=BHRDMediaObject(info, @"primaryUrl") ?: BHRDMediaObject(info, @"primaryURL");
+        NSURL *url = VideoResourceURL(address);
+#if BHRD_AVATAR_DIAGNOSTICS
+        if (diagnostic) primaryDecision=URLDecision(address,nil);
+#endif
         if (url) {
             BHRDAssetVariant *variant = [BHRDAssetVariant new]; variant.url = url.absoluteString;
             variant.contentType = [url.pathExtension.lowercaseString isEqualToString:@"mp4"] ? @"video/mp4" : @"application/x-mpegURL";
@@ -454,8 +563,15 @@ static NSDictionary *NativeVideo(id object, NSString *path) {
             resourcePath = [path stringByAppendingString:@".videoInfo.primaryUrl"];
         }
     }
+    NSString *identity = variants.count ? ResourceIdentity(urls) : nil;
+#if BHRD_AVATAR_DIAGNOSTICS
+    if (diagnostic) [trace addObject:@{@"path":path,@"class":NSStringFromClass([object class]),@"videoInfoPresent":@(info!=nil),
+        @"variantsCategory":[values isKindOfClass:NSArray.class] ? @"array" : values ? @"other" : @"absent",
+        @"variantCount":@([values isKindOfClass:NSArray.class] ? [values count] : 0),@"acceptedVariantCount":@(variants.count),
+        @"rejectionCounts":rejections,@"primaryDecision":primaryDecision ?: @{},
+        @"stage":!info ? @"no_video_info" : !variants.count ? @"no_accepted_native_variants" : !identity ? @"ambiguous_native_assets" : @"native_variants_accepted"}];
+#endif
     if (!variants.count) return nil;
-    NSString *identity = ResourceIdentity(urls);
     if (!identity) return @{@"ambiguous":@YES};
     BHRDAssetMedia *media = [BHRDAssetMedia new]; media.videoInfo = [BHRDAssetInfo new]; media.videoInfo.variants = variants;
     return @{@"media":media, @"assetIdentity":identity, @"path":resourcePath, @"count":@(variants.count)};
@@ -473,7 +589,7 @@ static NSDictionary *CurrentNativeMedia(id source, BOOL allowPostMedia) {
         NSValue *address = [NSValue valueWithNonretainedObject:object];
         if ([visited containsObject:address]) continue;
         [visited addObject:address];
-        NSDictionary *video = NativeVideo(object, node[@"path"]);
+        NSDictionary *video = NativeVideo(object, node[@"path"],nil);
         if ([video[@"ambiguous"] boolValue]) { ambiguous = YES; continue; }
         if (video) {
             NSString *identity = video[@"assetIdentity"];
@@ -558,6 +674,12 @@ static NSString *BoundToken(id source,NSString *post,NSArray *resources) {
     return binding.token;
 }
 NSDictionary *BHRDResolveBoundVideoSource(id source) {
+#if BHRD_AVATAR_DIAGNOSTICS
+    BOOL capture=NO; BHRDVideoProbeSample *sample=DetailedSample(source,&capture);
+    NSMutableArray *nativeProbes=capture ? [NSMutableArray array] : nil;
+#else
+    NSMutableArray *nativeProbes=nil;
+#endif
     NSString *post=BHRDMediaStatusIdentity(source) ?: @"";
     NSMutableArray *media=[NSMutableArray array],*resources=[NSMutableArray array];
     NSMutableDictionary *assetMedia=[NSMutableDictionary dictionary];
@@ -567,7 +689,7 @@ NSDictionary *BHRDResolveBoundVideoSource(id source) {
     for (;index<pending.count && seen.count<160;index++) {
         NSArray *entry=pending[index]; id object=entry[1]; NSUInteger depth=[entry[0] unsignedIntegerValue];
         NSValue *address=[NSValue valueWithNonretainedObject:object]; if ([seen containsObject:address]) continue; [seen addObject:address];
-        NSDictionary *native=NativeVideo(object,@"bound_inline_model");
+        NSDictionary *native=NativeVideo(object,@"bound_inline_model",nativeProbes);
         if ([native[@"ambiguous"] boolValue]) { conflicting=YES; break; }
         if (native) {
             NSString *asset=native[@"assetIdentity"];
@@ -594,7 +716,7 @@ NSDictionary *BHRDResolveBoundVideoSource(id source) {
         // Reuse only this exact currently bound post, with freshness and native
         // entity stamps checked by Cached; never adopt a globally recent video.
         for (id entity in Cached(source)) {
-            NSDictionary *native=NativeVideo(entity,@"bound_inline_cache");
+            NSDictionary *native=NativeVideo(entity,@"bound_inline_cache",nativeProbes);
             if ([native[@"ambiguous"] boolValue]) { conflicting=YES; break; }
             NSString *asset=native[@"assetIdentity"];
             if (native && !assetMedia[asset]) { assetMedia[asset]=native[@"media"]; [resources addObject:asset]; [media addObject:native[@"media"]]; }
@@ -602,8 +724,13 @@ NSDictionary *BHRDResolveBoundVideoSource(id source) {
     }
     if (truncated || conflicting) { [media removeAllObjects]; [resources removeAllObjects]; [assetMedia removeAllObjects]; }
     NSString *token=BoundToken(source,post,resources);
-    return @{@"media":media,@"identity":token,@"bindingToken":token,@"statusIdentity":post,@"postID":post,
+    NSMutableDictionary *result=[@{@"media":media,@"identity":token,@"bindingToken":token,@"statusIdentity":post,@"postID":post,
         @"assetIdentities":resources,@"assetMedia":assetMedia,@"assetIdentity":resources.count==1 ? resources.firstObject : @"",
         @"reason":truncated ? @"resource_scan_budget_exceeded" : conflicting ? @"ambiguous_current_media" : media.count ? @"resolved_bound_media" : @"bound_media_unavailable",
-        @"stage":@"bound_inline_model",@"sourcePath":@"inline.viewModel",@"sourceClass":source ? NSStringFromClass([source class]) : @"nil"};
+        @"stage":@"bound_inline_model",@"sourcePath":@"inline.viewModel",@"sourceClass":source ? NSStringFromClass([source class]) : @"nil"} mutableCopy];
+#if BHRD_AVATAR_DIAGNOSTICS
+    if (capture) sample.trace=@{@"nativeVariantProbes":nativeProbes,@"sample":@(sample.count)};
+    if (sample.trace) result[@"detailedNativeProbe"]=sample.trace;
+#endif
+    return result;
 }
