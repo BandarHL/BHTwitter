@@ -137,7 +137,7 @@ static NSData *DisplayedPhotoPayload(UIImage *image) {
             case 0: [controller copyPhoto]; break;
             case 1: [controller startCopyPrivate:NO loadedOnly:YES]; break;
             case 2: [controller startCopyPrivate:YES loadedOnly:NO]; break;
-            case 3: if (BHRDWritePhotoLinkClipboard(current.url)) [controller feedback:@"已复制链接"]; break;
+            case 3: [controller feedback:BHRDWritePhotoLinkClipboard(current.url) ? @"已复制链接" : @"未能确认链接写入，请重试"]; break;
             case 4: [controller showPhotoInfo]; break;
             case 5: [controller startSavePhotoLoadedOnly:NO]; break;
             case 6: [controller startSavePhotoLoadedOnly:YES]; break;
@@ -279,7 +279,8 @@ static NSData *DisplayedPhotoPayload(UIImage *image) {
 }
 - (void)startSavePhotoLoadedOnly:(BOOL)loadedOnly {
     if (self.copying || self.stopped || !PhotoHost(self.owner) || [self blocked]) return;
-    BHRDPhotoSnapshot *snapshot=BHRDCurrentFullscreenPhoto(self.owner.viewIfLoaded); if (!snapshot) return;
+    BHRDPhotoSnapshot *snapshot=BHRDCurrentFullscreenPhoto(self.owner.viewIfLoaded);
+    if (!snapshot) { BHRDAvatarLog(@"photo_copy_payload",@{@"success":@NO,@"reason":@"current_image_unavailable"}); [self feedback:@"当前图片尚未加载，请稍后重试"]; return; }
     [self cancel]; self.photo=snapshot; NSUInteger generation=self.generation;
     self.saveAcceptanceSession=BHRDAcceptanceCurrentSessionIdentifier();
     self.copying=YES; self.overlay.button.enabled=NO; self.overlay.toolsButton.enabled=NO; [self setCopySymbol:@"hourglass" status:@"正在保存到照片"];
@@ -323,8 +324,8 @@ static NSData *DisplayedPhotoPayload(UIImage *image) {
                 controller.copying=NO; controller.overlay.button.enabled=YES; controller.overlay.toolsButton.enabled=YES;
                 BHRDPhotoSnapshot *current=BHRDCurrentFullscreenPhoto(controller.owner.viewIfLoaded);
                 if (!BHRDPhotoCopyMayComplete(snapshot.identity,current.identity,generation,controller.generation,PhotoHost(controller.owner),[controller blocked])) { [controller refresh]; return; }
-                if (!payload || !type) { [controller feedback:@"图片过大或无效"]; return; }
-                if (!BHRDWritePhotoClipboard(payload,privateCopy)) { [controller feedback:@"复制失败"]; return; }
+                if (!payload || !type) { BHRDAvatarLog(@"photo_copy_payload",@{@"success":@NO,@"reason":@"encoding_or_pixel_budget"}); [controller feedback:@"图片过大或无效"]; return; }
+                if (!BHRDWritePhotoClipboard(payload,privateCopy)) { [controller feedback:@"未能确认图片写入，请重试"]; return; }
                 [controller feedback:privateCopy ? @"已临时复制" : fallback ? @"已复制当前图" : @"已复制原图"];
             });
         }
@@ -333,7 +334,8 @@ static NSData *DisplayedPhotoPayload(UIImage *image) {
 - (void)copyPhoto { [self startCopyPrivate:NO loadedOnly:NO]; }
 - (void)startCopyPrivate:(BOOL)privateCopy loadedOnly:(BOOL)loadedOnly {
     if (self.copying || self.stopped || !PhotoHost(self.owner) || [self blocked]) return;
-    BHRDPhotoSnapshot *snapshot=BHRDCurrentFullscreenPhoto(self.owner.viewIfLoaded); if (!snapshot) return;
+    BHRDPhotoSnapshot *snapshot=BHRDCurrentFullscreenPhoto(self.owner.viewIfLoaded);
+    if (!snapshot) { BHRDAvatarLog(@"photo_copy_payload",@{@"success":@NO,@"reason":@"current_image_unavailable"}); [self feedback:@"当前图片尚未加载，请稍后重试"]; return; }
     [self cancel]; self.photo=snapshot; NSUInteger generation=self.generation;
     self.copying=YES; self.overlay.button.enabled=NO; self.overlay.toolsButton.enabled=NO; [self setCopySymbol:@"hourglass" status:@"正在复制"];
     if (loadedOnly || !snapshot.url) { [self writeSnapshot:snapshot data:nil privateCopy:privateCopy generation:generation fallback:YES]; return; }

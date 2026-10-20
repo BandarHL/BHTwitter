@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Write immutable build identity; published builds must come from a clean commit."""
 import json
+import os
 import pathlib
 import re
 import subprocess
@@ -18,9 +19,12 @@ identity = commit + ("-dirty" if dirty else "")
 published=subprocess.run(["git","rev-parse","--verify",f"refs/tags/v{version}^{{commit}}"],cwd=root,text=True,capture_output=True)
 if published.returncode==0 and (published.stdout.strip()!=commit or dirty):
     raise SystemExit("This build number is already published. Fetch tags, run scripts/next_build.py, and commit the new revision before building.")
+repository=os.environ.get("GITHUB_REPOSITORY", "Caun1112/XSuixin")
+if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
+    raise SystemExit("Invalid source repository identity")
 destination = pathlib.Path(sys.argv[1])
 destination.parent.mkdir(parents=True, exist_ok=True)
 values = {"BHRD_BUILD_VERSION": version, "BHRD_PRODUCT_VERSION": match[1],
-          "BHRD_BUILD_REVISION": match[2], "BHRD_BUILD_COMMIT": identity}
+          "BHRD_BUILD_REVISION": match[2], "BHRD_BUILD_COMMIT": identity, "BHRD_BUILD_REPOSITORY": repository}
 destination.write_text("#pragma once\n" + "".join(f"#define {name} @{json.dumps(value)}\n" for name, value in values.items()))
 print(f"Build identity: {version} / {identity}")

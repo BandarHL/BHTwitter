@@ -11,6 +11,7 @@
 - (void)viewDidLoad { [super viewDidLoad]; self.title=@"运行状态"; self.navigationItem.rightBarButtonItem=[[UIBarButtonItem alloc] initWithTitle:@"刷新" style:UIBarButtonItemStylePlain target:self action:@selector(reloadStatus)]; [self reloadStatus]; }
 - (void)reloadStatus {
     NSMutableArray *rows=[NSMutableArray arrayWithArray:@[
+        @{@"feature":@"源码仓库",@"status":BHRD_BUILD_REPOSITORY,@"detail":@"请按此仓库的完整版本标签核对源码和安装包；正式项目为 Caun1112/XSuixin。"},
         @{@"feature":@"插件构建",@"status":BHRD_BUILD_VERSION,@"detail":[NSString stringWithFormat:@"修订 %@ · 提交 %@",BHRD_BUILD_REVISION,BHRD_BUILD_COMMIT]},
         @{@"feature":@"X 版本",@"status":[NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"未知",@"detail":[NSString stringWithFormat:@"build %@",[NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleVersion"] ?: @"未知"]},
         @{@"feature":@"iOS",@"status":UIDevice.currentDevice.systemVersion,@"detail":NSProcessInfo.processInfo.operatingSystemVersionString},

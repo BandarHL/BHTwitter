@@ -9,6 +9,9 @@
 static const NSUInteger LogLimit=2*1024*1024, PendingLimit=128;
 static const NSTimeInterval RetentionInterval=7*24*60*60;
 static NSUInteger Pending, Dropped, WriteFailures, InspectionGeneration;
+static NSUInteger CleanResponses, AggregatedRecords, AggregateCount;
+static unsigned long long AggregateBytes;
+static BOOL AggregateScheduled;
 static NSTimeInterval DetailedUntil, NextRetentionCheck;
 static char QueueSpecificKey;
 
@@ -39,9 +42,10 @@ void BHRDAvatarSetDetailedCollection(BOOL enabled) {
 static NSDictionary *Summary(void) {
     NSFileManager *fm=NSFileManager.defaultManager;
     NSString *path=BHRDAvatarDiagnosticPath();
-    NSUInteger dropped,failures,pending;
-    @synchronized(Queue()) { dropped=Dropped; failures=WriteFailures; pending=Pending; }
-    return @{@"build":BHRD_BUILD_VERSION,@"revision":BHRD_BUILD_REVISION,@"commit":BHRD_BUILD_COMMIT,
+    NSUInteger dropped,failures,pending,aggregated,aggregatePending;
+    @synchronized(Queue()) { dropped=Dropped; failures=WriteFailures; pending=Pending; aggregated=AggregatedRecords; aggregatePending=AggregateCount; }
+    return @{@"build":BHRD_BUILD_VERSION,@"revision":BHRD_BUILD_REVISION,@"commit":BHRD_BUILD_COMMIT,@"repository":BHRD_BUILD_REPOSITORY,
+        @"aggregatedRecords":@(aggregated),@"pendingAggregatedRecords":@(aggregatePending),
         @"droppedRecords":@(dropped),@"writeFailures":@(failures),@"pendingRecords":@(pending),
         @"detailedSecondsRemaining":@(ceil(BHRDAvatarDetailedCollectionRemaining())),@"retentionDays":@7,
         @"currentFile":@"avatar-diag.log",@"previousFile":@"avatar-diag.log.1",
@@ -83,7 +87,7 @@ static void WriteRecord(NSString *event,NSDictionary *fields) {
         if (NSDate.date.timeIntervalSince1970>=NextRetentionCheck) PruneLogs();
         NSMutableDictionary *record=[fields mutableCopy] ?: [NSMutableDictionary dictionary];
         record[@"event"]=event ?: @"unknown"; record[@"time"]=@(NSDate.date.timeIntervalSince1970);
-        record[@"build"]=BHRD_BUILD_VERSION; record[@"revision"]=BHRD_BUILD_REVISION; record[@"commit"]=BHRD_BUILD_COMMIT;
+        record[@"repository"]=BHRD_BUILD_REPOSITORY; record[@"build"]=BHRD_BUILD_VERSION; record[@"revision"]=BHRD_BUILD_REVISION; record[@"commit"]=BHRD_BUILD_COMMIT;
         NSData *json=[NSJSONSerialization dataWithJSONObject:record options:0 error:NULL];
         if (!json || json.length>32768) { RecordFailure(); return; }
         NSString *path=BHRDAvatarDiagnosticPath(); NSFileManager *fm=NSFileManager.defaultManager;
@@ -99,6 +103,30 @@ static void WriteRecord(NSString *event,NSDictionary *fields) {
         [file seekToEndOfFile]; [file writeData:json]; [file writeData:[@"\n" dataUsingEncoding:NSUTF8StringEncoding]]; [file closeFile];
     } @catch (__unused NSException *exception) { RecordFailure(); }
 }
+// Only routine negative ad observations are coalesced. Keep the first one,
+// every positive match, and all failures as individual records. At most one
+// timer is pending, regardless of response rate or manual flush frequency.
+static void FlushAggregatedRecords(void) {
+    NSUInteger count; unsigned long long bytes;
+    @synchronized(Queue()) { count=AggregateCount; bytes=AggregateBytes; AggregateCount=0; AggregateBytes=0; }
+    if (count) WriteRecord(@"ad_response_summary",@{@"marker":@NO,@"eventCount":@(count),@"totalBytes":@(bytes),@"maxWindowSeconds":@30});
+}
+static BOOL AggregateRoutineObservation(NSString *event, NSDictionary *fields) {
+    if (![event isEqual:@"ad_response_seen"] || ![fields[@"marker"] isKindOfClass:NSNumber.class] || [fields[@"marker"] boolValue]) return NO;
+    @synchronized(Queue()) {
+        if (++CleanResponses==1) return NO;
+        AggregatedRecords++; AggregateCount++;
+        if ([fields[@"bytes"] isKindOfClass:NSNumber.class] && [fields[@"bytes"] longLongValue]>0) AggregateBytes+=[fields[@"bytes"] unsignedLongLongValue];
+        if (!AggregateScheduled) {
+            AggregateScheduled=YES;
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW,30*NSEC_PER_SEC),Queue(),^{
+                @synchronized(Queue()) { AggregateScheduled=NO; }
+                FlushAggregatedRecords();
+            });
+        }
+    }
+    return YES;
+}
 static BOOL ReserveRecord(void) {
     @synchronized(Queue()) { if (Pending>=PendingLimit) { Dropped++; return NO; } Pending++; return YES; }
 }
@@ -107,12 +135,13 @@ void BHRDAvatarLog(NSString *event, NSDictionary *fields) {
     // Keep critical acceptance observations even if the bounded file queue fills.
     // The acceptance sink never calls this logger, so this cannot recurse.
     BHRDAcceptanceObserveEvent(event,fields);
+    if (AggregateRoutineObservation(event,fields)) return;
     if (!ReserveRecord()) return;
     // Snapshot fields before enqueuing so callers may safely reuse dictionaries.
     NSDictionary *snapshot=[fields copy]; NSString *name=[event copy];
     dispatch_async(Queue(),^{ @autoreleasepool { WriteRecord(name,snapshot); FinishRecord(); }});
 }
-void BHRDAvatarDiagnosticFlush(void) { if (!dispatch_get_specific(&QueueSpecificKey)) dispatch_sync(Queue(),^{}); }
+void BHRDAvatarDiagnosticFlush(void) { if (dispatch_get_specific(&QueueSpecificKey)) FlushAggregatedRecords(); else dispatch_sync(Queue(),^{ FlushAggregatedRecords(); }); }
 void BHRDAvatarClearLogs(void (^completion)(NSError *)) {
     BHRDAvatarSetDetailedCollection(NO);
     dispatch_async(Queue(),^{
@@ -122,7 +151,7 @@ void BHRDAvatarClearLogs(void (^completion)(NSError *)) {
             if ([fm fileExistsAtPath:path] && ![fm removeItemAtPath:path error:&error]) break;
         }
         if (!error) {
-            @synchronized(Queue()) { Dropped=0; WriteFailures=0; }
+            @synchronized(Queue()) { Dropped=0; WriteFailures=0; CleanResponses=0; AggregatedRecords=0; AggregateCount=0; AggregateBytes=0; }
             WriteRecord(@"logs_cleared",@{});
         }
         dispatch_async(dispatch_get_main_queue(),^{ if (completion) completion(error); });
@@ -130,11 +159,11 @@ void BHRDAvatarClearLogs(void (^completion)(NSError *)) {
 }
 void BHRDAvatarReadLog(void (^completion)(NSString *)) {
     dispatch_async(Queue(),^{
-        PruneLogs(); NSDictionary *summary=Summary();
+        FlushAggregatedRecords(); PruneLogs(); NSDictionary *summary=Summary();
         NSString *text=[NSString stringWithContentsOfFile:BHRDAvatarDiagnosticPath() encoding:NSUTF8StringEncoding error:NULL];
         NSArray *lines=[text componentsSeparatedByString:@"\n"];
         if (lines.count>300) text=[[lines subarrayWithRange:NSMakeRange(lines.count-300,300)] componentsJoinedByString:@"\n"];
-        NSString *header=[NSString stringWithFormat:@"版本 %@ · 构建 %@\n提交 %@\n本次启动丢弃 %@ 条 · 写入失败 %@ 次\n详细采集剩余 %@ 秒（默认关闭）\n当前 avatar-diag.log：%@ 字节\n上一份 avatar-diag.log.1：%@ 字节\n保留最近 7 天，单文件上限 2 MB；当前日志最多显示末尾 300 行。\n日志在本机保存账号和媒体线索；导出自动移除账号、帖子标识及地址。\n\n",summary[@"build"],summary[@"revision"],summary[@"commit"],summary[@"droppedRecords"],summary[@"writeFailures"],summary[@"detailedSecondsRemaining"],summary[@"currentBytes"],summary[@"previousBytes"]];
+        NSString *header=[NSString stringWithFormat:@"版本 %@ · 构建 %@\n提交 %@\n本次启动丢弃 %@ 条 · 写入失败 %@ 次\n普通未命中日志已聚合 %@ 条（不计入丢弃）\n详细采集剩余 %@ 秒（默认关闭）\n当前 avatar-diag.log：%@ 字节\n上一份 avatar-diag.log.1：%@ 字节\n保留最近 7 天，单文件上限 2 MB；当前日志最多显示末尾 300 行。\n日志在本机保存账号和媒体线索；导出自动移除账号、帖子标识及地址。\n\n",summary[@"build"],summary[@"revision"],summary[@"commit"],summary[@"droppedRecords"],summary[@"writeFailures"],summary[@"aggregatedRecords"],summary[@"detailedSecondsRemaining"],summary[@"currentBytes"],summary[@"previousBytes"]];
         NSString *result=[header stringByAppendingString:text.length ? text : @"暂无日志。请返回 X 复现问题，再点击刷新。"];
         dispatch_async(dispatch_get_main_queue(),^{ if (completion) completion(result); });
     });
@@ -165,7 +194,7 @@ static id RedactedValue(id value) {
 }
 void BHRDAvatarExportLogs(void (^completion)(NSArray<NSURL *> *,NSError *)) {
     dispatch_async(Queue(),^{
-        PruneLogs(); NSFileManager *fm=NSFileManager.defaultManager;
+        FlushAggregatedRecords(); PruneLogs(); NSFileManager *fm=NSFileManager.defaultManager;
         NSURL *directory=[[NSURL fileURLWithPath:NSTemporaryDirectory() isDirectory:YES] URLByAppendingPathComponent:[@"XSuixinLogs-" stringByAppendingString:NSUUID.UUID.UUIDString] isDirectory:YES];
         NSError *error=nil; NSMutableArray *files=[NSMutableArray array];
         if ([fm createDirectoryAtURL:directory withIntermediateDirectories:YES attributes:@{NSFilePosixPermissions:@0700} error:&error]) {

@@ -1,11 +1,12 @@
 import pathlib
+import os
 import shutil
 import subprocess
 import tempfile
 
 source=pathlib.Path(__file__).resolve().parents[1]
-def run(args,root,ok=True):
-    p=subprocess.run(args,cwd=root,text=True,capture_output=True)
+def run(args,root,ok=True,env=None):
+    p=subprocess.run(args,cwd=root,text=True,capture_output=True,env=env)
     assert (p.returncode==0)==ok,(args,p.stdout,p.stderr)
     return p.stdout
 with tempfile.TemporaryDirectory(prefix="xsuixin-identity-") as folder:
@@ -19,6 +20,11 @@ with tempfile.TemporaryDirectory(prefix="xsuixin-identity-") as folder:
     head=run(["git","rev-parse","HEAD"],root).strip(); output=root/".build/info.h"
     run(["python3",str(scripts/"write_build_info.py"),str(output)],root)
     text=output.read_text(); assert head in text and "dirty" not in text and '@"2.4.7-1"' in text
+    environment=dict(os.environ, GITHUB_REPOSITORY="Fixture/VerifiedSource")
+    run(["python3",str(scripts/"write_build_info.py"),str(output)],root,env=environment)
+    assert '#define BHRD_BUILD_REPOSITORY @"Fixture/VerifiedSource"' in output.read_text()
+    environment["GITHUB_REPOSITORY"]="not/a/valid/repository"
+    run(["python3",str(scripts/"write_build_info.py"),str(output)],root,False,env=environment)
     run(["git","tag","v2.4.7-1"],root)
     run(["python3",str(scripts/"write_build_info.py"),str(output)],root)
     (root/"RepostsDownloads/feature.txt").write_text("new code")

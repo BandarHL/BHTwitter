@@ -500,7 +500,7 @@ static NSDictionary *CurrentAssets(id source) {
     NSMutableDictionary *result=[@{@"assets":assets, @"unsupported":@(unsupported), @"playbackBound":@(playbackBound), @"truncated":@(truncated),
         @"itemMismatch":@(itemMismatch), @"resourceProbePaths":probePaths, @"excludedPlaybackBranches":excludedBranches} mutableCopy];
 #if BHRD_AVATAR_DIAGNOSTICS
-    if (capture) sample.trace=@{@"urlProbes":urlProbes,@"nativeVariantProbes":nativeProbes,@"currentItemShapes":itemShapes,@"sample":@(sample.count)};
+    if (capture) sample.trace=@{@"resourceProbes":urlProbes,@"nativeVariantProbes":nativeProbes,@"currentItemShapes":itemShapes,@"sample":@(sample.count)};
     if (sample.trace) result[@"detailedResourceProbe"]=sample.trace;
 #endif
     return result;

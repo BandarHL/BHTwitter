@@ -15,7 +15,7 @@ def check(condition, message):
         raise SystemExit(message)
 
 
-def verify(package, version, commit=None):
+def verify(package, version, commit=None, repository=None):
     check(re.fullmatch(r"\d+\.\d+\.\d+-[1-9]\d*",version),"Missing unique Debian build revision")
     for key, expected in [("Package", "com.caun.bhtwitter.repostsdownloads"), ("Version", version), ("Architecture", "iphoneos-arm64")]:
         value = subprocess.check_output(["dpkg-deb", "-f", str(package), key], text=True).strip()
@@ -110,6 +110,12 @@ def verify(package, version, commit=None):
               "Missing TAV resource traversal, bounded manifest ivar access or candidate diagnostics")
         check(b"current_card.status" in data and b"stream_probe_result" in data and b"stream_download_result" in data,
               "Missing Swift status native variants or stream lifecycle diagnostics")
+        if repository:
+            check(re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository), "Invalid repository identity")
+            check(repository.encode() in data, "Missing source repository identity")
+        if tuple(map(int, version.split("-")[0].split("."))) >= (2, 5, 0):
+            check(all(marker in data for marker in [b"image_write_verified", b"image_content_changed", b"ad_response_summary", b"aggregatedRecords", b"insufficient_samples", b"resourceProbes"]),
+                  "Missing 2.5.0 clipboard verification, aggregation, performance or video diagnostic features")
         check(version.encode() in data,"Binary build version does not match package")
         if commit:
             check(re.fullmatch(r"[0-9a-f]{40}",commit),"Invalid source commit")
@@ -123,7 +129,8 @@ def verify(package, version, commit=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("package", type=pathlib.Path)
-    parser.add_argument("--version", default="2.4.7-8")
+    parser.add_argument("--version", default="2.5.0-1")
     parser.add_argument("--commit")
+    parser.add_argument("--repository")
     args = parser.parse_args()
-    verify(args.package.resolve(), args.version,args.commit)
+    verify(args.package.resolve(), args.version,args.commit,args.repository)

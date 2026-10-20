@@ -110,5 +110,11 @@ FOUNDATION_EXPORT NSString * const UIPasteboardOptionExpirationDate;
 + (instancetype)generalPasteboard;
 @property(nonatomic,copy) NSArray *fixtureItems;
 @property(nonatomic,copy) NSDictionary *fixtureOptions;
+@property(nonatomic,copy) NSString *fixtureFailure;
+@property(nonatomic) NSInteger changeCount;
+@property(nonatomic,readonly) BOOL hasImages;
+@property(nonatomic,readonly) NSString *string;
+- (BOOL)containsPasteboardTypes:(NSArray *)types;
+- (NSData *)dataForPasteboardType:(NSString *)type;
 - (void)setItems:(NSArray *)items options:(NSDictionary *)options;
 @end

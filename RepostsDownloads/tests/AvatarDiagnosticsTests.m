@@ -118,5 +118,30 @@ int main(void) { @autoreleasepool {
     Check([Records(path).firstObject[@"event"] isEqual:@"logs_cleared"],@"Clear leaves only a non-identifying audit event");
     viewed=nil; BHRDAvatarReadLog(^(NSString *text) { viewed=text; }); Wait(^BOOL { return viewed!=nil; });
     Check([viewed containsString:@"丢弃 0 条"] && [viewed containsString:@"写入失败 0 次"] && ![viewed containsString:@"private_handle"],@"Clear removes prior browsing identifiers and resets displayed statistics");
+    BHRDAvatarDiagnosticTestSuspendWriter(YES);
+    dispatch_apply(10000,dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,0),^(size_t i) {
+        (void)i; BHRDAvatarLog(@"ad_response_seen",@{@"marker":@NO,@"bytes":@100});
+    });
+    BHRDAvatarLog(@"ad_response_seen",@{@"marker":@YES,@"bytes":@100});
+    BHRDAvatarLog(@"photo_clipboard_result",@{@"success":@NO,@"reason":@"image_type_missing"});
+    BHRDAvatarLog(@"video_probe",@{@"resourceProbes":@[@{@"reason":@"unsupported_scheme",@"schemeCategory":@"other",@"url":@"https://private.example/secret"}]});
+    BHRDAvatarDiagnosticTestSuspendWriter(NO); BHRDAvatarDiagnosticFlush();
+    NSUInteger negatives=0,positives=0,failures=0; NSDictionary *aggregate=nil;
+    for (NSDictionary *row in Records(path)) {
+        if ([row[@"event"] isEqual:@"ad_response_seen"]) { if ([row[@"marker"] boolValue]) positives++; else negatives++; }
+        if ([row[@"event"] isEqual:@"photo_clipboard_result"]) failures++;
+        if ([row[@"event"] isEqual:@"ad_response_summary"]) aggregate=row;
+    }
+    Check(negatives==1 && positives==1 && failures==1,@"10,000 clean responses retain first observation, positive matches and failures without filling the writer");
+    Check([aggregate[@"eventCount"] integerValue]==9999 && [aggregate[@"totalBytes"] unsignedLongLongValue]==999900,@"Concurrent aggregation accounts for every suppressed response and its bytes");
+    exported=nil; BHRDAvatarExportLogs(^(NSArray<NSURL *> *files,NSError *error) { exported=files; exportError=error; }); Wait(^BOOL { return exported!=nil; });
+    summary=[NSJSONSerialization JSONObjectWithData:[NSData dataWithContentsOfURL:exported.lastObject] options:0 error:NULL];
+    Check(!exportError && [summary[@"aggregatedRecords"] integerValue]==9999 && [summary[@"droppedRecords"] integerValue]==0 && [summary[@"pendingAggregatedRecords"] integerValue]==0,@"Intentional aggregation is separate from real queue overflow, including export/flush");
+    NSDictionary *resourceRecord=nil;
+    for (NSDictionary *row in Records(exported.firstObject.path)) if ([row[@"event"] isEqual:@"video_probe"]) resourceRecord=row;
+    Check([resourceRecord[@"resourceProbes"] isEqual:@[@{@"reason":@"unsupported_scheme",@"schemeCategory":@"other"}]],@"Video rejection categories survive export while raw addresses remain redacted");
+    BHRDAvatarRemoveExport(exported); BHRDAvatarDiagnosticFlush();
+    cleared=NO; BHRDAvatarClearLogs(^(NSError *error) { clearError=error; cleared=YES; }); Wait(^BOOL { return cleared; });
+    BHRDAvatarDiagnosticFlush(); Check(Records(path).count==1,@"Clear also discards pending aggregates without resurrecting old records");
     NSLog(@"PASS: %lu avatar diagnostic file checks",(unsigned long)checks);
 } return 0; }

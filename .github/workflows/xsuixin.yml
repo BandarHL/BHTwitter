@@ -54,16 +54,18 @@ jobs:
       - name: Regression tests
         run: sh source/RepostsDownloads/tests/run_all.sh
       - name: Build and verify
+        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
         run: |
           sh source/RepostsDownloads/build.sh
           cd source/RepostsDownloads
           VERSION=$(awk '/^Version:/ {print $2}' control)
           PACKAGE="packages/com.caun.bhtwitter.repostsdownloads_${VERSION}_iphoneos-arm64.deb"
-          python3 scripts/verify_deb.py "$PACKAGE" --version "$VERSION" --commit "$GITHUB_SHA"
+          python3 scripts/verify_deb.py "$PACKAGE" --version "$VERSION" --commit "$GITHUB_SHA" --repository "$GITHUB_REPOSITORY"
           cp "$PACKAGE" "packages/XSuixin_${VERSION}_rootless.deb"
           cd packages
           shasum -a 256 "XSuixin_${VERSION}_rootless.deb" > "XSuixin_${VERSION}_rootless.deb.sha256"
       - uses: actions/upload-artifact@v4
+        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
         with:
           name: XSuixin-rootless
           path: |
@@ -83,4 +85,7 @@ jobs:
             exit 0
           fi
           printf 'Build %s from commit %s. Includes default local diagnostics. See repository release notes for validation and device acceptance status.\n' "$VERSION" "$GITHUB_SHA" > "$RUNNER_TEMP/xsuixin-notes.md"
-          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag --title "X 随心 $VERSION" --notes-file "$RUNNER_TEMP/xsuixin-notes.md" "packages/XSuixin_${VERSION}_rootless.deb" "packages/XSuixin_${VERSION}_rootless.deb.sha256"
+          if test -f "RELEASE-$VERSION.md"; then
+            cat "RELEASE-$VERSION.md" >> "$RUNNER_TEMP/xsuixin-notes.md"
+          fi
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag --target "$GITHUB_SHA" --title "X 随心 $VERSION" --notes-file "$RUNNER_TEMP/xsuixin-notes.md" "packages/XSuixin_${VERSION}_rootless.deb" "packages/XSuixin_${VERSION}_rootless.deb.sha256"

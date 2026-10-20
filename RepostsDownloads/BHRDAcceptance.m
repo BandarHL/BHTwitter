@@ -1,6 +1,7 @@
 #import "BHRDAcceptance.h"
 #import "BHRDLocalJSON.h"
 #import "BHRDBuildInfo.h"
+#import "BHRDPerformanceStats.h"
 #import <math.h>
 
 static NSMutableDictionary *State;
@@ -111,6 +112,8 @@ static NSDictionary *StageDetails(void) {
         @"video_context_cancelled":@"读取期间已切换视频、离开全屏或取消操作，本次没有继续打开下载菜单。",
         @"video_selection_changed":@"读取期间当前视频已改变，本次请求已取消，以避免为其他视频打开下载菜单。",
         @"video_viewer_inactive":@"读取期间已经离开全屏或关闭下载功能，本次请求已取消，没有继续打开菜单。",
+        @"collecting_samples":@"正在采样，当前前台时长或回调数量不足，尚不能形成观察结论。",
+        @"insufficient_samples":@"采样已结束，但前台时长或回调数量不足；请重新开始观察，不算通过。",
         @"samples_observed":@"正在收集实际使用样本，仍需你确认实际体验。",@"sampling_finished":@"采样已结束，已有样本待你确认实际体验。",
         @"report_generated":@"已生成脱敏报告，等待系统分享结果。",@"share_presented":@"系统分享面板已打开，等待操作完成。",
         @"share_completed":@"系统分享活动已完成，接收端是否收到仍需人工确认。",@"share_cancelled":@"本次分享已取消，可重新导出。",
@@ -490,7 +493,10 @@ static void HandleObservation(NSString *event,NSDictionary *fields) {
             hidden ? @"实际返回时间线后，该转推仍保持隐藏缩略图。" : @"返回后未保持隐藏状态，请导出日志。",fields);
     } else if ([event hasPrefix:@"performance_"]) {
         NSMutableDictionary *item=Item(@"performance");
-        if ([event isEqual:@"performance_started"]) { Increment(item,@"attempts"); item[@"running"]=@YES; item[@"manualConfirmed"]=@NO; item[@"warningObserved"]=@NO; }
+        if ([event isEqual:@"performance_started"]) { Increment(item,@"attempts"); item[@"running"]=@YES; item[@"manualConfirmed"]=@NO; item[@"warningObserved"]=@NO;
+            item[@"observedSeconds"]=@0; item[@"frameIntervals"]=@0;
+            for (NSString *key in @[@"slowIntervalRatio",@"maxIntervalMs",@"currentFootprintMB",@"memoryMB",@"peakMemoryMB",@"lastMemoryBytes",@"lastLagMs",@"memoryWarnings"]) [item removeObjectForKey:key];
+        }
         if ([event isEqual:@"performance_finished"]) item[@"running"]=@NO;
         if (Number(fields[@"durationSeconds"])) item[@"observedSeconds"]=fields[@"durationSeconds"];
         if (Number(fields[@"visibleSeconds"])) item[@"observedSeconds"]=fields[@"visibleSeconds"];
@@ -501,8 +507,12 @@ static void HandleObservation(NSString *event,NSDictionary *fields) {
         if (Number(fields[@"memoryWarnings"])) item[@"memoryWarnings"]=fields[@"memoryWarnings"];
         BOOL concern=[event isEqual:@"performance_memory_warning"] || [Number(fields[@"thresholdExceeded"]) boolValue] || [Number(fields[@"memoryWarnings"]) unsignedIntegerValue]>0;
         if (concern) { item[@"warningObserved"]=@YES; Update(@"performance",@"failed",@"runtime_warning",@"已观察到卡顿阈值或内存警告，请结合采样及实际体验排查。",fields); }
-        else if (![item[@"manualConfirmed"] boolValue] && ![item[@"warningObserved"] boolValue]) Update(@"performance",@"running",[item[@"running"] boolValue] ? @"samples_observed" : @"sampling_finished",
-            [item[@"running"] boolValue] ? @"正在收集实际使用样本；样本正常仍需你确认连续使用体验。" : @"本次采样已结束，已有样本待你确认实际连续使用体验。",fields);
+        else if (![item[@"manualConfirmed"] boolValue] && ![item[@"warningObserved"] boolValue]) {
+            BOOL enough=BHRDPerformanceHasSufficientSamples([item[@"observedSeconds"] doubleValue],[item[@"frameIntervals"] unsignedIntegerValue]);
+            BOOL running=[item[@"running"] boolValue];
+            NSString *stage=running ? (enough ? @"samples_observed" : @"collecting_samples") : (enough ? @"sampling_finished" : @"insufficient_samples");
+            Update(@"performance",running ? @"running" : @"pending",stage,StageDetails()[stage],fields);
+        }
     } else if ([event isEqual:@"acceptance_export"]) {
         NSString *phase=fields[@"phase"];
         if ([phase isEqual:@"generated"]) {

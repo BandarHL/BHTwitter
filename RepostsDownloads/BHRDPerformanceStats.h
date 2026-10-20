@@ -1,5 +1,10 @@
 #pragma once
 #import <Foundation/Foundation.h>
+#import <math.h>
+
+static inline BOOL BHRDPerformanceHasSufficientSamples(double seconds, NSUInteger intervals) {
+    return isfinite(seconds) && seconds >= 30 && intervals >= 120;
+}
 
 // Records display callback cadence, not GPU-rendered FPS or battery consumption.
 // All timestamps use a single monotonic clock. Visibility transitions reset the

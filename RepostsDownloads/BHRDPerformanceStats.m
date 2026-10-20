@@ -46,7 +46,7 @@
 - (NSDictionary *)summaryAtTime:(NSTimeInterval)time {
     NSTimeInterval seconds = _visibleSeconds;
     if (_visible && isfinite(time)) seconds += MAX(0, time - _visibleSince);
-    BOOL observed = seconds >= 30 && _intervals >= 120;
+    BOOL observed = BHRDPerformanceHasSufficientSamples(seconds, _intervals);
     NSString *reason = observed ? @"" : (!_intervals ? @"no_frame_samples" : (seconds < 30 ? @"insufficient_visible_time" : @"insufficient_frame_samples"));
     return @{@"status":observed ? @"observed" : @"pending", @"pendingReason":reason,
         @"active":@(_visible), @"visibleSeconds":@(seconds), @"frameIntervals":@(_intervals),

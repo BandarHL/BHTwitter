@@ -51,6 +51,17 @@ int main(void) { @autoreleasepool {
     Check([board.fixtureItems[0][@"public.utf8-plain-text"] containsString:@"name=orig"] && [board.fixtureOptions[UIPasteboardOptionLocalOnly] boolValue] && board.fixtureOptions[UIPasteboardOptionExpirationDate],@"Photo-link copy respects local-only and expiry settings");
     previous=board.fixtureItems;
     Check(!BHRDWritePhotoLinkClipboard([NSURL URLWithString:@"https://other.example/image.jpg"]) && board.fixtureItems==previous,@"Rejected link cannot overwrite previous clipboard content");
+    for (NSString *mode in @[@"reject",@"clear",@"no_image",@"replace",@"race",@"throw_write",@"throw_read"]) {
+        board.fixtureFailure=nil; Check(BHRDWritePhotoClipboard(png,NO),@"Seed previous image before a failure");
+        board.fixtureFailure=mode;
+        Check(!BHRDWritePhotoClipboard(png,NO),[@"Never claim success for failed image write: " stringByAppendingString:mode]);
+    }
+    board.fixtureFailure=nil; Check(BHRDWritePhotoClipboard(png,YES),@"Successful writes recover after failures and keep temporary options");
+    for (NSString *mode in @[@"reject",@"clear",@"throw_write"]) {
+        board.fixtureFailure=mode;
+        Check(!BHRDWritePhotoLinkClipboard([NSURL URLWithString:@"https://pbs.twimg.com/media/new?format=png"]),@"Link failure is observable too");
+    }
+    board.fixtureFailure=nil;
     if (oldLocal) [NSUserDefaults.standardUserDefaults setObject:oldLocal forKey:BHRDCopyLocalOnlyKey]; else [NSUserDefaults.standardUserDefaults removeObjectForKey:BHRDCopyLocalOnlyKey];
     if (oldExpiry) [NSUserDefaults.standardUserDefaults setObject:oldExpiry forKey:BHRDCopyExpiresKey]; else [NSUserDefaults.standardUserDefaults removeObjectForKey:BHRDCopyExpiresKey];
     NSLog(@"PASS: %lu image-tool privacy and file management checks",(unsigned long)checks);
