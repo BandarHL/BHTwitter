@@ -1,0 +1,10 @@
+// Known production events. Unknown historical events export only validated metadata.
+@"acceptance_export",@"ad_response_checked",@"ad_response_seen",@"ad_response_summary",@"avatar_assigned",@"avatar_cache_hit",
+@"avatar_field",@"avatar_missing_url",@"avatar_request_start",@"avatar_response",@"avatar_retries_exhausted",@"avatar_retry_scheduled",
+@"detailed_collection",@"fullscreen_download_visibility",@"fullscreen_photo_resolution",@"fullscreen_video_resolution",@"home_header_resolution",@"logs_cleared",
+@"model_shape",@"model_url",@"native_avatar_assigned",@"native_avatar_candidate",@"native_avatar_poll_scheduled",@"native_image_view",
+@"overlay_state",@"performance_finished",@"performance_memory_warning",@"performance_sample",@"performance_started",@"photo_clipboard_result",
+@"photo_copy_payload",@"photo_save_authorization",@"photo_save_committed",@"photo_save_fetch",@"photo_save_prepare",@"photo_save_result",
+@"photo_save_start",@"preview_resolved",@"recovery_invoked",@"safety_pause_changed",@"session_start",@"stream_download_bound",
+@"stream_download_callback",@"stream_download_progress",@"stream_download_result",@"stream_download_start",@"stream_job_cancel",@"stream_job_timeout",
+@"stream_probe_bound",@"stream_probe_callback",@"stream_probe_invalidated",@"stream_probe_result",@"stream_probe_start",@"stream_probe_wait",

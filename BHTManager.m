@@ -8,6 +8,50 @@
 #import "BHTManager.h"
 #import "SettingsViewController.h"
 #import "BHTBundle/BHTBundle.h"
+#import <stdatomic.h>
+
+static atomic_uint_fast64_t BHTPreferenceCacheGeneration;
+
+static NSCache<NSString *, NSNumber *> *BHTBooleanPreferenceCache(void) {
+    static NSCache<NSString *, NSNumber *> *cache;
+    static __unused id observer;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        cache = [[NSCache alloc] init];
+        cache.countLimit = 64;
+        observer = [[NSNotificationCenter defaultCenter] addObserverForName:NSUserDefaultsDidChangeNotification
+                                                                     object:NSUserDefaults.standardUserDefaults
+                                                                      queue:nil
+                                                                 usingBlock:^(__unused NSNotification *notification) {
+            atomic_fetch_add_explicit(&BHTPreferenceCacheGeneration, 1, memory_order_acq_rel);
+        }];
+    });
+    return cache;
+}
+
+static BOOL BHTCachedBoolForKey(NSString *key) {
+    NSCache<NSString *, NSNumber *> *cache = BHTBooleanPreferenceCache();
+
+    for (;;) {
+        uint_fast64_t generation = atomic_load_explicit(&BHTPreferenceCacheGeneration, memory_order_acquire);
+        NSNumber *cachedValue = [cache objectForKey:key];
+        uint64_t packedValue = cachedValue.unsignedLongLongValue;
+        if (cachedValue != nil &&
+            (packedValue >> 1) == generation &&
+            generation == atomic_load_explicit(&BHTPreferenceCacheGeneration, memory_order_acquire)) {
+            return (packedValue & 1) != 0;
+        }
+
+        BOOL value = [[NSUserDefaults standardUserDefaults] boolForKey:key];
+        packedValue = ((uint64_t)generation << 1) | (value ? 1 : 0);
+        [cache setObject:@(packedValue) forKey:key];
+
+        // 偏好读取期间发生变更时，重新读取以免旧值回填缓存。
+        if (generation == atomic_load_explicit(&BHTPreferenceCacheGeneration, memory_order_acquire)) {
+            return value;
+        }
+    }
+}
 
 @implementation BHTManager
 + (bool)isDMVideoCell:(T1InlineMediaView *)view {
@@ -105,22 +149,19 @@
     MediaInformation *mediaInformation = [mediaInformationSession getMediaInformation];
     return mediaInformation;
 }
-+ (TFNMenuSheetViewController *)newFFmpegDownloadSheet:(MediaInformation *)mediaInformation downloadingURL:(NSURL *)downloadingURL progressView:(JGProgressHUD *)hud {
-    NSAttributedString *AttString = [[NSAttributedString alloc] initWithString:[[BHTBundle sharedBundle] localizedStringForKey:@"DOWNLOAD_MENU_TITLE"] attributes:@{
-        NSFontAttributeName: [[objc_getClass("TAEStandardFontGroup") sharedFontGroup] headline2BoldFont],
-        NSForegroundColorAttributeName: UIColor.labelColor
-    }];
-    TFNActiveTextItem *title = [[objc_getClass("TFNActiveTextItem") alloc] initWithTextModel:[[objc_getClass("TFNAttributedTextModel") alloc] initWithAttributedString:AttString] activeRanges:nil];
-    
-    NSMutableArray *actions = [[NSMutableArray alloc] init];
-    [actions addObject:title];
-    
++ (UIAlertController *)newFFmpegDownloadSheet:(MediaInformation *)mediaInformation downloadingURL:(NSURL *)downloadingURL progressView:(JGProgressHUD *)hud {
+    NSString *menuTitle = [[[BHTBundle sharedBundle] localizedStringForKey:@"DOWNLOAD_MENU_TITLE"]
+                           stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:menuTitle
+                                                                    message:nil
+                                                             preferredStyle:UIAlertControllerStyleActionSheet];
+
     for (StreamInformation *stream in [mediaInformation getStreams]) {
         NSNumber *width = [stream getWidth];
         NSNumber *height = [stream getHeight];
         if (width != nil && height != nil) {
             NSString *resolution = [NSString stringWithFormat:@"%@x%@", width, height];
-            TFNActionItem *downloadOption = [objc_getClass("TFNActionItem") actionItemWithTitle:resolution imageName:@"arrow_down_circle_stroke" action:^{
+            UIAlertAction *downloadOption = [UIAlertAction actionWithTitle:resolution style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *selectedAction) {
                 hud.textLabel.text = [[BHTBundle sharedBundle] localizedStringForKey:@"PROGRESS_DOWNLOADING_STATUS_TITLE"];
                 [hud showInView:topMostController().view];
 
@@ -141,123 +182,128 @@
                     });
                 }];
             }];
-            [actions addObject:downloadOption];
+            [alert addAction:downloadOption];
         }
     }
-    
-    TFNMenuSheetViewController *alert = [[objc_getClass("TFNMenuSheetViewController") alloc] initWithActionItems:[NSArray arrayWithArray:actions]];
+
+    [alert addAction:[UIAlertAction actionWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"CANCEL_BUTTON_TITLE"]
+                                              style:UIAlertActionStyleCancel
+                                            handler:nil]];
     return alert;
 }
 + (BOOL)DownloadingVideos {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"dw_v"];
+    return BHTCachedBoolForKey(@"dw_v");
 }
 + (BOOL)DirectSave {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"direct_save"];
+    return BHTCachedBoolForKey(@"direct_save");
 }
 + (BOOL)LikeConfirm {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"like_con"];
+    return BHTCachedBoolForKey(@"like_con");
 }
 + (BOOL)TweetConfirm {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"tweet_con"];
+    return BHTCachedBoolForKey(@"tweet_con");
 }
 + (BOOL)FollowConfirm {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"follow_con"];
+    return BHTCachedBoolForKey(@"follow_con");
 }
 + (BOOL)HidePromoted {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_promoted"];
+    return BHTCachedBoolForKey(@"hide_promoted");
 }
 + (BOOL)HideTopics {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_topics"];
+    return BHTCachedBoolForKey(@"hide_topics");
+}
++ (BOOL)HideReposts {
+    return BHTCachedBoolForKey(@"hide_reposts");
 }
 + (BOOL)DisableVODCaptions {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"dis_VODCaptions"];
+    return BHTCachedBoolForKey(@"dis_VODCaptions");
 }
 + (BOOL)UndoTweet {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"undo_tweet"];
+    return BHTCachedBoolForKey(@"undo_tweet");
 }
 + (BOOL)NoHistory {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"no_his"];
+    return BHTCachedBoolForKey(@"no_his");
 }
 + (BOOL)BioTranslate {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"bio_translate"];
+    return BHTCachedBoolForKey(@"bio_translate");
 }
 + (BOOL)Padlock {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"padlock"];
+    return BHTCachedBoolForKey(@"padlock");
 }
 + (BOOL)changeFont {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"en_font"];
+    return BHTCachedBoolForKey(@"en_font");
 }
 + (BOOL)FLEX {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"flex_twitter"];
+    return BHTCachedBoolForKey(@"flex_twitter");
 }
 + (BOOL)autoHighestLoad {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"autoHighestLoad"];
+    return BHTCachedBoolForKey(@"autoHighestLoad");
 }
 + (BOOL)disableSensitiveTweetWarnings {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"disableSensitiveTweetWarnings"];
+    return BHTCachedBoolForKey(@"disableSensitiveTweetWarnings");
 }
 + (BOOL)showScrollIndicator {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"showScollIndicator"];
+    return BHTCachedBoolForKey(@"showScollIndicator");
 }
 + (BOOL)CopyProfileInfo {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"CopyProfileInfo"];
+    return BHTCachedBoolForKey(@"CopyProfileInfo");
 }
 + (BOOL)tweetToImage {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"TweetToImage"];
+    return BHTCachedBoolForKey(@"TweetToImage");
 }
 + (BOOL)hideSpacesBar {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_spaces"];
+    return BHTCachedBoolForKey(@"hide_spaces");
 }
 + (BOOL)disableRTL {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"dis_rtl"];
+    return BHTCachedBoolForKey(@"dis_rtl");
 }
 + (BOOL)alwaysOpenSafari {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"openInBrowser"];
+    return BHTCachedBoolForKey(@"openInBrowser");
 }
 + (BOOL)hideWhoToFollow {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_who_to_follow"];
+    return BHTCachedBoolForKey(@"hide_who_to_follow");
 }
 + (BOOL)hideTopicsToFollow {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_topics_to_follow"];
+    return BHTCachedBoolForKey(@"hide_topics_to_follow");
 }
 + (BOOL)hideViewCount {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_view_count"];
+    return BHTCachedBoolForKey(@"hide_view_count");
 }
 + (BOOL)hidePremiumOffer {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_premium_offer"];
+    return BHTCachedBoolForKey(@"hide_premium_offer");
 }
 + (BOOL)hideTrendVideos {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_trend_videos"];
+    return BHTCachedBoolForKey(@"hide_trend_videos");
 }
 + (BOOL)forceTweetFullFrame {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"force_tweet_full_frame"];
+    return BHTCachedBoolForKey(@"force_tweet_full_frame");
 }
 + (BOOL)stripTrackingParams {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"strip_tracking_params"];
+    return BHTCachedBoolForKey(@"strip_tracking_params");
 }
 + (BOOL)alwaysFollowingPage {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"always_following_page"];
+    return BHTCachedBoolForKey(@"always_following_page");
 }
 + (BOOL)changeBackground {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"change_msg_background"];
+    return BHTCachedBoolForKey(@"change_msg_background");
 }
 + (bool)backgroundImage {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"background_image"];
+    return BHTCachedBoolForKey(@"background_image");
 }
 + (BOOL)hideBookmarkButton {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"hide_bookmark_button"];
+    return BHTCachedBoolForKey(@"hide_bookmark_button");
 }
 + (BOOL)voiceCreationEnabled {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"voice_creation_enabled"];
+    return BHTCachedBoolForKey(@"voice_creation_enabled");
 }
 + (BOOL)dmReplyLater {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"dm_reply_later_enabled"];
+    return BHTCachedBoolForKey(@"dm_reply_later_enabled");
 }
 + (BOOL)mediaUpload4k {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"media_upload_4k_enabled"];
+    return BHTCachedBoolForKey(@"media_upload_4k_enabled");
 }
 + (BOOL)customVoice {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"custom_voice_upload"];
+    return BHTCachedBoolForKey(@"custom_voice_upload");
 }
 + (UIViewController *)BHTSettingsWithAccount:(TFNTwitterAccount *)twAccount {
     SettingsViewController *pref = [[SettingsViewController alloc] initWithTwitterAccount:twAccount];
@@ -283,4 +329,3 @@
 }
 
 @end
-

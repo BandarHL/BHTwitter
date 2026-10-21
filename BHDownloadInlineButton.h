@@ -34,11 +34,18 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign) NSUInteger displayType;
 @property (nonatomic, strong, nullable) id viewModel;
 
++ (NSArray *)downloadableMediaEntitiesFromSource:(nullable id)source;
+
+- (void)presentDownloadOptionsForMediaEntities:(NSArray *)mediaEntities
+                                    sourceView:(UIView *)sourceView;
+- (void)DownloadHandler:(UIButton *)sender;
+
 - (void)setTouchInsets:(UIEdgeInsets)touchInsets;
 - (nullable id)_t1_imageNamed:(NSString *)name 
                      fitSize:(CGSize)fitSize 
                    fillColor:(nullable id)fillColor;
 - (BOOL)shouldShowCount;
+- (CGFloat)horizontalLayoutOffset;
 - (double)extraWidth;
 - (CGFloat)trailingEdgeInset;
 - (NSUInteger)touchInsetPriority;

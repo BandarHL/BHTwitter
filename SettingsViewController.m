@@ -184,6 +184,8 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
         PSSpecifier *mediaUpload4k = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"MEDIA_UPLOAD_4K_ENABLED_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"MEDIA_UPLOAD_4K_ENABLED_OPTION_DETAIL_TITLE"] key:@"media_upload_4k_enabled" defaultValue:false changeAction:nil];
 
         PSSpecifier *hideTopics = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_TOPICS_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_TOPICS_OPTION_DETAIL_TITLE"] key:@"hide_topics" defaultValue:false changeAction:nil];
+
+        PSSpecifier *hideReposts = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_REPOSTS_OPTION_TITLE"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_REPOSTS_OPTION_DETAIL_TITLE"] key:@"hide_reposts" defaultValue:false changeAction:nil];
         
         PSSpecifier *hideWhoToFollow = [self newSwitchCellWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_WHO_FOLLOW_OPTION"] detailTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"HIDE_WHO_FOLLOW_OPTION_DETAIL_TITLE"] key:@"hide_who_to_follow" defaultValue:false changeAction:nil];
         
@@ -275,6 +277,7 @@ static UIFont *TwitterChirpFont(TwitterFontStyle style) {
             dmReplyLater,
             mediaUpload4k,
             hideTopics,
+            hideReposts,
             hideWhoToFollow,
             hideTopicsToFollow,
             hideTrendVideos,

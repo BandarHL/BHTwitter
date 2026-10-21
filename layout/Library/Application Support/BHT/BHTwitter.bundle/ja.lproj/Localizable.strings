@@ -206,3 +206,6 @@
 
 "UPLOAD_CUSTOM_VOICE_OPTION_TITLE" = "カスタム音声をアップロード";
 "UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE" = "ポストで音声を録音した後にカスタム動画をアップロード";
+
+"HIDE_REPOSTS_OPTION_TITLE" = "リツイートを非表示";
+"HIDE_REPOSTS_OPTION_DETAIL_TITLE" = "タイムラインからすべてのリツイートを削除する";

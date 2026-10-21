@@ -1,5 +1,7 @@
 # BHTwitter
 
+> **X 随心的正式源码已统一到 [Caun1112/XSuixin 的 main 分支](https://github.com/Caun1112/XSuixin)。** 当前功能版本为 2.5.0，完整构建号为 2.5.0-2；[下载正式 rootless DEB](https://github.com/Caun1112/XSuixin/releases/tag/v2.5.0-2)。本分支的 `RepostsDownloads/` 同步该版本；根目录仍是历史 BHTwitter 产品。请勿用另一个仓库或根目录的历史版本号判断 X 随心发布版本。
+
 An awesome tweak for Twitter that enhances your experience with additional features and customization options. Get rid of ads, gain access to Twitter Blue features for free and much much more! 
 
 > [!WARNING]  

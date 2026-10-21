@@ -207,3 +207,6 @@
 
 "UPLOAD_CUSTOM_VOICE_OPTION_TITLE" = "Özel ses yükleyin";
 "UPLOAD_CUSTOM_VOICE_OPTION_DETAIL_TITLE" = "Gönderide bir ses kaydettikten sonra özel video yükleyin";
+
+"HIDE_REPOSTS_OPTION_TITLE" = "Retweetleri Gizle";
+"HIDE_REPOSTS_OPTION_DETAIL_TITLE" = "Zaman tünelindeki tüm retweetleri kaldır";
