@@ -91,9 +91,9 @@ int main(void) { @autoreleasepool {
     Wait(^BOOL { return exported!=nil; });
     Check(exported.count==3 && !exportError,@"Export snapshots current, previous and diagnostic summary files");
     NSArray *redacted=Records(exported.firstObject.path); NSDictionary *private=nil;
-    for (NSDictionary *row in redacted) if ([row[@"event"] isEqual:@"private_probe"]) private=row;
+    for (NSDictionary *row in redacted) if ([row[@"event"] isEqual:@"unrecognized_event"]) private=row;
     Check(private && !private[@"row"] && !private[@"post"] && !private[@"authorID"] && !private[@"handle"] && !private[@"url"],@"Export removes browsing identifiers and avatar addresses");
-    Check([private[@"nested"] isEqual:@{@"valid":@YES}] && [private[@"items"] isEqual:@[@{@"http":@200}]] && [private[@"loaded"] boolValue],@"Redaction is recursive and preserves diagnostic outcomes");
+    Check(!private[@"nested"] && !private[@"items"] && !private[@"loaded"] && [private[@"exportSchema"] isEqual:@2],@"Unknown historical events export validated metadata only, with no free-form fields");
     NSString *exportText=[NSString stringWithContentsOfURL:exported.firstObject encoding:NSUTF8StringEncoding error:NULL];
     Check(![exportText containsString:@"private-"] && ![exportText containsString:@"private_handle"] && ![exportText containsString:@"private_avatar"] && ![exportText containsString:@"https://"],@"Neither nested identifiers nor URL strings under unknown keys survive export");
     NSDictionary *summary=[NSJSONSerialization JSONObjectWithData:[NSData dataWithContentsOfURL:exported.lastObject] options:0 error:NULL];
@@ -124,7 +124,7 @@ int main(void) { @autoreleasepool {
     });
     BHRDAvatarLog(@"ad_response_seen",@{@"marker":@YES,@"bytes":@100});
     BHRDAvatarLog(@"photo_clipboard_result",@{@"success":@NO,@"reason":@"image_type_missing"});
-    BHRDAvatarLog(@"video_probe",@{@"resourceProbes":@[@{@"reason":@"unsupported_scheme",@"schemeCategory":@"other",@"url":@"https://private.example/secret"}]});
+    BHRDAvatarLog(@"fullscreen_video_resolution",@{@"resourceProbes":@[@{@"reason":@"unsupported_scheme",@"schemeCategory":@"other",@"url":@"https://private.example/secret",@"statusID":@"private-123"}]});
     BHRDAvatarDiagnosticTestSuspendWriter(NO); BHRDAvatarDiagnosticFlush();
     NSUInteger negatives=0,positives=0,failures=0; NSDictionary *aggregate=nil;
     for (NSDictionary *row in Records(path)) {
@@ -138,10 +138,14 @@ int main(void) { @autoreleasepool {
     summary=[NSJSONSerialization JSONObjectWithData:[NSData dataWithContentsOfURL:exported.lastObject] options:0 error:NULL];
     Check(!exportError && [summary[@"aggregatedRecords"] integerValue]==9999 && [summary[@"droppedRecords"] integerValue]==0 && [summary[@"pendingAggregatedRecords"] integerValue]==0,@"Intentional aggregation is separate from real queue overflow, including export/flush");
     NSDictionary *resourceRecord=nil;
-    for (NSDictionary *row in Records(exported.firstObject.path)) if ([row[@"event"] isEqual:@"video_probe"]) resourceRecord=row;
+    for (NSDictionary *row in Records(exported.firstObject.path)) if ([row[@"event"] isEqual:@"fullscreen_video_resolution"]) resourceRecord=row;
     Check([resourceRecord[@"resourceProbes"] isEqual:@[@{@"reason":@"unsupported_scheme",@"schemeCategory":@"other"}]],@"Video rejection categories survive export while raw addresses remain redacted");
     BHRDAvatarRemoveExport(exported); BHRDAvatarDiagnosticFlush();
     cleared=NO; BHRDAvatarClearLogs(^(NSError *error) { clearError=error; cleared=YES; }); Wait(^BOOL { return cleared; });
     BHRDAvatarDiagnosticFlush(); Check(Records(path).count==1,@"Clear also discards pending aggregates without resurrecting old records");
+    NSFileHandle *tail=[NSFileHandle fileHandleForWritingAtPath:path]; [tail seekToEndOfFile];
+    [tail writeData:[@"{\"event\":\"interrupted_tail\"}" dataUsingEncoding:NSUTF8StringEncoding]]; [tail closeFile];
+    BHRDAvatarLog(@"after_interrupted_tail",@{}); BHRDAvatarDiagnosticFlush();
+    Check(Records(path).count==3,@"A complete old JSON tail lacking its newline cannot corrupt the next writer's record");
     NSLog(@"PASS: %lu avatar diagnostic file checks",(unsigned long)checks);
 } return 0; }

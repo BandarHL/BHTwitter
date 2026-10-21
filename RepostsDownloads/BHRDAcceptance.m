@@ -149,10 +149,29 @@ static NSDictionary *VideoReasonStages(void) {
 static NSDictionary *VideoCancellationStages(void) {
     return @{@"selection_changed":@"video_selection_changed",@"viewer_inactive":@"video_viewer_inactive"};
 }
+static NSString *ManualResult(NSDictionary *item) {
+    id result=item[@"manualResult"];
+    if ([@[@"unrated",@"passed",@"failed"] containsObject:result ?: NSNull.null]) return result;
+    // Old records stored only a success boolean. Recover explicit legacy
+    // stages; a bare NO cannot distinguish an unrated item from a failure.
+    if ([item[@"stage"] isEqual:@"user_reported_failure"]) return @"failed";
+    if ([Number(item[@"manualConfirmed"]) boolValue] || [item[@"stage"] isEqual:@"user_confirmed"]) return @"passed";
+    return @"unrated";
+}
+static void PreservePerformanceConclusion(NSMutableDictionary *item) {
+    NSString *manual=ManualResult(item), *stage=nil, *status=nil;
+    if ([Number(item[@"warningObserved"]) boolValue]) { status=@"failed"; stage=@"runtime_warning"; }
+    else if ([manual isEqual:@"failed"]) { status=@"failed"; stage=@"user_reported_failure"; }
+    else if ([manual isEqual:@"passed"]) { status=@"success"; stage=@"user_confirmed"; }
+    if (!stage) return;
+    // Recomputing the display is not another observed success or failure.
+    item[@"status"]=status; item[@"stage"]=stage; item[@"lastOutcome"]=status;
+    item[@"detail"]=[stage isEqual:@"runtime_warning"] ? @"本轮验收已观察到卡顿阈值或内存警告；人工评价单独保留，重新采样不会清除告警。" : StageDetails()[stage];
+}
 static NSMutableDictionary *NewItem(NSString *key,NSString *title) {
     return [@{@"id":key,@"title":title,@"status":@"pending",@"stage":@"not_observed",
         @"detail":@"尚未观察到实际操作",@"attempts":@0,@"successCount":@0,@"failureCount":@0,
-        @"cancelledCount":@0,@"lastOutcome":@"none",@"manualConfirmed":@NO} mutableCopy];
+        @"cancelledCount":@0,@"lastOutcome":@"none",@"manualConfirmed":@NO,@"manualResult":@"unrated"} mutableCopy];
 }
 static NSMutableDictionary *NewState(NSString *mode) {
     NSMutableArray *items=[NSMutableArray array];
@@ -205,13 +224,16 @@ static void Initialize(void) {
                 NSNumber *number=Number(input[key]); if (number && number.doubleValue>=0) item[key]=number;
             }
             for (NSString *key in @[@"manualConfirmed",@"detailConfirmed",@"running",@"warningObserved",@"resolutionResolved",@"resolutionTerminal",@"streamTerminal"]) if (Number(input[key])) item[key]=@([Number(input[key]) boolValue]);
+            item[@"manualResult"]=ManualResult(input);
+            item[@"manualConfirmed"]=@([item[@"manualResult"] isEqual:@"passed"]);
             for (NSString *key in @[@"pendingAttempt",@"pendingBootID",@"pendingJob"]) if (UUID(input[key])) item[key]=input[key];
             NSString *outcome=[input[@"lastOutcome"] isKindOfClass:NSString.class] ? input[@"lastOutcome"] : @"none";
             if ([@[@"none",@"pending",@"running",@"success",@"failed",@"cancelled",@"unsupported",@"interrupted"] containsObject:outcome]) item[@"lastOutcome"]=outcome;
             if (CleanError(input[@"error"])) item[@"error"]=CleanError(input[@"error"]);
-            if ([item[@"status"] isEqual:@"success"] && ![item[@"successCount"] unsignedIntegerValue]) { item[@"status"]=@"pending"; item[@"stage"]=@"not_observed"; item[@"detail"]=StageDetails()[@"not_observed"]; item[@"manualConfirmed"]=@NO; }
+            if ([item[@"status"] isEqual:@"success"] && ![item[@"successCount"] unsignedIntegerValue]) { item[@"status"]=@"pending"; item[@"stage"]=@"not_observed"; item[@"detail"]=StageDetails()[@"not_observed"]; item[@"manualConfirmed"]=@NO; item[@"manualResult"]=@"unrated"; }
             if ([item[@"lastOutcome"] isEqual:@"cancelled"] && [item[@"successCount"] unsignedIntegerValue]) item[@"detail"]=[@"此前已有成功证据；本次操作已取消。" stringByAppendingString:item[@"detail"]];
             if ([item[@"lastOutcome"] isEqual:@"interrupted"] && [item[@"successCount"] unsignedIntegerValue]) item[@"detail"]=[@"此前已有成功证据；本次操作结果未确认。" stringByAppendingString:item[@"detail"]];
+            if ([definition[0] isEqual:@"performance"]) PreservePerformanceConclusion(item);
         }
         if ([saved[@"events"] isKindOfClass:NSArray.class]) for (id entry in saved[@"events"]) {
             if (![entry isKindOfClass:NSDictionary.class] || ![entry[@"event"] isKindOfClass:NSString.class]) continue;
@@ -317,6 +339,9 @@ static void HandleBoot(NSDictionary *fields) {
     while (launches.count>20) [launches removeObjectAtIndex:0];
     for (NSString *key in @[@"photo_save",@"repost_detail",@"video_resolution",@"stream_transfer",@"performance",@"log_export"]) {
         NSMutableDictionary *item=Item(key);
+        // A preserved warning/manual result may keep status non-running even
+        // while a measurement is active; a restarted process cannot keep it on.
+        if ([key isEqual:@"performance"]) item[@"running"]=@NO;
         if ([item[@"status"] isEqual:@"running"]) {
             BOOL priorSuccess=[item[@"successCount"] unsignedIntegerValue]>0;
             Update(key,@"pending",@"restart_result_unconfirmed",
@@ -493,7 +518,7 @@ static void HandleObservation(NSString *event,NSDictionary *fields) {
             hidden ? @"实际返回时间线后，该转推仍保持隐藏缩略图。" : @"返回后未保持隐藏状态，请导出日志。",fields);
     } else if ([event hasPrefix:@"performance_"]) {
         NSMutableDictionary *item=Item(@"performance");
-        if ([event isEqual:@"performance_started"]) { Increment(item,@"attempts"); item[@"running"]=@YES; item[@"manualConfirmed"]=@NO; item[@"warningObserved"]=@NO;
+        if ([event isEqual:@"performance_started"]) { Increment(item,@"attempts"); item[@"running"]=@YES;
             item[@"observedSeconds"]=@0; item[@"frameIntervals"]=@0;
             for (NSString *key in @[@"slowIntervalRatio",@"maxIntervalMs",@"currentFootprintMB",@"memoryMB",@"peakMemoryMB",@"lastMemoryBytes",@"lastLagMs",@"memoryWarnings"]) [item removeObjectForKey:key];
         }
@@ -507,12 +532,13 @@ static void HandleObservation(NSString *event,NSDictionary *fields) {
         if (Number(fields[@"memoryWarnings"])) item[@"memoryWarnings"]=fields[@"memoryWarnings"];
         BOOL concern=[event isEqual:@"performance_memory_warning"] || [Number(fields[@"thresholdExceeded"]) boolValue] || [Number(fields[@"memoryWarnings"]) unsignedIntegerValue]>0;
         if (concern) { item[@"warningObserved"]=@YES; Update(@"performance",@"failed",@"runtime_warning",@"已观察到卡顿阈值或内存警告，请结合采样及实际体验排查。",fields); }
-        else if (![item[@"manualConfirmed"] boolValue] && ![item[@"warningObserved"] boolValue]) {
+        else if ([ManualResult(item) isEqual:@"unrated"] && ![item[@"warningObserved"] boolValue]) {
             BOOL enough=BHRDPerformanceHasSufficientSamples([item[@"observedSeconds"] doubleValue],[item[@"frameIntervals"] unsignedIntegerValue]);
             BOOL running=[item[@"running"] boolValue];
             NSString *stage=running ? (enough ? @"samples_observed" : @"collecting_samples") : (enough ? @"sampling_finished" : @"insufficient_samples");
             Update(@"performance",running ? @"running" : @"pending",stage,StageDetails()[stage],fields);
         }
+        PreservePerformanceConclusion(item);
     } else if ([event isEqual:@"acceptance_export"]) {
         NSString *phase=fields[@"phase"];
         if ([phase isEqual:@"generated"]) {
@@ -543,10 +569,12 @@ void BHRDAcceptanceObserveEvent(NSString *event,NSDictionary *fields) {
 void BHRDAcceptanceObserveLaunch(BOOL paused,BOOL hooksEnabled) { BHRDAcceptanceObserveEvent(@"acceptance_boot",@{@"paused":@(paused),@"hooksEnabled":@(hooksEnabled)}); }
 void BHRDAcceptanceRecordManualResult(NSString *key,BOOL passed) {
     Sync(^{ NSMutableDictionary *item=Item(key); if (!item) return;
+        item[@"manualResult"]=passed ? @"passed" : @"failed";
         item[@"manualConfirmed"]=@(passed); item[@"manualRecordedAt"]=@(NSDate.date.timeIntervalSince1970);
         // Manual assertions remain explicitly distinct from automated evidence.
         Update(key,passed ? @"success" : @"failed",passed ? @"user_confirmed" : @"user_reported_failure",
             passed ? @"你已确认实际操作和结果符合预期（人工确认）。" : @"你已报告实际结果未通过（人工记录），请导出报告和日志。",@{});
+        if ([key isEqual:@"performance"]) PreservePerformanceConclusion(item);
         AddEvent(passed ? @"manual_pass" : @"manual_fail",@{}); Save();
     });
 }

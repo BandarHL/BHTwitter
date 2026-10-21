@@ -3,7 +3,8 @@
 #import "BHRDShareRenderState.h"
 #import "BHRDManager.h"
 #import "BHRDShareMediaQuality.h"
-#import <Photos/Photos.h>
+#import "BHRDShareImageFetch.h"
+#import "BHRDShareExport.h"
 
 static UIColor *RGB(NSNumber *value) { NSUInteger n = value.unsignedIntegerValue; return [UIColor colorWithRed:((n >> 16) & 255) / 255.0 green:((n >> 8) & 255) / 255.0 blue:(n & 255) / 255.0 alpha:1]; }
 @interface BHRDShareEditController : UITableViewController
@@ -43,7 +44,7 @@ static UIColor *RGB(NSNumber *value) { NSUInteger n = value.unsignedIntegerValue
 @property(nonatomic) NSInteger theme;
 @property(nonatomic, strong) NSMutableDictionary *options;
 @property(nonatomic, strong) NSMutableDictionary *images;
-@property(nonatomic, strong) NSMutableArray<NSURLSessionTask *> *tasks;
+@property(nonatomic, strong) NSMutableArray<BHRDShareImageFetch *> *tasks;
 @property(nonatomic, strong) UIScrollView *preview;
 @property(nonatomic, strong) UIImageView *imageView;
 @property(nonatomic, strong) UIView *controls;
@@ -61,13 +62,26 @@ static UIColor *RGB(NSNumber *value) { NSUInteger n = value.unsignedIntegerValue
 @property(nonatomic, strong) NSMutableArray<NSDictionary *> *imageRequests;
 @property(nonatomic) BOOL closing;
 
-@property(nonatomic) BOOL exporting;
+@property(nonatomic, strong) BHRDShareExport *exportSession;
+@property(nonatomic, strong) BHRDShareImageBudget *imageBudget;
 @property(nonatomic, strong) dispatch_queue_t renderQueue;
 @end
 @implementation BHRDShareImageController
 - (instancetype)initWithPost:(BHRDSharePost *)post {
     if ((self = [super init])) {
         _renderState = [BHRDShareRenderState new];
+        _exportSession = [BHRDShareExport new];
+        __weak BHRDShareImageController *weakSelf = self;
+        _exportSession.completion = ^(BHRDShareExportOutcome outcome, NSError *error) {
+            BHRDShareImageController *controller = weakSelf;
+            if (!controller || controller.closing) return;
+            [controller updateControls];
+            if (outcome == BHRDShareExportCopied) controller.hint.text = @"分享图片已复制。";
+            else if (outcome == BHRDShareExportSaved) controller.hint.text = @"分享图片已保存到相册。";
+            else if (outcome == BHRDShareExportShared) controller.hint.text = @"已完成分享。";
+            else if (outcome == BHRDShareExportCancelled) controller.hint.text = @"已取消。";
+            else if (outcome == BHRDShareExportFailed) BHRDShowError(error.localizedDescription ?: @"导出失败，请重试。" );
+        };
         _post = [post copy]; _images = [BHRDShareEmbeddedImages(post) mutableCopy]; _tasks = [NSMutableArray array];
         BHRDRestoreShareAuthorOption(NSUserDefaults.standardUserDefaults);
         _options = [BHRDShareOptions(NSUserDefaults.standardUserDefaults) mutableCopy];
@@ -159,7 +173,7 @@ static UIColor *RGB(NSNumber *value) { NSUInteger n = value.unsignedIntegerValue
         config.titleTextAttributesTransformer = ^NSDictionary *(NSDictionary *attrs) { NSMutableDictionary *a = [attrs mutableCopy]; a[NSFontAttributeName] = [UIFont systemFontOfSize:12 weight:selected ? UIFontWeightSemibold : UIFontWeightRegular]; return a; };
         self.toggles[i].configuration = config; self.toggles[i].accessibilityTraits = selected ? UIAccessibilityTraitButton | UIAccessibilityTraitSelected : UIAccessibilityTraitButton;
     }
-    BOOL enabled = [self.renderState canExportPNG:self.png != nil pendingImages:self.pendingImages exporting:self.exporting];
+    BOOL enabled = [self.renderState canExportPNG:self.png != nil pendingImages:self.pendingImages exporting:self.exportSession.busy];
     for (UIButton *button in self.actions) button.enabled = enabled;
     self.hint.text = self.pendingImages ? @"正在补充尚未加载的媒体…" : self.renderState.rendering ? @"正在生成预览…" : self.pendingUpgrades ? @"高清图补充中，可先分享当前画质" : self.failedImages ? @"部分媒体未加载，可返回原推文加载后再试" : (self.post.replyToIdentifier.length && !self.post.replyContextPost) ? @"原帖尚未加载，请打开完整对话后再生成" : @"显示内容 · 双语显示原文与已有译文";
 }
@@ -190,11 +204,12 @@ static UIColor *RGB(NSNumber *value) { NSUInteger n = value.unsignedIntegerValue
 }
 - (void)loadImages {
     ++self.imageGeneration;
-    for (NSURLSessionTask *task in self.tasks) [task cancel];
+    for (BHRDShareImageFetch *task in self.tasks) [task cancel];
     [self.tasks removeAllObjects]; self.activeImageRequests = 0; self.pendingImages = 0; self.pendingUpgrades = 0; self.failedImages = 0;
     self.imageRequests = [NSMutableArray array];
+    self.imageBudget = [[BHRDShareImageBudget alloc] initWithLimit:BHRDShareImageAggregateByteLimit];
     for (NSURL *url in BHRDShareVisibleImageURLs(self.post, self.options)) {
-        if (![url.scheme hasPrefix:@"http"]) continue;
+        if (!BHRDShareImageURLAllowed(url)) continue;
         NSData *current = self.images[url.absoluteString];
         if (!current) {
             NSCachedURLResponse *cached = [NSURLCache.sharedURLCache cachedResponseForRequest:[NSURLRequest requestWithURL:url]];
@@ -230,23 +245,21 @@ static UIColor *RGB(NSNumber *value) { NSUInteger n = value.unsignedIntegerValue
         self.activeImageRequests++;
         NSUInteger imageGeneration = self.imageGeneration;
         NSURL *url = item[@"url"]; NSString *key = item[@"key"]; BOOL required = [item[@"required"] boolValue];
-        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url]; request.timeoutInterval = 12;
         __weak BHRDShareImageController *weakSelf = self;
-        NSURLSessionDataTask *task = [NSURLSession.sharedSession dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
-            BOOL valid = !error && [response.MIMEType hasPrefix:@"image/"] && BHRDShareImagePixelSize(data).width > 0;
+        BHRDShareImageFetch *task = [BHRDShareImageFetch fetchURL:url budget:self.imageBudget completion:^(NSData *data, NSError *error) {
+            BHRDShareImageController *controller = weakSelf;
+            if (!controller || controller.closing || controller.imageGeneration != imageGeneration) return;
+            controller.activeImageRequests--;
+            if (required) controller.pendingImages--; else controller.pendingUpgrades--;
+            BOOL valid = !error && BHRDShareImagePixelSize(data).width > 0;
+            // Only the live generation may cache or display a late result.
             if (valid) BHRDCacheQualityImage(url, data);
-            dispatch_async(dispatch_get_main_queue(), ^{
-                BHRDShareImageController *controller = weakSelf;
-                if (!controller || controller.closing || controller.imageGeneration != imageGeneration) return;
-                controller.activeImageRequests--;
-                if (required) controller.pendingImages--; else controller.pendingUpgrades--;
-                if (valid && BHRDShareImageIsBetter(data, controller.images[key])) {
-                    controller.images[key] = data; [controller scheduleQualityRender];
-                } else if (required && !BHRDShareImagePixelSize(controller.images[key]).width) controller.failedImages++;
-                [controller updateControls]; [controller startNextImageRequests];
-            });
+            if (valid && BHRDShareImageIsBetter(data, controller.images[key])) {
+                controller.images[key] = data; [controller scheduleQualityRender];
+            } else if (required && !BHRDShareImagePixelSize(controller.images[key]).width) controller.failedImages++;
+            [controller updateControls]; [controller startNextImageRequests];
         }];
-        [self.tasks addObject:task]; [task resume];
+        [self.tasks addObject:task];
     }
 }
 - (void)edit {
@@ -255,38 +268,37 @@ static UIColor *RGB(NSNumber *value) { NSUInteger n = value.unsignedIntegerValue
     editor.done = ^(BHRDSharePost *post) { weakSelf.post = post; [weakSelf render]; };
     [self.navigationController pushViewController:editor animated:YES];
 }
-- (void)close { self.closing = YES; [self.renderState invalidate]; [self.imageRequests removeAllObjects]; for (NSURLSessionTask *task in self.tasks) [task cancel]; [self dismissViewControllerAnimated:YES completion:nil]; }
+- (void)dispose {
+    if (self.closing) return;
+    self.closing = YES; ++self.imageGeneration; [self.renderState invalidate];
+    [self.imageRequests removeAllObjects];
+    for (BHRDShareImageFetch *task in self.tasks) [task cancel];
+    [self.tasks removeAllObjects]; [self.exportSession close];
+}
+- (void)close { [self dispose]; [self dismissViewControllerAnimated:YES completion:nil]; }
 - (void)viewDidDisappear:(BOOL)animated {
     [super viewDidDisappear:animated];
-    if (self.isBeingDismissed || self.navigationController.isBeingDismissed) { self.closing = YES; [self.renderState invalidate]; for (NSURLSessionTask *task in self.tasks) [task cancel]; }
+    if (self.isBeingDismissed || self.navigationController.isBeingDismissed) [self dispose];
 }
-- (void)dealloc { for (NSURLSessionTask *task in _tasks) [task cancel]; }
+- (void)dealloc { for (BHRDShareImageFetch *task in _tasks) [task cancel]; [_exportSession close]; }
 - (void)export:(UIButton *)sender {
-    if (![self.renderState canExportPNG:self.png != nil pendingImages:self.pendingImages exporting:self.exporting]) return;
+    if (self.closing || ![self.renderState canExportPNG:self.png != nil pendingImages:self.pendingImages exporting:self.exportSession.busy]) return;
     NSData *png = self.png;
-    if (sender.tag == 2) { [UIPasteboard.generalPasteboard setData:png forPasteboardType:@"public.png"]; return; }
+    if (sender.tag == 2) { [self.exportSession copyPNG:png]; return; }
     if (sender.tag == 0) {
-        NSURL *file = [[NSURL fileURLWithPath:NSTemporaryDirectory()] URLByAppendingPathComponent:[NSString stringWithFormat:@"X随心分享-%@.png", NSUUID.UUID.UUIDString]];
-        NSError *error = nil;
-        if (![png writeToURL:file options:NSDataWritingAtomic error:&error]) { BHRDShowError(@"无法写入分享图片，请检查剩余存储空间。"); return; }
+        if (self.presentedViewController || !self.view.window) return;
+        NSURL *file = [self.exportSession prepareSharePNG:png];
+        if (!file) return;
+        [self updateControls];
         UIActivityViewController *sheet = [[UIActivityViewController alloc] initWithActivityItems:@[file] applicationActivities:nil];
         sheet.popoverPresentationController.sourceView = sender; sheet.popoverPresentationController.sourceRect = sender.bounds;
-        sheet.completionWithItemsHandler = ^(UIActivityType type, BOOL done, NSArray *items, NSError *err) { [[NSFileManager defaultManager] removeItemAtURL:file error:nil]; };
+        BHRDShareExport *session = self.exportSession;
+        sheet.completionWithItemsHandler = ^(UIActivityType type, BOOL done, NSArray *items, NSError *error) {
+            dispatch_async(dispatch_get_main_queue(), ^{ [session completeShare:done error:error]; });
+        };
         [self presentViewController:sheet animated:YES completion:nil]; return;
     }
-    NSDictionary *info = NSBundle.mainBundle.infoDictionary;
-    if (![info[@"NSPhotoLibraryAddUsageDescription"] length] && ![info[@"NSPhotoLibraryUsageDescription"] length]) { BHRDShowError(@"当前应用未提供相册权限说明，请通过“分享”菜单保存图片。" ); return; }
-    self.exporting = YES; [self updateControls];
-    [PHPhotoLibrary requestAuthorizationForAccessLevel:PHAccessLevelAddOnly handler:^(PHAuthorizationStatus status) {
-        if (status != PHAuthorizationStatusAuthorized && status != PHAuthorizationStatusLimited) {
-            dispatch_async(dispatch_get_main_queue(), ^{ self.exporting = NO; [self updateControls]; BHRDShowError(@"未获得相册写入权限，可前往系统设置允许，或通过“分享”保存。"); }); return;
-        }
-        [PHPhotoLibrary.sharedPhotoLibrary performChanges:^{
-            PHAssetResourceCreationOptions *options = [PHAssetResourceCreationOptions new]; options.originalFilename = @"X随心分享.png";
-            [[PHAssetCreationRequest creationRequestForAsset] addResourceWithType:PHAssetResourceTypePhoto data:png options:options];
-        } completionHandler:^(BOOL success, NSError *error) {
-            dispatch_async(dispatch_get_main_queue(), ^{ self.exporting = NO; [self updateControls]; BHRDShowError(success ? @"分享图片已保存到相册。" : @"保存失败，请检查相册权限与存储空间。"); });
-        }];
-    }];
+    [self.exportSession savePNG:png hostInfo:NSBundle.mainBundle.infoDictionary];
+    [self updateControls];
 }
 @end

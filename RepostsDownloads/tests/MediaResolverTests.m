@@ -365,6 +365,17 @@ int main(void) {
         Check(![live[@"media"] count] && [live[@"reason"] isEqual:@"unsupported_current_asset"], @"A file-scheme manifest ivar is rejected rather than handed to a remote downloader");
         UnverifiedEndpointsManager *unverified = [[UnverifiedEndpointsManager alloc] initWithManifest:[NSURL URLWithString:@"https://video.twimg.com/ext_tw_video/unverified/pu/pl/master.m3u8"]];
         Check(![BHRDResolveLiveVideoSource(@{@"currentItem":@{@"tech":@{@"qualityEndpoints":unverified}}})[@"media"] count], @"An identically named manifest ivar on an unverified private class is never inspected");
+        for (NSArray *caseInfo in @[
+            @[@"tavfoundation://private-current/item",@"video/mp4",@"unsupported_scheme"],
+            @[@"https://private.example/current.mp4",@"video/mp4",@"unsupported_host"],
+            @[@"https://video.twimg.com/current/blob",@"video/mp4",@"unsupported_extension"],
+            @[@"https://video.twimg.com/ext_tw_video/a/pu/vid/a.mp4",@"image/jpeg",@"unsupported_content_type"]]) {
+            NSDictionary *source=@{@"currentItem":@{@"asset":@{@"URL":caseInfo[0],@"mimeType":caseInfo[1]}}};
+            NSDictionary *resolution=BHRDResolveLiveVideoSource(source);
+            Check(![resolution[@"media"] count] && [resolution[@"resourceDecisionCounts"][caseInfo[2]] integerValue]>0,@"Basic failure evidence distinguishes each rejection without detailed mode");
+            NSString *summary=[resolution[@"resourceDecisionCounts"] description];
+            Check(![summary containsString:@"://"] && ![summary containsString:@"private"],@"Basic classification contains no resource values, tokens or user identity");
+        }
         NSLog(@"PASS: %lu shared media-resolution checks", (unsigned long)checks);
     }
     return 0;

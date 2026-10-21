@@ -5,3 +5,6 @@ BOOL BHRDHomePagingLimitScroll(UIScrollView *scroll);
 CGSize BHRDHomePagingContentSize(UIScrollView *scroll, CGSize proposed);
 CGPoint BHRDHomePagingOffset(UIScrollView *scroll, CGPoint proposed);
 CGRect BHRDHomePagingTabFrame(UIView *view, CGRect proposed);
+
+BOOL BHRDHomeHeaderIsAddCandidate(UIView *view);
+void BHRDHomeRecordStatus(UIWindow *window, NSString *stage, NSDictionary *fields);

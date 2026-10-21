@@ -1,6 +1,6 @@
 Package: com.caun.bhtwitter.repostsdownloads
 Name: X 随心
-Version: 2.5.0-1
+Version: 2.5.0-2
 Architecture: iphoneos-arm64
 Description: 推文与全屏下载、图片复制验证、诊断日志聚合和准确的性能验收，统一正式源码与构建身份。
 Maintainer: caun1112

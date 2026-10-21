@@ -207,7 +207,7 @@ int main(void) { @autoreleasepool {
     surface.player=readableAV; surface.currentPlayer=unboundTAV; context=BHRDCurrentFullscreenVideoContext(host);
     Check([URL(context) containsString:@"order-current"] && [context[@"identity"] isEqual:first],@"Swapping candidate enumeration order retains the same current download selection");
     Check([context[@"candidateResults"] count]==2 && [context[@"unresolvedReasons"] count]==1,@"Diagnostics record every resolved and unreadable candidate instead of returning at the first failure");
-    BOOL safeFields=YES; NSSet *diagnosticKeys=[NSSet setWithArray:@[@"kind",@"sourceClass",@"reason",@"stage",@"sourcePath",@"currentItemPresent",@"resolved",@"resourceAccess",@"endpointCount"]];
+    BOOL safeFields=YES; NSSet *diagnosticKeys=[NSSet setWithArray:@[@"kind",@"sourceClass",@"reason",@"stage",@"sourcePath",@"currentItemPresent",@"resolved",@"resourceAccess",@"endpointCount",@"resourceDecisionCounts"]];
     for (NSDictionary *candidate in context[@"candidateResults"]) if (![[NSSet setWithArray:candidate.allKeys] isEqual:diagnosticKeys]) safeFields=NO;
     Check(safeFields,@"Candidate diagnostics contain only fixed classes and stages, with no URL, account, or post identity");
     unboundTAV.internalState=@{@"currentItem":[NSMutableDictionary dictionary]}; context=BHRDCurrentFullscreenVideoContext(host);

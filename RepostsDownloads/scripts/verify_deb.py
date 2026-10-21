@@ -116,6 +116,9 @@ def verify(package, version, commit=None, repository=None):
         if tuple(map(int, version.split("-")[0].split("."))) >= (2, 5, 0):
             check(all(marker in data for marker in [b"image_write_verified", b"image_content_changed", b"ad_response_summary", b"aggregatedRecords", b"insufficient_samples", b"resourceProbes"]),
                   "Missing 2.5.0 clipboard verification, aggregation, performance or video diagnostic features")
+        if tuple(map(int, version.split("-")[0].split("."))) > (2, 5, 0) or (version.startswith("2.5.0-") and int(version.split("-")[1]) >= 2):
+            check(all(marker in data for marker in [b"resourceDecisionCounts", b"home_add_candidates", b"exportSchema", b"manualResult", b"selectionWatchdog", b"BHRDShareImageFetch", b"BHRDShareExport"]),
+                  "Missing 2.5.0-2 audited diagnostics, cancellation, sharing or state fixes")
         check(version.encode() in data,"Binary build version does not match package")
         if commit:
             check(re.fullmatch(r"[0-9a-f]{40}",commit),"Invalid source commit")
@@ -129,7 +132,7 @@ def verify(package, version, commit=None, repository=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("package", type=pathlib.Path)
-    parser.add_argument("--version", default="2.5.0-1")
+    parser.add_argument("--version", default="2.5.0-2")
     parser.add_argument("--commit")
     parser.add_argument("--repository")
     args = parser.parse_args()

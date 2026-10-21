@@ -13,6 +13,9 @@ static NSString *StatusTitle(NSDictionary *item) {
     return @{@"pending":@"待验证",@"running":@"观察中 / 待确认",@"success":@"已观察到成功",
         @"failed":@"失败 / 异常",@"cancelled":@"已取消",@"unsupported":@"条件未满足"}[item[@"status"]] ?: @"待验证";
 }
+static NSString *ManualTitle(NSDictionary *item) {
+    return @{@"unrated":@"未评价",@"passed":@"符合预期",@"failed":@"存在问题"}[item[@"manualResult"]] ?: @"未评价";
+}
 static NSString *Instruction(NSString *key) {
     return @{
         @"photo_permission":@"全屏打开图片，点右侧更多 → 保存图片，按系统提示允许添加照片。若之前已授权，不会再次弹窗；页面记录实际权限状态。",
@@ -122,8 +125,8 @@ static NSDictionary *CurrentSessionPerformance(void) {
         return [NSString stringWithFormat:@"%@ · %@\n构建 %@ · 提交 %@\n%@",mode,[format stringFromDate:date],BHRD_BUILD_VERSION,BHRD_BUILD_COMMIT,
             self.snapshot[@"storageError"] ? @"验收记录保存失败，跨重启结果可能丢失，请导出排查。" : @"每次新构建重新验收。尚未触发的功能不会自动标为通过。"];
     }
-    if (section==1) return @"结果来自运行事件或明确标注的人工确认。失败阶段与错误码供定位；成功、失败和取消计数保留。自动结果不能证明所有未来操作都成功。";
-    if (section==2) return @"观察只在你启动后进行，离开此页可继续操作 X；后台暂停，最多 20 分钟。内存峰值来自间隔采样，不是系统精确峰值；没有耗电测量。";
+    if (section==1) return @"结果来自运行事件或明确标注的人工确认。人工评价单独保留，性能告警优先显示；成功、失败和取消计数保留。自动结果不能证明所有未来操作都成功。";
+    if (section==2) return @"观察只在你启动后进行，离开此页可继续操作 X；后台暂停，最多 20 分钟。重新观察只清零采样数值，人工评价与本轮告警保留；开始新一轮验收才清零。内存峰值来自间隔采样，不是系统精确峰值；没有耗电测量。";
     return @"导出包含本轮阶段、构建身份、性能采样及脱敏日志，不自动上传。发现异常后把附件和复现步骤发回，再用下一构建复验。";
 }
 - (UITableViewCell *)tableView:(UITableView *)table cellForRowAtIndexPath:(NSIndexPath *)path {
@@ -142,7 +145,7 @@ static NSDictionary *CurrentSessionPerformance(void) {
     } else if (path.section==1) {
         NSDictionary *item=self.snapshot[@"items"][path.row]; NSDictionary *error=item[@"error"];
         title=[NSString stringWithFormat:@"%@ · %@",item[@"title"],StatusTitle(item)];
-        detail=[NSString stringWithFormat:@"%@\n阶段 %@ · 成功 %@ / 失败 %@ / 取消 %@%@",item[@"detail"],item[@"stage"],item[@"successCount"],item[@"failureCount"],item[@"cancelledCount"],error ? [NSString stringWithFormat:@"\n错误 %@ (%@)",error[@"domain"],error[@"code"]] : @""];
+        detail=[NSString stringWithFormat:@"%@\n人工评价：%@\n阶段 %@ · 成功 %@ / 失败 %@ / 取消 %@%@",item[@"detail"],ManualTitle(item),item[@"stage"],item[@"successCount"],item[@"failureCount"],item[@"cancelledCount"],error ? [NSString stringWithFormat:@"\n错误 %@ (%@)",error[@"domain"],error[@"code"]] : @""];
     } else if (path.section==2 && path.row==0) {
         NSDictionary *p=self.performance; BOOL started=p[@"sessionID"]!=nil;
         title=started ? ([p[@"running"] boolValue] ? ([p[@"active"] boolValue] ? @"正在观察前台使用" : @"观察已暂停（非前台）") : @"最近一次性能观察") : @"尚未开始性能观察";
@@ -177,7 +180,7 @@ static NSDictionary *CurrentSessionPerformance(void) {
 }
 - (void)showItem:(NSDictionary *)item source:(UITableViewCell *)cell {
     NSString *session=self.snapshot[@"sessionID"], *key=item[@"id"];
-    UIAlertController *sheet=[UIAlertController alertControllerWithTitle:item[@"title"] message:[NSString stringWithFormat:@"%@\n\n当前：%@\n%@",Instruction(key),StatusTitle(item),item[@"detail"]] preferredStyle:UIAlertControllerStyleActionSheet];
+    UIAlertController *sheet=[UIAlertController alertControllerWithTitle:item[@"title"] message:[NSString stringWithFormat:@"%@\n\n当前：%@\n人工评价：%@\n%@",Instruction(key),StatusTitle(item),ManualTitle(item),item[@"detail"]] preferredStyle:UIAlertControllerStyleActionSheet];
     __weak BHRDAcceptanceViewController *weakSelf=self;
     for (NSNumber *passed in @[@YES,@NO]) {
         [sheet addAction:[UIAlertAction actionWithTitle:passed.boolValue ? @"我已实际核对：符合预期" : @"我已实际核对：存在问题" style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {

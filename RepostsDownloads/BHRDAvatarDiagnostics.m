@@ -5,6 +5,7 @@
 #import <objc/message.h>
 #import "BHRDBuildInfo.h"
 #import "BHRDLocalJSON.h"
+#import "BHRDDiagnosticExport.h"
 
 static const NSUInteger LogLimit=2*1024*1024, PendingLimit=128;
 static const NSTimeInterval RetentionInterval=7*24*60*60;
@@ -98,9 +99,18 @@ static void WriteRecord(NSString *event,NSDictionary *fields) {
             if ([fm fileExistsAtPath:path] && ![fm moveItemAtPath:path toPath:previous error:NULL]) { RecordFailure(); return; }
         }
         if (![fm fileExistsAtPath:path] && ![fm createFileAtPath:path contents:nil attributes:@{NSFilePosixPermissions:@0600}]) { RecordFailure(); return; }
-        NSFileHandle *file=[NSFileHandle fileHandleForWritingAtPath:path];
+        NSFileHandle *file=[NSFileHandle fileHandleForUpdatingAtPath:path];
         if (!file) { RecordFailure(); return; }
-        [file seekToEndOfFile]; [file writeData:json]; [file writeData:[@"\n" dataUsingEncoding:NSUTF8StringEncoding]]; [file closeFile];
+        NSData *newline=[@"\n" dataUsingEncoding:NSUTF8StringEncoding];
+        unsigned long long end=[file seekToEndOfFile];
+        if (end) {
+            [file seekToFileOffset:end-1]; NSData *last=[file readDataOfLength:1]; [file seekToEndOfFile];
+            if (![last isEqual:newline]) [file writeData:newline];
+        }
+        // Keep JSON and its terminator in one write; after an interrupted older
+        // process, start a new line instead of joining two otherwise valid rows.
+        NSMutableData *line=[json mutableCopy]; [line appendData:newline];
+        [file writeData:line]; [file closeFile];
     } @catch (__unused NSException *exception) { RecordFailure(); }
 }
 // Only routine negative ad observations are coalesced. Keep the first one,
@@ -168,30 +178,6 @@ void BHRDAvatarReadLog(void (^completion)(NSString *)) {
         dispatch_async(dispatch_get_main_queue(),^{ if (completion) completion(result); });
     });
 }
-static BOOL SensitiveKey(NSString *key) {
-    NSString *name=key.lowercaseString;
-    return [name containsString:@"url"] || [name containsString:@"uri"] || [name containsString:@"handle"] ||
-        [name containsString:@"author"] || [name containsString:@"userid"] || [name containsString:@"username"] ||
-        [name containsString:@"rowid"] || [name containsString:@"postid"] || [name containsString:@"tweetid"] ||
-        [name isEqual:@"row"] || [name isEqual:@"post"] || [name isEqual:@"id"] || [name isEqual:@"pid"] ||
-        [name isEqual:@"request"] || [name isEqual:@"ownerid"] || [name isEqual:@"screen_name"] ||
-        [name isEqual:@"screenname"] || [name isEqual:@"name"] || [name isEqual:@"displayname"] ||
-        [name containsString:@"token"] || [name containsString:@"cookie"] || [name containsString:@"password"];
-}
-static id RedactedValue(id value) {
-    if ([value isKindOfClass:NSDictionary.class]) {
-        NSMutableDictionary *safe=[NSMutableDictionary dictionary];
-        for (id key in value) if ([key isKindOfClass:NSString.class] && !SensitiveKey(key)) {
-            id child=RedactedValue(value[key]); if (child) safe[key]=child;
-        }
-        return safe;
-    }
-    if ([value isKindOfClass:NSArray.class]) {
-        NSMutableArray *safe=[NSMutableArray array]; for (id child in value) { id item=RedactedValue(child); if (item) [safe addObject:item]; } return safe;
-    }
-    if ([value isKindOfClass:NSString.class] && ([value containsString:@"://"] || [value hasPrefix:@"@"] || [value hasPrefix:@"/var/"] || [value hasPrefix:@"/private/"])) return @"[已脱敏]";
-    return value;
-}
 void BHRDAvatarExportLogs(void (^completion)(NSArray<NSURL *> *,NSError *)) {
     dispatch_async(Queue(),^{
         FlushAggregatedRecords(); PruneLogs(); NSFileManager *fm=NSFileManager.defaultManager;
@@ -206,14 +192,14 @@ void BHRDAvatarExportLogs(void (^completion)(NSArray<NSURL *> *,NSError *)) {
                 for (NSString *line in [text componentsSeparatedByString:@"\n"]) {
                     id value=BHRDReadLocalJSON([line dataUsingEncoding:NSUTF8StringEncoding],0,NULL);
                     if (![value isKindOfClass:NSDictionary.class]) continue;
-                    NSData *json=[NSJSONSerialization dataWithJSONObject:RedactedValue(value) options:0 error:NULL];
+                    NSData *json=[NSJSONSerialization dataWithJSONObject:BHRDExportDiagnosticRecord(value) options:0 error:NULL];
                     if (json) { [redacted appendData:json]; [redacted appendData:[@"\n" dataUsingEncoding:NSUTF8StringEncoding]]; }
                 }
                 NSURL *target=[directory URLByAppendingPathComponent:[@"avatar-diag.log" stringByAppendingString:suffix]];
                 if (![redacted writeToURL:target options:NSDataWritingAtomic error:&error]) break;
                 [fm setAttributes:@{NSFilePosixPermissions:@0600} ofItemAtPath:target.path error:NULL]; [files addObject:target];
             }
-            NSMutableDictionary *summary=[Summary() mutableCopy]; summary[@"redacted"]=@YES;
+            NSMutableDictionary *summary=[Summary() mutableCopy]; summary[@"redacted"]=@YES; summary[@"exportSchema"]=@2;
             summary[@"exportedAt"]=@(NSDate.date.timeIntervalSince1970); summary[@"exportedFiles"]=[files valueForKey:@"lastPathComponent"];
             NSURL *target=[directory URLByAppendingPathComponent:@"diagnostic-summary.json"];
             NSData *json=[NSJSONSerialization dataWithJSONObject:summary options:NSJSONWritingPrettyPrinted error:&error];

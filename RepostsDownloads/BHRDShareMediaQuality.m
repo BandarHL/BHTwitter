@@ -1,5 +1,6 @@
 #import "BHRDShareMediaQuality.h"
 #import <ImageIO/ImageIO.h>
+#import <math.h>
 NSURL *BHRDHighQualityShareURL(NSURL *url) {
     if (![url.scheme.lowercaseString isEqual:@"https"] || ![url.host.lowercaseString isEqual:@"pbs.twimg.com"]) return nil;
     if (![url.path containsString:@"/media/"] && ![url.path containsString:@"_thumb/"]) return nil;
@@ -18,6 +19,7 @@ CGSize BHRDShareImagePixelSize(NSData *data) {
     BOOL complete = CGImageSourceGetStatus(source) == kCGImageStatusComplete; CFRelease(source);
     if (!complete) return CGSizeZero;
     CGFloat width = [properties[(__bridge NSString *)kCGImagePropertyPixelWidth] doubleValue], height = [properties[(__bridge NSString *)kCGImagePropertyPixelHeight] doubleValue];
+    if (!isfinite(width) || !isfinite(height) || width <= 0 || height <= 0 || width * height > 32000000) return CGSizeZero;
     NSInteger orientation = [properties[(__bridge NSString *)kCGImagePropertyOrientation] integerValue];
     return orientation >= 5 && orientation <= 8 ? CGSizeMake(height, width) : CGSizeMake(width, height);
 }

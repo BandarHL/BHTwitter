@@ -19,6 +19,7 @@ BHRD_FILES += BHRDRuntimeStatus.m BHRDRuntimeStatusViewController.m
 BHRD_FILES += BHRDAcceptance.m BHRDAcceptanceViewController.m BHRDPerformanceMonitor.m BHRDPerformanceStats.m
 BHRD_FILES += BHRDFullscreenVideoResolver.m
 BHRD_FILES += BHRDFullscreenVideoPresence.m
+BHRD_FILES += BHRDShareImageFetch.m BHRDShareExport.m
 BHRD_CFLAGS := -fobjc-arc -Wno-deprecated-declarations -Wno-nullability-completeness
 BHRD_CFLAGS += -I$(CURDIR)/.theos/xsuixin-build
 

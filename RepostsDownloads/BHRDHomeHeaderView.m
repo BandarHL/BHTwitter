@@ -19,24 +19,28 @@ static void Apply(UIWindow *window) {
     }
     NSMutableArray<NSDictionary *> *labels = [NSMutableArray array];
     NSMutableArray<UIView *> *pending = [NSMutableArray arrayWithArray:window.subviews];
-    NSUInteger budget = 1800;
+    NSUInteger budget = 1800, examined=0, cellExcluded=0, visibilityExcluded=0, regionExcluded=0;
     CGFloat topLimit = MIN(300, window.bounds.size.height * 0.45);
     while (pending.count && budget--) {
         UIView *view = pending.lastObject;
         [pending removeLastObject];
-        if (view.hidden || view.alpha <= 0.01 || InsideCell(view)) continue;
+        examined++;
+        if (view.hidden || view.alpha <= 0.01) { visibilityExcluded++; continue; }
+        if (InsideCell(view)) { cellExcluded++; continue; }
         CGRect rect = [view convertRect:view.bounds toView:window];
         // Ignore the content feed, dialogs below the header, and off-screen tabs.
-        if (CGRectGetMinY(rect) > topLimit || CGRectGetMaxY(rect) < 0) continue;
+        if (CGRectGetMinY(rect) > topLimit || CGRectGetMaxY(rect) < 0) { regionExcluded++; continue; }
         NSString *text = BHRDHomeHeaderViewText(view);
         BHRDHomeTabRole role = BHRDHomeHeaderRole(text);
         // Newer hosts expose the image-only Add button through accessibility,
         // while the two primary tabs still supply their visible UILabels.
-        if (([view isKindOfClass:UILabel.class] || role == BHRDHomeTabAdd) && role != BHRDHomeTabNone && CGRectGetMidY(rect) > window.safeAreaInsets.top && CGRectGetMidY(rect) < topLimit) {
+        if ((role != BHRDHomeTabNone || BHRDHomeHeaderIsAddCandidate(view)) && CGRectGetMidY(rect) > window.safeAreaInsets.top && CGRectGetMidY(rect) < topLimit) {
             [labels addObject:@{@"text": text, @"y": @(CGRectGetMidY(rect)), @"view": view}];
         }
         [pending addObjectsFromArray:view.subviews];
     }
+    BHRDHomeRecordStatus(window,@"home_header_scan",@{@"examinedViewCount":@(examined),@"cellExcludedCount":@(cellExcluded),@"visibilityExcludedCount":@(visibilityExcluded),@"regionExcludedCount":@(regionExcluded),@"candidateCount":@(labels.count),@"scanTruncated":@(pending.count>0)});
+    if (pending.count) return; // Partial scans cannot authorize hiding controls.
     BHRDUpdateHomePaging(window, labels);
 }
 void BHRDScheduleHomeHeaderUpdate(UIWindow *window) {

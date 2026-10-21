@@ -256,7 +256,7 @@ BH_METRIC(shouldShowCount,            NO)
                         if (selectionStillCurrent && !selectionStillCurrent()) { BHRDShowError(@"视频已切换，请重新打开当前视频的下载菜单。"); return; }
                         if (![BHRDManager DownloadingVideos]) return;
                         if (self.downloadManager || self.streamJob) return;
-                        self.streamJob = [BHRDStreamJob probeURL:url completion:^(MediaInformation *info, NSError *error) {
+                        self.streamJob = [BHRDStreamJob probeURL:url selectionStillCurrent:selectionStillCurrent completion:^(MediaInformation *info, NSError *error) {
                             self.streamJob = nil;
                             if (selectionStillCurrent && !selectionStillCurrent()) return;
                             if (error) {

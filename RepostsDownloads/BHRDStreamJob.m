@@ -11,6 +11,11 @@
 #import "../ffmpeg/MediaInformationSession.h"
 #import "../ffmpeg/StreamInformation.h"
 
+static BOOL SelectionIsCurrent(BOOL (^predicate)(void)) {
+    if (!predicate) return YES;
+    @try { return predicate(); }
+    @catch (__unused NSException *exception) { return NO; }
+}
 static NSDictionary *EngineFields(id<Session> session) {
     if (!session) return @{@"engineState":@"not_bound"};
     NSString *state=@[@"created",@"running",@"failed",@"completed"][MIN((NSUInteger)[session getState],(NSUInteger)3)];
@@ -26,6 +31,8 @@ static dispatch_queue_t ProbeQueue(void) {
 @property(nonatomic,strong) BHRDTaskState *state;
 @property(nonatomic,strong) JGProgressHUD *hud;
 @property(nonatomic,strong) NSTimer *watchdog;
+@property(nonatomic,strong) NSTimer *selectionWatchdog;
+@property(nonatomic,copy) BOOL (^selectionStillCurrent)(void);
 @property(nonatomic,strong) id<Session> engineSession;
 @property(nonatomic) NSTimeInterval started,lastProgress,lastLoggedProgress;
 @property(nonatomic) long lastSize;
@@ -77,7 +84,30 @@ static dispatch_queue_t ProbeQueue(void) {
 }
 - (void)clearProgress {
     BHRDEndTransfer(self); [self.watchdog invalidate]; self.watchdog=nil;
+    [self.selectionWatchdog invalidate]; self.selectionWatchdog=nil; self.selectionStillCurrent=nil;
     BHRDDismissDownloadProgress(self.hud); self.hud=nil; self.engineSession=nil;
+}
+- (void)cancelInvalidSelection {
+    if (self.state.finished) return;
+    [self log:@"stream_probe_invalidated" extra:@{@"reason":@"selection_changed"}];
+    [self cancel];
+}
+- (BOOL)cancelIfSelectionInvalidated {
+    if (!self.state.finished && self.selectionStillCurrent && !SelectionIsCurrent(self.selectionStillCurrent)) {
+        [self cancelInvalidSelection]; return YES;
+    }
+    return NO;
+}
+- (void)beginSelectionMonitoring {
+    if (!self.selectionStillCurrent) return;
+    __weak BHRDStreamJob *weakSelf=self;
+    // At most one live-selection check per second, including during scrolling.
+    // Resolving the current media context can traverse the host view/model graph.
+    // The existing 45-second probe watchdog bounds the monitor's lifetime.
+    self.selectionWatchdog=[NSTimer timerWithTimeInterval:1 repeats:YES block:^(__unused NSTimer *timer) {
+        [weakSelf cancelIfSelectionInvalidated];
+    }];
+    [NSRunLoop.mainRunLoop addTimer:self.selectionWatchdog forMode:NSRunLoopCommonModes];
 }
 - (void)stopWithError:(NSError *)error {
     if (![self.state cancel]) return;
@@ -101,21 +131,34 @@ static dispatch_queue_t ProbeQueue(void) {
     if (self.state.finished) self.engineSession=nil;
 }
 + (instancetype)probeURL:(NSURL *)url completion:(void (^)(MediaInformation *,NSError *))completion {
+    return [self probeURL:url selectionStillCurrent:nil completion:completion];
+}
++ (instancetype)probeURL:(NSURL *)url selectionStillCurrent:(BOOL (^)(void))selectionStillCurrent
+              completion:(void (^)(MediaInformation *,NSError *))completion {
     BHRDStreamJob *job=[self new]; job.phase=@"probe"; job.probeCompletion=completion;
+    job.selectionStillCurrent=selectionStillCurrent;
     [job log:@"stream_probe_start" extra:@{@"readTimeoutMs":@15000,@"watchdogSeconds":@45}];
+    if (selectionStillCurrent && !SelectionIsCurrent(selectionStillCurrent)) {
+        // Preserve asynchronous completion so the caller stores the returned job
+        // before its cancellation callback clears that reference.
+        dispatch_async(dispatch_get_main_queue(),^{ [job cancelInvalidSelection]; }); return job;
+    }
     if (!BHRDTryBeginTransfer(job)) {
         dispatch_async(dispatch_get_main_queue(),^{
             if (![job.state finish]) return;
-            job.probeCompletion=nil; [job log:@"stream_probe_result" extra:@{@"result":@"busy",@"success":@NO,@"errorDomain":@"BHRDBusy",@"errorCode":@1}];
+            job.probeCompletion=nil; [job clearProgress]; [job log:@"stream_probe_result" extra:@{@"result":@"busy",@"success":@NO,@"errorDomain":@"BHRDBusy",@"errorCode":@1}];
             completion(nil,[NSError errorWithDomain:@"BHRDBusy" code:1 userInfo:nil]);
         }); return job;
     }
     NSArray *args=BHRDStreamProbeArguments(url);
     if (!args) { dispatch_async(dispatch_get_main_queue(),^{ [job stopWithError:[NSError errorWithDomain:@"BHRDStream" code:1 userInfo:nil]]; }); return job; }
     [job beginProgress:@"正在读取流媒体清晰度…" timeout:45];
+    [job beginSelectionMonitoring];
     MediaInformationSession *session=[FFprobeKit getMediaInformationFromCommandArgumentsAsync:args withCompleteCallback:^(MediaInformationSession *finished) {
         dispatch_async(dispatch_get_main_queue(),^{
             NSMutableDictionary *fields=[EngineFields(finished) mutableCopy]; fields[@"late"]=@(job.state.finished); [job log:@"stream_probe_callback" extra:fields];
+            // Completion may beat the next timer tick after a swipe.
+            if ([job cancelIfSelectionInvalidated]) return;
             if (![job.state finish]) return;
             MediaInformation *info=[finished getMediaInformation]; NSUInteger videos=0;
             for (StreamInformation *stream in [info getStreams])

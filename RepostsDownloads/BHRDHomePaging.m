@@ -1,6 +1,7 @@
 #import "BHRDHomePaging.h"
 #import "BHRDHomeHeader.h"
 #import "BHRDPreferences.h"
+#import "BHRDAvatarDiagnostics.h"
 #import <objc/runtime.h>
 #import <objc/message.h>
 #import <substrate.h>
@@ -24,12 +25,30 @@ static char BindingKey, ScrollKey, TabKey, IndicatorKey, WindowStatesKey;
 @end
 @implementation BHRDHomePageBinding @end
 static BOOL Active(BHRDHomePageBinding *binding) { return binding.active && BHRDPreference(BHRDHideHomeAddKey); }
+void BHRDHomeRecordStatus(UIWindow *window, NSString *stage, NSDictionary *fields) {
+#if BHRD_AVATAR_DIAGNOSTICS
+    static char StatusKey;
+    if (!window) return;
+    NSMutableDictionary *state=objc_getAssociatedObject(window,&StatusKey);
+    if (!state) { state=[NSMutableDictionary dictionary]; objc_setAssociatedObject(window,&StatusKey,state,OBJC_ASSOCIATION_RETAIN_NONATOMIC); }
+    NSDictionary *old=state[stage]; NSTimeInterval now=NSProcessInfo.processInfo.systemUptime;
+    if ([old[@"fields"] isEqual:fields] || (old && now-[old[@"time"] doubleValue]<5) || [state[@"count"] unsignedIntegerValue]>=60) return;
+    state[stage]=@{@"fields":[fields copy],@"time":@(now)}; state[@"count"]=@([state[@"count"] unsignedIntegerValue]+1);
+    NSMutableDictionary *record=[fields mutableCopy]; record[@"stage"]=stage;
+    BHRDAvatarLog(@"home_header_resolution",record);
+#else
+    (void)window; (void)stage; (void)fields;
+#endif
+}
 NSString *BHRDHomeHeaderViewText(UIView *view) {
     if ([view isKindOfClass:UILabel.class]) return [(UILabel *)view text];
-    if (![view isKindOfClass:UIControl.class] && !(view.accessibilityTraits & UIAccessibilityTraitButton)) return nil;
-    NSString *label = view.accessibilityLabel;
-    if (BHRDHomeHeaderRole(label) != BHRDHomeTabNone) return label;
+    NSString *label=view.accessibilityLabel;
+    if (BHRDHomeHeaderRole(label)!=BHRDHomeTabNone || [@[@"+",@"＋"] containsObject:label ?: @""]) return label;
     return [view isKindOfClass:UIButton.class] ? [(UIButton *)view currentTitle] : nil;
+}
+BOOL BHRDHomeHeaderIsAddCandidate(UIView *view) {
+    NSString *text=BHRDHomeHeaderViewText(view);
+    return BHRDHomeHeaderRole(text)==BHRDHomeTabAdd || [@[@"+",@"＋"] containsObject:[text stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet] ?: @""];
 }
 static id Read(id object, NSString *name) {
     SEL selector = NSSelectorFromString(name);
@@ -213,38 +232,59 @@ static void Restore(BHRDHomePageBinding *binding) {
     RestorePaging(binding);
     for (UIView *control in binding.addHidden.keyEnumerator.allObjects) RestoreAddControl(binding, control);
 }
-static UIView *HomeAddControl(UIView *source, BHRDHomePageBinding *binding, UIViewController *home, UIWindow *window, NSArray<NSDictionary *> *labels) {
-    if (!source || source.window != window || ![source isDescendantOfView:home.view] || InContentCell(source)) return nil;
-    if (BHRDHomeHeaderRole(BHRDHomeHeaderViewText(source)) != BHRDHomeTabAdd) return nil;
+static UIView *HomeAddControl(UIView *source, BHRDHomePageBinding *binding, UIViewController *home, UIWindow *window, NSArray<NSDictionary *> *labels, NSString **failure) {
+    if (failure) *failure=@"source_outside_home";
+    if (!source || source.window != window || ![source isDescendantOfView:home.view]) return nil;
+    if (failure) *failure=@"content_cell_excluded";
+    for (UIView *v=source; v; v=v.superview)
+        if ([v isKindOfClass:UITableViewCell.class] || ([v isKindOfClass:UICollectionViewCell.class] && v.bounds.size.height>100)) return nil;
+    if (failure) *failure=@"add_role_unconfirmed";
+    if (!BHRDHomeHeaderIsAddCandidate(source)) return nil;
     CGRect sourceRect = [source convertRect:source.bounds toView:window];
+    if (failure) *failure=@"primary_row_mismatch";
     if (!BHRDHomeHeaderHasPrimaryTabs(labels, CGRectGetMidY(sourceRect))) return nil;
     UIView *header = binding.strip;
     while (header && ![source isDescendantOfView:header]) header = header.superview;
     // A shared, shallow header confirms that this Add belongs to the two tabs.
     // An entire timeline/root view is insufficient evidence for an Add match.
+    if (failure) *failure=@"shared_header_unconfirmed";
     if (!header || header == window || header == home.view || header.bounds.size.height > 110) return nil;
+    BOOL glyphOnly=BHRDHomeHeaderRole(BHRDHomeHeaderViewText(source))!=BHRDHomeTabAdd;
+    if (failure) *failure=@"plus_not_trailing";
+    if (glyphOnly) {
+        CGRect first=[binding.first convertRect:binding.first.bounds toView:window], second=[binding.second convertRect:binding.second.bounds toView:window];
+        if (CGRectGetMinX(sourceRect)<MAX(CGRectGetMaxX(first),CGRectGetMaxX(second))-1 || CGRectGetMinX(sourceRect)<window.bounds.size.width*0.8) return nil;
+    }
+    if (failure) *failure=@"hit_target_unavailable";
+    UIView *target=nil;
     for (UIView *view = source; view && view != header; view = view.superview) {
-        if (![view isKindOfClass:UIControl.class] && !(view.accessibilityTraits & UIAccessibilityTraitButton)) continue;
+        if (![view isKindOfClass:UIControl.class] && ![view isKindOfClass:UICollectionViewCell.class] && !(view.accessibilityTraits & UIAccessibilityTraitButton)) continue;
+        if (failure) *failure=@"shared_primary_control";
         if (view == binding.first || view == binding.second || [binding.first isDescendantOfView:view] || [binding.second isDescendantOfView:view]) return nil;
         CGRect rect = [view convertRect:view.bounds toView:window];
+        if (failure) *failure=@"add_geometry_unconfirmed";
         if (rect.size.width <= 0 || rect.size.width > 180 || rect.size.height < 20 || rect.size.height > 80 || !BHRDHomeHeaderHasPrimaryTabs(labels, CGRectGetMidY(rect))) return nil;
-        return view;
+        target=view;
     }
-    return nil;
+    // A selectable collection cell owns the hit region, not just its icon.
+    if (failure) *failure=target ? @"matched_control" : @"hit_target_unavailable";
+    return target;
 }
 static void UpdateAddControls(BHRDHomePageBinding *binding, UIViewController *home, UIWindow *window, NSArray<NSDictionary *> *labels) {
     // A previously hidden control is excluded from the visible-window scan.
     // Revalidate its saved semantic source so reuse cannot hide a different action.
     for (UIView *control in binding.addHidden.keyEnumerator.allObjects) {
         UIView *source = [binding.addSources objectForKey:control];
-        if (HomeAddControl(source, binding, home, window, labels) != control) RestoreAddControl(binding, control);
+        if (HomeAddControl(source, binding, home, window, labels, NULL) != control) RestoreAddControl(binding, control);
         else { control.hidden = YES; control.userInteractionEnabled = NO; }
     }
+    NSMutableDictionary *rejections=[NSMutableDictionary dictionary]; NSUInteger candidates=0;
     for (NSDictionary *label in labels) {
-        if (BHRDHomeHeaderRole(label[@"text"]) != BHRDHomeTabAdd) continue;
+        if (!BHRDHomeHeaderIsAddCandidate(label[@"view"])) continue;
         UIView *source = label[@"view"];
-        UIView *control = HomeAddControl(source, binding, home, window, labels);
-        if (!control) continue;
+        candidates++; NSString *failure=nil;
+        UIView *control = HomeAddControl(source, binding, home, window, labels, &failure);
+        if (!control) { if (failure) rejections[failure]=@([rejections[failure] unsignedIntegerValue]+1); continue; }
         if (![binding.addHidden objectForKey:control]) {
             [binding.addHidden setObject:@(control.hidden) forKey:control];
             [binding.addInteraction setObject:@(control.userInteractionEnabled) forKey:control];
@@ -253,6 +293,7 @@ static void UpdateAddControls(BHRDHomePageBinding *binding, UIViewController *ho
         control.hidden = YES;
         control.userInteractionEnabled = NO;
     }
+    BHRDHomeRecordStatus(window,@"home_add_candidates",@{@"candidateCount":@(candidates),@"addHiddenCount":@(binding.addHidden.count),@"rejectionCounts":rejections});
 }
 void BHRDUpdateHomePaging(UIWindow *window, NSArray<NSDictionary *> *labels) {
     NSMapTable<UIView *, BHRDHomePageBinding *> *states = objc_getAssociatedObject(window, &WindowStatesKey);
@@ -268,12 +309,13 @@ void BHRDUpdateHomePaging(UIWindow *window, NSArray<NSDictionary *> *labels) {
         if (BHRDHomeHeaderRole(label[@"text"]) == BHRDHomeTabFollowing) secondLabel = label[@"view"];
     }
     if (!firstLabel || !secondLabel) {
+        BHRDHomeRecordStatus(window,@"primary_tabs_unavailable",@{@"firstTabFound":@(firstLabel!=nil),@"secondTabFound":@(secondLabel!=nil)});
         for (BHRDHomePageBinding *old in states.objectEnumerator) if (!old.strip.window || !old.active) Restore(old);
         return;
     }
     UIView *strip = firstLabel.superview;
     while (strip && ![secondLabel isDescendantOfView:strip]) strip = strip.superview;
-    if (!strip || strip == window || strip.bounds.size.height > 110) return;
+    if (!strip || strip == window || strip.bounds.size.height > 110) { BHRDHomeRecordStatus(window,@"header_structure_unconfirmed",@{}); return; }
     UIView *first = Branch(firstLabel, strip), *second = Branch(secondLabel, strip);
     if (first == second) return;
     if (!states) {
@@ -299,7 +341,7 @@ void BHRDUpdateHomePaging(UIWindow *window, NSArray<NSDictionary *> *labels) {
             if (!home && ([name containsString:@"HomeTimeline"] || [name containsString:@"PagingViewController"])) home = (UIViewController *)r;
         }
     }
-    if (!home) { Restore(binding); return; }
+    if (!home) { BHRDHomeRecordStatus(window,@"home_controller_unconfirmed",@{}); Restore(binding); return; }
     UpdateAddControls(binding, home, window, labels);
     NSMutableArray *controllers = [NSMutableArray arrayWithObject:home];
     BOOL verifiedPager = NO;
@@ -313,6 +355,7 @@ void BHRDUpdateHomePaging(UIWindow *window, NSArray<NSDictionary *> *labels) {
     }
     // The native Add action can be verified without knowing the Swift pager API.
     // Keep unknown page arrays, selection and layout intact until identified.
+    BHRDHomeRecordStatus(window,@"home_header_bound",@{@"addHiddenCount":@(binding.addHidden.count),@"pagerVerified":@(verifiedPager)});
     if (!verifiedPager) { RestorePaging(binding); return; }
     binding.active = YES;
     for (UIView *tab in @[first, second]) {

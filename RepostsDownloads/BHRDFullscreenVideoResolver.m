@@ -160,6 +160,7 @@ static NSDictionary *ObservedResult(NSDictionary *result,NSArray *observations,N
         NSMutableDictionary *candidate=[@{@"kind":entry[@"kind"] ?: @"",@"sourceClass":context[@"sourceClass"] ?: @"",@"reason":context[@"reason"] ?: @"",
             @"stage":context[@"stage"] ?: @"",@"sourcePath":context[@"sourcePath"] ?: @"",@"currentItemPresent":@(entry[@"item"]!=nil),@"resolved":@(resolved),
             @"resourceAccess":Text(context[@"resourceAccess"]),@"endpointCount":[context[@"endpointCount"] isKindOfClass:NSNumber.class] ? context[@"endpointCount"] : @0} mutableCopy];
+        candidate[@"resourceDecisionCounts"]=context[@"resourceDecisionCounts"] ?: @{};
         if (context[@"detailedResourceProbe"]) candidate[@"detailedResourceProbe"]=context[@"detailedResourceProbe"];
         [candidates addObject:candidate];
     }

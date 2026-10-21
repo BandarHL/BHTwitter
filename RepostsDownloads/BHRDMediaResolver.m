@@ -246,17 +246,6 @@ static BHRDVideoProbeSample *DetailedSample(id source, BOOL *capture) {
     }
     return sample;
 }
-static NSDictionary *URLDecision(id value, NSString *contentType) {
-    NSURL *url=[value isKindOfClass:NSURL.class] ? value : ([value isKindOfClass:NSString.class] ? [NSURL URLWithString:value] : nil);
-    NSString *scheme=url.scheme.lowercaseString,*host=url.host.lowercaseString,*ext=url.pathExtension.lowercaseString;
-    NSString *schemeKind=[scheme isEqual:@"https"] ? @"https" : [scheme isEqual:@"http"] ? @"http" : scheme.length ? @"other" : @"absent";
-    NSString *hostKind=[host isEqual:@"video.twimg.com"] ? @"x_video" : [host isEqual:@"pbs.twimg.com"] ? @"x_photo" : host.length ? @"other" : @"absent";
-    NSString *extension=[ext isEqual:@"mp4"] ? @"mp4" : [ext isEqual:@"m3u8"] ? @"hls" : ext.length ? @"other" : @"absent";
-    NSString *type=[contentType isKindOfClass:NSString.class] ? contentType.lowercaseString : nil;
-    BOOL supportedType=!type.length || [@[@"video/mp4",@"application/x-mpegurl",@"application/vnd.apple.mpegurl"] containsObject:type];
-    NSString *reason=!value ? @"absent" : !url ? @"invalid_or_non_url" : ![scheme isEqual:@"https"] ? @"unsupported_scheme" : ![host isEqual:@"video.twimg.com"] ? @"unsupported_host" : ![@[@"mp4",@"m3u8"] containsObject:ext] ? @"unsupported_extension" : !supportedType ? @"unsupported_content_type" : @"accepted";
-    return @{@"reason":reason,@"schemeCategory":schemeKind,@"hostCategory":hostKind,@"extensionCategory":extension,@"contentTypeCategory":!type.length ? @"absent" : supportedType ? @"supported_video" : @"other"};
-}
 static NSArray *GetterShape(id object) {
     NSMutableArray *shape=[NSMutableArray array]; NSMutableSet *seen=[NSMutableSet set];
     for (Class cls=object_getClass(object); cls && cls!=NSObject.class && shape.count<48; cls=class_getSuperclass(cls)) {
@@ -274,6 +263,17 @@ static NSArray *GetterShape(id object) {
     return shape;
 }
 #endif
+static NSDictionary *URLDecision(id value, NSString *contentType) {
+    NSURL *url=[value isKindOfClass:NSURL.class] ? value : ([value isKindOfClass:NSString.class] ? [NSURL URLWithString:value] : nil);
+    NSString *scheme=url.scheme.lowercaseString,*host=url.host.lowercaseString,*ext=url.pathExtension.lowercaseString;
+    NSString *schemeKind=[scheme isEqual:@"https"] ? @"https" : [scheme isEqual:@"http"] ? @"http" : scheme.length ? @"other" : @"absent";
+    NSString *hostKind=[host isEqual:@"video.twimg.com"] ? @"x_video" : [host isEqual:@"pbs.twimg.com"] ? @"x_photo" : host.length ? @"other" : @"absent";
+    NSString *extension=[ext isEqual:@"mp4"] ? @"mp4" : [ext isEqual:@"m3u8"] ? @"hls" : ext.length ? @"other" : @"absent";
+    NSString *type=[contentType isKindOfClass:NSString.class] ? contentType.lowercaseString : nil;
+    BOOL supportedType=!type.length || [@[@"video/mp4",@"application/x-mpegurl",@"application/vnd.apple.mpegurl"] containsObject:type];
+    NSString *reason=!value ? @"absent" : !url ? @"invalid_or_non_url" : ![scheme isEqual:@"https"] ? @"unsupported_scheme" : ![host isEqual:@"video.twimg.com"] ? @"unsupported_host" : ![@[@"mp4",@"m3u8"] containsObject:ext] ? @"unsupported_extension" : !supportedType ? @"unsupported_content_type" : @"accepted";
+    return @{@"reason":reason,@"schemeCategory":schemeKind,@"hostCategory":hostKind,@"extensionCategory":extension,@"contentTypeCategory":!type.length ? @"absent" : supportedType ? @"supported_video" : @"other"};
+}
 static NSDictionary *NativeVideo(id object, NSString *path, NSMutableArray *trace);
 
 static NSURL *VideoResourceURL(id value) {
@@ -364,6 +364,7 @@ static NSDictionary *CurrentAssets(id source) {
     NSMutableArray *pending = [NSMutableArray arrayWithObject:@{@"object":source, @"path":@"source", @"depth":@0, @"binding":@0}];
     NSMutableSet *visited = [NSMutableSet set];
     NSMutableDictionary *assets = [NSMutableDictionary dictionary];
+    NSMutableDictionary *resourceDecisions = [NSMutableDictionary dictionary];
     NSMutableArray *probePaths = [NSMutableArray array], *excludedBranches = [NSMutableArray array];
     BOOL unsupported = NO, playbackBound = NO, itemDeclared = NO, truncated = NO, itemMismatch = NO;
     NSUInteger index = 0;
@@ -415,6 +416,10 @@ static NSDictionary *CurrentAssets(id source) {
                 decision[@"access"]=entry[@"access"] ?: @"object_getter"; [urlProbes addObject:decision];
             }
 #endif
+            if (binding>=2) {
+                NSString *decision=URLDecision(entry[@"value"],contentType)[@"reason"];
+                resourceDecisions[decision]=@([resourceDecisions[decision] unsignedIntegerValue]+1);
+            }
             if (!url) { unsupported = YES; continue; }
             if ([contentType isKindOfClass:NSString.class] && [contentType length] &&
                 ![@[@"video/mp4", @"application/x-mpegurl", @"application/vnd.apple.mpegurl"] containsObject:[contentType lowercaseString]]) {
@@ -498,7 +503,7 @@ static NSDictionary *CurrentAssets(id source) {
     for (NSString *key in [assets.allKeys copy])
         if ([assets[key][@"binding"] unsignedIntegerValue] < requiredBinding) [assets removeObjectForKey:key];
     NSMutableDictionary *result=[@{@"assets":assets, @"unsupported":@(unsupported), @"playbackBound":@(playbackBound), @"truncated":@(truncated),
-        @"itemMismatch":@(itemMismatch), @"resourceProbePaths":probePaths, @"excludedPlaybackBranches":excludedBranches} mutableCopy];
+        @"itemMismatch":@(itemMismatch), @"resourceProbePaths":probePaths, @"excludedPlaybackBranches":excludedBranches, @"resourceDecisionCounts":resourceDecisions} mutableCopy];
 #if BHRD_AVATAR_DIAGNOSTICS
     if (capture) sample.trace=@{@"resourceProbes":urlProbes,@"nativeVariantProbes":nativeProbes,@"currentItemShapes":itemShapes,@"sample":@(sample.count)};
     if (sample.trace) result[@"detailedResourceProbe"]=sample.trace;
@@ -507,6 +512,7 @@ static NSDictionary *CurrentAssets(id source) {
 }
 static NSDictionary *WithPlaybackProbes(NSDictionary *result, NSDictionary *probe) {
     NSMutableDictionary *annotated = [result mutableCopy];
+    annotated[@"resourceDecisionCounts"] = probe[@"resourceDecisionCounts"] ?: @{};
     annotated[@"resourceProbePaths"] = probe[@"resourceProbePaths"] ?: @[];
     annotated[@"excludedPlaybackBranches"] = probe[@"excludedPlaybackBranches"] ?: @[];
     if (probe[@"detailedResourceProbe"]) annotated[@"detailedResourceProbe"]=probe[@"detailedResourceProbe"];

@@ -53,11 +53,18 @@ jobs:
         run: cp -R sdk-source/iPhoneOS16.5.sdk "$THEOS/sdks/"
       - name: Regression tests
         run: sh source/RepostsDownloads/tests/run_all.sh
+      - name: Compile complete production code
+        run: |
+          cd source/RepostsDownloads
+          make clean
+          mkdir -p .theos/xsuixin-build
+          python3 scripts/write_build_info.py .theos/xsuixin-build/BHRDGeneratedBuildInfo.h
+          make all THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1
       - name: Build and verify
         if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
         run: |
-          sh source/RepostsDownloads/build.sh
           cd source/RepostsDownloads
+          make package THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1
           VERSION=$(awk '/^Version:/ {print $2}' control)
           PACKAGE="packages/com.caun.bhtwitter.repostsdownloads_${VERSION}_iphoneos-arm64.deb"
           python3 scripts/verify_deb.py "$PACKAGE" --version "$VERSION" --commit "$GITHUB_SHA" --repository "$GITHUB_REPOSITORY"
